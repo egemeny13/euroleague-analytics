@@ -1,0 +1,4 @@
+exploration/cache/
+exploration/sweep_results.json
+__pycache__/
+.env
