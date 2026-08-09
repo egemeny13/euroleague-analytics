@@ -38,11 +38,13 @@ consumed unmodified, and the failure surface is a single known defect.
 
 Three pieces, in this order.
 
-**2a — repository scaffolding.** There is none yet: no package, no test runner,
-no dependency pinning, no CI. Phases 3 and 4 cannot start without it, and it is
-cheaper to build before there is code to retrofit. A Python package, a `tests/`
-tree with pytest, a pinned and deliberately short dependency list, a linter,
-and a GitHub Actions workflow that runs the tests.
+**2a — repository scaffolding. Complete.** A `src/euroleague/` package with the
+cache reader and the database settings, a `tests/` tree with nine fixture games
+selected by defect, four pinned dependencies, ruff, and a GitHub Actions
+workflow that runs lint, format and tests on every push. 19 tests, no network
+and no database, green on Linux and Python 3.14.
+
+Public at `github.com/egemeny13/euroleague-analytics`.
 
 **2b — the Supabase project.** Done: `euroleague-analytics`,
 `pctiewdpstnwcutrvegu`, eu-central-1. See `DECISIONS.md` item 12 for the two
