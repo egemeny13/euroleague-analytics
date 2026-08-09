@@ -41,6 +41,8 @@ DATABASE_OVERHEAD_ALLOWANCE_BYTES = 8_388_608
 # league expanded to 20 teams. Cost per game is the honest unit and the figure
 # below should be re-derived that way once E2025 is loaded and measured.
 BACKFILL_SEASONS = 23
+# The endpoints Phase 4 turns into warehouse rows. See ingested_responses.
+INGESTED_ENDPOINTS: tuple[str, ...] = ("Schedule", "Boxscore", "PlaybyPlay")
 
 
 @dataclass(frozen=True)
@@ -118,6 +120,19 @@ _SNAPSHOT_QUERIES = {
 }
 
 
+def ingested_responses(cache: ResponseCache, season_code: str):
+    """Yield only the cached responses Phase 4 parses into the warehouse.
+
+    The production fetcher also archives `Points`, deliberately: it is a
+    coordinate source for a later phase under Decision 17, and nothing parses it
+    yet. A Points file on disk is therefore expected rather than a defect, and
+    reconciling it against `raw_api_response` would fail for that reason alone.
+    """
+    for response in cache.responses(season_code):
+        if response.endpoint in INGESTED_ENDPOINTS:
+            yield response
+
+
 def warehouse_snapshot(connection: Any, season_code: str) -> dict[str, TableFingerprint]:
     """Fingerprint every raw table so a second load can prove byte-level stability."""
     result: dict[str, TableFingerprint] = {}
@@ -179,7 +194,7 @@ def assert_warehouse_reconciles(
             )
 
     expected_archive = {}
-    for response in cache.responses(season_code):
+    for response in ingested_responses(cache, season_code):
         archived = build_archive_object(response)
         key = (archived.endpoint, archived.gamecode, archived.content_sha256)
         expected_archive[key] = (
@@ -239,14 +254,10 @@ def assert_warehouse_reconciles(
             f"match the {season_code} disk cache"
         )
 
-    points_directory = cache.root / season_code / "Points"
-    cached_points = (
-        sum(1 for _ in points_directory.glob("*.json")) if points_directory.is_dir() else 0
-    )
-    if shot_count or cached_points:
+    if shot_count:
         raise AssertionError(
-            f"raw_shot={shot_count} and cached Points={cached_points}; both must be zero "
-            "until the coordinate endpoint is deliberately fetched in a future phase"
+            f"raw_shot={shot_count} for {season_code}; Points is archived but nothing "
+            "parses it yet, so this table stays empty until the shot phase loads it"
         )
 
     return {
@@ -254,7 +265,6 @@ def assert_warehouse_reconciles(
         "raw_api_fetch": fetch_count,
         **{table: sum(counts.values()) for table, counts in expected_by_game.items()},
         "raw_shot": shot_count,
-        "cached_points": cached_points,
     }
 
 

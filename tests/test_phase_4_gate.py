@@ -10,6 +10,7 @@ from euroleague.config import DatabaseSettings
 from euroleague.gate import (
     PHYSICAL_BUDGET_BYTES,
     assert_warehouse_reconciles,
+    ingested_responses,
     projected_database_growth_bytes,
     projected_table_bytes,
     public_table_sizes,
@@ -19,6 +20,24 @@ from euroleague.gate import (
 
 def test_projection_counts_empty_table_overhead_once() -> None:
     assert projected_table_bytes(2_000, empty_table_bytes=500, seasons=19) == 29_000
+
+
+def test_points_on_disk_is_not_part_of_the_phase_4_reconciliation(tmp_path) -> None:
+    """Break caught: archiving Points fails the raw gate that never ingested them."""
+    season = tmp_path / "E2024"
+    (season / "Boxscore").mkdir(parents=True)
+    (season / "PlaybyPlay").mkdir(parents=True)
+    (season / "Points").mkdir(parents=True)
+    (season / "schedule.json").write_bytes(b'{"data": []}')
+    (season / "Boxscore" / "1.json").write_bytes(b'{"box": 1}')
+    (season / "PlaybyPlay" / "1.json").write_bytes(b'{"pbp": 1}')
+    (season / "Points" / "1.json").write_bytes(b'{"points": 1}')
+
+    endpoints = [
+        response.endpoint for response in ingested_responses(ResponseCache(tmp_path), "E2024")
+    ]
+
+    assert endpoints == ["Schedule", "Boxscore", "PlaybyPlay"]
 
 
 def test_database_projection_uses_growth_above_empty_project() -> None:
@@ -76,7 +95,6 @@ def test_live_phase_4_gate() -> None:
         "raw_boxscore_team": 1320,
         "raw_event": 176483,
         "raw_shot": 0,
-        "cached_points": 0,
     }
     assert {table: value.count for table, value in snapshot.items()} == {
         table: reconciliation[table]

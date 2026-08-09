@@ -54,10 +54,27 @@ class FakeTime:
         self.utc_value += timedelta(seconds=seconds)
 
 
+def schedule_bytes(games: list[dict[str, object]]) -> bytes:
+    return json.dumps({"data": games, "total": len(games)}).encode("utf-8")
+
+
 def write_schedule(root, games: list[dict[str, object]], season: str = "E2025") -> None:
     path = root / season / "schedule.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(json.dumps({"data": games, "total": len(games)}).encode("utf-8"))
+    path.write_bytes(schedule_bytes(games))
+
+
+def _fetcher_with_progress(root, transport, fake_time: FakeTime, messages: list[str]):
+    from euroleague.fetch import ArchiveFetcher
+
+    return ArchiveFetcher(
+        transport=transport,
+        cache_root=root,
+        sleep=fake_time.sleep,
+        monotonic=fake_time.monotonic,
+        utc_now=fake_time.utc_now,
+        progress=messages.append,
+    )
 
 
 def make_fetcher(root, transport: RecordingTransport, fake_time: FakeTime | None = None):
@@ -215,17 +232,95 @@ def test_404_is_recorded_and_the_next_game_continues(tmp_path) -> None:
     assert summary.failed_targets == 0
 
 
-def test_unplayed_schedule_entries_complete_without_requests(tmp_path) -> None:
+def test_unplayed_schedule_entries_complete_without_game_requests(tmp_path) -> None:
+    """An unplayed game is a normal skip: it costs the schedule check and nothing more."""
     write_schedule(tmp_path, [{"gameCode": 9, "played": False}])
-    transport = RecordingTransport([])
+    transport = RecordingTransport([StubResponse(200, {}, schedule_bytes([]))])
 
     summary = make_fetcher(tmp_path, transport).fetch_season("E2025")
 
-    assert transport.calls == []
-    assert summary.scheduled_games == 1
+    assert [url for url, _timeout in transport.calls if "gamecode=" in url] == []
+    assert summary.scheduled_games == 0
     assert summary.played_games == 0
-    assert summary.unplayed_games == 1
     assert summary.failed_targets == 0
+
+
+def test_a_complete_cached_schedule_is_reused_without_any_request(tmp_path) -> None:
+    """Break caught: finished seasons pay a refresh request they cannot benefit from."""
+    write_schedule(tmp_path, [{"gameCode": 7, "played": True}])
+    for endpoint in ENDPOINTS:
+        path = tmp_path / "E2025" / endpoint / "7.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"already here")
+    transport = RecordingTransport([])
+
+    make_fetcher(tmp_path, transport).fetch_season("E2025")
+
+    assert transport.calls == []
+
+
+def test_an_incomplete_cached_schedule_is_refreshed_before_targets_are_derived(tmp_path) -> None:
+    """Break caught: games played since the cached schedule are skipped in silence."""
+    write_schedule(tmp_path, [{"gameCode": 7, "played": True}, {"gameCode": 8, "played": False}])
+    for endpoint in ENDPOINTS:
+        path = tmp_path / "E2025" / endpoint / "7.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"already here")
+    refreshed = schedule_bytes([{"gameCode": 7, "played": True}, {"gameCode": 8, "played": True}])
+    transport = RecordingTransport(
+        [StubResponse(200, {}, refreshed)] + [StubResponse(200, {}, b"new game")] * len(ENDPOINTS)
+    )
+
+    summary = make_fetcher(tmp_path, transport).fetch_season("E2025")
+
+    assert summary.played_games == 2
+    assert summary.fetched_files == len(ENDPOINTS)
+    for endpoint in ENDPOINTS:
+        assert (tmp_path / "E2025" / endpoint / "8.json").read_bytes() == b"new game"
+
+
+def test_a_changed_schedule_keeps_the_body_it_supersedes(tmp_path) -> None:
+    """Break caught: a refresh overwrites response history, which CLAUDE.md forbids."""
+    write_schedule(tmp_path, [{"gameCode": 8, "played": False}])
+    original = (tmp_path / "E2025" / "schedule.json").read_bytes()
+    refreshed = schedule_bytes([{"gameCode": 8, "played": True}])
+    transport = RecordingTransport(
+        [StubResponse(200, {}, refreshed)] + [StubResponse(200, {}, b"body")] * len(ENDPOINTS)
+    )
+
+    make_fetcher(tmp_path, transport).fetch_season("E2025")
+
+    assert (tmp_path / "E2025" / "schedule.json").read_bytes() == refreshed
+    superseded = list((tmp_path / "E2025").glob("schedule.*.json"))
+    assert [path.read_bytes() for path in superseded] == [original]
+
+
+def test_an_unchanged_schedule_refresh_writes_no_second_copy(tmp_path) -> None:
+    """Break caught: every run of an unfinished season litters a duplicate schedule."""
+    write_schedule(tmp_path, [{"gameCode": 8, "played": False}])
+    unchanged = (tmp_path / "E2025" / "schedule.json").read_bytes()
+    transport = RecordingTransport([StubResponse(200, {}, unchanged)])
+
+    make_fetcher(tmp_path, transport).fetch_season("E2025")
+
+    assert list((tmp_path / "E2025").glob("schedule.*.json")) == []
+
+
+def test_a_failed_schedule_refresh_falls_back_to_the_cached_copy(tmp_path) -> None:
+    """Break caught: a refresh outage aborts a season the cache could still serve."""
+    write_schedule(tmp_path, [{"gameCode": 7, "played": True}, {"gameCode": 8, "played": False}])
+    messages: list[str] = []
+    fake_time = FakeTime()
+    transport = RecordingTransport(
+        [StubResponse(503, {}, b"down")] * 6 + [StubResponse(200, {}, b"body")] * len(ENDPOINTS)
+    )
+    fetcher = _fetcher_with_progress(tmp_path, transport, fake_time, messages)
+
+    summary = fetcher.fetch_season("E2025")
+
+    assert summary.played_games == 1
+    assert summary.total_targets == len(ENDPOINTS)
+    assert any("schedule refresh failed" in message for message in messages)
 
 
 def test_logged_404_is_not_requested_after_restart(tmp_path) -> None:

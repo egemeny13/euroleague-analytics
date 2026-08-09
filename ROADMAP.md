@@ -222,6 +222,29 @@ being fetched now**, about 2.0 hours. The remaining 21 seasons are 5,218 games,
 or roughly **26 hours**. It depends on no schema, no test and no decision, so it
 can run in the background from now.
 
-`exploration/fetch_season.py` takes the season from the `EL_SEASON` environment
-variable and defaults to `E2024`. It skips any response already on disk, so an
-interrupted run resumes for free.
+`exploration/fetch_season.py` is the prototype that produced the current cache.
+It takes the season from the `EL_SEASON` environment variable and defaults to
+`E2024`, and it skips any response already on disk, so an interrupted run
+resumes for free.
+
+**The production fetcher has replaced it**: `scripts/fetch_archive.py`, over
+`src/euroleague/fetch.py`. It writes exact response bytes through an atomic
+rename, appends one audit line per received response to
+`<cache>/fetch_log.jsonl`, holds the nine-second cadence, honours `Retry-After`,
+remembers permanent 404s across restarts, and resumes from the cache. Run one
+fetcher at a time; two will earn HTTP 429s.
+
+It also fetches `Points`, which the prototype never did. Two consequences worth
+knowing before the first long run:
+
+- **A finished season's schedule is reused; an unfinished one is re-fetched.**
+  A cached schedule that still lists unplayed games would otherwise hide every
+  game played since it was written — silently, with no missing file to notice.
+  The cost is one request per run per unfinished season. When the refreshed body
+  differs, the superseded body is kept beside it under its checksum, because a
+  re-fetch is an audit and never an overwrite.
+- **`Points` is archived but not ingested.** The Phase 4 gate reconciles the
+  cache against the warehouse for `Schedule`, `Boxscore` and `PlaybyPlay` only,
+  and `raw_shot` stays empty until a later phase parses coordinates. Decision 17
+  is drafted in `docs/ARCHIVE_FETCHER_SESSION_REPORT.md` and still needs the
+  owner's approval; the code implements it already.

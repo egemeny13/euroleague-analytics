@@ -83,6 +83,25 @@ def _write_exact(path: Path, body: bytes) -> None:
     os.replace(temporary, path)
 
 
+def _preserve_superseded(path: Path, body: bytes) -> None:
+    """Keep the body a refresh replaces, addressed by its own checksum.
+
+    CLAUDE.md forbids overwriting response history: a re-fetch is an audit. The
+    canonical path always holds the current body, and every body it ever held
+    stays beside it under its checksum.
+    """
+    digest = sha256(body).hexdigest()[:16]
+    superseded = path.with_name(f"{path.stem}.{digest}{path.suffix}")
+    if not superseded.exists():
+        _write_exact(superseded, body)
+
+
+def _schedule_is_complete(schedule: Mapping[str, object]) -> bool:
+    """True once every scheduled game is played, which makes the schedule final."""
+    games = list(schedule.get("data") or [])
+    return bool(games) and all(game.get("played") is True for game in games)
+
+
 class ArchiveFetcher:
     def __init__(
         self,
@@ -206,26 +225,46 @@ class ArchiveFetcher:
             return response
         return None
 
+    def _request_schedule(self, season_code: str) -> ResponseLike | None:
+        return self._request_with_retry(
+            season_code=season_code,
+            gamecode=None,
+            endpoint="Schedule",
+            url=_schedule_url(season_code),
+        )
+
     def _read_or_fetch_schedule(self, season_code: str) -> dict[str, object]:
         path = self.cache.schedule_path(season_code)
-        if path.exists():
-            body = path.read_bytes()
-        else:
-            url = _schedule_url(season_code)
-            response = self._request_with_retry(
-                season_code=season_code,
-                gamecode=None,
-                endpoint="Schedule",
-                url=url,
-            )
+        if not path.exists():
+            response = self._request_schedule(season_code)
             if response is None or response.status_code != 200:
                 raise FetchError(
                     f"Could not fetch the schedule for {season_code}; no game targets "
                     f"can be derived. Restore or fetch {path}."
                 )
-            body = response.content
-            _write_exact(path, body)
-        return json.loads(body)
+            _write_exact(path, response.content)
+            return json.loads(response.content)
+
+        body = path.read_bytes()
+        schedule = json.loads(body)
+        if _schedule_is_complete(schedule):
+            return schedule
+
+        # An unfinished season keeps gaining played games after its schedule was
+        # cached. Trusting the cached copy would skip every game played since,
+        # with no error and no missing-file to notice. One request per run.
+        response = self._request_schedule(season_code)
+        if response is None or response.status_code != 200:
+            self.progress(
+                f"schedule refresh failed for {season_code}; continuing from the cached "
+                f"copy at {path}, which may not list recently played games"
+            )
+            return schedule
+        if response.content == body:
+            return schedule
+        _preserve_superseded(path, body)
+        _write_exact(path, response.content)
+        return json.loads(response.content)
 
     def _permanent_404s(self) -> set[tuple[str, int, str]]:
         if not self.fetch_log_path.exists():
