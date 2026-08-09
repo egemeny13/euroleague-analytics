@@ -7,6 +7,8 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from psycopg import sql
+
 from euroleague.archive import build_archive_object
 from euroleague.cache import ResponseCache
 from euroleague.derived import PHASE_5_SEASON, E2024OnlyError, LineupUsage
@@ -286,7 +288,7 @@ def projected_database_growth_bytes(
 
 
 def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str, int]:
-    """Prove the pre-lineup E2024 dimensions and event rows match the raw layer."""
+    """Prove E2024 dimensions and event rows still match the raw layer."""
     if season_code != PHASE_5_SEASON:
         raise E2024OnlyError(
             f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
@@ -352,13 +354,11 @@ def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str
             """
             SELECT count(*) FROM game_event
             WHERE season_code = %s
-              AND (home_lineup_id IS NOT NULL OR away_lineup_id IS NOT NULL
-                   OR stint_index IS NOT NULL OR possession_index IS NOT NULL
-                   OR free_throw_trip_id IS NOT NULL)
+              AND (possession_index IS NOT NULL OR free_throw_trip_id IS NOT NULL)
             """,
             (season_code,),
         )
-        premature_rows = int(cursor.fetchone()[0])
+        phase6_rows = int(cursor.fetchone()[0])
         cursor.execute(
             "SELECT count(*) FROM player WHERE player_id = ANY(%s)",
             (list(COACH_IDS),),
@@ -370,10 +370,8 @@ def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str
             f"game_event differs from raw_event: keys={key_differences}, "
             f"payload_rows={payload_differences}."
         )
-    if premature_rows:
-        raise AssertionError(
-            f"Found {premature_rows} game_event rows with pre-decision lineup or Phase 6 values."
-        )
+    if phase6_rows:
+        raise AssertionError(f"Found {phase6_rows} game_event rows with Phase 6 values.")
     if coach_players:
         raise AssertionError(f"Found {coach_players} coach pseudo-identifiers in player.")
     if possession_count:
@@ -520,3 +518,295 @@ def measure_lineup_identifier_widths(
 ) -> dict[int, LineupIdentifierWidth]:
     """Measure full E2024-usage storage for the three owner decision options."""
     return {width: _measure_lineup_width(connection, usage, width) for width in (64, 32, 12)}
+
+
+def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int]:
+    """Enforce every persisted E2024 lineup, minute, quality, and scope gate."""
+    if season_code != PHASE_5_SEASON:
+        raise E2024OnlyError(
+            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
+        )
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                (SELECT count(*) FROM lineup),
+                (SELECT count(*) FROM lineup_stint WHERE season_code = %s),
+                (SELECT count(*) FROM game_event WHERE season_code = %s),
+                (SELECT count(*) FROM player_game_minutes WHERE season_code = %s),
+                (SELECT count(*) FROM game_quality WHERE season_code = %s),
+                (SELECT count(*) FROM possession)
+            """,
+            (season_code,) * 4,
+        )
+        lineup_count, stint_count, event_count, minute_count, quality_count, possession_count = (
+            int(value) for value in cursor.fetchone()
+        )
+
+        cursor.execute("SELECT count(*) FROM lineup WHERE length(lineup_id) <> 32")
+        wrong_width = int(cursor.fetchone()[0])
+        cursor.execute(
+            """
+            SELECT count(*) FROM game_event
+            WHERE season_code = %s
+              AND (home_lineup_id IS NULL OR away_lineup_id IS NULL OR stint_index IS NULL
+                   OR possession_index IS NOT NULL OR free_throw_trip_id IS NOT NULL)
+            """,
+            (season_code,),
+        )
+        unattached_events = int(cursor.fetchone()[0])
+        cursor.execute(
+            """
+            SELECT count(*)
+            FROM game_event event
+            JOIN lineup_stint stint
+              USING (season_code, gamecode, stint_index)
+            WHERE event.season_code = %s
+              AND (event.home_lineup_id IS DISTINCT FROM stint.home_lineup_id
+                   OR event.away_lineup_id IS DISTINCT FROM stint.away_lineup_id)
+            """,
+            (season_code,),
+        )
+        event_stint_mismatches = int(cursor.fetchone()[0])
+        cursor.execute(
+            """
+            SELECT count(*)
+            FROM lineup_stint stint
+            JOIN raw_game game USING (season_code, gamecode)
+            JOIN lineup home ON home.lineup_id = stint.home_lineup_id
+            JOIN lineup away ON away.lineup_id = stint.away_lineup_id
+            WHERE stint.season_code = %s
+              AND (home.team_code IS DISTINCT FROM game.local_team_code
+                   OR away.team_code IS DISTINCT FROM game.road_team_code)
+            """,
+            (season_code,),
+        )
+        wrong_sides = int(cursor.fetchone()[0])
+        cursor.execute(
+            """
+            SELECT count(*) FROM (
+                SELECT gamecode, period, codeteam, markertime
+                FROM game_event
+                WHERE season_code = %s AND playtype IN ('IN', 'OUT')
+                GROUP BY gamecode, period, codeteam, markertime
+                HAVING count(*) FILTER (WHERE playtype = 'IN')
+                    <> count(*) FILTER (WHERE playtype = 'OUT')
+            ) unpaired
+            """,
+            (season_code,),
+        )
+        unpaired_batches = int(cursor.fetchone()[0])
+        cursor.execute(
+            """
+            SELECT count(*) FROM (
+                SELECT minutes.gamecode, minutes.team_code
+                FROM player_game_minutes minutes
+                JOIN (
+                    SELECT gamecode, 2400 + greatest(max(period) - 4, 0) * 300 AS game_seconds
+                    FROM game_event WHERE season_code = %s GROUP BY gamecode
+                ) length USING (gamecode)
+                WHERE minutes.season_code = %s
+                GROUP BY minutes.gamecode, minutes.team_code, length.game_seconds
+                HAVING sum(seconds_raw) <> 5 * length.game_seconds
+                    OR sum(seconds_corrected) <> 5 * length.game_seconds
+            ) bad_team_minutes
+            """,
+            (season_code, season_code),
+        )
+        bad_team_minutes = int(cursor.fetchone()[0])
+        cursor.execute(
+            """
+            SELECT
+                coalesce(sum(oncourt_violations), 0),
+                coalesce(sum(pairing_errors), 0),
+                coalesce(sum(phantom_events), 0),
+                coalesce(sum(minute_mismatches_raw), 0),
+                coalesce(sum(minute_mismatches_corrected), 0)
+            FROM game_quality WHERE season_code = %s
+            """,
+            (season_code,),
+        )
+        oncourt, pairing, attribution, raw_minutes, corrected_minutes = (
+            int(value) for value in cursor.fetchone()
+        )
+        cursor.execute(
+            """
+            SELECT
+                array_agg(gamecode ORDER BY gamecode)
+                    FILTER (WHERE minute_mismatches_corrected > 0),
+                array_agg(gamecode ORDER BY gamecode)
+                    FILTER (WHERE phantom_events > 0),
+                count(*) FILTER (WHERE correction_applied AND correction_helped IS NOT TRUE)
+            FROM game_quality WHERE season_code = %s
+            """,
+            (season_code,),
+        )
+        minute_games, attribution_games, unhelpful_applied = cursor.fetchone()
+        cursor.execute(
+            """
+            SELECT
+                count(*) FILTER (WHERE elapsed_seconds_corrected <> elapsed_seconds_raw),
+                count(*) FILTER (WHERE attribution_suspect)
+            FROM game_event WHERE season_code = %s
+            """,
+            (season_code,),
+        )
+        corrected_event_rows, suspect_event_rows = (int(value) for value in cursor.fetchone())
+        cursor.execute(
+            """
+            SELECT gamecode, excluded_by_default, quarantine_reasons,
+                   minute_mismatches_corrected, phantom_events, oncourt_violations
+            FROM game_quality
+            WHERE season_code = %s
+            ORDER BY gamecode
+            """,
+            (season_code,),
+        )
+        quarantine_control_failures: list[int] = []
+        for (
+            gamecode,
+            excluded_by_default,
+            quarantine_reasons,
+            minute_mismatches_corrected,
+            phantom_events,
+            oncourt_violations,
+        ) in cursor.fetchall():
+            expected_reasons: list[str] = []
+            if minute_mismatches_corrected:
+                expected_reasons.append("minutes_mismatch")
+            if phantom_events:
+                expected_reasons.append("off_court_attribution")
+            if oncourt_violations:
+                expected_reasons.append("not_five_on_court")
+            if (
+                bool(excluded_by_default) != bool(expected_reasons)
+                or list(quarantine_reasons) != expected_reasons
+            ):
+                quarantine_control_failures.append(int(gamecode))
+        cursor.execute(
+            """
+            SELECT
+                (SELECT count(*) FROM game_event WHERE season_code <> %s)
+              + (SELECT count(*) FROM lineup_stint WHERE season_code <> %s)
+              + (SELECT count(*) FROM player_game_minutes WHERE season_code <> %s)
+              + (SELECT count(*) FROM game_quality WHERE season_code <> %s)
+            """,
+            (season_code,) * 4,
+        )
+        other_season_rows = int(cursor.fetchone()[0])
+
+    failures = {
+        "wrong_width": wrong_width,
+        "unattached_events": unattached_events,
+        "event_stint_mismatches": event_stint_mismatches,
+        "wrong_sides": wrong_sides,
+        "unpaired_batches": unpaired_batches,
+        "bad_team_minutes": bad_team_minutes,
+        "oncourt": oncourt,
+        "pairing": pairing,
+        "unhelpful_applied": int(unhelpful_applied),
+        "quarantine_controls": len(quarantine_control_failures),
+        "other_season_rows": other_season_rows,
+        "possession": possession_count,
+    }
+    if any(failures.values()):
+        raise AssertionError(f"Phase 5 warehouse invariant failures: {failures}")
+    if (attribution, raw_minutes, corrected_minutes) != (7, 36, 4):
+        raise AssertionError(
+            "Quality totals differ from E2024: "
+            f"attribution={attribution}, raw_minutes={raw_minutes}, "
+            f"corrected_minutes={corrected_minutes}."
+        )
+    if tuple(minute_games or ()) != (43, 98):
+        raise AssertionError(f"Corrected-minute quarantine differs: {minute_games}.")
+    if tuple(attribution_games or ()) != (23, 63, 72, 131, 139, 242, 323):
+        raise AssertionError(f"Attribution quarantine differs: {attribution_games}.")
+    if (corrected_event_rows, suspect_event_rows) != (32, 7):
+        raise AssertionError(
+            f"Event diagnostics differ: corrected={corrected_event_rows}, "
+            f"suspect={suspect_event_rows}."
+        )
+    return {
+        "lineup": lineup_count,
+        "lineup_stint": stint_count,
+        "game_event": event_count,
+        "player_game_minutes": minute_count,
+        "game_quality": quality_count,
+        "possession": possession_count,
+    }
+
+
+def derived_snapshot(connection: Any, season_code: str) -> dict[str, TableFingerprint]:
+    """Fingerprint every Phase 5 table so a second load must reproduce it exactly."""
+    queries = {
+        "lineup": (
+            """
+            SELECT count(*), md5(coalesce(string_agg(
+                md5(to_jsonb(t)::text), '' ORDER BY lineup_id
+            ), '')) FROM lineup t
+            """,
+            (),
+        ),
+        "lineup_stint": (
+            """
+            SELECT count(*), md5(coalesce(string_agg(
+                md5(to_jsonb(t)::text), '' ORDER BY gamecode, stint_index
+            ), '')) FROM lineup_stint t WHERE season_code = %s
+            """,
+            (season_code,),
+        ),
+        "game_event": (
+            """
+            SELECT count(*), md5(coalesce(string_agg(
+                md5(to_jsonb(t)::text), '' ORDER BY gamecode, ingest_index
+            ), '')) FROM game_event t WHERE season_code = %s
+            """,
+            (season_code,),
+        ),
+        "player_game_minutes": (
+            """
+            SELECT count(*), md5(coalesce(string_agg(
+                md5(to_jsonb(t)::text), '' ORDER BY gamecode, player_id
+            ), '')) FROM player_game_minutes t WHERE season_code = %s
+            """,
+            (season_code,),
+        ),
+        "game_quality": (
+            """
+            SELECT count(*), md5(coalesce(string_agg(
+                md5(to_jsonb(t)::text), '' ORDER BY gamecode
+            ), '')) FROM game_quality t WHERE season_code = %s
+            """,
+            (season_code,),
+        ),
+        "possession": (
+            """
+            SELECT count(*), md5(coalesce(string_agg(
+                md5(to_jsonb(t)::text), '' ORDER BY season_code, gamecode, possession_index
+            ), '')) FROM possession t
+            """,
+            (),
+        ),
+    }
+    result: dict[str, TableFingerprint] = {}
+    with connection.cursor() as cursor:
+        for table, (query, params) in queries.items():
+            cursor.execute(query, params)
+            count, checksum = cursor.fetchone()
+            result[table] = TableFingerprint(int(count), str(checksum))
+    return result
+
+
+def compact_public_tables(connection: Any) -> tuple[str, ...]:
+    """Fully compact every public table and rebuild each table's indexes."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename"
+        )
+        tables = tuple(str(row[0]) for row in cursor.fetchall())
+    for table in tables:
+        relation = sql.Identifier("public", table)
+        with connection.cursor() as cursor:
+            cursor.execute(sql.SQL("VACUUM (FULL, ANALYZE) {}").format(relation))
+            cursor.execute(sql.SQL("REINDEX TABLE {}").format(relation))
+    return tables

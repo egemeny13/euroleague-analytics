@@ -8,7 +8,9 @@ from euroleague.derived import (
     E2024OnlyError,
     build_dimensions,
     build_game_events,
+    build_remaining_rows,
     discover_lineup_usage,
+    lineup_identifier,
 )
 
 
@@ -160,6 +162,72 @@ def test_lineup_usage_counts_only_stable_atomic_five_man_units(fixture_cache) ->
     assert usage.possession_lineups == ()
 
 
+def test_lineup_identifier_is_the_selected_32_character_sha256_prefix() -> None:
+    """Break caught: the owner-selected width or canonical encoding changes silently."""
+    unit = ("AAA", "P1", "P2", "P3", "P4", "P5")
+
+    assert lineup_identifier(unit) == "72a1584655561ed0ca76a229bdff7653"
+
+
+def test_remaining_fixture_rows_have_the_real_grains_and_matchup_boundaries(
+    fixture_cache,
+) -> None:
+    """Break caught: persistence changes grain or splits a substitution batch."""
+    rows = build_remaining_rows(fixture_cache, "E2024")
+
+    assert len(rows.lineups) == 321
+    assert len(rows.stints) == 417
+    assert len(rows.event_attachments) == 5087
+    assert len(rows.player_minutes) == 212
+    assert len(rows.game_qualities) == 9
+    assert len({row.lineup_id for row in rows.lineups}) == 321
+    assert all(len(row.lineup_id) == 32 for row in rows.lineups)
+
+    game_one_stints = [row for row in rows.stints if row.gamecode == 1]
+    assert game_one_stints[0].stint_index == 0
+    assert game_one_stints[0].start_ingest_index == 0
+    assert game_one_stints[0].end_ingest_index == 49
+    assert game_one_stints[0].start_elapsed_raw == 0
+    assert game_one_stints[0].end_elapsed_raw == 292
+    assert game_one_stints[0].duration_seconds_raw == 292
+    assert game_one_stints[0].home_points == 5
+    assert game_one_stints[0].away_points == 9
+    assert sum(row.duration_seconds_raw for row in game_one_stints) == 2400
+    assert sum(row.duration_seconds_corrected for row in game_one_stints) == 2400
+
+    game_one_attachments = [row for row in rows.event_attachments if row.gamecode == 1]
+    assert [row.ingest_index for row in game_one_attachments] == list(range(458))
+    assert all(row.possession_index is None for row in game_one_attachments)
+
+
+def test_quality_rows_generate_the_fixture_quarantine_instead_of_hard_coding_it(
+    fixture_cache,
+) -> None:
+    """Break caught: persisted quarantine disagrees with Phase 3 validation output."""
+    rows = build_remaining_rows(fixture_cache, "E2024")
+
+    minute_games = {row.gamecode for row in rows.game_qualities if row.minute_mismatches_corrected}
+    attribution_games = {row.gamecode for row in rows.game_qualities if row.phantom_events}
+    oncourt_games = {row.gamecode for row in rows.game_qualities if row.oncourt_violations}
+    assert minute_games == {43, 98}
+    assert attribution_games == {23, 131, 323}
+    assert oncourt_games == set()
+    assert all(row.pairing_errors == 0 for row in rows.game_qualities)
+
+
+def test_overtime_correction_changes_stint_durations_but_no_lineup_or_span(
+    fixture_cache,
+) -> None:
+    """Break caught: the duration correction moves a persisted lineup boundary."""
+    rows = build_remaining_rows(fixture_cache, "E2024")
+    game_35 = [row for row in rows.stints if row.gamecode == 35]
+
+    assert any(row.duration_seconds_raw != row.duration_seconds_corrected for row in game_35)
+    assert sum(row.duration_seconds_raw for row in game_35) == 2700
+    assert sum(row.duration_seconds_corrected for row in game_35) == 2700
+    assert all(row.start_ingest_index <= row.end_ingest_index for row in game_35)
+
+
 @pytest.mark.full_season
 def test_full_e2024_base_rows_match_the_published_season_counts() -> None:
     """Season claim protected: fixture coverage cannot establish full-season counts."""
@@ -191,3 +259,86 @@ def test_full_e2024_lineup_usage_has_the_real_storage_population() -> None:
     assert len(usage.event_lineups) == 176_483
     assert len(usage.stint_lineups) == 13_927
     assert usage.possession_lineups == ()
+
+
+@pytest.mark.full_season
+def test_full_e2024_remaining_rows_pass_every_phase_5_population_gate() -> None:
+    """Season claim protected: all persisted grains and quarantines match Phase 3."""
+    from collections import defaultdict
+
+    from euroleague.cache import ResponseCache
+
+    rows = build_remaining_rows(ResponseCache("exploration/cache"), "E2024")
+
+    assert len(rows.lineups) == 5985
+    assert len(rows.stints) == 13_927
+    assert len(rows.event_attachments) == 176_483
+    assert len(rows.player_minutes) == 7863
+    assert len(rows.game_qualities) == 330
+    assert len({row.lineup_id for row in rows.lineups}) == 5985
+    assert all(len(row.lineup_id) == 32 for row in rows.lineups)
+    assert {row.gamecode for row in rows.stints if row.duration_seconds_raw < 0} == {
+        69,
+        82,
+        185,
+        307,
+        308,
+    }
+    assert {row.gamecode for row in rows.stints if row.duration_seconds_corrected < 0} == {
+        69,
+        82,
+        185,
+        272,
+        307,
+        308,
+    }
+
+    raw_team_seconds = defaultdict(int)
+    corrected_team_seconds = defaultdict(int)
+    for row in rows.player_minutes:
+        raw_team_seconds[(row.gamecode, row.team_code)] += row.seconds_raw
+        corrected_team_seconds[(row.gamecode, row.team_code)] += row.seconds_corrected
+    game_seconds = {
+        row.gamecode: sum(
+            stint.duration_seconds_raw for stint in rows.stints if stint.gamecode == row.gamecode
+        )
+        for row in rows.game_qualities
+    }
+    for key, seconds in raw_team_seconds.items():
+        assert seconds == 5 * game_seconds[key[0]]
+        assert corrected_team_seconds[key] == 5 * game_seconds[key[0]]
+    for gamecode in game_seconds:
+        assert (
+            sum(
+                stint.duration_seconds_corrected
+                for stint in rows.stints
+                if stint.gamecode == gamecode
+            )
+            == game_seconds[gamecode]
+        )
+
+    assert {row.gamecode for row in rows.game_qualities if row.minute_mismatches_corrected} == {
+        43,
+        98,
+    }
+    assert {row.gamecode for row in rows.game_qualities if row.phantom_events} == {
+        23,
+        63,
+        72,
+        131,
+        139,
+        242,
+        323,
+    }
+    assert not any(row.oncourt_violations for row in rows.game_qualities)
+    assert not any(row.pairing_errors for row in rows.game_qualities)
+    for row in rows.game_qualities:
+        expected_reasons = []
+        if row.minute_mismatches_corrected:
+            expected_reasons.append("minutes_mismatch")
+        if row.phantom_events:
+            expected_reasons.append("off_court_attribution")
+        if row.oncourt_violations:
+            expected_reasons.append("not_five_on_court")
+        assert row.quarantine_reasons == expected_reasons
+        assert row.excluded_by_default == bool(expected_reasons)
