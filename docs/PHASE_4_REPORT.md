@@ -7,6 +7,14 @@
 
 > **Compaction correction:** The original 1,023,918,080-byte projection below is retained as historical evidence. Immediately after removing dead table/index space, the table-based projection was 645,070,848 bytes and billing-aware whole-database projection was 725,786,624 bytes. Routine vacuum metadata makes the operational projections slightly higher—647,561,216 and 728,276,992 bytes respectively. All figures exceed budget. See “Correction — compacted physical-size gate.”
 
+> **Season-count correction, 2026-08-10.** The projections here multiply by 19
+> seasons, an assumption that had never been measured. Measured: the API serves
+> E2003–E2026, so **23 seasons are complete** (E2003–E2025), and 23 is a floor
+> because codes below E2003 were not probed. At 23 the raw-layer table
+> projection becomes **1,239,367,680 bytes** against the same 474,311,115-byte
+> budget — still failing, by a wider margin. Seasons are also not uniformly
+> sized: E2024 is 330 games, E2025 is 402. See `DECISIONS.md` item 8.
+
 ## Result
 
 E2024 was loaded from the existing disk cache without any EuroLeague API request. Every parsed raw table reconciles per game, all 661 archived bodies reconcile by both checksums, and a second complete load left every raw-table count and content fingerprint unchanged.

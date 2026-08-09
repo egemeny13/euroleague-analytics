@@ -10,6 +10,25 @@
 
 **Possessions:** Not started; `possession` is empty
 
+> **Season-count correction, 2026-08-10.** Every projection in this report
+> multiplies by 19 seasons. That number was an assumption inherited from
+> `DECISIONS.md` item 8 and had never been measured. It has now been measured:
+> the API serves E2003–E2026, so **23 seasons are complete** (E2003–E2025), and
+> 23 is a floor because codes below E2003 were not probed. Substituting 23 for
+> 19 without re-measuring anything else: the table projection becomes
+> **2,071,412,736 bytes** and the billing-aware projection **2,176,204,800
+> bytes**. Both still exceed the 474,311,115-byte budget, so the verdict is
+> unchanged and only the margin widens.
+>
+> A second correction matters more for planning. These figures price an
+> "E2024-sized season" at 330 games, but **E2025 is 402 games** after the
+> expansion to 20 teams, so a current season costs about 22% more than this
+> unit. The per-season figures below should be re-derived **per game** once
+> E2025 is loaded. The measured per-game cost implied here is 286,720 bytes.
+>
+> The measured E2024 bytes in this report are unaffected — they are readings,
+> not extrapolations.
+
 ## Result
 
 Phase 5 persisted the already-validated Phase 3 lineup reconstruction into the

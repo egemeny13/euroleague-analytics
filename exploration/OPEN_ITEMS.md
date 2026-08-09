@@ -253,9 +253,18 @@ game.
   work. That ratio is architectural; actual CPU time remains unmeasured until
   the derived pipeline exists.
 
-## Decision 8 — archive all 19 seasons; keep the event table lean
+## Decision 8 — archive all seasons; keep the event table lean
 
-**Recommend backfilling all 19 available seasons into the immutable response
+> **⚠️ The "19 seasons" in this section was never measured, and it is wrong.**
+> Measured on 2026-08-10: the API serves E2003–E2026, so **23 complete seasons**
+> exist (E2003–E2025), and 23 is a floor because codes below E2003 were not
+> probed. Seasons are also not all E2024-sized — E2024 is 330 games, E2025 is
+> 402. Every per-season extrapolation below therefore uses both the wrong count
+> and a unit that is ~22% too small for a current season. `DECISIONS.md` item 8
+> carries the corrected figures and is authoritative. The text below is retained
+> as the Phase 1 record.
+
+**Recommend backfilling all available seasons into the immutable response
 archive and into the core `raw_event` shape, subject to a physical-size gate
 when DDL is approved.** The measured logical values for 19 E2024-sized core
 seasons are 172.93 MB, leaving 327.07 MB of the stated 500 MB before physical
@@ -303,5 +312,5 @@ recovered and backfilled losslessly from the archive.
 |---|---|
 | 7 — response handling | Immutable, checksum-addressed versions; deduplicate identical bodies; never overwrite history |
 | 7 — rebuild scope | Per-game rebuild on source revision; wholesale only for cross-season logic/schema changes |
-| 8 — backfill | Archive all 19 seasons and target all 19 for core `raw_event`, with a physical staging-size gate before production load |
+| 8 — backfill | Archive all seasons and target all of them for core `raw_event`, with a physical staging-size gate before production load. The count said 19 here; it was measured as 23 on 2026-08-10 — see `DECISIONS.md` item 8 |
 | 8 — optional event text | Drop `player_name`, `dorsal`, and `playinfo` from `raw_event`; no side table; recover from archived payload on demand |

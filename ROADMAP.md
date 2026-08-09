@@ -27,8 +27,9 @@ consumed unmodified, and the failure surface is a single known defect.
 - Item 7: 0 of 60 sampled historical responses changed; immutable,
   checksum-addressed versions and per-game derived rebuilds approved
 - Item 8: 82.434 logical bytes/event with the optional text and 51.572 without;
-  all 19 seasons targeted, optional event text dropped, physical-size gate
-  required before production backfill
+  all seasons targeted, optional event text dropped, physical-size gate
+  required before production backfill. The season count was amended from an
+  unmeasured 19 to a measured 23 on 2026-08-10 — see `DECISIONS.md` item 8.
 
 ---
 
@@ -205,14 +206,22 @@ Then begin the next unfinished phase as described in ROADMAP.md.
 
 ## Long-lead item — start it early, it blocks nothing
 
-Only E2024 is cached. The other seasons have not been fetched, and fetching is
-the slowest thing in the project: 9.0 seconds per response at the safe cadence,
-660 responses for an E2024-sized season, so roughly **1.65 hours per season**
-and an **estimated 28 hours** for eighteen more. It depends on no schema, no
-test and no decision, so it can run in the background from now.
+**The season count is now measured.** On 2026-08-10 one schedule request per
+candidate season code established that the API serves **E2003 through E2026**:
+E2003–E2025 are complete (**23 seasons**), and E2026 is the 2026-27 season with
+380 games scheduled and none played. Probing began at E2003, so 23 is a floor.
+Full table and caveats in `DECISIONS.md` item 8.
 
-One thing to measure before starting it: **how many seasons the API actually
-serves.** "19 available seasons" appears in `DECISIONS.md` item 8 and
-`exploration/OPEN_ITEMS.md`, but no document in this repository measures it. It
-is one request per candidate season code to settle, and every storage
-projection in item 8 rests on the number.
+That measurement also corrected the size unit. **Seasons are not all
+E2024-sized**: E2024 is 330 games, E2025 is 402 after the expansion to 20 teams.
+Across E2003–E2025 the API serves **5,950 played games** in total.
+
+Fetching remains the slowest thing in the project, at 9.0 seconds per response
+and two responses per game. E2024 (330 games) is already cached and **E2025 is
+being fetched now**, about 2.0 hours. The remaining 21 seasons are 5,218 games,
+or roughly **26 hours**. It depends on no schema, no test and no decision, so it
+can run in the background from now.
+
+`exploration/fetch_season.py` takes the season from the `EL_SEASON` environment
+variable and defaults to `E2024`. It skips any response already on disk, so an
+interrupted run resumes for free.

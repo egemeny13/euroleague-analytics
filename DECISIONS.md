@@ -20,7 +20,7 @@ is binding — the decision is only approved with it.
 | 5 | Possession-straddling convention | Approved with one condition |
 | 6 | Clutch splits | Approved, but **re-framed** — read below |
 | 7 | Re-ingest policy | Approved — immutable versions and per-game rebuilds |
-| 8 | Backfill scope and event text | Approved with a physical-size gate |
+| 8 | Backfill scope and event text | Approved with a physical-size gate; season count amended 19 → 23 on 2026-08-10 |
 | 9 | Where the immutable archive lives | Supabase Storage; Postgres holds no bodies |
 | 10 | Migration tooling and the rollback gate | Plain SQL files applied through the Supabase MCP |
 | 11 | EuroCup scope for the October launch | Schema-ready, not loaded |
@@ -191,7 +191,7 @@ time.
 
 ## 8. Backfill scope and storage capacity — approved with a gate
 
-Archive all 19 available seasons and target all 19 for the core `raw_event`
+Archive all 23 available seasons and target all 23 for the core `raw_event`
 shape. Drop `player_name`, `dorsal`, and `playinfo` from `raw_event`; do not move
 them to a one-to-one side table. Recover their exact source values from the
 immutable archived payload when an audit needs them.
@@ -200,8 +200,34 @@ immutable archived payload when an audit needs them.
 82.434 bytes per row with those columns and 51.572 without them. The three
 columns consume 5,446,579 bytes, 37.44% of the full logical payload, while none
 is used for identity, ordering, lineup reconstruction, or possession
-boundaries. Nineteen E2024-sized core seasons extrapolate to 172,930,818 logical
-value bytes; keeping the three fields raises that estimate to 276,415,819.
+boundaries. Twenty-three E2024-sized core seasons extrapolate to 209,337,306
+logical value bytes; keeping the three fields raises that estimate to
+334,608,623.
+
+**Amendment, 2026-08-10 — the season count was never measured, and it was
+wrong.** This item said 19 available seasons from the day it was written, and
+`ROADMAP.md` flagged that no document in the repository had measured it. It has
+now been measured: one schedule request per candidate season code, at the
+8-second safe cadence.
+
+**E2003 through E2026 all answer.** E2003–E2025 are complete, which is **23
+seasons, not 19**. E2026 is the 2026-27 season — 380 games scheduled, zero
+played. Probing started at E2003, so codes below it were never tested and 23 is
+a floor rather than a ceiling. Two seasons carry real-world cancellations:
+E2019 played 252 of 306 and E2021 played 299 of 327. E2024 returned exactly 330
+played games, matching the validated baseline, which is what makes the rest of
+the table trustworthy.
+
+**The second error is worse than the count.** Every projection here treats a
+season as E2024-sized. **E2024 is 330 games; E2025 is 402**, because the league
+expanded to 20 teams, and E2026 already lists 380 regular-season games. A
+current season is about 22% larger than the unit these estimates are built on,
+so per-season figures understate it. **Cost per game is the honest unit.**
+Re-derive these projections that way once E2025 is loaded and measured; do not
+reuse the E2024 per-season figure for a modern season.
+
+The gate below is unaffected in direction. It failed at 19 seasons and fails by
+a wider margin at 23.
 
 This corrects the earlier unmeasured statement that 19 seasons cannot fit in
 500 MB. The logical values fit; physical PostgreSQL storage is still unknown.
@@ -210,7 +236,7 @@ This corrects the earlier unmeasured statement that 19 seasons cannot fit in
 approved, load one complete season into a dedicated staging table with its real
 primary key and measure table plus indexes with `pg_total_relation_size`.
 Project the whole warehouse, not `raw_event` alone. If it exceeds 500 MB, keep
-all 19 seasons in the immutable archive and reduce only the hot PostgreSQL
+all 23 seasons in the immutable archive and reduce only the hot PostgreSQL
 window. Do not invent that window size before the other tables and database
 overhead are measured.
 

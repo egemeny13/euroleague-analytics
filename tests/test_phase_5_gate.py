@@ -14,6 +14,7 @@ from euroleague.derived import (
 )
 from euroleague.derived_load import load_phase5_base_rows, load_remaining_rows
 from euroleague.gate import (
+    BACKFILL_SEASONS,
     DATABASE_OVERHEAD_ALLOWANCE_BYTES,
     EMPTY_PUBLIC_TABLE_BYTES,
     PHYSICAL_BUDGET_BYTES,
@@ -172,7 +173,7 @@ def test_live_phase_5_second_load_is_idempotent() -> None:
 @pytest.mark.warehouse
 @pytest.mark.full_season
 def test_live_compacted_phase_5_physical_size_gate() -> None:
-    """Break caught: the warehouse grows, or 19 seasons quietly start to look affordable."""
+    """Break caught: the warehouse grows, or 23 seasons quietly start to look affordable."""
     settings = DatabaseSettings.from_env()
     with psycopg.connect(settings.url()) as connection:
         sizes = public_table_sizes(connection)
@@ -181,7 +182,7 @@ def test_live_compacted_phase_5_physical_size_gate() -> None:
     public_total = sum(size.total_bytes for size in sizes.values())
     season_increment = public_total - EMPTY_PUBLIC_TABLE_BYTES
     table_projection = projected_table_bytes(public_total)
-    billed_season_growth = billed_projection // 19
+    billed_season_growth = billed_projection // BACKFILL_SEASONS
     non_relation_growth = billed_season_growth - season_increment
 
     # The public relations hold every warehouse row, and they only move when the
@@ -189,7 +190,7 @@ def test_live_compacted_phase_5_physical_size_gate() -> None:
     assert len(sizes) == 16
     assert public_total == 90_570_752
     assert season_increment == 90_038_272
-    assert table_projection == 1_711_259_648
+    assert table_projection == 2_071_412_736
     assert sizes["game_event"].total_bytes == 50_225_152
     assert sizes["raw_event"].total_bytes == 31_383_552
     assert sizes["possession"].total_bytes == 49_152
@@ -198,8 +199,9 @@ def test_live_compacted_phase_5_physical_size_gate() -> None:
     # space. It moves on its own, so it is bounded rather than pinned.
     assert 0 <= non_relation_growth <= DATABASE_OVERHEAD_ALLOWANCE_BYTES
 
-    # The decision this gate exists to protect. Nineteen seasons do not fit, and
-    # that verdict is nowhere near the boundary.
+    # The decision this gate exists to protect. Twenty-three seasons do not fit,
+    # and that verdict is nowhere near the boundary. It was already the verdict
+    # at the unmeasured 19, and the measured 23 only widens the gap.
     assert billed_projection > PHYSICAL_BUDGET_BYTES
     assert seasons_within_budget(season_increment, fixed_overhead=EMPTY_PUBLIC_TABLE_BYTES) == 5
 

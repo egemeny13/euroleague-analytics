@@ -30,6 +30,17 @@ EMPTY_PUBLIC_TABLE_BYTES = 532_480
 # and allows the remainder this much room before treating it as a defect. Sized
 # to stay below one tenth of a season's relation cost.
 DATABASE_OVERHEAD_ALLOWANCE_BYTES = 8_388_608
+# Completed seasons the backfill targets. This was an unmeasured 19 until
+# 2026-08-10, when one schedule request per candidate season code measured the
+# real range: E2003 through E2025 are complete, E2026 is scheduled with zero
+# games played, and codes below E2003 were never probed. So 23 is a floor, not
+# a ceiling. See DECISIONS.md item 8.
+#
+# The projections built on this constant treat every season as E2024-sized, and
+# that is now optimistic: E2024 is 330 games but E2025 is 402, because the
+# league expanded to 20 teams. Cost per game is the honest unit and the figure
+# below should be re-derived that way once E2025 is loaded and measured.
+BACKFILL_SEASONS = 23
 
 
 @dataclass(frozen=True)
@@ -271,7 +282,7 @@ def projected_table_bytes(
     one_season_table_bytes: int,
     *,
     empty_table_bytes: int = EMPTY_PUBLIC_TABLE_BYTES,
-    seasons: int = 19,
+    seasons: int = BACKFILL_SEASONS,
 ) -> int:
     """Project N same-sized seasons while counting fixed table overhead once."""
     incremental = one_season_table_bytes - empty_table_bytes
@@ -296,7 +307,7 @@ def projected_database_growth_bytes(
     connection: Any,
     *,
     empty_project_bytes: int = EMPTY_PROJECT_DATABASE_BYTES,
-    seasons: int = 19,
+    seasons: int = BACKFILL_SEASONS,
 ) -> int:
     """Project charged database growth rather than only selected relations."""
     with connection.cursor() as cursor:
