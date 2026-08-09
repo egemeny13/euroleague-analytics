@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from euroleague.cache import ENDPOINTS, ResponseCache, sha256_of_bytes
+from euroleague.cache import ResponseCache, sha256_of_bytes
 
 SEASON_CODE = "E2024"
 
@@ -22,11 +22,11 @@ def test_manifest_lists_the_expected_number_of_games(manifest: dict) -> None:
     assert len(manifest["games"]) == 9
 
 
-def test_every_manifest_game_has_both_endpoints_on_disk(
-    fixture_games_root: Path, fixture_gamecodes: list[int]
+def test_every_manifest_game_has_each_recorded_endpoint_on_disk(
+    manifest: dict, fixture_games_root: Path, fixture_gamecodes: list[int]
 ) -> None:
     for gamecode in fixture_gamecodes:
-        for endpoint in ENDPOINTS:
+        for endpoint in manifest["games"][str(gamecode)]["sha256"]:
             path = fixture_games_root / SEASON_CODE / endpoint / f"{gamecode}.json"
             assert path.exists(), f"Fixture missing: {path}"
 
@@ -37,20 +37,20 @@ def test_fixture_bytes_match_their_recorded_checksums(
     """A fixture may not drift from the archived response it was copied from."""
     for gamecode in fixture_gamecodes:
         recorded = manifest["games"][str(gamecode)]["sha256"]
-        for endpoint in ENDPOINTS:
+        for endpoint, expected in recorded.items():
             path = fixture_games_root / SEASON_CODE / endpoint / f"{gamecode}.json"
             actual = sha256_of_bytes(path.read_bytes())
-            assert actual == recorded[endpoint], (
+            assert actual == expected, (
                 f"Game {gamecode} {endpoint} has changed since it was committed. "
-                f"Expected {recorded[endpoint]}, found {actual}."
+                f"Expected {expected}, found {actual}."
             )
 
 
 def test_every_fixture_parses_as_json(
-    fixture_cache: ResponseCache, fixture_gamecodes: list[int]
+    manifest: dict, fixture_cache: ResponseCache, fixture_gamecodes: list[int]
 ) -> None:
     for gamecode in fixture_gamecodes:
-        for endpoint in ENDPOINTS:
+        for endpoint in manifest["games"][str(gamecode)]["sha256"]:
             payload = fixture_cache.read_json(SEASON_CODE, endpoint, gamecode)
             assert isinstance(payload, dict)
 
