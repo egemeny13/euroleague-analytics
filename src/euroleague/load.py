@@ -131,6 +131,15 @@ def load_cached_season(
             f"[{index:>3}/{len(games)}] game {gamecode:>3}: "
             f"{counts['raw_event']:,} events, {counts['raw_boxscore_player']:,} players"
         )
+
+    # Re-loading a season replaces every game and leaves old row versions for
+    # PostgreSQL's MVCC readers. A plain vacuum makes that space reusable and
+    # ANALYZE refreshes planner statistics. VACUUM FULL is deliberately not
+    # routine loader work: it rewrites and exclusively locks each table.
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "VACUUM (ANALYZE) raw_game, raw_boxscore_player, raw_boxscore_team, raw_event"
+        )
     return totals
 
 

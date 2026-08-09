@@ -10,6 +10,7 @@ from euroleague.config import DatabaseSettings
 from euroleague.load import (
     DerivedRowsExistError,
     assert_phase4_safe,
+    load_cached_season,
     load_game,
     load_season,
 )
@@ -168,3 +169,32 @@ def test_load_season_opens_autocommit_connection_for_real_per_game_transactions(
 
     assert captured["kwargs"] == {"autocommit": True}
     assert result == {"raw_game": 330}
+
+
+def test_complete_season_load_vacuums_analyzes_replaced_tables(fixture_cache, monkeypatch) -> None:
+    connection = LoaderConnection()
+    monkeypatch.setattr(
+        "euroleague.load.load_game",
+        lambda connection, parsed: {
+            "raw_game": 1,
+            "raw_boxscore_player": len(parsed.players),
+            "raw_boxscore_team": len(parsed.teams),
+            "raw_event": len(parsed.events),
+        },
+    )
+
+    load_cached_season(
+        connection,
+        fixture_cache,
+        "E2024",
+        progress=lambda message: None,
+    )
+
+    maintenance_queries = [
+        " ".join(query.split())
+        for query, _ in connection.executions
+        if query.lstrip().upper().startswith("VACUUM")
+    ]
+    assert maintenance_queries == [
+        "VACUUM (ANALYZE) raw_game, raw_boxscore_player, raw_boxscore_team, raw_event"
+    ]

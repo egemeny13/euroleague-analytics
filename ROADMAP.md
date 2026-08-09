@@ -95,10 +95,14 @@ E2024 was loaded from the existing cache into the raw layer with no EuroLeague
 API requests. Every raw table reconciles per game, all 661 archive checksums
 match, and a second complete load left counts and content fingerprints unchanged.
 
-The physical-size condition did not pass: one measured season projects to
-1,023,918,080 bytes across 19 E2024-sized seasons, above the 474,311,115-byte
-usable budget. No hot-window size has been chosen. The owner must make that
-Decision 8 follow-up before production backfill. See `docs/PHASE_4_REPORT.md`.
+The physical-size condition did not pass. Immediately after full compaction,
+billing-aware whole-database growth projected to 725,786,624 bytes across 19
+E2024-sized seasons; routine vacuum metadata makes the operational projection
+728,276,992 bytes. Both exceed the 474,311,115-byte usable budget. The original
+post-reload measurement was higher because it included dead space; all readings
+and the correction are preserved in `docs/PHASE_4_REPORT.md`. No hot-window
+size has been chosen. The owner must make that Decision 8 follow-up before
+production backfill.
 
 ### Phase 5 — derived layer: lineups and stints
 Build `game_event`, `lineup`, `lineup_stint`, `player_game_minutes`,

@@ -5,6 +5,8 @@
 **Measured:** 2026-08-09  
 **Verdict:** Do not begin the 19-season PostgreSQL backfill until the owner chooses a hot-window policy.
 
+> **Compaction correction:** The original 1,023,918,080-byte projection below is retained as historical evidence. Immediately after removing dead table/index space, the table-based projection was 645,070,848 bytes and billing-aware whole-database projection was 725,786,624 bytes. Routine vacuum metadata makes the operational projections slightly higher—647,561,216 and 728,276,992 bytes respectively. All figures exceed budget. See “Correction — compacted physical-size gate.”
+
 ## Result
 
 E2024 was loaded from the existing disk cache without any EuroLeague API request. Every parsed raw table reconciles per game, all 661 archived bodies reconcile by both checksums, and a second complete load left every raw-table count and content fingerprint unchanged.
@@ -112,6 +114,92 @@ The 25,688,885-byte empty-project database cost is not added again: Decision 12 
 
 The derived tables remain empty because Phase 5 was out of scope. Their current totals contain only relation/index overhead. Adding lineups, stints, minutes, quality, and possessions can only add storage, so the failed budget condition is already decisive.
 
+## Correction — compacted physical-size gate
+
+**Remeasured 2026-08-09.** The original measurement above was accurate for the database state at that moment, but it was not a clean one-season size measurement. The idempotency proof had replaced all 330 games a second time. PostgreSQL kept old row versions as dead tuples, and no full compaction had occurred. Immediately before correction, `raw_event` alone reported 20,481 dead tuples beside 176,483 live rows.
+
+No schema, row population, or source archive changed during this correction. The 16 public tables were measured, each received `VACUUM (FULL, ANALYZE)`, each was reindexed, and the identical measurements were taken again. All reported dead-tuple estimates were zero afterward.
+
+### Before and after compaction
+
+| Table | Before table | Before indexes | Before total | After table | After indexes | After total |
+|---|---:|---:|---:|---:|---:|---:|
+| `game_event` | 8,192 | 57,344 | 65,536 | 8,192 | 57,344 | 65,536 |
+| `game_quality` | 8,192 | 16,384 | 24,576 | 8,192 | 16,384 | 24,576 |
+| `lineup` | 8,192 | 57,344 | 65,536 | 8,192 | 57,344 | 65,536 |
+| `lineup_stint` | 8,192 | 24,576 | 32,768 | 8,192 | 24,576 | 32,768 |
+| `player` | 8,192 | 8,192 | 16,384 | 8,192 | 8,192 | 16,384 |
+| `player_game_minutes` | 8,192 | 24,576 | 32,768 | 8,192 | 24,576 | 32,768 |
+| `possession` | 8,192 | 40,960 | 49,152 | 8,192 | 40,960 | 49,152 |
+| `raw_api_fetch` | 65,536 | 73,728 | 139,264 | 40,960 | 73,728 | 114,688 |
+| `raw_api_response` | 270,336 | 221,184 | 491,520 | 212,992 | 180,224 | 393,216 |
+| `raw_boxscore_player` | 1,695,744 | 802,816 | 2,498,560 | 1,277,952 | 491,520 | 1,769,472 |
+| `raw_boxscore_team` | 294,912 | 139,264 | 434,176 | 204,800 | 81,920 | 286,720 |
+| `raw_event` | 23,068,672 | 27,164,672 | 50,233,344 | 17,686,528 | 13,697,024 | 31,383,552 |
+| `raw_game` | 155,648 | 73,728 | 229,376 | 90,112 | 65,536 | 155,648 |
+| `raw_shot` | 8,192 | 16,384 | 24,576 | 8,192 | 16,384 | 24,576 |
+| `team` | 16,384 | 16,384 | 32,768 | 8,192 | 8,192 | 16,384 |
+| `team_season` | 8,192 | 16,384 | 24,576 | 8,192 | 16,384 | 24,576 |
+| **Total** | **25,649,152** | **28,745,728** | **54,394,880** | **19,595,264** | **14,860,288** | **34,455,552** |
+
+Whole-database size—`sum(pg_database_size(datname))` across every database—fell from **83,778,357** to **63,888,181 bytes**. The unchanged empty-project baseline is 25,688,885 bytes.
+
+### Corrected one-season cost
+
+The original table-based incremental number was **53,862,400 bytes**. After compaction it is **33,923,072 bytes**:
+
+```text
+compacted public tables       = 34,455,552 bytes
+empty public-table baseline   =    532,480 bytes
+compacted season increment    = 33,923,072 bytes
+
+original season increment     = 53,862,400 bytes
+space removed by compaction   = 19,939,328 bytes (37.02%)
+```
+
+The project should no longer use 53,862,400 as the physical cost of one clean E2024-sized raw season. It was a valid post-reload operational footprint, but **33,923,072 bytes** is the corrected compacted table increment.
+
+### Table gate versus Supabase-billed growth
+
+There are two honest views of size, and they answer different questions:
+
+| Basis | Original one-season growth | Compacted one-season growth | Compacted 19-season projection | Budget verdict |
+|---|---:|---:|---:|---|
+| Summed public tables | 53,862,400 | 33,923,072 | 645,070,848 | Over by 170,759,733 |
+| Whole-database growth | 58,089,472 | 38,199,296 | 725,786,624 | Over by 251,475,509 |
+
+The table projection uses the existing `projected_table_bytes` rule: count the 532,480-byte fixed table baseline once, then multiply the compacted season increment by 19. Whole-database growth subtracts the 25,688,885-byte empty-project reading from the measured database total, then multiplies that charged growth by 19.
+
+Before compaction, whole-database growth was 7.85% above summed-table incremental growth, exactly as the context warning stated. After compaction the difference is **4,276,224 bytes per season, or 12.61%** of the table increment. At 19 seasons, the whole-database projection is **80,715,776 bytes, or 12.51%,** above the table projection; the slight percentage difference comes from counting fixed table overhead only once in the table formula.
+
+**The permanent budget gate should assert on live whole-database growth.** Supabase charges the physical database, not only the relations selected by the test. Summed tables remain valuable diagnostic evidence because they show where bytes went, but using the lower number as the pass/fail condition would ignore real charged growth outside those relations. The gate now queries the live total rather than hardcoding either measurement snapshot.
+
+### How many raw seasons fit
+
+Using the 474,311,115-byte usable budget and requiring complete E2024-sized raw seasons:
+
+| Basis | Before compaction | After compaction |
+|---|---:|---:|
+| Summed-table method | 8 seasons | 13 seasons |
+| Whole-database billing method | 8 seasons | **12 seasons** |
+
+The planning answer is therefore **8 before compaction and 12 after compaction**. Thirteen compacted seasons fit only under the narrower summed-table accounting; Supabase's whole-database billing makes twelve the defensible raw-layer limit. This is not a new hot-window decision: it is the measured capacity requested here. Phase 5 tables are still empty, so the eventual complete-warehouse window can only be smaller and remains an owner decision.
+
+### Routine loader maintenance
+
+The loader should run **plain `VACUUM (ANALYZE)`** after each successful season load on the four tables it replaced. This marks dead row versions reusable and refreshes planner statistics after a large batch. A regression test now fails if the completed load omits that maintenance call.
+
+The loader should **not** run `VACUUM FULL` or `REINDEX` after every season. Full vacuum rewrites and exclusively locks a table, and reindexing adds another blocking rebuild. Those are maintenance-window tools for an explicit compaction or measurement like this one. Plain vacuum does not shrink files immediately; it prevents subsequent loads from needing more space when reusable pages are available.
+
+Verifying the exact routine statement after the formal “after” snapshot created 32,768 bytes of visibility/free-space-map storage on each of the four vacuumed tables, 131,072 bytes total. No index grew, no row count changed, and dead tuples remained zero. This is normal operational metadata, not returned bloat. The resulting post-loader state is:
+
+| Basis | Operational one-season growth | Operational 19-season projection |
+|---|---:|---:|
+| Summed public tables | 34,054,144 | 647,561,216 |
+| Whole-database growth | 38,330,368 | **728,276,992** |
+
+The operational whole-database projection is 80,715,776 bytes (12.46%) above the operational table projection. It still fits 12 complete raw seasons by the billing method, so this small metadata allocation changes neither the capacity answer nor the failed-budget verdict.
+
 ## Plain-language code walkthrough
 
 ### Cache and parser
@@ -137,6 +225,7 @@ The derived tables remain empty because Phase 5 was out of scope. Their current 
 - `assert_phase4_safe` counts Phase 5-or-later rows and refuses raw replacement if any exist. `_copy_rows` streams tuples into one trusted staging table and counts them.
 - `load_game` opens one transaction, creates four migration-shaped temporary tables, copies every row set, deletes only that game's previous raw rows in foreign-key-safe order, inserts parent-first, and commits or rolls back the whole game.
 - `load_cached_season` runs the guard, walks scheduled games numerically, refuses an incomplete cache, parses/loads each game, totals rows, and prints safe progress.
+- After the final game succeeds, `load_cached_season` asks PostgreSQL to vacuum and analyze the four replaced raw tables. In plain language: it labels obsolete row versions as reusable and updates the database's map of the data, without the blocking full rewrite used for this one-time measurement.
 - `load_season` opens the validated session-pooler URL with autocommit enabled, so the safety query is not an outer transaction and each explicit game transaction is real.
 
 ### Gate

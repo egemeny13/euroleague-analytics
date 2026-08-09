@@ -10,6 +10,7 @@ from euroleague.config import DatabaseSettings
 from euroleague.gate import (
     PHYSICAL_BUDGET_BYTES,
     assert_warehouse_reconciles,
+    projected_database_growth_bytes,
     projected_table_bytes,
     public_table_sizes,
     warehouse_snapshot,
@@ -18,6 +19,41 @@ from euroleague.gate import (
 
 def test_projection_counts_empty_table_overhead_once() -> None:
     assert projected_table_bytes(2_000, empty_table_bytes=500, seasons=19) == 29_000
+
+
+def test_database_projection_uses_growth_above_empty_project() -> None:
+    class Cursor:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def execute(self, query):
+            self.query = " ".join(str(query).split())
+
+        def fetchone(self):
+            return (63_888_181,)
+
+    class Connection:
+        def __init__(self):
+            self.cursor_instance = Cursor()
+
+        def cursor(self):
+            return self.cursor_instance
+
+    connection = Connection()
+
+    projection = projected_database_growth_bytes(
+        connection,
+        empty_project_bytes=25_688_885,
+        seasons=19,
+    )
+
+    assert connection.cursor_instance.query == (
+        "select sum(pg_database_size(datname)) from pg_database"
+    )
+    assert projection == 725_786_624
 
 
 @pytest.mark.warehouse
@@ -30,6 +66,7 @@ def test_live_phase_4_gate() -> None:
         reconciliation = assert_warehouse_reconciles(connection, cache, "E2024")
         snapshot = warehouse_snapshot(connection, "E2024")
         sizes = public_table_sizes(connection)
+        billed_projection = projected_database_growth_bytes(connection)
 
     assert reconciliation == {
         "raw_api_response": 661,
@@ -54,6 +91,4 @@ def test_live_phase_4_gate() -> None:
         )
     }
     assert len(sizes) == 16
-    assert projected_table_bytes(sum(size.total_bytes for size in sizes.values())) <= (
-        PHYSICAL_BUDGET_BYTES
-    )
+    assert billed_projection <= PHYSICAL_BUDGET_BYTES

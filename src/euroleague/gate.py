@@ -10,6 +10,7 @@ from euroleague.cache import ResponseCache
 from euroleague.parse import parse_cached_game
 
 PHYSICAL_BUDGET_BYTES = 474_311_115
+EMPTY_PROJECT_DATABASE_BYTES = 25_688_885
 # Measured before Phase 4 loaded any row, across all 16 public tables. This is
 # relation overhead, separate from the 25,688,885-byte empty-database cost that
 # DECISIONS.md item 12 already subtracts from the 500 MB project quota.
@@ -248,3 +249,19 @@ def projected_table_bytes(
     if incremental < 0:
         raise ValueError("One-season table size cannot be below the measured empty baseline.")
     return empty_table_bytes + seasons * incremental
+
+
+def projected_database_growth_bytes(
+    connection: Any,
+    *,
+    empty_project_bytes: int = EMPTY_PROJECT_DATABASE_BYTES,
+    seasons: int = 19,
+) -> int:
+    """Project charged database growth rather than only selected relations."""
+    with connection.cursor() as cursor:
+        cursor.execute("select sum(pg_database_size(datname)) from pg_database")
+        current_bytes = int(cursor.fetchone()[0])
+    growth = current_bytes - empty_project_bytes
+    if growth < 0:
+        raise ValueError("Current database size cannot be below the measured empty baseline.")
+    return seasons * growth
