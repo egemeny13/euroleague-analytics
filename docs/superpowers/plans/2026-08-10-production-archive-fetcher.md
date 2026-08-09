@@ -41,9 +41,7 @@ Add a test that asks the real cache for the Points path and checks the literal l
 def test_points_is_a_supported_coordinate_endpoint(tmp_path) -> None:
     cache = ResponseCache(tmp_path)
 
-    assert cache.path_for("E2025", "Points", 17) == (
-        tmp_path / "E2025" / "Points" / "17.json"
-    )
+    assert cache.path_for("E2025", "Points", 17) == (tmp_path / "E2025" / "Points" / "17.json")
 ```
 
 This catches removal of Points support: the current implementation raises
@@ -143,6 +141,7 @@ Create these public values:
 
 ```python
 DEFAULT_CACHE_ROOT = Path(__file__).resolve().parents[2] / "exploration" / "cache"
+
 
 @dataclass(frozen=True)
 class FetchSummary:
@@ -275,16 +274,18 @@ def test_fetch_log_records_the_required_shape_and_path(tmp_path) -> None:
     transport = RecordingTransport([StubResponse(200, {}, body)])
     write_one_missing_points_target(tmp_path)
     make_fetcher(tmp_path, transport).fetch_season("E2025")
-    assert read_log(tmp_path) == [{
-        "season": "E2025",
-        "gamecode": 7,
-        "endpoint": "Points",
-        "url": "https://live.euroleague.net/api/Points?gamecode=7&seasoncode=E2025",
-        "http_status": 200,
-        "fetched_at": "2026-08-10T00:00:00Z",
-        "byte_length": 5,
-        "sha256": "fa79d4746c21cd960a17b92db8976ddef95a7e20b590721f8e0fa7847a05e486",
-    }]
+    assert read_log(tmp_path) == [
+        {
+            "season": "E2025",
+            "gamecode": 7,
+            "endpoint": "Points",
+            "url": "https://live.euroleague.net/api/Points?gamecode=7&seasoncode=E2025",
+            "http_status": 200,
+            "fetched_at": "2026-08-10T00:00:00Z",
+            "byte_length": 5,
+            "sha256": "fa79d4746c21cd960a17b92db8976ddef95a7e20b590721f8e0fa7847a05e486",
+        }
+    ]
 
 
 def test_fetched_schedule_is_cached_before_it_is_parsed(tmp_path) -> None:
