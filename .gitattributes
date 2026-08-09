@@ -1,0 +1,14 @@
+# Normalise text to LF inside the repository. Working copies on Windows still
+# get native endings on checkout.
+* text=auto eol=lf
+
+# API response fixtures are compared byte-for-byte against SHA-256 checksums
+# recorded in tests/fixtures/MANIFEST.json. Git must never rewrite a byte of
+# them, or the checksum test fails on a Linux runner for a reason that has
+# nothing to do with the data.
+#
+# Today's cached responses happen to contain no newline bytes at all, so
+# nothing would be converted. That is luck rather than design: a season whose
+# responses arrive pretty-printed would break silently. Marking them binary
+# makes the guarantee explicit instead of accidental.
+tests/fixtures/games/**/*.json -text
