@@ -61,10 +61,17 @@ to miss because the proposal still shows the superseded version:
 - `competition_code` exists everywhere it is needed, though only EuroLeague
   will be loaded — item 11.
 
-**Gate:** apply every `up`, apply every `down`, apply every `up` again, against
-the project while it is still empty. **This gate can only be run once.** After
-Phase 4 the database holds data and "rolls back cleanly" can never again be
-tested honestly. Run it before ingest or lose it.
+**Gate: passed 2026-08-09.** `scripts/migration_gate.py` ran the full cycle —
+up, down, up, down — against the empty project. 16 tables created, removed and
+recreated identically, leaving the database empty. The three migrations were
+then applied and recorded through the Supabase MCP.
+
+That gate could only be run once. After Phase 4 the database holds data and
+"rolls back cleanly" can never again be tested honestly against production; a
+future schema change must be gated on a fresh empty database instead.
+
+Also verified: RLS denies the public REST endpoint. With one row present, the
+owning role saw 1 and `anon` saw 0.
 
 ### Phase 3 — the test suite
 Promote the throwaway checks in `exploration/sweep_season.py` into a permanent
