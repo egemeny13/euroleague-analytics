@@ -30,6 +30,25 @@ descriptions, and test names must be in English. No exceptions.
 
 ---
 
+## The project documents, and which one wins
+
+This file holds the rules. It is not the whole context, and it is not the most
+recent word on every subject. Read these before starting work:
+
+| File | What it holds | Authority |
+|---|---|---|
+| `CLAUDE.md` (this file) | The rules | Binding. Override only with a measurement and a decision. |
+| `CONTEXT.md` | Why the project exists, who it is for, the constraints | Binding on *goals*, not on technique. **Untracked by git and local to the owner's machine** — see `DECISIONS.md` item 13. If it is not present, you are working from a clone and should ask for the goals rather than infer them. |
+| `DECISIONS.md` | Settled technical decisions and their conditions | **Binding, and newer than this file.** A condition attached to a decision is part of the decision. |
+| `ROADMAP.md` | Phase sequence and the gate that opens each phase | Binding on sequence. |
+| `exploration/FINDINGS.md` | Single-game API reconnaissance | Evidence, not rules. |
+| `exploration/SEASON_SWEEP.md` | Full-season validation, 330 games | Evidence. The numbers here are the regression baseline. |
+| `exploration/SCHEMA_PROPOSAL.md` | The approved schema | Approved **as amended by `DECISIONS.md`**. Where the two disagree, `DECISIONS.md` wins — it is later. |
+| `exploration/OPEN_ITEMS.md` | Phase 1 measurements behind decisions 7 and 8 | Evidence, with its estimate boundaries stated explicitly. Do not quote its extrapolations as measurements. |
+
+`AGENTS.md` is a pointer to this file, deliberately containing no rules of its
+own. Do not copy rules into it.
+
 ## Known data facts
 
 `exploration/FINDINGS.md` contains verified reconnaissance of the public
@@ -70,6 +89,13 @@ the event stream as a bug.
   untouched with a checksum. Never "restore" the padding to a table in the name
   of faithfulness: it reintroduces the silent-join failure and gains nothing the
   cache does not already hold.
+- **`raw_event` does not carry `player_name`, `dorsal` or `playinfo`, and there
+  is no one-to-one side table holding them.** Measured across all 176,483 E2024
+  events they are 37.44 % of the row payload, and nothing uses them - not
+  identity, not ordering, not lineup reconstruction, not possession boundaries.
+  When an audit needs the exact source string, open the archived payload and
+  find the event by `ingest_index`. Adding these columns back is a decision,
+  not a convenience.
 - **Join on ID, never on name.** The same player appears as
   `WILLIAMS, TREVION` in one endpoint and `WILLIAMS , TREVION` in another.
 - **Player IDs are opaque variable-length strings.** Most are `P` + 6 digits,
@@ -191,11 +217,27 @@ the event stream as a bug.
 - Computed results are stored in Supabase (Postgres).
 - The MCP server is a thin query layer over pre-computed tables. No heavy
   computation at query time.
-- **Cache every raw API response to disk before parsing it**, and never
-  re-fetch what is already cached. The EuroLeague API is undocumented and may
-  break or disappear without notice. The warehouse must survive that.
+- **Cache every raw API response to disk before parsing it.** The EuroLeague
+  API is undocumented and may break or disappear without notice. The warehouse
+  must survive that.
+- **Never re-fetch a response to save yourself a cache read.** Ingest, parsing,
+  backfill and debugging all read the cache. The network is not a convenience.
+- **A re-fetch is an audit, and audits are versioned, never overwrites.**
+  Responses are immutable and addressed by the checksum of their body. Record
+  every fetch observation; store a second body only when its checksum differs;
+  keep an explicit pointer to the current version; never overwrite response
+  history. When a checksum changes, rebuild that one game's parsed and derived
+  rows in a single transaction — not the season. See `DECISIONS.md` item 7 for
+  the scheduled settlement re-checks, which are the only sanctioned re-fetches.
 - All endpoints take `gamecode` (integer, unique within a season) and
   `seasoncode` (`E2024`, `E2023`, ...).
+- **The Supabase free tier is 500 MB, and that is a design constraint rather
+  than a detail.** Before any production backfill, load one complete season
+  into a staging table with its real primary key, measure table plus indexes
+  with `pg_total_relation_size`, and project the *whole* warehouse - not
+  `raw_event` alone. If the projection exceeds 500 MB, every season still goes
+  into the immutable archive and only the hot PostgreSQL window shrinks. Do not
+  pick that window size before the other tables have been measured.
 
 ## MCP tool design
 

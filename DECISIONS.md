@@ -1,0 +1,421 @@
+# Decision log
+
+Decisions made on the schema proposal, with the reasoning behind each. This
+file exists so that any agent picking up the project has the decision context
+without needing the conversation it came from.
+
+Format: the decision, then why, then any condition attached to it. A condition
+is binding — the decision is only approved with it.
+
+---
+
+## Status
+
+| # | Topic | Status |
+|---|---|---|
+| 1 | Layer split and the trimming trade-off | Approved as proposed |
+| 2 | Offensive-foul inference (section 0b) | Approved — already applied |
+| 3 | `corrected` as the default for minutes | Approved with two conditions |
+| 4 | Matchup-bounded stints | Approved as proposed |
+| 5 | Possession-straddling convention | Approved with one condition |
+| 6 | Clutch splits | Approved, but **re-framed** — read below |
+| 7 | Re-ingest policy | Approved — immutable versions and per-game rebuilds |
+| 8 | Backfill scope and event text | Approved with a physical-size gate |
+| 9 | Where the immutable archive lives | Supabase Storage; Postgres holds no bodies |
+| 10 | Migration tooling and the rollback gate | Plain SQL files applied through the Supabase MCP |
+| 11 | EuroCup scope for the October launch | Schema-ready, not loaded |
+| 12 | The Supabase project | Created — `euroleague-analytics`, eu-central-1 |
+| 13 | Public repository, and what stays out of it | Public; `CONTEXT.md` untracked |
+| 14 | How the test suite gets its data | Committed edge-case fixtures; full season on demand |
+| 15 | How Python reaches Postgres | `psycopg` through the connection pooler |
+| 16 | Dependency tooling | `pip` with pinned requirements files |
+
+Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
+2026-08-09. The measurements and explicit estimate boundaries are in
+`exploration/OPEN_ITEMS.md`.
+
+Items 9 to 12 were raised at the start of Phase 2, also on 2026-08-09, because
+each one changes what the migrations must contain.
+
+Items 13 to 16 were raised at the start of Phase 2a, also on 2026-08-09,
+because each one changes what the scaffolding must contain.
+
+---
+
+## 1. Layer split and trimming — approved as proposed
+
+Trim IDs and team codes in the raw tables. Byte-level fidelity is carried by
+`raw_api_response`, which stores the untouched payload plus a checksum.
+
+**Why.** The padding is fixed-width formatting, not meaning. Its failure mode
+is silent: joining `"BER       "` to `"BER"` returns an empty result rather
+than an error. The archive layer guarantees fidelity and the table layer
+guarantees usability, so neither has to be compromised.
+
+---
+
+## 2. Offensive-foul inference — approved, already applied
+
+Foul type is read from `PLAYTYPE`. The "foul + turnover sharing a clock
+reading" inference is deleted and banned.
+
+**Why.** Measured at 77.7% precision — it would invent 340 turnovers a season.
+The original rule was generalised from a single game that happened to contain
+no offensive foul at all, and the example that motivated it turned out to be a
+false positive under its own rule.
+
+**Consequence to carry into possession logic.** Every offensive foul already
+carries its own separate `TO` row. The risk is double-counting, not
+under-counting. Count the `TO` row and ignore the `OF` row, or the season gains
+1,185 phantom turnovers.
+
+---
+
+## 3. `corrected` as the default for minutes — approved with two conditions
+
+The MCP layer serves corrected values for anything involving minutes or
+per-minute rates. `raw` stays available alongside and is used for anything
+positional.
+
+**Why.** The lesson from the clamp experiment does not transfer. The clamp was a
+blanket rewrite of every timestamp and broke 183 of 330 games. This is a narrow
+mechanical rule firing on 32 rows, and it was *measured* to improve agreement
+with the published box score: 36 mismatched player-rows down to 4. It has
+external ground truth, so it satisfies the project's own standard for shipping
+a derived value.
+
+**Condition A — provenance travels with the number.** Any MCP response
+containing a minutes value must state whether it is raw or corrected. Holding
+it in a column is not enough. Same reasoning as the quarantine-disclosure rule:
+a number without its provenance is a number that will be misquoted.
+
+**Condition B — re-measure every season, never assume.** This rule was tuned on
+E2024. It must be re-measured against each new season. Build a mechanical
+safety belt: if the correction increases disagreement with the official box
+score for any season, it auto-disables for that season and its test fails red.
+
+---
+
+## 4. Matchup-bounded stints — approved as proposed
+
+A stint boundary is drawn when either team substitutes.
+
+**Why.** Matchup stints aggregate up into team stints; team stints cannot be
+split back down into matchups. Storing the finer grain keeps both questions
+answerable. The row-count cost is trivial.
+
+Also approved: the batch-boundary rule from section 6 — a batch spans from the
+first substitution carrying a clock reading to the last one carrying it,
+absorbing intruders — combined with the union tolerance window for attribution
+checking. Measured at 0 on-court violations and 7 misattributed rows, the best
+result of any combination tested.
+
+---
+
+## 5. Possession-straddling convention — approved with one condition
+
+A possession is credited to the lineup on the floor when the possession
+started.
+
+**Why.** Simple, writable down, and it makes possession counts sum cleanly to
+team totals, which is a required invariant. A consistent convention beats a
+theoretically purer one that nobody can reason about.
+
+**Condition — measure the magnitude.** Report the rate of possessions that
+straddle a substitution, as a number, in the season sweep output. Nobody
+currently knows whether this is 2% or 15% of possessions, and the two cases
+warrant different treatment. A documented approximation without a measured
+magnitude is not documented.
+
+---
+
+## 6. Clutch — critical, but re-framed
+
+**Clutch matters. It is the single most important query shape this project
+needs to support.** But the proposal framed it as a stint-splitting problem,
+and that framing is wrong.
+
+A stint is a coarse unit: it spans many possessions, straddles the moment a
+game becomes clutch, and the score margin changes *within* it. A possession is
+fine-grained: roughly fifteen seconds, one score margin, and by the convention
+above, exactly one lineup.
+
+**So clutch is a filter on possessions, not a split of stints.**
+
+**Decision:** add two columns to the `possession` table —
+`margin_at_start` and `seconds_remaining_at_start`.
+
+**Why this is better than a pre-computed clutch table.**
+
+- No threshold is ever baked in. Last 5 minutes within 5 points, last 2 minutes
+  within 3 points, any other definition — all are queries, not rebuilds.
+- EuroLeague is a 40-minute game. Importing the NBA's 48-minute clutch
+  convention unexamined would be a mistake, and this defers that choice until
+  it can be made against the data.
+- It costs two integer columns instead of a whole table and its refresh logic.
+- It does not violate the "no heavy computation at query time" rule, because
+  filtering on two indexed integer columns is not heavy computation.
+
+**What is given up.** Duration-based clutch metrics, such as clutch minutes
+played. This is acceptable: nearly every clutch metric worth publishing is
+per-possession — clutch offensive rating, clutch eFG%, clutch usage — and
+possessions are the correct denominator for all of them.
+
+---
+
+## 7. Re-ingest policy — approved
+
+Store API responses as immutable, checksum-addressed versions. Record each
+fetch observation, but deduplicate an identical body rather than storing the
+same bytes repeatedly. Keep an explicit pointer to the current version. Never
+overwrite response history.
+
+When a checksum changes, rebuild the parsed raw rows and every derived row for
+that game in one transaction. Do not rebuild the whole season for a one-game
+source revision. A wholesale rebuild is reserved for a schema or transformation
+rule change that can affect every game.
+
+**Why.** A 30-game sample spread across E2024 re-fetched both cached endpoints,
+60 responses in total. Zero byte checksums and zero canonical-JSON checksums
+changed. That does not prove revisions never happen: the first snapshots were
+already 440–674 days after the games and the second snapshots followed only
+1.3–2.8 hours later. Versioning preserves the audit trail at zero duplicate-body
+cost when responses are identical, while per-game rebuilds match the natural
+scope of a source revision.
+
+**Condition — measure settlement prospectively.** For one future season,
+re-check completed games at +6 hours, +24 hours, +72 hours, and +7 days. Reduce
+that provisional cadence only after those observations establish when revisions
+actually settle. The E2024 experiment cannot supply a near-game settlement
+time.
+
+## 8. Backfill scope and storage capacity — approved with a gate
+
+Archive all 19 available seasons and target all 19 for the core `raw_event`
+shape. Drop `player_name`, `dorsal`, and `playinfo` from `raw_event`; do not move
+them to a one-to-one side table. Recover their exact source values from the
+immutable archived payload when an audit needs them.
+
+**Why.** Across all 176,483 E2024 events, the actual logical value payload is
+82.434 bytes per row with those columns and 51.572 without them. The three
+columns consume 5,446,579 bytes, 37.44% of the full logical payload, while none
+is used for identity, ordering, lineup reconstruction, or possession
+boundaries. Nineteen E2024-sized core seasons extrapolate to 172,930,818 logical
+value bytes; keeping the three fields raises that estimate to 276,415,819.
+
+This corrects the earlier unmeasured statement that 19 seasons cannot fit in
+500 MB. The logical values fit; physical PostgreSQL storage is still unknown.
+
+**Condition — physical-size gate before production backfill.** Once DDL is
+approved, load one complete season into a dedicated staging table with its real
+primary key and measure table plus indexes with `pg_total_relation_size`.
+Project the whole warehouse, not `raw_event` alone. If it exceeds 500 MB, keep
+all 19 seasons in the immutable archive and reduce only the hot PostgreSQL
+window. Do not invent that window size before the other tables and database
+overhead are measured.
+
+---
+
+## 9. Where the immutable archive lives — Supabase Storage
+
+The archived response bodies go into a Supabase Storage bucket in the project.
+PostgreSQL stores the checksum, the fetch metadata and the object path. **It
+never stores a response body**, so the archive costs nothing against the 500 MB
+database quota.
+
+**Why.** Measured, not assumed: the 660 cached E2024 responses are 52,381,257
+bytes raw and **3,549,266 bytes when each file is gzipped individually** — a
+14.76× ratio. Nineteen E2024-sized seasons therefore come to an **estimated
+67 MB**, against a Storage free quota of 1 GB. The earlier worry that a
+1 GB pile of raw JSON had nowhere to live was arithmetic on uncompressed bytes.
+
+Per-file compression is the right number to quote here rather than a single
+solid archive, because Decision 7 addresses bodies individually by checksum.
+A solid `tar.gz` of the same 660 files is 3,242,269 bytes; the 9% difference is
+the price of content-addressing, and it is worth paying.
+
+The local disk cache stays exactly as CLAUDE.md requires. Storage is the
+durable, CI-readable copy, not a replacement for it.
+
+**Rejected:** committing gzipped seasons to git — every clone would carry the
+whole archive and git handles opaque blobs that never diff badly. **Rejected:**
+local disk alone — GitHub Actions cannot verify a checksum against a file it
+cannot read, which makes the audit trail unenforceable in CI.
+
+---
+
+## 10. Migration tooling — plain SQL, applied through the Supabase MCP
+
+Numbered `up` and `down` SQL files live in `migrations/`. They are applied
+through the Supabase MCP against the project.
+
+**Why.** Neither the Supabase CLI nor Docker is installed on the owner's
+machine, and Docker Desktop is a heavy dependency to add to a project whose
+owner cannot debug it when it breaks. Plain SQL files are also the artefact
+that survives a change of tooling.
+
+**How the ROADMAP gate is met.** "Migrations apply cleanly to an empty database
+and roll back cleanly" is tested literally, and it can only be tested once:
+apply every `up`, apply every `down`, apply every `up` again, all against the
+project **before a single row exists in it**. Do this before Phase 4, because
+after ingest the database is no longer empty and the gate can never be run
+honestly again.
+
+Supabase's own convention is forward-only migrations with no `down` files. We
+write them anyway, because the gate requires them.
+
+**Revisit if** local iteration becomes slow enough to be painful; a local
+Postgres is then worth its install cost.
+
+---
+
+## 11. EuroCup — schema-ready, not loaded
+
+`competition_code` exists on every table that needs it from the first
+migration, so EuroCup lands in the same tables later with no schema change.
+Nothing EuroCup is fetched, parsed or loaded before the October launch.
+
+**Why.** CLAUDE.md names EuroCup in the project goal, but every measurement the
+project owns counted EuroLeague only — the 176,483 events, the 500 MB
+projection, the 19-season plan. Loading a second competition would roughly
+double both the backfill fetch hours and the storage projection, against a
+budget whose physical size is still unmeasured. The column costs nothing now;
+the data can wait until the gate in item 8 has an answer.
+
+---
+
+## 12. The Supabase project
+
+Created 2026-08-09: **`euroleague-analytics`**, ref `pctiewdpstnwcutrvegu`,
+region `eu-central-1`, free plan, $0 per month.
+
+Frankfurt because the owner is in Turkey and interactive queries from the MCP
+server dominate latency-sensitive use; batch ETL from GitHub Actions does not
+care where the database is.
+
+**Two free-tier facts that are operational constraints, not trivia.**
+
+- **A fresh Supabase database already occupies 40–60 MB** of pre-installed
+  extensions, schemas and default data. The usable budget is therefore roughly
+  440–460 MB, not 500. Item 8's arithmetic did not account for this and should
+  be read with the reduction applied.
+- **Free projects pause after seven days of low activity.** A few queries a day
+  prevents it. This is harmless during the August–September build, and the MCP
+  server's own traffic should cover it after launch, but a quiet week in the
+  off-season will pause the warehouse and it must be resumed by hand.
+
+---
+
+## 13. Public repository — and `CONTEXT.md` stays out of it
+
+The repository is public on GitHub under the owner's own name. **`CONTEXT.md`
+is untracked** and lives only on the owner's machine.
+
+**Why public.** `CONTEXT.md` itself sets the goal: the repository is the CV, and
+it is linked from the account bio. A visible trail of measurements, rejected
+hypotheses and corrected mistakes is worth more to a club than a repository
+that appears fully formed on launch day. Public repositories also get unlimited
+GitHub Actions minutes, where private ones get 2,000 a month — a full backfill
+could eat that.
+
+**Why `CONTEXT.md` is the exception.** It is strategy, not method, and three
+parts of it change meaning when strangers read them: it names the specific club
+the owner wants to work for, which tells every other club they are second
+choice; it names a real competing account and states an inferred reason for its
+shutdowns, which is an unproven public allegation made under a real name; and
+it states a hobby-scale budget while the repository is asking to be taken
+seriously.
+
+Nothing is lost from the public record. `DECISIONS.md`, `ROADMAP.md` and the
+`exploration/` documents already carry the reasoning that demonstrates method,
+which is the part that does the work.
+
+**Consequence for agents.** `CLAUDE.md` points at `CONTEXT.md`, and in a fresh
+clone it will be missing. That is expected. Ask for the goals rather than
+inferring them from the code.
+
+**Reversible.** Removing one line from `.gitignore` publishes it. The reverse
+is not reversible, which is why the private direction was taken first.
+
+---
+
+## 14. How the test suite gets its data — committed fixtures, full season on demand
+
+A small set of games is committed to `tests/fixtures/`. The full 330-game
+validation runs on demand against the cache, and later against the Supabase
+Storage archive.
+
+**Why this was needed at all.** The cache is gitignored by item 9, so CI has no
+data. A test suite that cannot run in CI is a test suite the owner has to
+remember to run, and the entire validation architecture exists precisely
+because he cannot catch errors by reading code.
+
+**Why the fixtures are derived, not chosen.** The set is selected from
+`exploration/sweep_results.json` by which defect each game carries — the
+double-overtime game, the overlapping substitution batch, the games that
+quarantine on minutes, the games the ±60 correction fires on, plus the
+reference game. Each is committed with a note naming the defect it protects.
+Hand-picking convenient games would reintroduce the n=1 reasoning that produced
+the wrong offensive-foul rule.
+
+**What this does not do.** Fixtures prove the logic handles the known hard
+cases. They cannot prove a season-wide count. Any claim about a season number
+must come from the full run, never from the fixtures.
+
+---
+
+## 15. How Python reaches Postgres — `psycopg` through the pooler
+
+Bulk loads use `psycopg` and the `COPY` command over a direct Postgres
+connection, addressed through **Supabase's connection pooler**, never the
+direct database host.
+
+**Why not the Supabase client.** `supabase-py` speaks to PostgREST over HTTPS,
+which has no `COPY`. Loading 176,483 events would mean thousands of batched
+insert requests: slow, and every batch is an opportunity to half-fail and leave
+the table in a state no test anticipated.
+
+**Why the pooler specifically, and why this is written down.** Free projects
+have no dedicated IPv4 address, and GitHub Actions runners are IPv4-only. Code
+pointed at the direct database host works on the owner's machine and fails only
+in CI. That is the worst failure shape this project has, so the address is a
+decision rather than a configuration detail.
+
+---
+
+## 16. Dependency tooling — `pip` and pinned requirements files
+
+Exact versions pinned in `requirements.txt` and `requirements-dev.txt`.
+
+**Why not `uv`.** It is faster and its lockfile is stronger. But the measured
+dependency count is four — `requests` and `psycopg` at runtime, `pytest` and
+`ruff` for development — because the entire 330-game sweep was written against
+the standard library and imports nothing external. At four dependencies a
+heavier tool buys reproducibility the pins already provide, and costs another
+tool between the owner and code he is learning to read.
+
+**Revisit if** the dependency list grows past roughly ten, or if a transitive
+version conflict ever costs an afternoon.
+
+---
+
+## Rules to add to the project instruction file
+
+```
+- Any correction rule tuned on one season must be re-measured on every
+  new season, never assumed. A correction that increases disagreement
+  with the official box score in any season must auto-disable for that
+  season and fail its test.
+- MCP responses involving minutes must state whether the value is raw or
+  corrected. A number without its provenance is a number that will be
+  misquoted.
+- Shot queries spanning free throws must be built from `game_event`.
+  `raw_shot` omits missed free throws entirely and is a coordinate
+  source only.
+- Possessions carry `margin_at_start` and `seconds_remaining_at_start`.
+  Clutch is a filter on those columns, never a hard-coded threshold and
+  never a separate pre-computed table.
+- Report the measured rate of possessions straddling a substitution.
+  A documented approximation without a measured magnitude is not
+  documented.
+```

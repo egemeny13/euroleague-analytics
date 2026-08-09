@@ -1,4 +1,19 @@
+# The raw API response cache. Archived to Supabase Storage instead - see
+# DECISIONS.md item 9. 53 MB for one season; every clone would carry it forever.
 exploration/cache/
 exploration/sweep_results.json
-__pycache__/
+
+# Internal strategy notes. Deliberately not published - see DECISIONS.md item 13.
+CONTEXT.md
+
+# Secrets. Never commit. See .env.example for the shape.
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
