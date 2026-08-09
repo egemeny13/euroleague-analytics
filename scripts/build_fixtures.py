@@ -6,9 +6,10 @@ game carries*, read out of the season sweep results, never chosen because they
 were convenient. Encoding the selection here is how that rule survives the
 person who wrote it.
 
-The fixtures are byte-identical copies of the cached API responses. The
-manifest records a SHA-256 of every copied file, so a fixture cannot drift away
-from the archive without a test noticing.
+The game-level fixtures are byte-identical copies of cached API responses. The
+schedule fixture is the exact nine matching game objects wrapped in a new
+schedule response whose total is nine. The manifest records a SHA-256 of every
+fixture file, so a fixture cannot drift without a test noticing.
 
 Run it from the repository root, with the cache present:
 
@@ -68,12 +69,14 @@ SELECTION: dict[int, dict[str, object]] = {
         "predicate": lambda g: g["overtime_periods"] == 1 and g["players_with_delta"] == 0,
     },
     131: {
-        "defect": "on-court violation, overlapping substitution batches",
+        "defect": "overlapping substitution batch plus an off-court attribution",
         "why": (
             "The only game in the season where the naive batch rule leaves a team "
             "showing four players: two Real Madrid events stamped 08:00 land "
-            "inside a Zalgiris batch stamped 07:12. The absorbing batch rule from "
-            "SCHEMA_PROPOSAL.md section 6 exists because of this game."
+            "inside a Zalgiris batch stamped 07:12. The absorbing batch rule removes "
+            "those violations. The same source payload also credits event 168 to "
+            "P002329 before his IN row, so the permanent result correctly retains "
+            "one attribution issue."
         ),
         "predicate": lambda g: g["checks"]["oncourt_violations"] > 0,
     },
@@ -154,12 +157,30 @@ def main() -> None:
 
     manifest: dict[str, object] = {
         "season_code": SEASON_CODE,
-        "source": "exploration/cache, byte-identical copies",
+        "source": "exploration/cache; game responses byte-identical, schedule subset derived",
         "selected_by": "exploration/sweep_results.json, by defect carried",
         "games": {},
     }
 
     FIXTURE_ROOT.mkdir(parents=True, exist_ok=True)
+
+    schedule_source = CACHE_ROOT / SEASON_CODE / "schedule.json"
+    if not schedule_source.exists():
+        raise SystemExit(f"Cache miss: {schedule_source}")
+    schedule = json.loads(schedule_source.read_text(encoding="utf-8"))
+    selected_codes = set(SELECTION)
+    selected_schedule = [
+        game for game in schedule["data"] if int(game["gameCode"]) in selected_codes
+    ]
+    if {int(game["gameCode"]) for game in selected_schedule} != selected_codes:
+        raise SystemExit("The cached schedule does not contain every selected fixture game.")
+    schedule_target = FIXTURE_ROOT / "games" / SEASON_CODE / "schedule.json"
+    schedule_target.parent.mkdir(parents=True, exist_ok=True)
+    schedule_target.write_text(
+        json.dumps({"data": selected_schedule, "total": len(selected_schedule)}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    manifest["schedule_sha256"] = sha256_of(schedule_target)
 
     for gamecode, entry in sorted(SELECTION.items()):
         files: dict[str, str] = {}

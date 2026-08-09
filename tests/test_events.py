@@ -182,6 +182,20 @@ def test_elapsed_seconds_preserve_a_backwards_clock_step() -> None:
     assert events[2].markertime == "09:31"
 
 
+def test_raw_scores_remain_nullable_alongside_forward_filled_scores() -> None:
+    payload = _payload(
+        first=[
+            {"NUMBEROFPLAY": 1, "PLAYTYPE": "2FGM", "POINTS_A": 2, "POINTS_B": 0},
+            {"NUMBEROFPLAY": 2, "PLAYTYPE": "D", "POINTS_A": None, "POINTS_B": None},
+        ]
+    )
+
+    events = flatten_play_by_play(payload)
+
+    assert (events[1].points_a_raw, events[1].points_b_raw) == (None, None)
+    assert (events[1].score_a, events[1].score_b) == (2, 0)
+
+
 def test_a_second_overtime_opening_clock_maps_to_45_minutes_elapsed() -> None:
     payload = _payload(
         extra=[

@@ -7,9 +7,11 @@ This is **not** an API wrapper. Thin wrappers already exist. The value is in the
 derived layer: possessions counted exactly from the event stream, four factors,
 and lineup-level on/off metrics reconstructed play by play.
 
-**Status: pre-release.** The data has been explored and validated, the schema is
-settled, and the first code has just landed. No warehouse is loaded yet. The
-roadmap is in [`ROADMAP.md`](ROADMAP.md).
+**Status: pre-release.** E2024 is loaded and reconciled in the private raw
+warehouse. The 19-season physical-size projection exceeds the free-tier budget,
+so historical backfill and Phase 5 are paused for an owner decision. The full
+measurement is in [`docs/PHASE_4_REPORT.md`](docs/PHASE_4_REPORT.md), and the
+phase sequence is in [`ROADMAP.md`](ROADMAP.md).
 
 ---
 

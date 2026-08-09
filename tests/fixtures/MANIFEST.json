@@ -1,6 +1,6 @@
 {
   "season_code": "E2024",
-  "source": "exploration/cache, byte-identical copies",
+  "source": "exploration/cache; game responses byte-identical, schedule subset derived",
   "selected_by": "exploration/sweep_results.json, by defect carried",
   "games": {
     "1": {
@@ -75,5 +75,6 @@
         "PlaybyPlay": "e31683173eaa8b91bcd7d42a4d7ac34ecc40bbf877c27946fd95e9b79b98274e"
       }
     }
-  }
+  },
+  "schedule_sha256": "057f386683fe5c7374778eb2c8bf39bf0fefa2cd281bf31bd4664c01f25abb19"
 }

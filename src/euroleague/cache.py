@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +27,18 @@ from typing import Any
 # lands. `ShootingGraphic` and `Comparison` are the API's own derived summaries
 # and are deliberately never cached as source - see CLAUDE.md.
 ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay")
+
+
+@dataclass(frozen=True)
+class CachedResponse:
+    """One response body already present on disk, with honest local provenance."""
+
+    season_code: str
+    endpoint: str
+    gamecode: int | None
+    path: Path
+    body: bytes
+    modified_at: datetime
 
 
 def sha256_of_bytes(data: bytes) -> str:
@@ -53,6 +67,26 @@ class ResponseCache:
                 f"Unknown endpoint {endpoint!r}. Known endpoints are {', '.join(ENDPOINTS)}."
             )
         return self.root / season_code / endpoint / f"{gamecode}.json"
+
+    def schedule_path(self, season_code: str) -> Path:
+        """Where the season-level schedule response lives."""
+        return self.root / season_code / "schedule.json"
+
+    def read_schedule_bytes(self, season_code: str) -> bytes:
+        """Read the exact cached schedule bytes without any network fallback."""
+        path = self.schedule_path(season_code)
+        try:
+            return path.read_bytes()
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"No cached schedule response for season {season_code} at {path}. "
+                "Restore it to the cache first; nothing in the pipeline reaches "
+                "the network on its own."
+            ) from None
+
+    def read_schedule_json(self, season_code: str) -> dict[str, Any]:
+        """Return the cached season schedule parsed without reshaping it."""
+        return json.loads(self.read_schedule_bytes(season_code))
 
     def exists(self, season_code: str, endpoint: str, gamecode: int) -> bool:
         return self.path_for(season_code, endpoint, gamecode).exists()
@@ -98,3 +132,39 @@ class ResponseCache:
             except ValueError:
                 continue
         return sorted(codes)
+
+    def responses(self, season_code: str):
+        """Yield every cached API response once, without fetching or reordering events.
+
+        The schedule is yielded first. Game responses then follow in ascending
+        gamecode with the fixed endpoint order in ``ENDPOINTS``. Sorting games is
+        harmless; this method never opens or reorders the event arrays inside a
+        PlaybyPlay response.
+        """
+        schedule_path = self.schedule_path(season_code)
+        schedule_body = self.read_schedule_bytes(season_code)
+        yield CachedResponse(
+            season_code=season_code,
+            endpoint="Schedule",
+            gamecode=None,
+            path=schedule_path,
+            body=schedule_body,
+            modified_at=datetime.fromtimestamp(schedule_path.stat().st_mtime, tz=UTC),
+        )
+
+        gamecodes = sorted(
+            {code for endpoint in ENDPOINTS for code in self.gamecodes(season_code, endpoint)}
+        )
+        for gamecode in gamecodes:
+            for endpoint in ENDPOINTS:
+                path = self.path_for(season_code, endpoint, gamecode)
+                if not path.is_file():
+                    continue
+                yield CachedResponse(
+                    season_code=season_code,
+                    endpoint=endpoint,
+                    gamecode=gamecode,
+                    path=path,
+                    body=path.read_bytes(),
+                    modified_at=datetime.fromtimestamp(path.stat().st_mtime, tz=UTC),
+                )

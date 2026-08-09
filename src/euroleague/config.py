@@ -27,6 +27,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ENV_VAR = "DATABASE_URL"
+SUPABASE_URL_ENV_VAR = "SUPABASE_URL"
+SUPABASE_SERVICE_KEY_ENV_VAR = "SUPABASE_SERVICE_ROLE_KEY"
+SUPABASE_BUCKET_ENV_VAR = "SUPABASE_STORAGE_BUCKET"
+DEFAULT_STORAGE_BUCKET = "euroleague-api-archive"
 
 # The repository root, three levels up from src/euroleague/config.py.
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -170,3 +174,50 @@ class DatabaseSettings:
         """
         url = environ.get(ENV_VAR) or load_env_file(env_file).get(ENV_VAR, "")
         return cls.from_url(url)
+
+
+@dataclass(frozen=True)
+class StorageSettings:
+    """Supabase Storage credentials whose representation never exposes the key."""
+
+    project_url: str
+    _service_key: str
+    bucket: str = DEFAULT_STORAGE_BUCKET
+
+    def __repr__(self) -> str:
+        return (
+            f"StorageSettings(project_url={self.project_url!r}, "
+            f"service_key=<hidden>, bucket={self.bucket!r})"
+        )
+
+    def service_key(self) -> str:
+        """Return the secret only at the HTTP boundary that needs it."""
+        return self._service_key
+
+    @classmethod
+    def from_env(cls, env_file: Path | str = DEFAULT_ENV_FILE) -> StorageSettings:
+        """Read private Storage settings from the environment or gitignored file."""
+        file_values = load_env_file(env_file)
+        project_url = environ.get(SUPABASE_URL_ENV_VAR) or file_values.get(SUPABASE_URL_ENV_VAR, "")
+        service_key = environ.get(SUPABASE_SERVICE_KEY_ENV_VAR) or file_values.get(
+            SUPABASE_SERVICE_KEY_ENV_VAR, ""
+        )
+        bucket = (
+            environ.get(SUPABASE_BUCKET_ENV_VAR)
+            or file_values.get(SUPABASE_BUCKET_ENV_VAR)
+            or DEFAULT_STORAGE_BUCKET
+        )
+        if not project_url.strip():
+            raise ValueError(f"No Supabase project URL given. Set {SUPABASE_URL_ENV_VAR} in .env.")
+        if not service_key.strip():
+            raise ValueError(
+                f"No private Storage credential given. Set {SUPABASE_SERVICE_KEY_ENV_VAR} "
+                "in .env; never commit or print it."
+            )
+        if not bucket.strip():
+            raise ValueError(f"{SUPABASE_BUCKET_ENV_VAR} may not be blank.")
+        return cls(
+            project_url=project_url.rstrip("/"),
+            _service_key=service_key,
+            bucket=bucket.strip(),
+        )

@@ -16,6 +16,7 @@ import pytest
 from euroleague.config import (
     DatabaseSettings,
     DirectHostError,
+    StorageSettings,
     TransactionPoolerError,
     load_env_file,
 )
@@ -170,3 +171,30 @@ def test_a_real_environment_variable_beats_the_env_file(
     )
     settings = DatabaseSettings.from_env(env_file=path)
     assert settings.host == "aws-0-eu-central-1.pooler.supabase.com"
+
+
+def test_storage_settings_hide_the_service_key() -> None:
+    settings = StorageSettings(
+        project_url="https://project.supabase.co",
+        _service_key="service-secret",
+        bucket="euroleague-api-archive",
+    )
+
+    assert "service-secret" not in repr(settings)
+    assert settings.service_key() == "service-secret"
+
+
+def test_storage_settings_read_the_same_env_file_without_printing_it(tmp_path: Path) -> None:
+    path = tmp_path / ".env"
+    path.write_text(
+        "SUPABASE_URL=https://project.supabase.co\n"
+        "SUPABASE_SERVICE_ROLE_KEY=service-secret\n"
+        "SUPABASE_STORAGE_BUCKET=private-bucket\n",
+        encoding="utf-8",
+    )
+
+    settings = StorageSettings.from_env(env_file=path)
+
+    assert settings.project_url == "https://project.supabase.co"
+    assert settings.bucket == "private-bucket"
+    assert settings.service_key() == "service-secret"

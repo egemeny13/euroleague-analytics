@@ -33,6 +33,8 @@ class EventRecord:
     team_code: str | None
     markertime: str | None
     minute: int | None
+    points_a_raw: int | None
+    points_b_raw: int | None
     elapsed_seconds_raw: int
     clock_moved_backwards: bool
     score_a: int
@@ -138,6 +140,8 @@ def flatten_play_by_play(payload: dict[str, Any]) -> list[EventRecord]:
                 team_code=_trim(row.get("CODETEAM")),
                 markertime=markertime,
                 minute=int(row["MINUTE"]) if row.get("MINUTE") is not None else None,
+                points_a_raw=(int(row["POINTS_A"]) if row.get("POINTS_A") is not None else None),
+                points_b_raw=(int(row["POINTS_B"]) if row.get("POINTS_B") is not None else None),
                 elapsed_seconds_raw=elapsed_seconds,
                 clock_moved_backwards=elapsed_seconds < previous_elapsed,
                 score_a=score_a,

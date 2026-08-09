@@ -90,15 +90,22 @@ player or team points mismatches. The correction re-times 32 substitution rows,
 moves no lineup, and is enabled only because it strictly improves agreement with
 the official box score. See `docs/PHASE_3_REPORT.md`.
 
-### Phase 4 — raw ingest
-Load E2024 from the existing cache into the raw layer. Network not required —
-the cache is already on disk.
+### Phase 4 — raw ingest. Complete; size gate exceeded.
+E2024 was loaded from the existing cache into the raw layer with no EuroLeague
+API requests. Every raw table reconciles per game, all 661 archive checksums
+match, and a second complete load left counts and content fingerprints unchanged.
 
-**Gate:** every raw table reconciles to the cached payloads; checksums match.
+The physical-size condition did not pass: one measured season projects to
+1,023,918,080 bytes across 19 E2024-sized seasons, above the 474,311,115-byte
+usable budget. No hot-window size has been chosen. The owner must make that
+Decision 8 follow-up before production backfill. See `docs/PHASE_4_REPORT.md`.
 
 ### Phase 5 — derived layer: lineups and stints
 Build `game_event`, `lineup`, `lineup_stint`, `player_game_minutes`,
 `game_quality`.
+
+**Blocked:** do not begin until the owner resolves Phase 4's failed physical-size
+gate. The existing E2024 raw season remains valid and fully reconciled.
 
 **Gate:** all lineup invariants green on 330 games; the quarantine list matches
 `SEASON_SWEEP.md` exactly — 2 games failing minutes after correction, 7 failing

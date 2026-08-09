@@ -25,6 +25,7 @@ testpaths = ["tests"]
 addopts = "--strict-markers --strict-config -q"
 markers = [
     "full_season: reads the complete response cache, which is not committed. Deselected in CI with -m 'not full_season'.",
+    "warehouse: connects to the configured private Supabase warehouse. Deselected in fixture-only CI.",
 ]
 
 [tool.ruff]
