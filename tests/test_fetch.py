@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import pytest
+import requests
 
 from euroleague.cache import ENDPOINTS
 
@@ -20,14 +21,14 @@ class StubResponse:
 
 
 class RecordingTransport:
-    def __init__(self, responses: list[StubResponse | Exception]) -> None:
+    def __init__(self, responses: list[StubResponse | BaseException]) -> None:
         self.responses = list(responses)
         self.calls: list[tuple[str, float]] = []
 
     def get(self, url: str, *, timeout: float) -> StubResponse:
         self.calls.append((url, timeout))
         response = self.responses.pop(0)
-        if isinstance(response, Exception):
+        if isinstance(response, BaseException):
             raise response
         return response
 
@@ -144,3 +145,172 @@ def test_fetched_schedule_is_cached_before_it_is_parsed(tmp_path) -> None:
         make_fetcher(tmp_path, transport).fetch_season("E2025")
 
     assert (tmp_path / "E2025" / "schedule.json").read_bytes() == body
+
+
+def test_429_retry_after_is_honored_before_success(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport(
+        [
+            StubResponse(429, {"Retry-After": "12"}, b"slow down"),
+            StubResponse(200, {}, b"eventual success"),
+        ]
+    )
+    fake_time = FakeTime()
+
+    summary = make_fetcher(tmp_path, transport, fake_time).fetch_season("E2025")
+
+    assert len(transport.calls) == 2
+    assert fake_time.sleeps == [12.0]
+    assert [entry["http_status"] for entry in read_log(tmp_path)] == [429, 200]
+    assert (tmp_path / "E2025" / "Points" / "7.json").read_bytes() == (
+        b"eventual success"
+    )
+    assert summary.fetched_files == 1
+
+
+def test_5xx_is_retried_with_backoff(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport(
+        [
+            StubResponse(503, {}, b"first outage"),
+            StubResponse(503, {}, b"second outage"),
+            StubResponse(200, {}, b"recovered"),
+        ]
+    )
+    fake_time = FakeTime()
+
+    make_fetcher(tmp_path, transport, fake_time).fetch_season("E2025")
+
+    assert len(transport.calls) == 3
+    assert fake_time.sleeps == [9.0, 10.0]
+    assert [entry["http_status"] for entry in read_log(tmp_path)] == [503, 503, 200]
+    assert (tmp_path / "E2025" / "Points" / "7.json").read_bytes() == b"recovered"
+
+
+def test_404_is_recorded_and_the_next_game_continues(tmp_path) -> None:
+    write_schedule(
+        tmp_path,
+        [
+            {"gameCode": 7, "played": True},
+            {"gameCode": 8, "played": True},
+        ],
+    )
+    for gamecode in (7, 8):
+        for endpoint in ("Boxscore", "PlaybyPlay"):
+            path = tmp_path / "E2025" / endpoint / f"{gamecode}.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"already cached")
+    transport = RecordingTransport(
+        [
+            StubResponse(404, {}, b"missing"),
+            StubResponse(200, {}, b"next game"),
+        ]
+    )
+    fake_time = FakeTime()
+
+    summary = make_fetcher(tmp_path, transport, fake_time).fetch_season("E2025")
+
+    assert len(transport.calls) == 2
+    assert [entry["http_status"] for entry in read_log(tmp_path)] == [404, 200]
+    assert (tmp_path / "E2025" / "Points" / "8.json").read_bytes() == b"next game"
+    assert summary.permanent_missing == 1
+    assert summary.failed_targets == 0
+
+
+def test_unplayed_schedule_entries_complete_without_requests(tmp_path) -> None:
+    write_schedule(tmp_path, [{"gameCode": 9, "played": False}])
+    transport = RecordingTransport([])
+
+    summary = make_fetcher(tmp_path, transport).fetch_season("E2025")
+
+    assert transport.calls == []
+    assert summary.scheduled_games == 1
+    assert summary.played_games == 0
+    assert summary.unplayed_games == 1
+    assert summary.failed_targets == 0
+
+
+def test_logged_404_is_not_requested_after_restart(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    first_transport = RecordingTransport([StubResponse(404, {}, b"missing")])
+    make_fetcher(tmp_path, first_transport).fetch_season("E2025")
+    restarted_transport = RecordingTransport([])
+
+    summary = make_fetcher(tmp_path, restarted_transport).fetch_season("E2025")
+
+    assert restarted_transport.calls == []
+    assert summary.permanent_missing == 1
+
+
+def test_progress_reports_running_eta(tmp_path) -> None:
+    from euroleague.fetch import ArchiveFetcher
+
+    write_one_missing_points_target(tmp_path)
+    messages: list[str] = []
+    fake_time = FakeTime()
+    fetcher = ArchiveFetcher(
+        transport=RecordingTransport([StubResponse(200, {}, b"done")]),
+        cache_root=tmp_path,
+        sleep=fake_time.sleep,
+        monotonic=fake_time.monotonic,
+        utc_now=fake_time.utc_now,
+        progress=messages.append,
+    )
+
+    fetcher.fetch_season("E2025")
+
+    assert any(
+        "ETA" in message
+        and "fetched=1" in message
+        and "skipped=2" in message
+        and "permanent=0" in message
+        for message in messages
+    )
+
+
+def test_429_http_date_retry_after_is_honored(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport(
+        [
+            StubResponse(
+                429,
+                {"Retry-After": "Mon, 10 Aug 2026 00:00:15 GMT"},
+                b"slow down",
+            ),
+            StubResponse(200, {}, b"eventual success"),
+        ]
+    )
+    fake_time = FakeTime()
+
+    make_fetcher(tmp_path, transport, fake_time).fetch_season("E2025")
+
+    assert fake_time.sleeps == [15.0]
+
+
+def test_transport_failure_is_retried_and_the_success_is_logged(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport(
+        [
+            requests.ConnectionError("temporary disconnect"),
+            StubResponse(200, {}, b"recovered"),
+        ]
+    )
+    fake_time = FakeTime()
+
+    summary = make_fetcher(tmp_path, transport, fake_time).fetch_season("E2025")
+
+    assert len(transport.calls) == 2
+    assert fake_time.sleeps == [9.0]
+    assert [entry["http_status"] for entry in read_log(tmp_path)] == [200]
+    assert summary.http_requests == 2
+
+
+def test_ctrl_c_returns_an_interrupted_summary_without_a_partial_cache_file(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport([KeyboardInterrupt()])
+
+    summary = make_fetcher(tmp_path, transport).fetch_season("E2025")
+
+    assert summary.interrupted is True
+    assert not (tmp_path / "E2025" / "Points" / "7.json").exists()
+    assert summary.http_requests == 1
