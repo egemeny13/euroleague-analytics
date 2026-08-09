@@ -1,0 +1,13 @@
+# Runtime dependencies. Exact pins, deliberately few.
+#
+# Only direct dependencies are pinned here, not the full transitive tree.
+# A full `pip freeze` from this Windows machine would pin platform-specific
+# packages (colorama, psycopg-binary) that do not resolve the same way on the
+# Linux runners CI uses, so it would break the thing it is meant to protect.
+
+requests==2.34.2
+
+# psycopg with the binary wheel, so no local PostgreSQL build toolchain is
+# needed. Used with COPY for bulk loads - see DECISIONS.md item 15, including
+# why the connection must go through the pooler and not the direct host.
+psycopg[binary]==3.3.4

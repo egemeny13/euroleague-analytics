@@ -1,0 +1,5 @@
+# Development dependencies. Installing this file installs the runtime ones too.
+-r requirements.txt
+
+pytest==9.1.1
+ruff==0.16.2

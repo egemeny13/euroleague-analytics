@@ -1,0 +1,79 @@
+{
+  "season_code": "E2024",
+  "source": "exploration/cache, byte-identical copies",
+  "selected_by": "exploration/sweep_results.json, by defect carried",
+  "games": {
+    "1": {
+      "defect": "none - reference game",
+      "why": "The game exploration/FINDINGS.md was written against. Clean on every invariant, so it is the baseline that proves a failure elsewhere is the data and not the reader.",
+      "sha256": {
+        "Boxscore": "66db57074f8851c14d999a9697c8a5edea241856794c22c53032c0be1936d8fc",
+        "PlaybyPlay": "43393b352c05637abc1cb8653770ac12aa343aedeff6583e67de5607104865df"
+      }
+    },
+    "23": {
+      "defect": "phantom event - statistic credited to an off-court player",
+      "why": "One of the 7 games carrying a misattributed row. No other defect, so it isolates attribution from everything else.",
+      "sha256": {
+        "Boxscore": "55e4fdfccd6a1bd215a39a2e31561bcb1d0227a8277e466e73432324e2dbb2a0",
+        "PlaybyPlay": "71c54b486b322fe67ed7eb3046ddab8904b7204f0f61d42863cbc2c500188571"
+      }
+    },
+    "35": {
+      "defect": "minute mismatch the +-60 correction repairs",
+      "why": "An overtime game whose tip-off substitutions are mistimed by exactly 60 seconds. This is the case the correction was built for, so it is the test that the correction still helps.",
+      "sha256": {
+        "Boxscore": "5d8c1fe434658c0509227c6490dc7178877d841e2b59b6e571987b453fa8988f",
+        "PlaybyPlay": "66d16e0641def47226ff1df9843b1ff44b1b9505cf8cecb71c1539d4741888f6"
+      }
+    },
+    "43": {
+      "defect": "minute mismatch the +-60 correction cannot repair - quarantined",
+      "why": "Mismatches by 60 seconds but has no overtime, so the correction rule cannot reach it. One of the two games that stay quarantined. Proves the correction is narrow rather than a blanket 60-second nudge.",
+      "sha256": {
+        "Boxscore": "ea6587e63b461795a01b91b3d3e278d740ecd47e2d1c16c6d0af01130ab4c008",
+        "PlaybyPlay": "32ab5ebbb1e87dd42716e10baa93ca81ed444cbca104d9f45b70947b76bc843f"
+      }
+    },
+    "75": {
+      "defect": "single overtime, otherwise clean",
+      "why": "Overtime that reconciles perfectly. Guards the opposite error from game 107: a period rule that invents problems in ordinary overtime.",
+      "sha256": {
+        "Boxscore": "9c1c767748362d27c2e829027e040438f652ec0beacb813ae90b2e2be5e759d6",
+        "PlaybyPlay": "0a3d01fefdae82e24474d4eecce2ddd96f2ccd6723e36a69b539df45f55e2048"
+      }
+    },
+    "98": {
+      "defect": "minute mismatch the +-60 correction cannot repair - quarantined",
+      "why": "The second of the two permanently quarantined games. Same shape as 43.",
+      "sha256": {
+        "Boxscore": "066cc5fcf2db22e95824bc2692ba462b33fc8e25182295956de37d77dc5f6f57",
+        "PlaybyPlay": "8a824efc986f2f9fa9b8a0eb2c74b3105146409049de34c01b5a7411cb7d0996"
+      }
+    },
+    "107": {
+      "defect": "double overtime",
+      "why": "The only double-overtime game in E2024. ExtraTime is a single JSON list holding every overtime period, so the period boundary has to be counted off the end-of-period markers. A game with one overtime cannot detect an off-by-one in that rule; this one can.",
+      "sha256": {
+        "Boxscore": "76bf18f749492fa6c2e8e86ecef272a7d045f2024513f36d4e63945e6a8667be",
+        "PlaybyPlay": "0f1f998a2094b2d847cd5a2bddcd9764a82f78161ebda2748be7168862642c82"
+      }
+    },
+    "131": {
+      "defect": "on-court violation, overlapping substitution batches",
+      "why": "The only game in the season where the naive batch rule leaves a team showing four players: two Real Madrid events stamped 08:00 land inside a Zalgiris batch stamped 07:12. The absorbing batch rule from SCHEMA_PROPOSAL.md section 6 exists because of this game.",
+      "sha256": {
+        "Boxscore": "4ac4e292742626cdf0f8e8480c68560c5a21280f403dff4632d2834780a95bd6",
+        "PlaybyPlay": "505ef9016283f185c4e0a3584ff660577a19c5354485cb9690ac1b05e4c2589c"
+      }
+    },
+    "323": {
+      "defect": "phantom event plus a full 60-second backwards clock step",
+      "why": "Carries both an attribution defect and the largest backwards clock step observed. Two defects in one game is the case where a fix for one can quietly break the other.",
+      "sha256": {
+        "Boxscore": "09b293fe6df54fd95580d976e51edb12847bc3bbf51f22bd13b8596a7ec7d8cd",
+        "PlaybyPlay": "e31683173eaa8b91bcd7d42a4d7ac34ecc40bbf877c27946fd95e9b79b98274e"
+      }
+    }
+  }
+}

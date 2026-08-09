@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "euroleague-analytics"
+version = "0.1.0"
+description = "A validated data warehouse for EuroLeague and EuroCup basketball, built from the public play-by-play API."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "MIT"
+authors = [{ name = "Egemen Yucelen" }]
+
+# Dependencies are pinned in requirements.txt rather than listed here, so that
+# there is exactly one place to look. See that file for why the pins stop at
+# direct dependencies.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Fail on an unregistered marker rather than silently skipping the test.
+addopts = "--strict-markers --strict-config -q"
+markers = [
+    "full_season: reads the complete response cache, which is not committed. Deselected in CI with -m 'not full_season'.",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["src", "tests"]
+
+# The exploration scripts are the throwaway instruments that produced
+# FINDINGS.md and SEASON_SWEEP.md. They are kept so the measurements can be
+# reproduced, not maintained as pipeline code, and reformatting them would
+# edit the evidence. Excluded deliberately.
+extend-exclude = ["exploration"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # import sorting
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "SIM", # simplify
+    "RUF",
+]
