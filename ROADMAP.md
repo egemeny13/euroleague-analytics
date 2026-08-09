@@ -73,7 +73,7 @@ future schema change must be gated on a fresh empty database instead.
 Also verified: RLS denies the public REST endpoint. With one row present, the
 owning role saw 1 and `anon` saw 0.
 
-### Phase 3 — the test suite
+### Phase 3 — the test suite. Complete.
 Promote the throwaway checks in `exploration/sweep_season.py` into a permanent
 test suite: the four tripwires that currently never fire, the three that
 quarantine games, and the box-score reconciliation across 50+ games.
@@ -81,6 +81,14 @@ quarantine games, and the box-score reconciliation across 50+ games.
 **Gate — the hardest rule in this roadmap: do not load a single row into the
 warehouse before this phase is green.** A warehouse filled with unvalidated
 data cannot be debugged, because there is no baseline to compare against.
+
+**Gate: passed 2026-08-09.** The permanent cache-only library and tests reproduce
+the complete E2024 baseline: 330 games and 176,483 events; 9 games/36 player rows
+mismatching raw minutes by exactly 60 seconds; 2 games/4 rows after the narrow
+overtime correction; 0 on-court violations; 7 off-court attributions; and 0
+player or team points mismatches. The correction re-times 32 substitution rows,
+moves no lineup, and is enabled only because it strictly improves agreement with
+the official box score. See `docs/PHASE_3_REPORT.md`.
 
 ### Phase 4 — raw ingest
 Load E2024 from the existing cache into the raw layer. Network not required —

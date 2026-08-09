@@ -60,8 +60,8 @@
       }
     },
     "131": {
-      "defect": "on-court violation, overlapping substitution batches",
-      "why": "The only game in the season where the naive batch rule leaves a team showing four players: two Real Madrid events stamped 08:00 land inside a Zalgiris batch stamped 07:12. The absorbing batch rule from SCHEMA_PROPOSAL.md section 6 exists because of this game.",
+      "defect": "overlapping substitution batch plus an off-court attribution",
+      "why": "The only game in the season where the naive batch rule leaves a team showing four players: two Real Madrid events stamped 08:00 land inside a Zalgiris batch stamped 07:12. The absorbing batch rule removes those violations. The same source payload also credits event 168 to P002329 before his IN row, so the permanent result correctly retains one attribution issue.",
       "sha256": {
         "Boxscore": "4ac4e292742626cdf0f8e8480c68560c5a21280f403dff4632d2834780a95bd6",
         "PlaybyPlay": "505ef9016283f185c4e0a3584ff660577a19c5354485cb9690ac1b05e4c2589c"
