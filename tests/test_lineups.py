@@ -149,6 +149,19 @@ def test_game_131s_intruding_rows_are_absorbed_into_the_substitution_batch(fixtu
     assert result.oncourt_violations == ()
 
 
+def test_result_exposes_starters_and_atomic_substitution_windows(fixture_cache) -> None:
+    """Break caught: persistence invents transient hybrid five-man units mid-batch."""
+    result = _fixture_result(fixture_cache, 131)
+
+    assert [len(lineup) for lineup in result.initial_lineups] == [5, 5]
+    assert result.substitution_intervals
+    assert all(
+        len(result.lineup_timeline[end][team_index]) == 5
+        for _, end in result.substitution_intervals
+        for team_index in (0, 1)
+    )
+
+
 def test_a_player_may_enter_act_and_leave_within_one_clock_reading(fixture_cache) -> None:
     result = _fixture_result(fixture_cache, 107)
 

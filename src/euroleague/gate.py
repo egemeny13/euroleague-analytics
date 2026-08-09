@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import math
 from dataclasses import dataclass
 from typing import Any
 
 from euroleague.archive import build_archive_object
 from euroleague.cache import ResponseCache
+from euroleague.derived import PHASE_5_SEASON, E2024OnlyError, LineupUsage
+from euroleague.lineups import COACH_IDS
 from euroleague.parse import parse_cached_game
 
 PHYSICAL_BUDGET_BYTES = 474_311_115
@@ -31,6 +35,20 @@ class TableSize:
 
     table_bytes: int
     index_bytes: int
+    total_bytes: int
+
+
+@dataclass(frozen=True)
+class LineupIdentifierWidth:
+    """Measured storage and uniform collision risk for one checksum width."""
+
+    hex_characters: int
+    distinct_units: int
+    event_references: int
+    stint_references: int
+    possession_references: int
+    collision_probability: float
+    component_sizes: dict[str, TableSize]
     total_bytes: int
 
 
@@ -265,3 +283,240 @@ def projected_database_growth_bytes(
     if growth < 0:
         raise ValueError("Current database size cannot be below the measured empty baseline.")
     return seasons * growth
+
+
+def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str, int]:
+    """Prove the pre-lineup E2024 dimensions and event rows match the raw layer."""
+    if season_code != PHASE_5_SEASON:
+        raise E2024OnlyError(
+            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
+        )
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                (SELECT count(*) FROM player),
+                (SELECT count(*) FROM team),
+                (SELECT count(*) FROM team_season WHERE season_code = %s),
+                (SELECT count(*) FROM game_event WHERE season_code = %s),
+                (SELECT count(*) FROM possession)
+            """,
+            (season_code, season_code),
+        )
+        player_count, team_count, team_season_count, event_count, possession_count = (
+            int(value) for value in cursor.fetchone()
+        )
+
+        cursor.execute(
+            """
+            SELECT count(*) FROM (
+                (SELECT season_code, gamecode, ingest_index
+                 FROM raw_event WHERE season_code = %s
+                 EXCEPT
+                 SELECT season_code, gamecode, ingest_index
+                 FROM game_event WHERE season_code = %s)
+                UNION ALL
+                (SELECT season_code, gamecode, ingest_index
+                 FROM game_event WHERE season_code = %s
+                 EXCEPT
+                 SELECT season_code, gamecode, ingest_index
+                 FROM raw_event WHERE season_code = %s)
+            ) differences
+            """,
+            (season_code,) * 4,
+        )
+        key_differences = int(cursor.fetchone()[0])
+
+        cursor.execute(
+            """
+            SELECT count(*)
+            FROM raw_event raw
+            JOIN game_event derived
+              USING (season_code, gamecode, ingest_index)
+            WHERE raw.season_code = %s
+              AND (raw.competition_code IS DISTINCT FROM derived.competition_code
+                   OR raw.source_list IS DISTINCT FROM derived.source_list
+                   OR raw.numberofplay IS DISTINCT FROM derived.numberofplay
+                   OR raw.playtype IS DISTINCT FROM derived.playtype
+                   OR raw.player_id IS DISTINCT FROM derived.player_id
+                   OR raw.codeteam IS DISTINCT FROM derived.codeteam
+                   OR raw.markertime IS DISTINCT FROM derived.markertime
+                   OR raw.minute IS DISTINCT FROM derived.minute)
+            """,
+            (season_code,),
+        )
+        payload_differences = int(cursor.fetchone()[0])
+
+        cursor.execute(
+            """
+            SELECT count(*) FROM game_event
+            WHERE season_code = %s
+              AND (home_lineup_id IS NOT NULL OR away_lineup_id IS NOT NULL
+                   OR stint_index IS NOT NULL OR possession_index IS NOT NULL
+                   OR free_throw_trip_id IS NOT NULL)
+            """,
+            (season_code,),
+        )
+        premature_rows = int(cursor.fetchone()[0])
+        cursor.execute(
+            "SELECT count(*) FROM player WHERE player_id = ANY(%s)",
+            (list(COACH_IDS),),
+        )
+        coach_players = int(cursor.fetchone()[0])
+
+    if key_differences or payload_differences:
+        raise AssertionError(
+            f"game_event differs from raw_event: keys={key_differences}, "
+            f"payload_rows={payload_differences}."
+        )
+    if premature_rows:
+        raise AssertionError(
+            f"Found {premature_rows} game_event rows with pre-decision lineup or Phase 6 values."
+        )
+    if coach_players:
+        raise AssertionError(f"Found {coach_players} coach pseudo-identifiers in player.")
+    if possession_count:
+        raise AssertionError(
+            f"Phase 5 requires an empty possession table; found {possession_count}."
+        )
+
+    return {
+        "player": player_count,
+        "team": team_count,
+        "team_season": team_season_count,
+        "game_event": event_count,
+        "possession": possession_count,
+    }
+
+
+def checksum_collision_probability(distinct_values: int, hex_characters: int) -> float:
+    """Return the exact birthday collision risk for uniform hexadecimal values."""
+    if distinct_values < 0:
+        raise ValueError("Distinct value count cannot be negative.")
+    if hex_characters <= 0:
+        raise ValueError("Checksum width must be positive.")
+    if distinct_values < 2:
+        return 0.0
+    value_space = 16**hex_characters
+    if distinct_values > value_space:
+        return 1.0
+    log_no_collision = sum(
+        math.log1p(-used_values / value_space) for used_values in range(distinct_values)
+    )
+    return -math.expm1(log_no_collision)
+
+
+def _measurement_tokens(usage: LineupUsage, width: int) -> dict[tuple[str, ...], str]:
+    tokens = {
+        unit: hashlib.sha256(("measurement\0" + "\0".join(unit)).encode()).hexdigest()[:width]
+        for unit in usage.units
+    }
+    if len(set(tokens.values())) != len(tokens):
+        raise AssertionError(f"Synthetic {width}-character measurement tokens collided.")
+    return tokens
+
+
+def _copy_measurement_rows(cursor: Any, table: str, columns: str, rows) -> None:
+    with cursor.copy(f"COPY {table} ({columns}) FROM STDIN") as copy:
+        for row in rows:
+            copy.write_row(row)
+
+
+def _relation_size(cursor: Any, relation: str) -> TableSize:
+    cursor.execute(
+        """
+        SELECT pg_table_size(%s::regclass),
+               pg_indexes_size(%s::regclass),
+               pg_total_relation_size(%s::regclass)
+        """,
+        (relation, relation, relation),
+    )
+    table_bytes, index_bytes, total_bytes = cursor.fetchone()
+    return TableSize(int(table_bytes), int(index_bytes), int(total_bytes))
+
+
+def _measure_lineup_width(connection: Any, usage: LineupUsage, width: int) -> LineupIdentifierWidth:
+    if width not in {64, 32, 12}:
+        raise ValueError(f"Unsupported lineup identifier width {width}.")
+    suffix = str(width)
+    relation_names = {
+        "lineup": f"measure_lineup_{suffix}",
+        "game_event": f"measure_game_event_{suffix}",
+        "lineup_stint": f"measure_lineup_stint_{suffix}",
+        "possession": f"measure_possession_{suffix}",
+    }
+    tokens = _measurement_tokens(usage, width)
+
+    with connection.cursor() as cursor:
+        try:
+            cursor.execute(
+                f"""
+                CREATE TEMP TABLE {relation_names["lineup"]} (
+                    unit_token text NOT NULL,
+                    team_code text NOT NULL,
+                    player_id_1 text NOT NULL,
+                    player_id_2 text NOT NULL,
+                    player_id_3 text NOT NULL,
+                    player_id_4 text NOT NULL,
+                    player_id_5 text NOT NULL
+                )
+                """
+            )
+            _copy_measurement_rows(
+                cursor,
+                relation_names["lineup"],
+                "unit_token, team_code, player_id_1, player_id_2, player_id_3, "
+                "player_id_4, player_id_5",
+                ((tokens[unit], *unit) for unit in usage.units),
+            )
+            cursor.execute(f"CREATE UNIQUE INDEX ON {relation_names['lineup']} (unit_token)")
+            cursor.execute(f"CREATE INDEX ON {relation_names['lineup']} (team_code)")
+            for player_position in range(1, 6):
+                cursor.execute(
+                    f"CREATE INDEX ON {relation_names['lineup']} (player_id_{player_position})"
+                )
+
+            for component, references in (
+                ("game_event", usage.event_lineups),
+                ("lineup_stint", usage.stint_lineups),
+                ("possession", usage.possession_lineups),
+            ):
+                relation = relation_names[component]
+                cursor.execute(
+                    f"CREATE TEMP TABLE {relation} (home_unit_token text, away_unit_token text)"
+                )
+                _copy_measurement_rows(
+                    cursor,
+                    relation,
+                    "home_unit_token, away_unit_token",
+                    ((tokens[home], tokens[away]) for home, away in references),
+                )
+                cursor.execute(f"CREATE INDEX ON {relation} (home_unit_token)")
+                cursor.execute(f"CREATE INDEX ON {relation} (away_unit_token)")
+
+            component_sizes = {
+                component: _relation_size(cursor, relation)
+                for component, relation in relation_names.items()
+            }
+        finally:
+            for relation in reversed(tuple(relation_names.values())):
+                cursor.execute(f"DROP TABLE IF EXISTS {relation}")
+
+    return LineupIdentifierWidth(
+        hex_characters=width,
+        distinct_units=len(usage.units),
+        event_references=2 * len(usage.event_lineups),
+        stint_references=2 * len(usage.stint_lineups),
+        possession_references=2 * len(usage.possession_lineups),
+        collision_probability=checksum_collision_probability(len(usage.units), width),
+        component_sizes=component_sizes,
+        total_bytes=sum(size.total_bytes for size in component_sizes.values()),
+    )
+
+
+def measure_lineup_identifier_widths(
+    connection: Any, usage: LineupUsage
+) -> dict[int, LineupIdentifierWidth]:
+    """Measure full E2024-usage storage for the three owner decision options."""
+    return {width: _measure_lineup_width(connection, usage, width) for width in (64, 32, 12)}

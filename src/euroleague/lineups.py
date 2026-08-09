@@ -59,6 +59,8 @@ class OnCourtViolation:
 @dataclass(frozen=True)
 class LineupGameResult:
     teams: tuple[str, str]
+    initial_lineups: tuple[frozenset[str], frozenset[str]]
+    substitution_intervals: tuple[tuple[int, int], ...]
     overtime_periods: int
     event_count: int
     player_seconds_raw: dict[tuple[str, str], int]
@@ -204,6 +206,7 @@ def reconstruct_lineups(boxscore: dict[str, Any], events: list[EventRecord]) -> 
     substitution_intervals = _substitution_intervals(events)
     interval_end_positions = {end for _, end in substitution_intervals}
     clock_windows = _clock_windows(events)
+    initial_lineups = (frozenset(on_court[teams[0]]), frozenset(on_court[teams[1]]))
 
     came_on = {team: {player: 0 for player in on_court[team]} for team in teams}
     seconds_played: Counter[tuple[str, str]] = Counter()
@@ -331,6 +334,8 @@ def reconstruct_lineups(boxscore: dict[str, Any], events: list[EventRecord]) -> 
     timeline = tuple((snapshot[teams[0]], snapshot[teams[1]]) for snapshot in snapshots[1:])
     return LineupGameResult(
         teams=(teams[0], teams[1]),
+        initial_lineups=initial_lineups,
+        substitution_intervals=substitution_intervals,
         overtime_periods=max(0, last_period - 4),
         event_count=len(events),
         player_seconds_raw=player_seconds,
