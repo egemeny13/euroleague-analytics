@@ -9,6 +9,10 @@ CONTEXT.md
 # Secrets. Never commit. See .env.example for the shape.
 .env
 
+# Machine-local symlinks into .agents/skills, created by the skills installer.
+# The skills themselves are committed; these pointers are not portable.
+.claude/
+
 # Python
 __pycache__/
 *.py[cod]

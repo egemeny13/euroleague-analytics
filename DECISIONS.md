@@ -364,22 +364,51 @@ must come from the full run, never from the fixtures.
 
 ---
 
-## 15. How Python reaches Postgres — `psycopg` through the pooler
+## 15. How Python reaches Postgres — `psycopg` through the **session** pooler
 
-Bulk loads use `psycopg` and the `COPY` command over a direct Postgres
-connection, addressed through **Supabase's connection pooler**, never the
-direct database host.
+Bulk loads use `psycopg` and the `COPY` command, addressed through **Supabase's
+shared pooler in session mode**: the `...pooler.supabase.com` host on port
+**5432**.
+
+Supabase offers three connection strings and two of them are wrong here. This
+item originally said "the pooler", which is ambiguous, and the ambiguity
+immediately produced a `.env.example` showing the wrong port.
+
+| String | Address | Verdict |
+|---|---|---|
+| Direct | `db.<ref>.supabase.co:5432` | No — IPv6-only on the free plan, and GitHub runners are IPv4-only. |
+| Transaction pooler | `...pooler.supabase.com:6543` | No — no prepared statements. |
+| **Session pooler** | `...pooler.supabase.com:5432` | **Yes** — IPv4, and otherwise behaves like a direct connection. |
 
 **Why not the Supabase client.** `supabase-py` speaks to PostgREST over HTTPS,
 which has no `COPY`. Loading 176,483 events would mean thousands of batched
 insert requests: slow, and every batch is an opportunity to half-fail and leave
 the table in a state no test anticipated.
 
-**Why the pooler specifically, and why this is written down.** Free projects
-have no dedicated IPv4 address, and GitHub Actions runners are IPv4-only. Code
-pointed at the direct database host works on the owner's machine and fails only
-in CI. That is the worst failure shape this project has, so the address is a
-decision rather than a configuration detail.
+**Why not the direct connection.** Free projects have no dedicated IPv4
+address, and GitHub Actions runners are IPv4-only. Code pointed at the direct
+host works on the owner's machine and fails only in CI. That is the worst
+failure shape this project has.
+
+**Why not the transaction pooler**, which is the one most guides reach for.
+Transaction mode does not support prepared statements, and psycopg prepares a
+statement automatically once it has seen the same query five times. A bulk load
+would therefore succeed for the first few batches and begin failing partway
+through — a failure that looks like our loader and is not. Transaction mode is
+built for serverless functions issuing one query and disconnecting; this project
+is one long-running process issuing large loads, which is what session mode is
+for.
+
+**Transaction mode is not impossible, and this is a policy rather than a
+constraint.** It can be made to work by turning prepared statements off in the
+driver — `prepare_threshold=None` in psycopg. We are choosing not to: one
+enforced connection style is easier to reason about than two, and a project
+whose owner cannot audit the code should not carry a second configuration whose
+failure mode is a partial load.
+
+**Enforced in code.** `DatabaseSettings` rejects both wrong strings with an
+error naming the fix, so a mis-pasted connection string fails at startup rather
+than halfway through loading a season.
 
 ---
 

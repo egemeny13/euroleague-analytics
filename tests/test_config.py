@@ -11,19 +11,40 @@ from __future__ import annotations
 
 import pytest
 
-from euroleague.config import DatabaseSettings, DirectHostError
+from euroleague.config import DatabaseSettings, DirectHostError, TransactionPoolerError
 
+# Session mode: the pooler host on port 5432. The one this project uses.
 POOLER_URL = (
+    "postgresql://postgres.pctiewdpstnwcutrvegu:secret"
+    "@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
+)
+# Transaction mode: same host, port 6543. No prepared statements.
+TRANSACTION_POOLER_URL = (
     "postgresql://postgres.pctiewdpstnwcutrvegu:secret"
     "@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
 )
 DIRECT_URL = "postgresql://postgres:secret@db.pctiewdpstnwcutrvegu.supabase.co:5432/postgres"
 
 
-def test_a_pooler_url_is_accepted() -> None:
+def test_the_session_pooler_url_is_accepted() -> None:
     settings = DatabaseSettings.from_url(POOLER_URL)
     assert settings.host == "aws-0-eu-central-1.pooler.supabase.com"
-    assert settings.port == 6543
+    assert settings.port == 5432
+
+
+def test_the_transaction_pooler_is_rejected() -> None:
+    """Port 6543 has no prepared statements, and psycopg prepares them on its own."""
+    with pytest.raises(TransactionPoolerError):
+        DatabaseSettings.from_url(TRANSACTION_POOLER_URL)
+
+
+def test_the_transaction_pooler_rejection_explains_the_failure_and_the_fix() -> None:
+    with pytest.raises(TransactionPoolerError) as raised:
+        DatabaseSettings.from_url(TRANSACTION_POOLER_URL)
+    message = str(raised.value)
+    assert "prepared statement" in message.lower()
+    assert "5432" in message
+    assert "session" in message.lower()
 
 
 def test_the_direct_supabase_host_is_rejected() -> None:

@@ -1,13 +1,22 @@
 """Database connection settings, and the guard against the one mistake that hides.
 
-Supabase projects on the free plan have no dedicated IPv4 address, and GitHub
-Actions runners are IPv4-only. So a connection string pointed at the direct
-database host - `db.<ref>.supabase.co` - connects perfectly from the owner's
-machine and fails only in CI.
+Supabase offers three connection strings and only one of them is right here.
 
-That is the worst failure shape this project has: it works where it is tested by
-hand and breaks where nobody is watching. `DatabaseSettings` refuses the direct
-host outright and says what to use instead.
+`db.<ref>.supabase.co:5432` is the direct connection. On the free plan it is
+IPv6-only, and GitHub Actions runners are IPv4-only, so it connects perfectly
+from the owner's machine and fails only in CI. That is the worst failure shape
+this project has: it works where it is tested by hand and breaks where nobody is
+watching.
+
+`...pooler.supabase.com:6543` is the pooler in *transaction* mode, which does
+not support prepared statements. psycopg prepares a statement automatically once
+it has seen the same query five times, so a bulk load succeeds for the first few
+batches and then starts failing partway through - a failure that looks like our
+code and is not.
+
+`...pooler.supabase.com:5432` is the pooler in *session* mode: IPv4, and
+otherwise behaves like a direct connection. That is the one this project uses,
+and the other two are refused here with an explanation.
 """
 
 from __future__ import annotations
@@ -18,15 +27,21 @@ from urllib.parse import urlparse
 
 ENV_VAR = "DATABASE_URL"
 
-# Supabase's direct-connection hostname. Reachable over IPv6 only on the free
-# plan. The pooler hostnames look like `aws-0-eu-central-1.pooler.supabase.com`
-# and are dual-stack.
+# Supabase's direct-connection hostname, IPv6-only on the free plan.
 _DIRECT_HOST_PREFIX = "db."
 _SUPABASE_DOMAIN = ".supabase.co"
+
+# The shared pooler. Session mode is port 5432, transaction mode is 6543.
+_POOLER_DOMAIN = ".pooler.supabase.com"
+_TRANSACTION_MODE_PORT = 6543
 
 
 class DirectHostError(ValueError):
     """Raised when a connection string points at Supabase's direct database host."""
+
+
+class TransactionPoolerError(ValueError):
+    """Raised when a connection string points at the pooler in transaction mode."""
 
 
 @dataclass(frozen=True)
@@ -84,9 +99,21 @@ class DatabaseSettings:
         if not host:
             raise ValueError(f"No host in the connection string {url!r}.")
 
+        port = parsed.port or 5432
+        if host.endswith(_POOLER_DOMAIN) and port == _TRANSACTION_MODE_PORT:
+            raise TransactionPoolerError(
+                f"Port {_TRANSACTION_MODE_PORT} is the pooler in transaction mode, "
+                f"which does not support prepared statements. psycopg prepares a "
+                f"statement automatically once it has seen the same query five "
+                f"times, so a bulk load would succeed for the first few batches and "
+                f"then start failing partway through. Use the session pooler "
+                f"instead: the same host on port 5432. In the Supabase dashboard it "
+                f"is the string labelled 'Session pooler'."
+            )
+
         return cls(
             host=host,
-            port=parsed.port or 5432,
+            port=port,
             database=(parsed.path or "/postgres").lstrip("/") or "postgres",
             user=parsed.username or "postgres",
             _password=parsed.password or "",
