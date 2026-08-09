@@ -11,6 +11,11 @@ fixtures and exercise exactly the code path production uses.
 Layout on disk, and the fixture tree mirrors it exactly:
 
     <root>/<season_code>/<endpoint>/<gamecode>.json
+
+`Points` is a COORDINATE SOURCE ONLY. It omits missed free throws entirely, so
+counting shots from it and from the event stream gives different answers with
+no error. Shot populations come from PlaybyPlay; Points may only attach
+coordinates to those events. This is Decision 17.
 """
 
 from __future__ import annotations
@@ -22,11 +27,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-# The two endpoints the warehouse is built from. `Points` supplies shot
-# coordinates and joins through `numberofplay`; it is added when the shot layer
-# lands. `ShootingGraphic` and `Comparison` are the API's own derived summaries
-# and are deliberately never cached as source - see CLAUDE.md.
-ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay")
+# The source endpoints archived for every played game. `ShootingGraphic` and
+# `Comparison` are the API's own derived summaries and are deliberately never
+# cached as source - see CLAUDE.md.
+ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay", "Points")
 
 
 @dataclass(frozen=True)
