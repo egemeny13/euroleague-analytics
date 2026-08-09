@@ -29,10 +29,11 @@ testpaths = ["tests"]
 # left the data correct and the tables 111 MB bloated with dead tuples, which
 # is a confusing way to discover the default was wrong. Opting in is now
 # explicit: `pytest -m warehouse` to run the live gates.
-addopts = "--strict-markers --strict-config -q -m 'not full_season and not warehouse'"
+addopts = "--strict-markers --strict-config -q -m 'not full_season and not warehouse and not network'"
 markers = [
     "full_season: reads the complete response cache, which is not committed. Excluded by the default addopts filter.",
     "warehouse: connects to and WRITES TO the configured private Supabase warehouse. Excluded by the default addopts filter; opt in with -m warehouse.",
+    "network: reaches the real EuroLeague API. Excluded by default.",
 ]
 
 [tool.ruff]

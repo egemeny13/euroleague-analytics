@@ -18,11 +18,7 @@ import urllib.parse
 
 import requests
 
-# The season to fetch. This was hard-coded to E2024 for the original
-# reconnaissance sweep. It is a parameter now because the cache must hold more
-# than one season, and because hard-coding it is how the project ended up a
-# season out of date without anyone noticing.
-SEASON = os.environ.get("EL_SEASON", "E2024")
+SEASON = "E2024"
 CACHE_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache", SEASON)
 
 SCHEDULE_URL = (

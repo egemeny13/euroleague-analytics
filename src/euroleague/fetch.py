@@ -68,10 +68,7 @@ class _Counters:
 
 def _schedule_url(season_code: str) -> str:
     query = urlencode({"limit": 1000})
-    return (
-        "https://api-live.euroleague.net/v2/competitions/E/seasons/"
-        f"{season_code}/games?{query}"
-    )
+    return f"https://api-live.euroleague.net/v2/competitions/E/seasons/{season_code}/games?{query}"
 
 
 def _game_url(season_code: str, endpoint: str, gamecode: int) -> str:
@@ -137,7 +134,7 @@ class ArchiveFetcher:
             return float(stripped)
         try:
             retry_at = parsedate_to_datetime(stripped)
-        except (TypeError, ValueError, OverflowError):
+        except TypeError, ValueError, OverflowError:
             return 0.0
         if retry_at.tzinfo is None:
             retry_at = retry_at.replace(tzinfo=UTC)
@@ -238,8 +235,7 @@ class ArchiveFetcher:
         for index, line in enumerate(lines):
             if not line.endswith((b"\n", b"\r")) and index == len(lines) - 1:
                 self.progress(
-                    f"fetch log ends with an incomplete line; ignoring it: "
-                    f"{self.fetch_log_path}"
+                    f"fetch log ends with an incomplete line; ignoring it: {self.fetch_log_path}"
                 )
                 break
             try:
@@ -285,9 +281,7 @@ class ArchiveFetcher:
         )
         average_network_seconds = self.request_interval_seconds
         if network_targets:
-            average_network_seconds = max(
-                self.request_interval_seconds, elapsed / network_targets
-            )
+            average_network_seconds = max(self.request_interval_seconds, elapsed / network_targets)
         remaining_targets = max(0, total_targets - completed_targets)
         eta_seconds = remaining_targets * average_network_seconds
         self.progress(
@@ -401,3 +395,21 @@ class ArchiveFetcher:
                 elapsed_seconds=elapsed_seconds,
                 interrupted=True,
             )
+
+
+def fetch_seasons(
+    season_codes: list[str] | tuple[str, ...],
+    *,
+    fetcher_factory: Callable[[str], ArchiveFetcher],
+    between_seasons: Callable[[float], None] = time.sleep,
+) -> list[FetchSummary]:
+    """Fetch seasons serially, with no opportunity for overlapping requests."""
+    summaries: list[FetchSummary] = []
+    for index, season_code in enumerate(season_codes):
+        if index:
+            between_seasons(9.0)
+        summary = fetcher_factory(season_code).fetch_season(season_code)
+        summaries.append(summary)
+        if summary.interrupted:
+            break
+    return summaries

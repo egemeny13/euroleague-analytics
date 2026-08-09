@@ -8,9 +8,7 @@ from euroleague.cache import ResponseCache
 def test_points_is_a_supported_coordinate_endpoint(tmp_path) -> None:
     cache = ResponseCache(tmp_path)
 
-    assert cache.path_for("E2025", "Points", 17) == (
-        tmp_path / "E2025" / "Points" / "17.json"
-    )
+    assert cache.path_for("E2025", "Points", 17) == (tmp_path / "E2025" / "Points" / "17.json")
 
 
 def test_fixture_cache_reads_the_committed_schedule_subset(fixture_cache) -> None:

@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
-from hashlib import sha256
+import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+from pathlib import Path
 
 import pytest
 import requests
@@ -125,10 +128,7 @@ def test_fetch_log_records_the_required_shape_and_path(tmp_path) -> None:
             "season": "E2025",
             "gamecode": 7,
             "endpoint": "Points",
-            "url": (
-                "https://live.euroleague.net/api/Points?"
-                "gamecode=7&seasoncode=E2025"
-            ),
+            "url": ("https://live.euroleague.net/api/Points?gamecode=7&seasoncode=E2025"),
             "http_status": 200,
             "fetched_at": "2026-08-10T00:00:00Z",
             "byte_length": 5,
@@ -162,9 +162,7 @@ def test_429_retry_after_is_honored_before_success(tmp_path) -> None:
     assert len(transport.calls) == 2
     assert fake_time.sleeps == [12.0]
     assert [entry["http_status"] for entry in read_log(tmp_path)] == [429, 200]
-    assert (tmp_path / "E2025" / "Points" / "7.json").read_bytes() == (
-        b"eventual success"
-    )
+    assert (tmp_path / "E2025" / "Points" / "7.json").read_bytes() == (b"eventual success")
     assert summary.fetched_files == 1
 
 
@@ -314,3 +312,60 @@ def test_ctrl_c_returns_an_interrupted_summary_without_a_partial_cache_file(tmp_
     assert summary.interrupted is True
     assert not (tmp_path / "E2025" / "Points" / "7.json").exists()
     assert summary.http_requests == 1
+
+
+def test_multiple_seasons_run_sequentially_in_one_process() -> None:
+    from euroleague.fetch import FetchSummary, fetch_seasons
+
+    seen: list[str] = []
+    separators: list[float] = []
+
+    class StubFetcher:
+        def __init__(self, season_code: str) -> None:
+            self.season_code = season_code
+
+        def fetch_season(self, season_code: str) -> FetchSummary:
+            assert season_code == self.season_code
+            seen.append(season_code)
+            return FetchSummary(
+                season=season_code,
+                scheduled_games=0,
+                played_games=0,
+                unplayed_games=0,
+                total_targets=0,
+                fetched_files=0,
+                fetched_bytes=0,
+                skipped_files=0,
+                permanent_missing=0,
+                failed_targets=0,
+                http_requests=0,
+                elapsed_seconds=0.0,
+                interrupted=False,
+            )
+
+    summaries = fetch_seasons(
+        ["E2023", "E2024", "E2025"],
+        fetcher_factory=StubFetcher,
+        between_seasons=separators.append,
+    )
+
+    assert seen == ["E2023", "E2024", "E2025"]
+    assert separators == [9.0, 9.0]
+    assert [summary.season for summary in summaries] == seen
+
+
+def test_fetch_archive_help_is_offline_and_documents_the_command() -> None:
+    script = Path(__file__).resolve().parents[1] / "scripts" / "fetch_archive.py"
+
+    completed = subprocess.run(
+        [sys.executable, str(script), "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "SEASON" in completed.stdout
+    assert "--cache-root" in completed.stdout
+    assert "--fetch-log" in completed.stdout
+    assert "--timeout-seconds" in completed.stdout
