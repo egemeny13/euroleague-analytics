@@ -295,10 +295,15 @@ care where the database is.
 
 **Two free-tier facts that are operational constraints, not trivia.**
 
-- **A fresh Supabase database already occupies 40–60 MB** of pre-installed
-  extensions, schemas and default data. The usable budget is therefore roughly
-  440–460 MB, not 500. Item 8's arithmetic did not account for this and should
-  be read with the reduction applied.
+- **An empty project already occupies 25,688,885 bytes.** Measured on this
+  project on 2026-08-09 with `sum(pg_database_size(datname))` before a single
+  table existed: `postgres` 10,415,104 bytes, `template1` 7,752,704,
+  `template0` 7,521,077. The usable budget is therefore **474,311,115 bytes**,
+  not 500,000,000, and item 8's arithmetic should be read with that reduction.
+  This replaces an earlier "40–60 MB" figure taken from Supabase's
+  documentation rather than from the project — the documented range describes
+  projects with extensions installed, and is roughly twice what an untouched
+  project actually uses.
 - **Free projects pause after seven days of low activity.** A few queries a day
   prevents it. This is harmless during the August–September build, and the MCP
   server's own traffic should cover it after launch, but a quiet week in the

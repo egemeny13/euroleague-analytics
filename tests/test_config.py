@@ -9,9 +9,16 @@ rather than by a red workflow run.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from euroleague.config import DatabaseSettings, DirectHostError, TransactionPoolerError
+from euroleague.config import (
+    DatabaseSettings,
+    DirectHostError,
+    TransactionPoolerError,
+    load_env_file,
+)
 
 # Session mode: the pooler host on port 5432. The one this project uses.
 POOLER_URL = (
@@ -93,9 +100,73 @@ def test_from_env_reads_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_from_env_without_the_variable_names_the_variable(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.delenv("DATABASE_URL", raising=False)
     with pytest.raises(ValueError) as raised:
-        DatabaseSettings.from_env()
+        DatabaseSettings.from_env(env_file=tmp_path / "absent.env")
     assert "DATABASE_URL" in str(raised.value)
+
+
+# --- reading the .env file -------------------------------------------------
+
+
+def test_load_env_file_reads_a_simple_assignment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    path = tmp_path / ".env"
+    path.write_text(f"DATABASE_URL={POOLER_URL}\n", encoding="utf-8")
+    assert load_env_file(path) == {"DATABASE_URL": POOLER_URL}
+
+
+def test_load_env_file_ignores_comments_and_blank_lines(tmp_path: Path) -> None:
+    path = tmp_path / ".env"
+    path.write_text(
+        "# a comment\n\n   \nDATABASE_URL=value\n# trailing comment\n", encoding="utf-8"
+    )
+    assert load_env_file(path) == {"DATABASE_URL": "value"}
+
+
+def test_load_env_file_strips_quotes_and_an_export_prefix(tmp_path: Path) -> None:
+    """Both forms are common in .env files copied from shell snippets."""
+    path = tmp_path / ".env"
+    path.write_text("export DATABASE_URL=\"quoted value\"\nOTHER='single'\n", encoding="utf-8")
+    assert load_env_file(path) == {"DATABASE_URL": "quoted value", "OTHER": "single"}
+
+
+def test_load_env_file_keeps_characters_that_appear_in_passwords(tmp_path: Path) -> None:
+    """Passwords contain '=' and '#'. Splitting on every '=' or stripping every
+    '#' would silently truncate the password and produce an auth failure that
+    looks like a wrong password rather than a parsing bug."""
+    path = tmp_path / ".env"
+    path.write_text("DATABASE_URL=postgresql://u:pa=ss#word@host:5432/db\n", encoding="utf-8")
+    assert load_env_file(path) == {"DATABASE_URL": "postgresql://u:pa=ss#word@host:5432/db"}
+
+
+def test_load_env_file_returns_nothing_when_the_file_is_absent(tmp_path: Path) -> None:
+    assert load_env_file(tmp_path / "nope.env") == {}
+
+
+def test_from_env_falls_back_to_the_env_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    path = tmp_path / ".env"
+    path.write_text(f"DATABASE_URL={POOLER_URL}\n", encoding="utf-8")
+    settings = DatabaseSettings.from_env(env_file=path)
+    assert settings.host == "aws-0-eu-central-1.pooler.supabase.com"
+
+
+def test_a_real_environment_variable_beats_the_env_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """In CI the value comes from a secret, and a stray .env must never win."""
+    monkeypatch.setenv("DATABASE_URL", POOLER_URL)
+    path = tmp_path / ".env"
+    path.write_text(
+        "DATABASE_URL=postgresql://wrong:wrong@wrong.pooler.supabase.com:5432/postgres\n",
+        encoding="utf-8",
+    )
+    settings = DatabaseSettings.from_env(env_file=path)
+    assert settings.host == "aws-0-eu-central-1.pooler.supabase.com"

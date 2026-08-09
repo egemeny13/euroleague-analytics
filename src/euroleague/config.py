@@ -23,9 +23,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from os import environ
+from pathlib import Path
 from urllib.parse import urlparse
 
 ENV_VAR = "DATABASE_URL"
+
+# The repository root, three levels up from src/euroleague/config.py.
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_ENV_FILE = REPO_ROOT / ".env"
 
 # Supabase's direct-connection hostname, IPv6-only on the free plan.
 _DIRECT_HOST_PREFIX = "db."
@@ -34,6 +39,42 @@ _SUPABASE_DOMAIN = ".supabase.co"
 # The shared pooler. Session mode is port 5432, transaction mode is 6543.
 _POOLER_DOMAIN = ".pooler.supabase.com"
 _TRANSACTION_MODE_PORT = 6543
+
+
+def load_env_file(path: Path | str = DEFAULT_ENV_FILE) -> dict[str, str]:
+    """Read a `.env` file into a plain dictionary. Returns `{}` if it is absent.
+
+    Deliberately hand-written rather than adding `python-dotenv`, because the
+    need is one variable and the dependency list is meant to stay short.
+
+    It handles the three shapes a `.env` file actually arrives in: an optional
+    `export ` prefix, surrounding single or double quotes, and comment lines.
+    It splits on the *first* `=` only and does not strip anything after a `#`,
+    because passwords contain both characters. Getting that wrong would
+    truncate the password and produce an authentication failure that looks like
+    a wrong password rather than a parsing bug.
+    """
+    path = Path(path)
+    if not path.is_file():
+        return {}
+
+    values: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].lstrip()
+        if "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        name = name.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        if name:
+            values[name] = value
+    return values
 
 
 class DirectHostError(ValueError):
@@ -120,6 +161,12 @@ class DatabaseSettings:
         )
 
     @classmethod
-    def from_env(cls) -> DatabaseSettings:
-        """Read the connection string from the environment."""
-        return cls.from_url(environ.get(ENV_VAR, ""))
+    def from_env(cls, env_file: Path | str = DEFAULT_ENV_FILE) -> DatabaseSettings:
+        """Read the connection string from the environment, falling back to `.env`.
+
+        A real environment variable always wins over the file. In CI the value
+        comes from a repository secret, and a stray `.env` must never override
+        it.
+        """
+        url = environ.get(ENV_VAR) or load_env_file(env_file).get(ENV_VAR, "")
+        return cls.from_url(url)
