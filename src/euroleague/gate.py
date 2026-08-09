@@ -21,6 +21,15 @@ EMPTY_PROJECT_DATABASE_BYTES = 25_688_885
 # relation overhead, separate from the 25,688,885-byte empty-database cost that
 # DECISIONS.md item 12 already subtracts from the 500 MB project quota.
 EMPTY_PUBLIC_TABLE_BYTES = 532_480
+# Whole-database size counts catalogue and system space that moves without any
+# warehouse row changing. Measured on 2026-08-10 with the data untouched, it
+# rose 40,960 bytes after the temporary relations in measure_lineup_identifier_
+# widths were created and dropped, then fell 240,260 bytes as autovacuum caught
+# up. An exact whole-database byte total is therefore not a testable constant.
+# The size gate pins the public relations, which only move when the data moves,
+# and allows the remainder this much room before treating it as a defect. Sized
+# to stay below one tenth of a season's relation cost.
+DATABASE_OVERHEAD_ALLOWANCE_BYTES = 8_388_608
 
 
 @dataclass(frozen=True)
@@ -269,6 +278,18 @@ def projected_table_bytes(
     if incremental < 0:
         raise ValueError("One-season table size cannot be below the measured empty baseline.")
     return empty_table_bytes + seasons * incremental
+
+
+def seasons_within_budget(
+    one_season_bytes: int,
+    *,
+    budget: int = PHYSICAL_BUDGET_BYTES,
+    fixed_overhead: int = 0,
+) -> int:
+    """Count the complete same-sized seasons that fit inside the usable budget."""
+    if one_season_bytes <= 0:
+        raise ValueError("One season must cost at least one byte to be measured.")
+    return (budget - fixed_overhead) // one_season_bytes
 
 
 def projected_database_growth_bytes(

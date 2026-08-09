@@ -377,3 +377,29 @@ does not fit.
 The final measurement is therefore: **94,617,600 bytes per populated E2024-sized
 whole warehouse; 1,797,734,400 bytes projected for 19 seasons; 5 complete seasons
 inside 474,311,115 bytes.**
+
+## Correction — the whole-database figure is not a constant, 2026-08-10
+
+The size gate originally pinned 94,617,600 exactly. Re-run the next day against
+unchanged data, it read 94,658,560, then 94,418,300 about an hour later: up
+40,960 bytes after the temporary relations in `measure_lineup_identifier_widths`
+were created and dropped, then down 240,260 as autovacuum caught up. Three fresh
+connections agreed within each reading, so this is real movement in the
+database rather than a bad sample.
+
+Nothing about the warehouse changed. Every public-relation figure in the tables
+above still measures exactly as reported — 90,570,752 total, 90,038,272 per
+season, and each individual table. The drift is entirely catalogue and system
+space, which Supabase charges for and which no row in this project controls.
+
+The gate now pins what is stable and bounds what is not: exact assertions on the
+public relations, the non-relation remainder allowed up to 8,388,608 bytes, the
+19-season verdict asserted as over budget (1.80 GB against 474 MB, nowhere near
+the boundary), and the relation-based capacity pinned at 5 seasons.
+
+**The billing-aware capacity answer is borderline and is bounded to 4 or 5.**
+The cost at which it reports 4 rather than 5 lies inside the same few-hundred-
+kilobyte band the readings already drift across. Pinning it to either value
+would assert a precision the measurement does not have. This is a further reason
+not to choose a hot-window size from this report: `possession` is still empty,
+so the per-season cost has not stopped moving either.

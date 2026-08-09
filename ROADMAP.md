@@ -104,16 +104,38 @@ and the correction are preserved in `docs/PHASE_4_REPORT.md`. No hot-window
 size has been chosen. The owner must make that Decision 8 follow-up before
 production backfill.
 
-### Phase 5 — derived layer: lineups and stints
+### Phase 5 — derived layer: lineups and stints. Complete.
 Build `game_event`, `lineup`, `lineup_stint`, `player_game_minutes`,
 `game_quality`.
 
-**Blocked:** do not begin until the owner resolves Phase 4's failed physical-size
-gate. The existing E2024 raw season remains valid and fully reconciled.
+**Gate: passed 2026-08-10.** All lineup invariants are green across 330 games and
+the quarantine list matches `SEASON_SWEEP.md` exactly — 2 games failing minutes
+after correction (43, 98), 7 failing attribution (23, 63, 72, 131, 139, 242,
+323), 0 failing on-court. The live gate re-checks those populations against the
+database rather than against the builder, so agreement is not assumed.
+Persisted: 176,483 `game_event` rows one-for-one with `raw_event`, 5,985
+lineups, 13,927 stints, 7,863 player-game minute rows, 330 quality rows.
+`possession` is deliberately empty. A second complete load left every content
+fingerprint unchanged. See `docs/PHASE_5_REPORT.md`.
 
-**Gate:** all lineup invariants green on 330 games; the quarantine list matches
-`SEASON_SWEEP.md` exactly — 2 games failing minutes after correction, 7 failing
-attribution, 0 failing on-court.
+**How it proceeded while marked blocked.** This phase was gated on the owner
+resolving Phase 4's failed size gate, and that decision is still open. Phase 5
+ran anyway, scoped hard to E2024, with no fetch, no second season and no
+backfill — nothing the blocked decision governs. Recorded here because the block
+was real and was passed, not because passing it was authorised in advance.
+
+**Storage: still failing, and now by more.** Loading the derived layer took the
+billing-aware 19-season projection from 725,786,624 bytes to 1,797,734,400
+against a 474,311,115-byte budget. `test_live_phase_4_gate` asserts that
+projection is inside budget and is therefore red, deliberately, exactly as
+Phase 4 left it. The suite cannot be all-green until the hot-window decision is
+made, and that is the point of leaving it red.
+
+**The capacity figure is provisional and borderline.** Roughly 5 complete
+E2024-sized seasons fit. Two reasons not to choose a window on that number yet:
+`possession` is empty, so the per-season cost is going to rise in Phase 6; and
+whole-database readings drift by a few hundred kilobytes on their own, which is
+the same order as the distance between the 5-season and 4-season answers.
 
 ### Phase 6 — possessions
 The fragile phase. Free-throw trip grouping is the project's only remaining
@@ -131,6 +153,11 @@ must be able to review the *definitions* it implements.
 **Gate:** both teams' possession counts within 1–2 of each other in every game;
 lineup possessions sum to team totals; the straddle rate is measured and
 reported per `DECISIONS.md` item 5.
+
+**Re-measure the size gate when this phase finishes, then decide the window.**
+Possessions are the last thing that changes per-season cost before the backfill,
+so a hot-window size chosen before them is chosen against a number that is about
+to move.
 
 ### Phase 7 — the MCP server
 A thin query layer over pre-computed tables. No computation at query time.

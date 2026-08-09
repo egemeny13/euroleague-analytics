@@ -14,7 +14,7 @@ from euroleague.derived import (
 )
 from euroleague.derived_load import load_phase5_base_rows, load_remaining_rows
 from euroleague.gate import (
-    EMPTY_PROJECT_DATABASE_BYTES,
+    DATABASE_OVERHEAD_ALLOWANCE_BYTES,
     EMPTY_PUBLIC_TABLE_BYTES,
     PHYSICAL_BUDGET_BYTES,
     assert_phase5_base_reconciles,
@@ -26,6 +26,7 @@ from euroleague.gate import (
     projected_database_growth_bytes,
     projected_table_bytes,
     public_table_sizes,
+    seasons_within_budget,
 )
 
 
@@ -52,6 +53,19 @@ def test_collision_probability_uses_the_exact_uniform_birthday_risk() -> None:
     assert checksum_collision_probability(0, 1) == 0.0
     assert checksum_collision_probability(1, 1) == 0.0
     assert checksum_collision_probability(2, 1) == pytest.approx(1 / 16)
+
+
+def test_seasons_within_budget_counts_only_complete_seasons() -> None:
+    """Break caught: a partly-loaded season is reported as a season that fits."""
+    assert seasons_within_budget(100, budget=1_000) == 10
+    assert seasons_within_budget(101, budget=1_000) == 9
+    assert seasons_within_budget(100, budget=1_000, fixed_overhead=500) == 5
+
+
+def test_seasons_within_budget_rejects_a_season_that_costs_nothing() -> None:
+    """Break caught: a failed measurement divides by zero and reports infinite capacity."""
+    with pytest.raises(ValueError):
+        seasons_within_budget(0)
 
 
 def test_full_compaction_targets_each_public_table_then_rebuilds_its_indexes() -> None:
@@ -158,7 +172,7 @@ def test_live_phase_5_second_load_is_idempotent() -> None:
 @pytest.mark.warehouse
 @pytest.mark.full_season
 def test_live_compacted_phase_5_physical_size_gate() -> None:
-    """Break caught: the reported full-warehouse capacity is not the live compacted state."""
+    """Break caught: the warehouse grows, or 19 seasons quietly start to look affordable."""
     settings = DatabaseSettings.from_env()
     with psycopg.connect(settings.url()) as connection:
         sizes = public_table_sizes(connection)
@@ -167,19 +181,30 @@ def test_live_compacted_phase_5_physical_size_gate() -> None:
     public_total = sum(size.total_bytes for size in sizes.values())
     season_increment = public_total - EMPTY_PUBLIC_TABLE_BYTES
     table_projection = projected_table_bytes(public_total)
-    table_seasons_fit = (PHYSICAL_BUDGET_BYTES - EMPTY_PUBLIC_TABLE_BYTES) // season_increment
     billed_season_growth = billed_projection // 19
-    billed_seasons_fit = PHYSICAL_BUDGET_BYTES // billed_season_growth
+    non_relation_growth = billed_season_growth - season_increment
 
+    # The public relations hold every warehouse row, and they only move when the
+    # data moves. These are the exact compacted bytes in docs/PHASE_5_REPORT.md.
     assert len(sizes) == 16
     assert public_total == 90_570_752
     assert season_increment == 90_038_272
     assert table_projection == 1_711_259_648
-    assert billed_season_growth == 94_617_600
-    assert billed_projection == 1_797_734_400
-    assert table_seasons_fit == 5
-    assert billed_seasons_fit == 5
     assert sizes["game_event"].total_bytes == 50_225_152
     assert sizes["raw_event"].total_bytes == 31_383_552
     assert sizes["possession"].total_bytes == 49_152
-    assert billed_season_growth == 120_306_485 - EMPTY_PROJECT_DATABASE_BYTES
+
+    # Everything else Supabase charges for: catalogue, system relations, work
+    # space. It moves on its own, so it is bounded rather than pinned.
+    assert 0 <= non_relation_growth <= DATABASE_OVERHEAD_ALLOWANCE_BYTES
+
+    # The decision this gate exists to protect. Nineteen seasons do not fit, and
+    # that verdict is nowhere near the boundary.
+    assert billed_projection > PHYSICAL_BUDGET_BYTES
+    assert seasons_within_budget(season_increment, fixed_overhead=EMPTY_PUBLIC_TABLE_BYTES) == 5
+
+    # Bounded on purpose. Three readings on 2026-08-10 spanned 94,418,300 to
+    # 94,658,560 bytes per season with no data change, and the cost at which
+    # this figure reports 4 rather than 5 sits inside that same drift band.
+    # Pinning it to either number would be a coin toss dressed as a measurement.
+    assert seasons_within_budget(billed_season_growth) in (4, 5)
