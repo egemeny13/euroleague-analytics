@@ -16,6 +16,30 @@ codes. The remaining distinction between a shooting and non-shooting personal
 foul is genuinely absent because ``CM`` does not encode it. Any downstream use
 that treats a personal foul followed by free throws as a shooting foul is still
 an inference and must say so.
+
+``is_within_single_award_limit`` is a one-sided test, and the name says so on
+purpose. False proves the group holds more than one foul award, because no
+single foul awards more than three shots. True proves nothing: it only says the
+group is short enough that one award *could* explain it. Two fouls that both
+land before the first shot are not separated by the approved rule, because the
+rule closes a trip on a foul arriving *after* a shot. Hand-verified E2024
+examples of short groups that are certainly two awards:
+
+- game 120, shots 461-462 — two technical fouls on the same player (rows 457
+  and 458), so the opponent's two makes are two one-shot awards, not one
+  two-shot trip;
+- game 159, shots 438-439 — two coach fouls on the same bench (rows 436 and
+  437), same shape;
+- game 60, shots 29-31 — a personal foul and a coach foul on the same team
+  (rows 26 and 28), so the three shots are a two-shot award plus a one-shot
+  award.
+
+Counting these from the event stream alone was tried and rejected. It needs the
+premise that a technical always awards free throws, and that premise is false
+here: 20 E2024 dead-ball clusters contain a technical-family foul and no free
+throw at all, because technicals on opposing teams offset (games 261 and 315
+are worked examples). Stacking that inference on top of the shooting-foul
+inference would produce a flag less trustworthy than the honest one-sided test.
 """
 
 from __future__ import annotations
@@ -28,7 +52,7 @@ from euroleague.events import EventRecord
 FREE_THROW_TYPES = frozenset({"FTM", "FTA"})
 BALL_TOUCHING_BOUNDARY_TYPES = frozenset({"2FGM", "3FGM", "TO", "D", "2FGA", "3FGA", "O"})
 FOUL_TYPES = frozenset({"CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI"})
-MAX_RESOLVABLE_SHOTS = 3
+MAX_SHOTS_ONE_FOUL_CAN_AWARD = 3
 
 
 class EventOrderError(ValueError):
@@ -44,7 +68,7 @@ class FreeThrowShot:
     inferred_position: int
     inferred_trip_length: int
     is_last_in_inferred_trip: bool
-    trip_resolvable: bool
+    trip_within_single_award_limit: bool
 
 
 @dataclass(frozen=True)
@@ -54,8 +78,8 @@ class FreeThrowTrip:
     trip_id: int
     shooter_id: str | None
     shots: tuple[FreeThrowShot, ...]
-    is_resolvable: bool
-    unresolvable_reason: str | None
+    is_within_single_award_limit: bool
+    over_award_limit_reason: str | None
 
     @property
     def observed_shot_count(self) -> int:
@@ -65,9 +89,9 @@ class FreeThrowTrip:
 
 def _build_trip(trip_id: int, events: list[EventRecord]) -> FreeThrowTrip:
     shot_count = len(events)
-    is_resolvable = shot_count <= MAX_RESOLVABLE_SHOTS
+    within_limit = shot_count <= MAX_SHOTS_ONE_FOUL_CAN_AWARD
     reason = None
-    if not is_resolvable:
+    if not within_limit:
         reason = (
             f"Observed group has {shot_count} shots, more than three shots any "
             "single foul can award; award boundaries are unresolvable from the event stream."
@@ -79,7 +103,7 @@ def _build_trip(trip_id: int, events: list[EventRecord]) -> FreeThrowTrip:
             inferred_position=position,
             inferred_trip_length=shot_count,
             is_last_in_inferred_trip=position == shot_count,
-            trip_resolvable=is_resolvable,
+            trip_within_single_award_limit=within_limit,
         )
         for position, event in enumerate(events, start=1)
     )
@@ -87,8 +111,8 @@ def _build_trip(trip_id: int, events: list[EventRecord]) -> FreeThrowTrip:
         trip_id=trip_id,
         shooter_id=events[0].player_id,
         shots=shots,
-        is_resolvable=is_resolvable,
-        unresolvable_reason=reason,
+        is_within_single_award_limit=within_limit,
+        over_award_limit_reason=reason,
     )
 
 
@@ -100,9 +124,11 @@ def group_free_throw_trips(events: Sequence[EventRecord]) -> tuple[FreeThrowTrip
     challenges, and bookkeeping markers. It closes on a different free-throw
     shooter, any non-free-throw ball-touching event, or any explicit new foul.
 
-    Groups longer than three shots are returned unchanged and marked
-    unresolvable. Their one-based positions describe the observed inferred run,
-    not the unknowable positions inside its multiple underlying foul awards.
+    Groups longer than three shots are returned unchanged and marked over the
+    single-award limit. Their one-based positions describe the observed
+    inferred run, not the unknowable positions inside its multiple underlying
+    foul awards. A group inside the limit may still hold two awards; see the
+    module docstring for hand-verified examples.
     """
     previous_ingest_index: int | None = None
     for event in events:

@@ -13,6 +13,10 @@ CONTEXT.md
 # The skills themselves are committed; these pointers are not portable.
 .claude/
 
+# Repository-scoped pytest temporary directories. The desktop sandbox cannot
+# reach pytest's machine-wide temp folder, so runs pass --basetemp .tmp/...
+.tmp/
+
 # Python
 __pycache__/
 *.py[cod]

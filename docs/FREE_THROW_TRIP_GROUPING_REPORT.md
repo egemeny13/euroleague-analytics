@@ -1,6 +1,7 @@
 # Free-throw trip grouping report
 
 **Completed:** 2026-08-10
+**Revised:** 2026-08-10, after review — see "The flag was an over-claim" below.
 **Scope:** group free throws into inferred trips, assign inferred shot positions,
 and measure the rule's ambiguity. Possession counting itself is not part of this
 session.
@@ -23,10 +24,10 @@ Each returned shot carries:
 - its one-based inferred position;
 - the inferred group length;
 - whether it is last in the inferred group; and
-- whether the group is resolvable as one foul award.
+- whether the group is within the length one foul award can explain.
 
-Each returned trip carries the shooter, its shots, the observed shot count, a
-resolvable flag, and an explanation when it is not resolvable.
+Each returned trip carries the shooter, its shots, the observed shot count, that
+same limit flag, and an explanation when the group is over the limit.
 
 ## The rejected rules and the data trap
 
@@ -56,6 +57,65 @@ not represented as a `3FGA` event. Calling that foul a shooting foul is an
 inference from the award and is documented as such; the grouping test does not
 pretend the source supplied the distinction.
 
+## The flag was an over-claim, and has been narrowed
+
+The first version of this work shipped the flag as `is_resolvable`, with
+`unresolvable_reason` beside it, and told consumers to "check the flag before
+treating the final observed shot as a reliable award boundary". That instruction
+was unsafe, because the flag never tested what its name promised.
+
+The test the code actually performs is one-sided. `False` proves the group holds
+more than one award, since no single foul awards more than three shots. `True`
+proves only that the group is *short enough* that one award could explain it. The
+approved rule closes a trip on a foul that arrives **after** a shot, so two fouls
+that both land before the first shot are never separated.
+
+Three E2024 cases were read out of the archived payloads by hand and are now
+permanent fixtures. In each, both fouls are charged to the **same** team, so they
+do not offset and both awarded free throws:
+
+| Game | Foul rows | Shots | Why it is certainly two awards |
+|---:|---|---|---|
+| 120 | 457, 458 — two `CMT` on P012774 | 461-462 | Two technicals on one player are two one-shot awards. The rule returns one two-shot trip. |
+| 159 | 436, 437 — two `C` on the ULK bench | 438-439 | Two coach fouls, two one-shot awards, returned as one two-shot trip. |
+| 60 | 26 `CM` and 28 `C`, both on ZAL | 29-31 | A two-shot award plus a one-shot award, returned as one three-shot trip. |
+
+The fix is a rename, not a new inference. `is_resolvable` is now
+`is_within_single_award_limit`, `unresolvable_reason` is
+`over_award_limit_reason`, and the shot-level `trip_resolvable` is
+`trip_within_single_award_limit`. Every call site in Phase 6 will now read a name
+that states the one-sided meaning.
+
+### The cleverer rule was measured and rejected
+
+Counting awards per dead-ball cluster was tried first: count the fouls that
+always award free throws, and where they outnumber the trips in that cluster,
+flag the trips. It rests on the premise that a technical always awards free
+throws, and **that premise is false in this data**. Measured over the cache, 20
+E2024 dead-ball clusters contain a technical-family foul and no free throw at
+all, because technicals on opposing teams offset. Two worked examples:
+
+- **game 261**, rows 147-148 — `CMT` on BAR's Anderson and `CMT` on PAR's Jones,
+  offsetting, so neither awards a shot;
+- **game 315**, rows 341-345 — `CMT` and `CMU` on each of MCO and BAR, of which
+  only one award survives to produce two shots.
+
+Two E2024 clusters end up with fewer free throws than they have always-awarding
+fouls, which is the arithmetic signature of the same thing. Stacking that
+premise on top of the shooting-foul inference would have produced a flag less
+trustworthy than the honest one-sided test, so it was not shipped.
+
+### The open question this leaves for Phase 6
+
+Splitting these groups would change the approved Section 4 grouping rule, so it
+is not being done here. **It needs the owner's decision**, and it matters for
+possessions: a technical free throw is a bonus that does not end a possession,
+so a merged technical-plus-personal group has the wrong possession boundary. The
+grouper currently gives Phase 6 no way to tell the two apart. Options are to
+leave it (accepting the error, now bounded and named), to expose each trip's
+preceding foul rows as raw observation and let the possession layer decide, or
+to split on same-team multiple awards and accept a new inference.
+
 ## Full-season measurements
 
 Both complete seasons currently present in the local cache were measured with
@@ -70,6 +130,17 @@ the production grouper.
 The E2024 distribution reproduces the five approved values exactly. The
 full-season regression pins both seasons independently so E2024's error rate is
 never assumed for a later season.
+
+Two invariants were checked over both seasons and are clean: **no trip spans a
+period** and **no trip spans two teams**, in 15,495 trips. Neither is guaranteed
+by the rule — it does not treat `BP`/`EP` as boundaries — so both hold by
+observation, not by construction, and should be re-measured on a new season.
+Every free throw lands in exactly one trip: 12,392 shots in E2024 and 15,807 in
+E2025, matching the event counts exactly.
+
+One event shape appears mid-trip in E2025 and never in E2024: game 168 has a
+`TOUT` and a `TOUT_TV` between shots 177 and 180. A timeout between free throws
+is legal, and the approved rule correctly keeps the trip whole.
 
 ### E2024: all six unresolvable groups
 
@@ -86,11 +157,11 @@ The three cases not named in detail in Section 4 are games **276, 317, and
 | 323 | P008099 | 275-278 | Personal plus technical rows precede four consecutive makes. |
 
 These are not special-cased. The approved rule returns the observed four- or
-five-shot group intact and sets `is_resolvable=False`. Each shot still receives
-an ordinal within the observed inferred run, but those ordinals must not be
-misrepresented as known positions inside the multiple underlying awards. A
-consumer must check the flag before treating the final observed shot as a
-reliable award boundary.
+five-shot group intact and sets `is_within_single_award_limit=False`. Each shot
+still receives an ordinal within the observed inferred run, but those ordinals
+must not be misrepresented as known positions inside the multiple underlying
+awards. `False` here is a proof that the boundary is unknown; `True` elsewhere is
+not a proof that it is known.
 
 E2025 has three independently measured unresolvable groups:
 
@@ -128,15 +199,22 @@ or adjusted count was introduced to force either prose number.
 
 ## Fixtures and tests
 
-The committed fixture set now contains 22 games. `MANIFEST.json` includes 18
+The committed fixture set now contains 25 games. `MANIFEST.json` includes 21
 named free-throw case notes alongside the prior lineup defects. The fixture
 builder validates the exact play type and player at every named ingest index
 before copying byte-identical `Boxscore` and `PlaybyPlay` responses and writing
-their SHA-256 checksums.
+their SHA-256 checksums — which is how the three hand-read payloads above were
+confirmed rather than trusted.
+
+Adding games 60, 120 and 159 moved the fixture-wide totals in the Phase 5 tests.
+The deltas were checked to be purely additive before the expected values were
+changed: events 12,269 to 13,747 is exactly 490 + 471 + 517, and player-game
+minute rows 521 to 593 is exactly 24 + 24 + 24.
 
 Permanent tests cover:
 
 - all six E2024 length-four/five groups;
+- the three hand-verified short groups that are certainly two awards;
 - all nine substitution-between-shots groups produced by the approved rule;
 - games 209 and 272 as new-foul splits for the same shooter;
 - an and-one;
@@ -155,13 +233,14 @@ Permanent tests cover:
 ### `_build_trip`
 
 1. Count the free-throw events collected in the open group.
-2. Treat groups of one to three shots as resolvable; a single foul cannot award
-   more than three.
+2. Mark groups of one to three shots as within the single-award limit, because
+   no single foul awards more than three. This is a length check, not a proof
+   that only one foul was involved.
 3. For a longer group, attach an explicit explanation that the event stream
    cannot recover the underlying award boundaries.
 4. Walk through the collected shots from one to the observed length.
 5. Copy the source event into an immutable shot record and attach its trip ID,
-   position, observed length, last-shot flag, and resolvable flag.
+   position, observed length, last-shot flag, and single-award-limit flag.
 6. Return one immutable trip containing those annotated shots. Nothing is
    dropped, reordered, or split heuristically.
 
@@ -185,9 +264,11 @@ Permanent tests cover:
 ## Verification commands
 
 The final verification uses repository-scoped pytest temporary directories
-because the desktop sandbox cannot access pytest's machine-wide temp folder:
+because the desktop sandbox cannot access pytest's machine-wide temp folder. The
+`.tmp` parent must exist first, or every test taking a temp directory errors:
 
 ```powershell
+New-Item -ItemType Directory -Force .tmp
 .\.venv\Scripts\python.exe -m pytest --basetemp .tmp\pytest-final -p no:cacheprovider
 .\.venv\Scripts\python.exe -m pytest tests\test_free_throws.py -m full_season --basetemp .tmp\pytest-final-full -p no:cacheprovider
 .\.venv\Scripts\ruff.exe check .

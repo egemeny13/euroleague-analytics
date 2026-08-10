@@ -14,7 +14,7 @@ def test_points_is_a_supported_coordinate_endpoint(tmp_path) -> None:
 def test_fixture_cache_reads_the_committed_schedule_subset(fixture_cache) -> None:
     schedule = fixture_cache.read_schedule_json("E2024")
 
-    assert schedule["total"] == 22
+    assert schedule["total"] == 25
     assert {game["gameCode"] for game in schedule["data"]} == {
         1,
         2,
@@ -25,10 +25,13 @@ def test_fixture_cache_reads_the_committed_schedule_subset(fixture_cache) -> Non
         39,
         43,
         51,
+        60,
         75,
         98,
+        120,
         107,
         131,
+        159,
         169,
         195,
         209,

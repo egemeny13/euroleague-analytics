@@ -121,6 +121,20 @@
         }
       ]
     },
+    "60": {
+      "defect": "two foul awards inside one three-shot group",
+      "why": "A personal foul and a coach foul, both on Zalgiris, award P009754 three shots the approved rule cannot separate.",
+      "sha256": {
+        "Boxscore": "34e71cb04f529b653db4aa32ffc94c081dd0895fcbcf05baa1c265c1c66b663f",
+        "PlaybyPlay": "7c45bd2e7cdb7c571c751acd4de03ca7a17d9bc55ffb5282106c2d7c297c1a94"
+      },
+      "free_throw_cases": [
+        {
+          "case": "short group that is certainly two awards",
+          "why": "Fouls 26 and 28 precede shots 29-31, so the three-shot group is a two-shot award plus a one-shot award. The single-award limit flag stays True and therefore does not prove one award."
+        }
+      ]
+    },
     "75": {
       "defect": "single overtime, otherwise clean",
       "why": "Overtime that reconciles perfectly. Guards the opposite error from game 107: a period rule that invents problems in ordinary overtime.",
@@ -145,6 +159,20 @@
         "PlaybyPlay": "0f1f998a2094b2d847cd5a2bddcd9764a82f78161ebda2748be7168862642c82"
       }
     },
+    "120": {
+      "defect": "two technical fouls inside one two-shot group",
+      "why": "Two technical fouls on the same player award P013369 two separate one-shot trips that the approved rule returns as one two-shot trip.",
+      "sha256": {
+        "Boxscore": "e34f9475faa5097b8375d3c5e46850852b75868351b9c45ff072812d8a7e7718",
+        "PlaybyPlay": "b1b75b2cf4efb1dcbe84ddbe51bddbc97f1d06e77ef2a42333c5a986fe6b8f31"
+      },
+      "free_throw_cases": [
+        {
+          "case": "short group that is certainly two awards",
+          "why": "Technicals 457 and 458 are both on P012774, so shots 461-462 are two one-shot awards, not one two-shot trip."
+        }
+      ]
+    },
     "131": {
       "defect": "overlapping substitution batch plus an off-court attribution",
       "why": "The only game in the season where the naive batch rule leaves a team showing four players: two Real Madrid events stamped 08:00 land inside a Zalgiris batch stamped 07:12. The absorbing batch rule removes those violations. The same source payload also credits event 168 to P002329 before his IN row, so the permanent result correctly retains one attribution issue.",
@@ -152,6 +180,20 @@
         "Boxscore": "4ac4e292742626cdf0f8e8480c68560c5a21280f403dff4632d2834780a95bd6",
         "PlaybyPlay": "505ef9016283f185c4e0a3584ff660577a19c5354485cb9690ac1b05e4c2589c"
       }
+    },
+    "159": {
+      "defect": "two coach fouls inside one two-shot group",
+      "why": "Two coach fouls on the same bench award P012720 two separate one-shot trips that the approved rule returns as one two-shot trip.",
+      "sha256": {
+        "Boxscore": "abb2f5ad18a42bbd81b3b6c9234bc4e1ae43b1525b04cb06b1ca0c626d1a0d65",
+        "PlaybyPlay": "8f9f039068d5869d058f2ee90a1846b1826f852cd7ae37660f5a6e2e5839c03b"
+      },
+      "free_throw_cases": [
+        {
+          "case": "short group that is certainly two awards",
+          "why": "Coach fouls 436 and 437 are both charged to ULK, so shots 438-439 are two one-shot awards."
+        }
+      ]
     },
     "169": {
       "defect": "substitution between two free throws",
@@ -284,5 +326,5 @@
       ]
     }
   },
-  "schedule_sha256": "342f4cad0432d1d3ae1792a94ded7b94e1ff023fbde8c513c58ebe23f858d844"
+  "schedule_sha256": "ecb56e2c222c67f62eb15ff469007810378e9b2c7d89638c1d9d6298ff49a6a9"
 }

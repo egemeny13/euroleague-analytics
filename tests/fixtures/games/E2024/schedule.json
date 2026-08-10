@@ -1332,6 +1332,153 @@
       }
     },
     {
+      "id": "10d239ef-ba6b-4b29-9ec4-232fd1bde84f",
+      "identifier": "E2024_159",
+      "gameCode": 159,
+      "season": {
+        "name": "EuroLeague 2024-25",
+        "code": "E2024",
+        "alias": "2024-25",
+        "competitionCode": "E",
+        "year": 2024,
+        "startDate": "2024-06-29T00:00:00"
+      },
+      "group": {
+        "id": "653ea5d2-0ed0-4edf-9445-176b766c6b7a",
+        "order": 1,
+        "name": "Group Regular Season",
+        "rawName": "Regular Season"
+      },
+      "phaseType": {
+        "code": "RS",
+        "alias": "REGULAR SEASON",
+        "name": "Regular Season",
+        "isGroupPhase": true
+      },
+      "round": 18,
+      "roundAlias": "Round 18",
+      "roundName": "Round 18",
+      "played": true,
+      "date": "2024-12-27T20:30:00",
+      "confirmedDate": true,
+      "confirmedHour": true,
+      "localTimeZone": 1,
+      "localDate": "2024-12-27T20:30:00",
+      "utcDate": "2024-12-27T19:30:00Z",
+      "local": {
+        "club": {
+          "code": "PAR",
+          "name": "Partizan Mozzart Bet Belgrade",
+          "abbreviatedName": "Partizan",
+          "editorialName": "",
+          "tvCode": "PAR",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.incrowdsports.com/2681304e-77dd-4331-88b1-683078c0fb49.png"
+          }
+        },
+        "score": 90,
+        "standingsScore": 90,
+        "partials": {
+          "partials1": 25,
+          "partials2": 22,
+          "partials3": 18,
+          "partials4": 25,
+          "extraPeriods": {}
+        }
+      },
+      "road": {
+        "club": {
+          "code": "ULK",
+          "name": "Fenerbahce Beko Istanbul",
+          "abbreviatedName": "Fenerbahce",
+          "editorialName": "",
+          "tvCode": "FBB",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHN/c91466d1-a620-4c0c-b47b-4a0cd9eee944.png"
+          }
+        },
+        "score": 81,
+        "standingsScore": 81,
+        "partials": {
+          "partials1": 21,
+          "partials2": 17,
+          "partials3": 19,
+          "partials4": 24,
+          "extraPeriods": {}
+        }
+      },
+      "audience": 19624,
+      "audienceConfirmed": true,
+      "socialFeed": "",
+      "operationsCode": null,
+      "referee1": {
+        "code": "OJLL",
+        "name": "DIFALLAH, MEHDI",
+        "alias": "DIFALLAH, M.",
+        "country": {
+          "code": "FRA",
+          "name": "France"
+        },
+        "images": {
+          "verticalSmall": "87ytu4ivn6qtsqni"
+        },
+        "active": true
+      },
+      "referee2": {
+        "code": "OJIY",
+        "name": "PASTUSIAK, PIOTR",
+        "alias": "PASTUSIAK, P.",
+        "country": {
+          "code": "POL",
+          "name": "Poland"
+        },
+        "images": {
+          "verticalSmall": "885wrb4rki89jxa3"
+        },
+        "active": true
+      },
+      "referee3": {
+        "code": "OAEZ",
+        "name": "VYKLICKY, ROBERT",
+        "alias": "VYKLICKY, R.",
+        "country": {
+          "code": "CZE",
+          "name": "Czech Republic"
+        },
+        "images": {
+          "verticalSmall": "886cwwge7bwbagta"
+        },
+        "active": true
+      },
+      "referee4": null,
+      "venue": {
+        "name": "BELGRADE ARENA",
+        "code": "ATM7",
+        "capacity": 18500,
+        "address": "Bulevar Arsenija Carnojevica 58, 11070 Belgrade - Serbia",
+        "images": {
+          "medium": null
+        },
+        "active": true,
+        "notes": ""
+      },
+      "isNeutralVenue": false,
+      "gameStatus": "Confirmed",
+      "winner": {
+        "code": "ULK",
+        "name": "Fenerbahce Beko Istanbul",
+        "abbreviatedName": "Fenerbahce",
+        "editorialName": "",
+        "tvCode": "FBB",
+        "isVirtual": false,
+        "images": {
+          "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHN/c91466d1-a620-4c0c-b47b-4a0cd9eee944.png"
+        }
+      }
+    },
+    {
       "id": "137e4f95-c812-4a48-860d-c4b423056b08",
       "identifier": "E2024_131",
       "gameCode": 131,
@@ -1458,6 +1605,153 @@
         "code": "ATI",
         "capacity": 13109,
         "address": "Avenida de Felipe II 1, 28009, Madrid",
+        "images": {
+          "medium": null
+        },
+        "active": true,
+        "notes": ""
+      },
+      "isNeutralVenue": false,
+      "gameStatus": "Confirmed",
+      "winner": {
+        "code": "ULK",
+        "name": "Fenerbahce Beko Istanbul",
+        "abbreviatedName": "Fenerbahce",
+        "editorialName": "",
+        "tvCode": "FBB",
+        "isVirtual": false,
+        "images": {
+          "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHN/c91466d1-a620-4c0c-b47b-4a0cd9eee944.png"
+        }
+      }
+    },
+    {
+      "id": "dc153a8d-7a2b-4bd1-a880-0e1da358d259",
+      "identifier": "E2024_120",
+      "gameCode": 120,
+      "season": {
+        "name": "EuroLeague 2024-25",
+        "code": "E2024",
+        "alias": "2024-25",
+        "competitionCode": "E",
+        "year": 2024,
+        "startDate": "2024-06-29T00:00:00"
+      },
+      "group": {
+        "id": "653ea5d2-0ed0-4edf-9445-176b766c6b7a",
+        "order": 1,
+        "name": "Group Regular Season",
+        "rawName": "Regular Season"
+      },
+      "phaseType": {
+        "code": "RS",
+        "alias": "REGULAR SEASON",
+        "name": "Regular Season",
+        "isGroupPhase": true
+      },
+      "round": 14,
+      "roundAlias": "Round 14",
+      "roundName": "Round 14",
+      "played": true,
+      "date": "2024-12-05T20:30:00",
+      "confirmedDate": true,
+      "confirmedHour": true,
+      "localTimeZone": 1,
+      "localDate": "2024-12-05T20:30:00",
+      "utcDate": "2024-12-05T19:30:00Z",
+      "local": {
+        "club": {
+          "code": "PAR",
+          "name": "Partizan Mozzart Bet Belgrade",
+          "abbreviatedName": "Partizan",
+          "editorialName": "",
+          "tvCode": "PAR",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.incrowdsports.com/2681304e-77dd-4331-88b1-683078c0fb49.png"
+          }
+        },
+        "score": 91,
+        "standingsScore": 91,
+        "partials": {
+          "partials1": 20,
+          "partials2": 24,
+          "partials3": 20,
+          "partials4": 27,
+          "extraPeriods": {}
+        }
+      },
+      "road": {
+        "club": {
+          "code": "PAN",
+          "name": "Panathinaikos AKTOR Athens",
+          "abbreviatedName": "Panathinaikos",
+          "editorialName": "",
+          "tvCode": "PAO",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.incrowdsports.com/e3dff28a-9ec6-4faf-9d96-ecbc68f75780.png"
+          }
+        },
+        "score": 73,
+        "standingsScore": 73,
+        "partials": {
+          "partials1": 20,
+          "partials2": 17,
+          "partials3": 12,
+          "partials4": 24,
+          "extraPeriods": {}
+        }
+      },
+      "audience": 19680,
+      "audienceConfirmed": true,
+      "socialFeed": "",
+      "operationsCode": null,
+      "referee1": {
+        "code": "OAEN",
+        "name": "PEREZ, MIGUEL ANGEL",
+        "alias": "PEREZ, M.",
+        "country": {
+          "code": "ESP",
+          "name": "Spain"
+        },
+        "images": {
+          "verticalSmall": "885xtwkcapuckeov"
+        },
+        "active": true
+      },
+      "referee2": {
+        "code": "OJIY",
+        "name": "PASTUSIAK, PIOTR",
+        "alias": "PASTUSIAK, P.",
+        "country": {
+          "code": "POL",
+          "name": "Poland"
+        },
+        "images": {
+          "verticalSmall": "885wrb4rki89jxa3"
+        },
+        "active": true
+      },
+      "referee3": {
+        "code": "OJDE",
+        "name": "SHEMMESH, SEFFI",
+        "alias": "SHEMMESH, S.",
+        "country": {
+          "code": "ISR",
+          "name": "Israel"
+        },
+        "images": {
+          "verticalSmall": "8868vo7rsgoyayqh"
+        },
+        "active": true
+      },
+      "referee4": null,
+      "venue": {
+        "name": "BELGRADE ARENA",
+        "code": "ATM7",
+        "capacity": 18500,
+        "address": "Bulevar Arsenija Carnojevica 58, 11070 Belgrade - Serbia",
         "images": {
           "medium": null
         },
@@ -1909,6 +2203,153 @@
         "code": "ASY4",
         "capacity": 14500,
         "address": "Mercedes-Platz 1, Berlin",
+        "images": {
+          "medium": null
+        },
+        "active": true,
+        "notes": ""
+      },
+      "isNeutralVenue": false,
+      "gameStatus": "Confirmed",
+      "winner": {
+        "code": "ULK",
+        "name": "Fenerbahce Beko Istanbul",
+        "abbreviatedName": "Fenerbahce",
+        "editorialName": "",
+        "tvCode": "FBB",
+        "isVirtual": false,
+        "images": {
+          "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHN/c91466d1-a620-4c0c-b47b-4a0cd9eee944.png"
+        }
+      }
+    },
+    {
+      "id": "50ed6b03-8a96-4fb9-af44-c9011ae9f342",
+      "identifier": "E2024_60",
+      "gameCode": 60,
+      "season": {
+        "name": "EuroLeague 2024-25",
+        "code": "E2024",
+        "alias": "2024-25",
+        "competitionCode": "E",
+        "year": 2024,
+        "startDate": "2024-06-29T00:00:00"
+      },
+      "group": {
+        "id": "653ea5d2-0ed0-4edf-9445-176b766c6b7a",
+        "order": 1,
+        "name": "Group Regular Season",
+        "rawName": "Regular Season"
+      },
+      "phaseType": {
+        "code": "RS",
+        "alias": "REGULAR SEASON",
+        "name": "Regular Season",
+        "isGroupPhase": true
+      },
+      "round": 7,
+      "roundAlias": "Round 7",
+      "roundName": "Round 7",
+      "played": true,
+      "date": "2024-11-01T19:00:00",
+      "confirmedDate": true,
+      "confirmedHour": true,
+      "localTimeZone": 2,
+      "localDate": "2024-11-01T20:00:00",
+      "utcDate": "2024-11-01T18:00:00Z",
+      "local": {
+        "club": {
+          "code": "ZAL",
+          "name": "Zalgiris Kaunas",
+          "abbreviatedName": "Zalgiris",
+          "editorialName": "",
+          "tvCode": "ZAL",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.incrowdsports.com/0aa09358-3847-4c4e-b228-3582ee4e536d.png"
+          }
+        },
+        "score": 63,
+        "standingsScore": 63,
+        "partials": {
+          "partials1": 20,
+          "partials2": 14,
+          "partials3": 9,
+          "partials4": 20,
+          "extraPeriods": {}
+        }
+      },
+      "road": {
+        "club": {
+          "code": "MCO",
+          "name": "AS Monaco",
+          "abbreviatedName": "Monaco",
+          "editorialName": "",
+          "tvCode": "ASM",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.incrowdsports.com/89ed276a-2ba3-413f-8ea2-b3be209ca129.png"
+          }
+        },
+        "score": 62,
+        "standingsScore": 62,
+        "partials": {
+          "partials1": 11,
+          "partials2": 14,
+          "partials3": 18,
+          "partials4": 19,
+          "extraPeriods": {}
+        }
+      },
+      "audience": 14922,
+      "audienceConfirmed": true,
+      "socialFeed": "",
+      "operationsCode": null,
+      "referee1": {
+        "code": "OADJ",
+        "name": "PUKL,SASA",
+        "alias": "PUKL,S.",
+        "country": {
+          "code": "SLO",
+          "name": "Slovenia"
+        },
+        "images": {
+          "verticalSmall": "8863itxgormdtqhs"
+        },
+        "active": true
+      },
+      "referee2": {
+        "code": "OAAX",
+        "name": "ZAMOJSKI, JAKUB",
+        "alias": "ZAMOJSKI, J.",
+        "country": {
+          "code": "POL",
+          "name": "Poland"
+        },
+        "images": {
+          "verticalSmall": "886d5v4r7bejwode"
+        },
+        "active": true
+      },
+      "referee3": {
+        "code": "QJMM",
+        "name": "PITSILKAS, VASSILIS",
+        "alias": "PITSILKAS, V.",
+        "country": {
+          "code": "GRE",
+          "name": "Greece"
+        },
+        "images": {
+          "verticalSmall": "bugv8rxs3d3yj99v"
+        },
+        "active": true
+      },
+      "referee4": null,
+      "venue": {
+        "name": "ZALGIRIO ARENA",
+        "code": "ATJ",
+        "capacity": 15415,
+        "address": "Karaliaus Mindaugo Av. 50, 44287 Kaunas",
         "images": {
           "medium": null
         },
@@ -3257,5 +3698,5 @@
       }
     }
   ],
-  "total": 22
+  "total": 25
 }

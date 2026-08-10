@@ -228,6 +228,74 @@ FREE_THROW_FIXTURES: dict[int, dict[str, object]] = {
             404: ("FTA", "P007975"),
         },
     },
+    60: {
+        "defect": "two foul awards inside one three-shot group",
+        "why": (
+            "A personal foul and a coach foul, both on Zalgiris, award P009754 "
+            "three shots the approved rule cannot separate."
+        ),
+        "cases": [
+            {
+                "case": "short group that is certainly two awards",
+                "why": (
+                    "Fouls 26 and 28 precede shots 29-31, so the three-shot group is "
+                    "a two-shot award plus a one-shot award. The single-award limit "
+                    "flag stays True and therefore does not prove one award."
+                ),
+            }
+        ],
+        "events": {
+            26: ("CM", "P007513"),
+            28: ("C", "CO_A"),
+            29: ("FTM", "P009754"),
+            30: ("FTM", "P009754"),
+            31: ("FTM", "P009754"),
+        },
+    },
+    120: {
+        "defect": "two technical fouls inside one two-shot group",
+        "why": (
+            "Two technical fouls on the same player award P013369 two separate "
+            "one-shot trips that the approved rule returns as one two-shot trip."
+        ),
+        "cases": [
+            {
+                "case": "short group that is certainly two awards",
+                "why": (
+                    "Technicals 457 and 458 are both on P012774, so shots 461-462 are "
+                    "two one-shot awards, not one two-shot trip."
+                ),
+            }
+        ],
+        "events": {
+            457: ("CMT", "P012774"),
+            458: ("CMT", "P012774"),
+            461: ("FTM", "P013369"),
+            462: ("FTA", "P013369"),
+        },
+    },
+    159: {
+        "defect": "two coach fouls inside one two-shot group",
+        "why": (
+            "Two coach fouls on the same bench award P012720 two separate one-shot "
+            "trips that the approved rule returns as one two-shot trip."
+        ),
+        "cases": [
+            {
+                "case": "short group that is certainly two awards",
+                "why": (
+                    "Coach fouls 436 and 437 are both charged to ULK, so shots 438-439 "
+                    "are two one-shot awards."
+                ),
+            }
+        ],
+        "events": {
+            436: ("C", "CO_B"),
+            437: ("C", "CO_B"),
+            438: ("FTA", "P012720"),
+            439: ("FTM", "P012720"),
+        },
+    },
     51: {
         "defect": "substitution between two free throws",
         "why": "P003526 takes shots 456 and 459 around substitution rows 457-458.",

@@ -74,9 +74,9 @@ def test_committed_fixtures_produce_the_hand_counted_dimension_rows(fixture_cach
     """Break caught: a source row is silently skipped or a duplicate is emitted."""
     rows = build_dimensions(fixture_cache, "E2024")
 
-    assert len(rows.players) == 207
-    assert len(rows.teams) == 14
-    assert len(rows.team_seasons) == 14
+    assert len(rows.players) == 225
+    assert len(rows.teams) == 15
+    assert len(rows.team_seasons) == 15
     assert {row[0] for row in rows.players}.isdisjoint({"CO_A", "CO_B", "AC_A", "AC_B"})
     assert ("BER",) in rows.teams
     assert ("E2024", "BER", "E", "ALBA Berlin") in rows.team_seasons
@@ -86,7 +86,7 @@ def test_game_events_are_one_for_one_and_keep_ingest_index(fixture_cache) -> Non
     """Break caught: an event is sorted, dropped, duplicated, or renumbered."""
     rows = build_game_events(fixture_cache, "E2024")
 
-    assert len(rows) == 12_269
+    assert len(rows) == 13_747
     game_one = [row for row in rows if row.gamecode == 1]
     assert [row.ingest_index for row in game_one] == list(range(458))
     assert game_one[0] == (
@@ -153,9 +153,9 @@ def test_lineup_usage_counts_only_stable_atomic_five_man_units(fixture_cache) ->
     """Break caught: storage sizing includes transient mid-substitution hybrids."""
     usage = discover_lineup_usage(fixture_cache, "E2024")
 
-    assert len(usage.units) == 748
-    assert len(usage.event_lineups) == 12_269
-    assert len(usage.stint_lineups) == 997
+    assert len(usage.units) == 826
+    assert len(usage.event_lineups) == 13_747
+    assert len(usage.stint_lineups) == 1_110
     assert all(len(unit) == 6 for unit in usage.units)
     assert all(unit in usage.units for pair in usage.event_lineups for unit in pair)
     assert all(unit in usage.units for pair in usage.stint_lineups for unit in pair)
@@ -175,12 +175,12 @@ def test_remaining_fixture_rows_have_the_real_grains_and_matchup_boundaries(
     """Break caught: persistence changes grain or splits a substitution batch."""
     rows = build_remaining_rows(fixture_cache, "E2024")
 
-    assert len(rows.lineups) == 748
-    assert len(rows.stints) == 997
-    assert len(rows.event_attachments) == 12_269
-    assert len(rows.player_minutes) == 521
-    assert len(rows.game_qualities) == 22
-    assert len({row.lineup_id for row in rows.lineups}) == 748
+    assert len(rows.lineups) == 826
+    assert len(rows.stints) == 1_110
+    assert len(rows.event_attachments) == 13_747
+    assert len(rows.player_minutes) == 593
+    assert len(rows.game_qualities) == 25
+    assert len({row.lineup_id for row in rows.lineups}) == 826
     assert all(len(row.lineup_id) == 32 for row in rows.lineups)
 
     game_one_stints = [row for row in rows.stints if row.gamecode == 1]
