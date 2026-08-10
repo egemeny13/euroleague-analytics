@@ -21,6 +21,10 @@ EMPTY_PROJECT_DATABASE_BYTES = 25_688_885
 # relation overhead, separate from the 25,688,885-byte empty-database cost that
 # DECISIONS.md item 12 already subtracts from the 500 MB project quota.
 EMPTY_PUBLIC_TABLE_BYTES = 532_480
+
+# Two compactions of identical rows settled 8,192 bytes apart on 2026-08-11.
+# Real growth is megabytes, so this band separates noise from a regression.
+COMPACTION_DRIFT_ALLOWANCE_BYTES = 262_144
 # Whole-database size counts catalogue and system space that moves without any
 # warehouse row changing. Measured on 2026-08-10 with the data untouched, it
 # rose 40,960 bytes after the temporary relations in measure_lineup_identifier_
@@ -396,7 +400,7 @@ def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str
             """
             SELECT count(*) FROM game_event
             WHERE season_code = %s
-              AND (possession_index IS NOT NULL OR free_throw_trip_id IS NOT NULL)
+              AND free_throw_trip_id IS NOT NULL
             """,
             (season_code,),
         )
@@ -413,14 +417,9 @@ def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str
             f"payload_rows={payload_differences}."
         )
     if phase6_rows:
-        raise AssertionError(f"Found {phase6_rows} game_event rows with Phase 6 values.")
+        raise AssertionError(f"Found {phase6_rows} game_event rows with a free-throw trip.")
     if coach_players:
         raise AssertionError(f"Found {coach_players} coach pseudo-identifiers in player.")
-    if possession_count:
-        raise AssertionError(
-            f"Phase 5 requires an empty possession table; found {possession_count}."
-        )
-
     return {
         "player": player_count,
         "team": team_count,
@@ -592,7 +591,7 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
             SELECT count(*) FROM game_event
             WHERE season_code = %s
               AND (home_lineup_id IS NULL OR away_lineup_id IS NULL OR stint_index IS NULL
-                   OR possession_index IS NOT NULL OR free_throw_trip_id IS NOT NULL)
+                   OR free_throw_trip_id IS NOT NULL)
             """,
             (season_code,),
         )
@@ -720,6 +719,9 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
                 expected_reasons.append("off_court_attribution")
             if oncourt_violations:
                 expected_reasons.append("not_five_on_court")
+            # Phase 6 adds its own reason, and it is appended last.
+            if "possession_gate" in quarantine_reasons:
+                expected_reasons.append("possession_gate")
             if (
                 bool(excluded_by_default) != bool(expected_reasons)
                 or list(quarantine_reasons) != expected_reasons
@@ -749,7 +751,7 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
         "unhelpful_applied": int(unhelpful_applied),
         "quarantine_controls": len(quarantine_control_failures),
         "other_season_rows": other_season_rows,
-        "possession": possession_count,
+        "possession_missing": int(possession_count == 0),
     }
     if any(failures.values()):
         raise AssertionError(f"Phase 5 warehouse invariant failures: {failures}")

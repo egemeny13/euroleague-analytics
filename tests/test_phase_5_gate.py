@@ -15,6 +15,7 @@ from euroleague.derived import (
 from euroleague.derived_load import load_phase5_base_rows, load_remaining_rows
 from euroleague.gate import (
     BACKFILL_SEASONS,
+    COMPACTION_DRIFT_ALLOWANCE_BYTES,
     DATABASE_OVERHEAD_ALLOWANCE_BYTES,
     EMPTY_PUBLIC_TABLE_BYTES,
     PHYSICAL_BUDGET_BYTES,
@@ -34,7 +35,7 @@ from euroleague.gate import (
 @pytest.mark.warehouse
 @pytest.mark.full_season
 def test_live_phase_5_base_gate() -> None:
-    """Break caught: persisted dimensions/events drift or contain Phase 6 values."""
+    """Break caught: persisted dimensions or events drift from the raw layer."""
     settings = DatabaseSettings.from_env()
 
     with psycopg.connect(settings.url()) as connection:
@@ -45,7 +46,7 @@ def test_live_phase_5_base_gate() -> None:
         "team": 18,
         "team_season": 18,
         "game_event": 176_483,
-        "possession": 0,
+        "possession": 47_831,
     }
 
 
@@ -146,7 +147,7 @@ def test_live_completed_phase_5_gate() -> None:
         "game_event": 176_483,
         "player_game_minutes": 7863,
         "game_quality": 330,
-        "possession": 0,
+        "possession": 47_831,
     }
 
 
@@ -163,7 +164,7 @@ def test_live_phase_5_second_load_is_idempotent() -> None:
     rows = build_remaining_rows(cache, "E2024")
     with psycopg.connect(settings.url(), autocommit=True) as connection:
         before = derived_snapshot(connection, "E2024")
-        load_phase5_base_rows(connection, dimensions, events, "E2024")
+        load_phase5_base_rows(connection, dimensions, events, "E2024", rebuilding_possessions=True)
         load_remaining_rows(connection, rows, "E2024")
         after = derived_snapshot(connection, "E2024")
 
@@ -173,8 +174,16 @@ def test_live_phase_5_second_load_is_idempotent() -> None:
 @pytest.mark.warehouse
 @pytest.mark.full_season
 def test_live_compacted_phase_5_physical_size_gate() -> None:
-    """Break caught: the warehouse grows, or 23 seasons quietly start to look affordable."""
+    """Break caught: the warehouse grows, or 23 seasons quietly start to look affordable.
+
+    Compacts first so the reading is of the rows and not of dead tuples. Without
+    that this test measures whichever load ran before it: the idempotency test
+    earlier in this file leaves the tables roughly 160 MB bloated, which reads
+    as catastrophic growth rather than as the vacuum debt it is.
+    """
     settings = DatabaseSettings.from_env()
+    with psycopg.connect(settings.url(), autocommit=True) as connection:
+        compact_public_tables(connection)
     with psycopg.connect(settings.url()) as connection:
         sizes = public_table_sizes(connection)
         billed_projection = projected_database_growth_bytes(connection)
@@ -186,14 +195,22 @@ def test_live_compacted_phase_5_physical_size_gate() -> None:
     non_relation_growth = billed_season_growth - season_increment
 
     # The public relations hold every warehouse row, and they only move when the
-    # data moves. These are the exact compacted bytes in docs/PHASE_5_REPORT.md.
+    # data moves. Measured on 2026-08-11 after Phase 6 and recorded in
+    # docs/PHASE_6_POSSESSIONS_REPORT.md.
+    #
+    # Bounded rather than pinned exactly. Four consecutive readings after one
+    # compaction were byte-identical at 104,783,872, but a second compaction of
+    # the same rows settled 8,192 bytes higher. The figure is stable within a
+    # compaction and wobbles by a page or two between them, so an equality
+    # assertion here would fail on a coin toss rather than on real growth --
+    # which is measured in megabytes, far outside this band.
     assert len(sizes) == 16
-    assert public_total == 90_570_752
-    assert season_increment == 90_038_272
-    assert table_projection == 2_071_412_736
-    assert sizes["game_event"].total_bytes == 50_225_152
+    assert abs(public_total - 104_783_872) <= COMPACTION_DRIFT_ALLOWANCE_BYTES
+    assert abs(season_increment - 104_251_392) <= COMPACTION_DRIFT_ALLOWANCE_BYTES
+    assert abs(table_projection - 2_398_314_496) <= 23 * COMPACTION_DRIFT_ALLOWANCE_BYTES
+    assert abs(sizes["game_event"].total_bytes - 51_560_448) <= COMPACTION_DRIFT_ALLOWANCE_BYTES
     assert sizes["raw_event"].total_bytes == 31_383_552
-    assert sizes["possession"].total_bytes == 49_152
+    assert abs(sizes["possession"].total_bytes - 12_918_784) <= COMPACTION_DRIFT_ALLOWANCE_BYTES
 
     # Everything else Supabase charges for: catalogue, system relations, work
     # space. It moves on its own, so it is bounded rather than pinned.
@@ -203,10 +220,9 @@ def test_live_compacted_phase_5_physical_size_gate() -> None:
     # and that verdict is nowhere near the boundary. It was already the verdict
     # at the unmeasured 19, and the measured 23 only widens the gap.
     assert billed_projection > PHYSICAL_BUDGET_BYTES
-    assert seasons_within_budget(season_increment, fixed_overhead=EMPTY_PUBLIC_TABLE_BYTES) == 5
+    assert seasons_within_budget(season_increment, fixed_overhead=EMPTY_PUBLIC_TABLE_BYTES) == 4
 
-    # Bounded on purpose. Three readings on 2026-08-10 spanned 94,418,300 to
-    # 94,658,560 bytes per season with no data change, and the cost at which
-    # this figure reports 4 rather than 5 sits inside that same drift band.
-    # Pinning it to either number would be a coin toss dressed as a measurement.
-    assert seasons_within_budget(billed_season_growth) in (4, 5)
+    # Phase 5 left this bounded at 4 or 5 because the two answers sat inside the
+    # reading drift. Possessions added about 14.2 MB a season and moved it clear
+    # of that band, so it is now pinned.
+    assert seasons_within_budget(billed_season_growth) == 4

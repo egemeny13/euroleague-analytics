@@ -13,6 +13,7 @@ from euroleague.derived import (
     LINEUP_STINT_COLUMNS,
     PHASE_5_SEASON,
     PLAYER_GAME_MINUTES_COLUMNS,
+    POSSESSION_COLUMNS,
     DimensionRows,
     E2024OnlyError,
     GameEventRow,
@@ -75,6 +76,7 @@ def _assert_remaining_scope(rows: RemainingDerivedRows) -> None:
         rows.event_attachments,
         rows.player_minutes,
         rows.game_qualities,
+        rows.possessions,
     ):
         invalid.update(row.season_code for row in row_set if row.season_code != PHASE_5_SEASON)
     if invalid:
@@ -181,15 +183,26 @@ def load_game_events(
     return {"game_event": count}
 
 
-def assert_pre_lineup_safe(connection: Any, season_code: str) -> None:
-    """Require E2024 scope and an entirely empty Phase 6 table."""
+def assert_pre_lineup_safe(
+    connection: Any, season_code: str, *, rebuilding_possessions: bool = False
+) -> None:
+    """Refuse a base load that would strand Phase 6 rows built from other events.
+
+    Phase 5 required this table to be empty. Phase 6 fills it, so a caller that
+    is about to rebuild possessions in the same run may say so and proceed. The
+    refusal stays loud for every other caller, because a base load on its own
+    leaves possessions describing events that have since been replaced.
+    """
     _assert_season_code(season_code)
+    if rebuilding_possessions:
+        return
     with connection.cursor() as cursor:
         cursor.execute("SELECT count(*) FROM possession")
         possession_rows = int(cursor.fetchone()[0])
     if possession_rows:
         raise Phase5StateError(
-            f"The possession table must stay empty in Phase 5; found {possession_rows} rows."
+            f"Found {possession_rows} possession rows. Pass rebuilding_possessions=True "
+            "only when load_remaining_rows will run in the same pass."
         )
 
 
@@ -198,6 +211,8 @@ def load_phase5_base_rows(
     dimensions: DimensionRows,
     events: tuple[GameEventRow, ...],
     season_code: str,
+    *,
+    rebuilding_possessions: bool = False,
 ) -> dict[str, int]:
     """Refresh dimensions first, then events without clearing derived attachments."""
     _assert_season_code(season_code)
@@ -208,20 +223,10 @@ def load_phase5_base_rows(
             "E2024 is the only allowed season in Phase 5; "
             f"found event rows for {sorted(invalid_events)}."
         )
-    assert_pre_lineup_safe(connection, season_code)
+    assert_pre_lineup_safe(connection, season_code, rebuilding_possessions=rebuilding_possessions)
     counts = load_dimensions(connection, dimensions)
     counts.update(load_game_events(connection, events, season_code))
     return counts
-
-
-def _assert_possession_empty(cursor: Any) -> int:
-    cursor.execute("SELECT count(*) FROM possession")
-    count = int(cursor.fetchone()[0])
-    if count:
-        raise Phase5StateError(
-            f"The possession table must stay empty in Phase 5; found {count} rows."
-        )
-    return count
 
 
 def load_remaining_rows(
@@ -252,10 +257,15 @@ def load_remaining_rows(
             GAME_QUALITY_COLUMNS,
             rows.game_qualities,
         ),
+        (
+            "possession",
+            "stage_possession",
+            POSSESSION_COLUMNS,
+            rows.possessions,
+        ),
     )
     counts: dict[str, int] = {}
     with connection.transaction(), connection.cursor() as cursor:
-        _assert_possession_empty(cursor)
         for target, stage, columns, source_rows in row_sets:
             cursor.execute(
                 f"CREATE TEMP TABLE {stage} (LIKE {target} INCLUDING DEFAULTS) ON COMMIT DROP"
@@ -311,7 +321,16 @@ def load_remaining_rows(
             "UPDATE game_event SET stint_index = NULL WHERE season_code = %s",
             (season_code,),
         )
-        for target in ("player_game_minutes", "game_quality", "lineup_stint"):
+        # Clear the reference before deleting possessions. The foreign key is
+        # composite and declared ON DELETE SET NULL, so Postgres would try to
+        # null season_code and gamecode too, and both are NOT NULL. Releasing
+        # the reference first means the delete never fires that action.
+        cursor.execute(
+            "UPDATE game_event SET possession_index = NULL WHERE season_code = %s",
+            (season_code,),
+        )
+        # possession is deleted before lineup_stint because it references the stint.
+        for target in ("possession", "player_game_minutes", "game_quality", "lineup_stint"):
             cursor.execute(f"DELETE FROM {target} WHERE season_code = %s", (season_code,))
 
         for target, stage, columns, _ in row_sets[1:]:
@@ -333,11 +352,11 @@ def load_remaining_rows(
             """,
             (season_code,),
         )
-        _assert_possession_empty(cursor)
 
     with connection.cursor() as cursor:
         cursor.execute(
-            "VACUUM (ANALYZE) lineup, lineup_stint, game_event, player_game_minutes, game_quality"
+            "VACUUM (ANALYZE) lineup, lineup_stint, game_event, player_game_minutes, "
+            "game_quality, possession"
         )
     return {
         "lineup": counts["lineup"],
@@ -345,5 +364,5 @@ def load_remaining_rows(
         "game_event_attached": attached_count,
         "player_game_minutes": counts["player_game_minutes"],
         "game_quality": counts["game_quality"],
-        "possession": 0,
+        "possession": counts["possession"],
     }

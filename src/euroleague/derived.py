@@ -110,6 +110,24 @@ PLAYER_GAME_MINUTES_COLUMNS = (
     "is_starter",
 )
 
+POSSESSION_COLUMNS = (
+    "season_code",
+    "gamecode",
+    "possession_index",
+    "offense_team_code",
+    "defense_team_code",
+    "start_ingest_index",
+    "end_ingest_index",
+    "stint_index",
+    "offense_lineup_id",
+    "defense_lineup_id",
+    "points_scored",
+    "end_reason",
+    "margin_at_start",
+    "seconds_remaining_at_start",
+    "straddles_substitution",
+)
+
 GAME_QUALITY_COLUMNS = (
     "season_code",
     "gamecode",

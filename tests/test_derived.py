@@ -338,6 +338,7 @@ def test_full_e2024_remaining_rows_pass_every_phase_5_population_gate() -> None:
     }
     assert not any(row.oncourt_violations for row in rows.game_qualities)
     assert not any(row.pairing_errors for row in rows.game_qualities)
+    gate_failures = set()
     for row in rows.game_qualities:
         expected_reasons = []
         if row.minute_mismatches_corrected:
@@ -346,5 +347,31 @@ def test_full_e2024_remaining_rows_pass_every_phase_5_population_gate() -> None:
             expected_reasons.append("off_court_attribution")
         if row.oncourt_violations:
             expected_reasons.append("not_five_on_court")
+        # Phase 6 appends its own reason last, from the possession gate rather
+        # than from any lineup invariant.
+        if "possession_gate" in row.quarantine_reasons:
+            expected_reasons.append("possession_gate")
+            gate_failures.add(row.gamecode)
         assert row.quarantine_reasons == expected_reasons
         assert row.excluded_by_default == bool(expected_reasons)
+
+    # The 16 games whose two independently counted totals disagree by more than
+    # two. Quarantined and excluded by default, never dropped.
+    assert gate_failures == {
+        3,
+        18,
+        29,
+        45,
+        75,
+        156,
+        177,
+        190,
+        200,
+        238,
+        239,
+        262,
+        270,
+        290,
+        296,
+        323,
+    }

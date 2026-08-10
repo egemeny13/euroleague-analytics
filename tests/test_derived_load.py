@@ -211,17 +211,16 @@ def test_base_loader_commits_dimensions_before_game_events() -> None:
     ]
 
 
-def test_base_loader_refuses_any_existing_possession_row() -> None:
-    """Break caught: Phase 5 runs while Phase 6 data exists."""
+def test_base_loader_refuses_an_existing_possession_row_unless_it_is_being_rebuilt() -> None:
+    """Break caught: a base load on its own strands possessions built from replaced events."""
     connection = Connection(possession_rows=1)
+    empty = DimensionRows(players=(), teams=(), team_seasons=())
 
-    with pytest.raises(Phase5StateError, match="possession table must stay empty"):
-        load_phase5_base_rows(
-            connection,
-            DimensionRows(players=(), teams=(), team_seasons=()),
-            (),
-            "E2024",
-        )
+    with pytest.raises(Phase5StateError, match="rebuilding_possessions=True"):
+        load_phase5_base_rows(connection, empty, (), "E2024")
+
+    # Declaring the rebuild is the only way through, and it must be explicit.
+    load_phase5_base_rows(connection, empty, (), "E2024", rebuilding_possessions=True)
 
 
 def test_base_loader_rejects_every_non_e2024_value_before_any_write() -> None:
@@ -289,10 +288,10 @@ def test_base_reload_preserves_existing_lineup_attachments() -> None:
     assert "free_throw_trip_id" not in update_clause
 
 
-def test_remaining_rows_load_in_one_transaction_and_leave_possession_untouched(
+def test_remaining_rows_including_possessions_load_in_one_transaction(
     fixture_cache,
 ) -> None:
-    """Break caught: a partial Phase 5 load becomes visible or Phase 6 is populated."""
+    """Break caught: a partial derived load becomes visible to a reader."""
     rows = build_remaining_rows(fixture_cache, "E2024")
     connection = Connection()
 
@@ -304,7 +303,7 @@ def test_remaining_rows_load_in_one_transaction_and_leave_possession_untouched(
         "game_event_attached": 14_321,
         "player_game_minutes": 617,
         "game_quality": 26,
-        "possession": 0,
+        "possession": 3_850,
     }
     assert connection.transactions_started == 1
     assert connection.transactions_committed == 1
@@ -314,13 +313,15 @@ def test_remaining_rows_load_in_one_transaction_and_leave_possession_untouched(
         "stage_lineup_stint",
         "stage_player_game_minutes",
         "stage_game_quality",
+        "stage_possession",
         "stage_game_event_attachment",
     ]
     vacuum_queries = [
         query for query, _ in connection.executions if query.startswith("VACUUM (ANALYZE)")
     ]
     assert vacuum_queries == [
-        "VACUUM (ANALYZE) lineup, lineup_stint, game_event, player_game_minutes, game_quality"
+        "VACUUM (ANALYZE) lineup, lineup_stint, game_event, player_game_minutes, "
+        "game_quality, possession"
     ]
     queries = [query for query, _ in connection.executions]
     detach_index = queries.index("UPDATE game_event SET stint_index = NULL WHERE season_code = %s")
