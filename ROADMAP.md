@@ -189,12 +189,15 @@ in E2024 and 367 to **385 of 402** in E2025.
 persisted, `possession` is still empty, and the straddle rate and the storage
 re-measurement have not started. The gate is unchanged and honestly red.
 
-Four candidate causes for the residual are measured and eliminated, so the next
+Five candidate causes for the residual are measured and eliminated, so the next
 session needs a new instrument rather than a rerun: the free-throw suppression
 rule (three alternatives, all worse), unresolved missed shots (12 in E2024,
-explaining none of the failures), end-of-period double closing (zero cases), and
-trip splitting (9, too rare). The direction is known — the failures are a
-**missing ending for one team**, not an invented one.
+explaining none of the failures), end-of-period double closing (zero cases),
+trip splitting (9, too rare), and the **free-throw award split**, which was
+built and measured on 2026-08-11 and moves the two seasons' combined total by
+zero. That last decision is closed, not open, and the split was not shipped
+because it buys nothing for a fragile inference. The direction is known — the
+failures are a **missing ending for one team**, not an invented one.
 
 **The trap to avoid is named.** Ending a possession whenever the next ball event
 belongs to the other team would pass the gate almost everywhere and prove

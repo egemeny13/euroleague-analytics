@@ -392,6 +392,38 @@ not used to soften the gate.
 - E2025, 17 games: 67, 106, 119, 122, 124, 140, 162, 163, 167, 192, 221,
   230, 312, 322, 337, 357, 364.
 
+### The free-throw award split: measured, and it does not help
+
+This was the owner's open decision from `FREE_THROW_TRIP_GROUPING_REPORT.md`. It
+was built and measured on 2026-08-11 rather than left open.
+
+Technical-family fouls award a fixed, known number of shots — one for `CMT`, `C`
+and `B`; unsportsmanlike and disqualifying fouls award two and also return the
+ball. Subtracting those from an observed trip leaves the ordinary personal-foul
+award, which is the one that ends a possession. The unknown is where in the
+observed run the ordinary shots sit, so **both orderings were measured rather
+than assumed**, together with merging a same-shooter trip that an intervening
+different shooter had split inside one dead ball.
+
+| Variant | E2024 passing | E2025 passing | Total |
+|---|---:|---:|---:|
+| Baseline, shipped | 314 | 385 | **699** |
+| Merge only | 313 | 385 | 698 |
+| Split, ordinary award first | 315 | 384 | **699** |
+| Split, ordinary award last | 315 | 384 | **699** |
+| Split first + merge | 315 | 383 | 698 |
+| Split last + merge | 315 | 384 | 699 |
+
+Splitting moves exactly one E2024 game inside the gate and one E2025 game
+outside it. The two orderings give identical results, which is itself the
+finding: the population is far too small for the ordering assumption to matter,
+so the split cannot be the residual either.
+
+**It was not shipped.** It adds a fragile inference — fixed award sizes plus an
+unmeasurable shot ordering — in exchange for no measured improvement. The
+approved Section 4 grouping rule is therefore unchanged, and the decision is
+closed rather than open.
+
 ### Four candidate causes measured and eliminated
 
 The residual is genuinely unexplained, and these four are ruled out rather than
@@ -434,9 +466,8 @@ In order, and each ends in a number:
    belongs to the other team would pass the gate in nearly every game and prove
    nothing, because it forces the alternation the gate is meant to test. That is
    exactly the hole Decision 6 exists to close. Do not take it.
-3. The free-throw award split remains the owner's open decision and is worth
-   resolving first, since it bounds how much of the residual is even reachable
-   without changing the approved grouping rule.
+3. The free-throw award split is closed, measured, and is **not** the residual.
+   Do not reopen it without new evidence.
 
 ## Permanent tests
 
