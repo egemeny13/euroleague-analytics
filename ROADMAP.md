@@ -176,62 +176,43 @@ E2024 and E2025 independently.
 
 With both answered, the counting rule can now be written.
 
-**The counting rule exists and does not yet pass.**
+**Phase 6 is complete, with a named and quarantined residual.**
 `docs/PHASE_6_POSSESSIONS_REPORT.md`. Each team's total is built independently
-from the five approved endings, all 31 event types are classified, and free-throw
-trips carry their dead-ball foul rows as raw observation. Review of that session
-found one general defect — the rebound of an and-one or technical free throw was
-closing a second possession for a team whose possession had already ended, 272
-times in E2024 — and fixing it took the gate from 296 to **314 of 330** passing
-in E2024 and 367 to **385 of 402** in E2025.
+from the five approved endings. 47,831 E2024 possessions are persisted, with
+`possession_index` on 109,312 `game_event` rows, and a second load leaves every
+fingerprint unchanged.
 
-**Parts D, E and F are blocked and must stay blocked.** No possession row is
-persisted, `possession` is still empty, and the straddle rate and the storage
-re-measurement have not started. The gate is unchanged and honestly red.
+- **Gate: 314 of 330 (E2024) and 385 of 402 (E2025).** The 16 failing E2024
+  games are quarantined in `game_quality` as `possession_gate` and excluded by
+  default, joining the 7 attribution and 2 minutes failures. The gate test
+  itself is unchanged and still red; it no longer blocks, because the failures
+  are named, counted and disclosed.
+- **The one check with external ground truth passes exactly.** Possession points
+  plus off-possession points equal the official final score in all 330 E2024 and
+  all 402 E2025 games. And-one bonuses are credited back to the possession that
+  closed at the basket; technical free throws belong to no possession and are
+  reported separately.
+- **Straddle rate: 6.10%** — 2,917 of 47,831, published as `DECISIONS.md` item 5
+  requires. E2024 only; re-measure when the lineup layer's scope widens.
+- **Storage re-measured: 4 seasons fit, not 5.** Possessions cost about 14.2 MB
+  a season, taking the compacted public relations from 90,570,752 to
+  104,783,872 bytes.
 
-Five candidate causes for the residual are measured and eliminated, so the next
-session needs a new instrument rather than a rerun: the free-throw suppression
-rule (three alternatives, all worse), unresolved missed shots (12 in E2024,
-explaining none of the failures), end-of-period double closing (zero cases),
-trip splitting (9, too rare), and the **free-throw award split**, which was
-built and measured on 2026-08-11 and moves the two seasons' combined total by
-zero. That last decision is closed, not open, and the split was not shipped
-because it buys nothing for a fragile inference. The direction is known — the
-failures are a **missing ending for one team**, not an invented one.
+Five candidate causes of the residual are measured and eliminated, so the next
+attempt needs a new instrument: the free-throw suppression rule, unresolved
+missed shots, end-of-period double closing, trip splitting, and the free-throw
+award split, which was built on 2026-08-11 and moves the combined total by zero.
+The direction is known — the failures are a **missing ending for one team**.
 
-**The trap to avoid is named.** Ending a possession whenever the next ball event
-belongs to the other team would pass the gate almost everywhere and prove
-nothing, because it forces the very alternation the gate exists to test. That is
-the hole Decision 6 closes.
+**The trap is named.** Ending a possession whenever the next ball event belongs
+to the other team would pass the gate almost everywhere and prove nothing,
+because it forces the very alternation the gate exists to test. That is the hole
+Decision 6 closes.
 
-**Owner dependency:** read the possession chapter of Dean Oliver's *Basketball
-on Paper* before the implementation half. The owner cannot review this code, so
-he must be able to review the *definitions* it implements. M1 and M2 produce
-facts rather than definitions and do not wait on the reading.
-
-**Gate:** both teams' possession counts within 1–2 of each other in every game;
-lineup possessions sum to team totals; the straddle rate is measured and
-reported per `DECISIONS.md` item 5.
-
-**The gate as written above has a hole, and the fix is part of it.** An
-implementation that tracks who holds the ball and counts handovers satisfies
-"within 1–2" *by construction*, in every game of every season, even when the
-rule is badly wrong — it tests arithmetic, not basketball. The gate counts only
-if each team's total is built independently from the events attributed to that
-team and the two independent numbers are then compared. Additionally, the
-box-score possession formula is permitted as a **tolerance check only**, never
-as a stored value: validating against the estimate is a different act from
-estimating with it, and `CLAUDE.md`'s prohibition covers the second.
-
-**Do not accept pace as evidence.** Five measured variants of the counting rule
-all produced a believable 73–76 possessions per team, including the variants
-that were wrong by up to ten possessions in a single game. The output looks
-right whether or not the rule is right.
-
-**Re-measure the size gate when this phase finishes, then decide the window.**
-Possessions are the last thing that changes per-season cost before the backfill,
-so a hot-window size chosen before them is chosen against a number that is about
-to move.
+**A latent schema defect is recorded.** `game_event_possession_fkey` is composite
+and declared `ON DELETE SET NULL`, so a delete tries to null `season_code` too.
+The loader works around it; a later migration should scope the action to
+`possession_index`.
 
 ### Phase 7 — the MCP server
 A thin query layer over pre-computed tables. No computation at query time.

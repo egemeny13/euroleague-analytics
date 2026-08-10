@@ -1,12 +1,21 @@
 # Phase 6 possessions report
 
-**Status:** stopped after Part C, as required by the session brief.
-**Revised:** 2026-08-11 after review. One defect was found and fixed; the gate
-improved but still fails. See "Review findings" below.
+**Status:** Parts A to F complete. The Part C gate is still red and the failing
+games are quarantined rather than blocking.
+**Revised:** 2026-08-11. Review found and fixed one general defect, then the
+owner decided to quarantine the residual and proceed. See "Review findings" and
+"Parts D to F" below.
 
-Parts A and B are implemented. The unsoftened Part C gate fails in both cached
-seasons, so Parts D, E, and F have not started. No possession row has been
-persisted and no database value has changed.
+All six parts are implemented. 47,831 E2024 possessions are persisted. The
+sixteen E2024 games whose two independently counted totals still disagree by
+more than two are recorded in `game_quality` with the reason `possession_gate`
+and are excluded by default — the same treatment the seven attribution and two
+minutes failures already get.
+
+**The gate itself was not softened.** `test_each_team_is_within_two_independently
+_counted_possessions` still asserts zero violations and is still red. What
+changed is that it no longer blocks the phase, because the failures are named,
+counted and disclosed.
 
 ## Part A result
 
@@ -449,19 +458,100 @@ untested. Recording them so the next session does not re-tread them:
    grouping rule and needs the owner's decision, and it cannot account for 16
    failing games.
 
-This is the required Part C stop. The result looks plausible in aggregate and
-still fails the only meaningful gate. The threshold has not been changed and no
-individual game is special-cased. One general defect was found in review and
-fixed, halving the failures; the rest remain. **Parts D-F stay blocked** until
-the independent counter passes for a measured, general reason.
+The threshold has not been changed and no individual game is special-cased.
 
-### What the next session should try
+---
 
-In order, and each ends in a number:
+## Parts D to F
+
+### Part D — possession rows, lineups, and the straddle rate
+
+Each possession carries the stint it started in, the offence and defence lineup
+IDs denormalised from that stint, points scored, the margin and seconds
+remaining at its start, and whether it straddles a substitution.
+
+`CLAUDE.md` credits a possession spanning a substitution wholly to the lineup on
+court when it **started**, so the stint and both lineup IDs come from the
+starting stint. The rate that convention was applied at, which
+`DECISIONS.md` item 5 requires be published:
+
+| | E2024 |
+|---|---:|
+| Possessions | 47,831 |
+| Straddling a substitution | 2,917 |
+| **Rate** | **6.10%** |
+
+This is E2024 only. The lineup layer is scoped to that season, so the rate
+cannot yet be re-measured on E2025 and must be when the scope widens.
+
+End reasons cross-check against the definitions document exactly:
+
+| End reason | Count | Cross-check |
+|---|---:|---|
+| Made shot | 19,759 | 13,556 `2FGM` + 6,203 `3FGM` |
+| Defensive rebound | 15,011 | 15,283 `D` less the 272 excluded-free-throw rebounds |
+| Turnover | 8,129 | matches `TO` exactly |
+| Made free throw | 4,103 | |
+| End of period | 829 | |
+
+### Points needed an exact identity, and it holds
+
+The gate has no external ground truth. Points do: the official running score.
+
+An and-one bonus arrives *after* its possession has closed at the basket, so it
+is credited back to it. Technical and unsportsmanlike free throws belong to no
+possession at all — they are shot while the other team may hold the ball — so
+they are reported separately as `off_possession_points` rather than dropped.
+
+**Possession points plus off-possession points equal the final score in all 330
+E2024 and all 402 E2025 games. Zero mismatches.** The off-possession population
+is 500 points in E2024 and 574 in E2025.
+
+### Part E — persisted
+
+47,831 possessions loaded in one transaction, with `possession_index` attached
+to 109,312 `game_event` rows. A second complete load leaves every content
+fingerprint unchanged.
+
+**That idempotency proof caught a schema defect.**
+`game_event_possession_fkey` is composite over
+`(season_code, gamecode, possession_index)` and declared `ON DELETE SET NULL`,
+so deleting a possession made Postgres try to null `season_code` and `gamecode`
+too — both `NOT NULL`. The loader now releases the reference before deleting, so
+the action never fires. **The schema still carries the defect** and should get a
+column-scoped `SET NULL` in a later migration; until then, nothing may delete
+from `possession` without clearing `game_event.possession_index` first.
+
+Clutch is a filter on the stored columns, as `DECISIONS.md` item 6 requires, not
+a table. Last five minutes within five points returns 2,493 possessions.
+
+### Part F — storage re-measured, and the window is now 4
+
+| | Phase 5 | Phase 6 |
+|---|---:|---:|
+| Public relations, fully compacted | 90,570,752 | **104,783,872** |
+| `possession` table | 49,152 | 12,918,784 |
+| Seasons inside the 474,311,115-byte budget | 5 | **4** |
+
+Possessions cost about **14.2 MB a season**. Phase 5 left the capacity figure
+bounded at "4 or 5" because the two answers sat inside the reading drift;
+possessions moved it clear of that band, so it is now pinned at 4.
+
+Two size assertions became bounds rather than exact pins. Four consecutive
+readings after one compaction were byte-identical, but a second compaction of
+the same rows settled 8,192 bytes higher — so equality would fail on a page
+wobble rather than on growth, which is measured in megabytes.
+
+**The hot-window decision is now answerable and is the owner's.** Four complete
+E2024-sized seasons fit the free tier. E2025 is 402 games rather than 330, so
+four *recent* seasons will not fit; the real choice is between fewer hot seasons
+and a paid plan.
+
+### What still needs doing on the counter
 
 1. The direction is established: the failures are a **missing ending for one
-   team**. Find possessions the event stream never closes. The four candidates
-   above are eliminated, so this needs a new instrument rather than a rerun.
+   team**. Five candidates are eliminated, so this needs a new instrument
+   rather than a rerun.
 2. Beware the trap. A rule that ends a possession whenever the next ball event
    belongs to the other team would pass the gate in nearly every game and prove
    nothing, because it forces the alternation the gate is meant to test. That is
