@@ -197,7 +197,13 @@ def test_remaining_fixture_rows_have_the_real_grains_and_matchup_boundaries(
 
     game_one_attachments = [row for row in rows.event_attachments if row.gamecode == 1]
     assert [row.ingest_index for row in game_one_attachments] == list(range(458))
-    assert all(row.possession_index is None for row in game_one_attachments)
+    # Phase 6 fills possession_index for events inside a possession. Dead-ball
+    # rows and technical free throws belong to none and stay null, so both
+    # populations must be present rather than one of them being empty.
+    attached = [row for row in game_one_attachments if row.possession_index is not None]
+    assert attached
+    assert len(attached) < len(game_one_attachments)
+    assert min(row.possession_index for row in attached) == 0
 
 
 def test_quality_rows_generate_the_fixture_quarantine_instead_of_hard_coding_it(

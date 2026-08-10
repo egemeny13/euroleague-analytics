@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections import Counter
+
 import pytest
 
 from euroleague.cache import ResponseCache
+from euroleague.derived import build_remaining_rows
 from euroleague.events import EventRecord, flatten_play_by_play
 from euroleague.possessions import (
     EVENT_ROLES,
@@ -289,6 +292,145 @@ def test_period_end_uses_the_structural_period_transition_not_end_markers() -> N
         ("AAA", 0, "end_of_period"),
         ("BBB", 1, "turnover"),
     ]
+
+
+def test_and_one_bonus_point_belongs_to_the_possession_that_already_closed() -> None:
+    """Break caught: the and-one free throw is skipped and its point vanishes."""
+    events = [
+        _event(0, "2FGM", "AAA", "P1", score_a=2),
+        _event(1, "CM", "BBB", "DEF", score_a=2),
+        _event(2, "FTM", "AAA", "P1", score_a=3),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_points == {"AAA": 3, "BBB": 0}
+    assert result.off_possession_points == {"AAA": 0, "BBB": 0}
+
+
+def test_technical_free_throw_points_are_reported_outside_every_possession() -> None:
+    """Break caught: technical points are silently dropped or credited to offence."""
+    events = [
+        _event(0, "2FGA", "AAA", "P1"),
+        _event(1, "CMT", "BBB", "DEF"),
+        _event(2, "FTM", "AAA", "P1", score_a=1),
+        _event(3, "TO", "AAA", "P1", score_a=1),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_points == {"AAA": 0, "BBB": 0}
+    assert result.off_possession_points == {"AAA": 1, "BBB": 0}
+
+
+def test_every_possession_is_credited_to_a_lineup_of_the_offence(
+    fixture_cache: ResponseCache,
+) -> None:
+    """Break caught: a home/away swap credits possessions to the wrong five."""
+    rows = build_remaining_rows(fixture_cache, "E2024")
+    team_of_lineup = {lineup.lineup_id: lineup.team_code for lineup in rows.lineups}
+
+    assert rows.possessions
+    for possession in rows.possessions:
+        assert team_of_lineup[possession.offense_lineup_id] == possession.offense_team_code
+        assert team_of_lineup[possession.defense_lineup_id] == possession.defense_team_code
+
+
+def test_lineup_possessions_sum_to_team_possessions(fixture_cache: ResponseCache) -> None:
+    """Break caught: the straddle convention differs between the two levels.
+
+    A possession spanning a substitution is credited wholly to the lineup on
+    court when it started. If the lineup-level and team-level totals used
+    different conventions this sum would fail for reasons that look exactly
+    like a bug, which is why `CLAUDE.md` names it as an invariant.
+    """
+    rows = build_remaining_rows(fixture_cache, "E2024")
+    team_of_lineup = {lineup.lineup_id: lineup.team_code for lineup in rows.lineups}
+
+    per_game_team: Counter[tuple[int, str]] = Counter()
+    per_game_lineup: Counter[tuple[int, str, str]] = Counter()
+    for possession in rows.possessions:
+        per_game_team[(possession.gamecode, possession.offense_team_code)] += 1
+        per_game_lineup[
+            (
+                possession.gamecode,
+                team_of_lineup[possession.offense_lineup_id],
+                possession.offense_lineup_id,
+            )
+        ] += 1
+
+    rolled_up: Counter[tuple[int, str]] = Counter()
+    for (gamecode, team_code, _lineup_id), count in per_game_lineup.items():
+        rolled_up[(gamecode, team_code)] += count
+
+    assert rolled_up == per_game_team
+
+
+def test_a_possession_starting_inside_a_stint_is_credited_to_that_stint(
+    fixture_cache: ResponseCache,
+) -> None:
+    """Break caught: a straddling possession is credited to where it ended."""
+    rows = build_remaining_rows(fixture_cache, "E2024")
+    stints = {(stint.gamecode, stint.stint_index): stint for stint in rows.stints}
+
+    straddling = [row for row in rows.possessions if row.straddles_substitution]
+
+    assert straddling, "the straddle population must not be empty"
+    for possession in rows.possessions:
+        stint = stints[(possession.gamecode, possession.stint_index)]
+        assert stint.start_ingest_index <= possession.start_ingest_index
+        assert possession.start_ingest_index <= stint.end_ingest_index
+    for possession in straddling:
+        stint = stints[(possession.gamecode, possession.stint_index)]
+        assert possession.end_ingest_index > stint.end_ingest_index
+
+
+def test_a_game_failing_the_possession_gate_is_quarantined_not_dropped(
+    fixture_cache: ResponseCache,
+) -> None:
+    """Break caught: gate failures are silently loaded or silently discarded."""
+    rows = build_remaining_rows(fixture_cache, "E2024")
+    quality = {row.gamecode: row for row in rows.game_qualities}
+
+    failing = [code for code, row in quality.items() if "possession_gate" in row.quarantine_reasons]
+
+    assert failing, "the fixture set must carry at least one gate failure"
+    for gamecode in failing:
+        assert quality[gamecode].excluded_by_default
+        # The rows are still built. Quarantine excludes by default, never deletes.
+        assert any(row.gamecode == gamecode for row in rows.possessions)
+
+
+@pytest.mark.parametrize("season", ["E2024", "E2025"])
+@pytest.mark.full_season
+def test_possession_points_plus_off_possession_points_equal_the_final_score(
+    season: str,
+) -> None:
+    """Break caught: a scoring event lands in no possession and is lost.
+
+    This is the phase's one exact accounting identity, and unlike the gate it
+    has an external ground truth: the official running score. Technical and
+    unsportsmanlike free throws belong to no possession by design, so they are
+    reported separately rather than dropped, and the two together must
+    reconcile to the last forward-filled score of the game.
+    """
+    cache = ResponseCache("exploration/cache")
+    mismatches: list[tuple[int, int, int, int, int]] = []
+
+    for game in cache.read_schedule_json(season)["data"]:
+        gamecode = int(game["gameCode"])
+        home_team = str(game["local"]["club"]["code"]).strip()
+        away_team = str(game["road"]["club"]["code"]).strip()
+        events = flatten_play_by_play(cache.read_json(season, "PlaybyPlay", gamecode))
+        result = count_game_possessions(events, home_team, away_team)
+
+        home_total = result.team_points[home_team] + result.off_possession_points[home_team]
+        away_total = result.team_points[away_team] + result.off_possession_points[away_team]
+        final = events[-1]
+        if (home_total, away_total) != (final.score_a, final.score_b):
+            mismatches.append((gamecode, home_total, final.score_a, away_total, final.score_b))
+
+    assert mismatches == []
 
 
 @pytest.mark.parametrize("season", ["E2024", "E2025"])

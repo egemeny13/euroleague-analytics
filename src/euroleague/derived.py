@@ -9,6 +9,7 @@ from typing import Any, NamedTuple
 from euroleague.cache import ResponseCache
 from euroleague.events import EventRecord, parse_clock
 from euroleague.lineups import COACH_IDS
+from euroleague.possessions import count_game_possessions
 from euroleague.validation import validate_season
 
 PHASE_5_SEASON = "E2024"
@@ -191,7 +192,7 @@ class GameEventAttachmentRow(NamedTuple):
     home_lineup_id: str
     away_lineup_id: str
     stint_index: int
-    possession_index: None
+    possession_index: int | None
 
 
 class PlayerGameMinutesRow(NamedTuple):
@@ -252,6 +253,24 @@ class StableSegment:
     away_points: int
 
 
+class PossessionRow(NamedTuple):
+    season_code: str
+    gamecode: int
+    possession_index: int
+    offense_team_code: str
+    defense_team_code: str
+    start_ingest_index: int
+    end_ingest_index: int
+    stint_index: int
+    offense_lineup_id: str
+    defense_lineup_id: str
+    points_scored: int
+    end_reason: str
+    margin_at_start: int
+    seconds_remaining_at_start: int
+    straddles_substitution: bool
+
+
 @dataclass(frozen=True)
 class RemainingDerivedRows:
     lineups: tuple[LineupRow, ...]
@@ -259,6 +278,7 @@ class RemainingDerivedRows:
     event_attachments: tuple[GameEventAttachmentRow, ...]
     player_minutes: tuple[PlayerGameMinutesRow, ...]
     game_qualities: tuple[GameQualityRow, ...]
+    possessions: tuple[PossessionRow, ...] = ()
 
 
 def _trim(value: Any) -> str | None:
@@ -565,7 +585,87 @@ def _clock_backwards(game) -> tuple[int, int]:
     return count, largest
 
 
-def _game_quality_rows(season_code: str, validation) -> tuple[GameQualityRow, ...]:
+QUARTER_SECONDS = 600
+OVERTIME_SECONDS = 300
+POSSESSION_GATE_TOLERANCE = 2
+POSSESSION_GATE_REASON = "possession_gate"
+
+
+def _game_total_seconds(events) -> int:
+    """Regulation plus one overtime length for every overtime period played."""
+    last_period = max(event.period for event in events)
+    return 4 * QUARTER_SECONDS + max(0, last_period - 4) * OVERTIME_SECONDS
+
+
+def _possession_rows_for_game(
+    season_code: str,
+    gamecode: int,
+    events,
+    segments: tuple[StableSegment, ...],
+    identifiers: dict[CanonicalUnit, str],
+    home_team: str,
+    away_team: str,
+) -> tuple[tuple[PossessionRow, ...], dict[int, int]]:
+    """Attach each counted possession to the stint it started in.
+
+    `CLAUDE.md` credits a possession that straddles a substitution wholly to the
+    lineup on court when it *started*. Both the stint reference and the two
+    lineup IDs therefore come from the starting stint, and `straddles_substitution`
+    records where that convention was applied so the rate can be published.
+    """
+    result = count_game_possessions(events, home_team, away_team)
+    positions = {event.ingest_index: position for position, event in enumerate(events)}
+    total_seconds = _game_total_seconds(events)
+
+    ordered = sorted(result.possessions, key=lambda p: (p.end_ingest_index, p.start_ingest_index))
+    rows: list[PossessionRow] = []
+    event_possession: dict[int, int] = {}
+
+    for possession_index, possession in enumerate(ordered):
+        start_position = positions[possession.start_ingest_index]
+        end_position = positions[possession.end_ingest_index]
+        segment = next(
+            segment
+            for segment in segments
+            if segment.start_position <= start_position <= segment.end_position
+        )
+        home_id = identifiers[segment.home_unit]
+        away_id = identifiers[segment.away_unit]
+        offense_is_home = possession.offense_team_code == home_team
+
+        start_event = events[start_position]
+        margin = start_event.score_a - start_event.score_b
+        rows.append(
+            PossessionRow(
+                season_code,
+                gamecode,
+                possession_index,
+                possession.offense_team_code,
+                possession.defense_team_code,
+                possession.start_ingest_index,
+                possession.end_ingest_index,
+                segment.stint_index,
+                home_id if offense_is_home else away_id,
+                away_id if offense_is_home else home_id,
+                possession.points_scored,
+                possession.end_reason,
+                margin if offense_is_home else -margin,
+                total_seconds - start_event.elapsed_seconds_raw,
+                end_position > segment.end_position,
+            )
+        )
+        # First possession to cover an event wins. Overlaps are rare and are
+        # themselves a symptom, never a silent merge.
+        for position in range(start_position, end_position + 1):
+            event_possession.setdefault(events[position].ingest_index, possession_index)
+
+    return tuple(rows), event_possession
+
+
+def _game_quality_rows(
+    season_code: str, validation, gate_failures: set[int] | None = None
+) -> tuple[GameQualityRow, ...]:
+    failures = gate_failures or set()
     rows: list[GameQualityRow] = []
     for gamecode, game in validation.games.items():
         backwards_count, max_backwards = _clock_backwards(game)
@@ -575,6 +675,13 @@ def _game_quality_rows(season_code: str, validation) -> tuple[GameQualityRow, ..
             correction_helped = len(candidate.candidate_minute_mismatches) < len(
                 candidate.lineups.raw_minute_mismatches
             )
+        # The possession gate is a quarantine reason, not a load blocker. A game
+        # whose two independently counted totals disagree by more than two is
+        # recorded and excluded by default, the same way a failing lineup
+        # invariant already is.
+        reasons = list(game.quarantine_reasons)
+        if gamecode in failures:
+            reasons.append(POSSESSION_GATE_REASON)
         rows.append(
             GameQualityRow(
                 season_code,
@@ -588,8 +695,8 @@ def _game_quality_rows(season_code: str, validation) -> tuple[GameQualityRow, ..
                 max_backwards,
                 game.correction_applied,
                 correction_helped,
-                bool(game.quarantine_reasons),
-                list(game.quarantine_reasons),
+                bool(reasons),
+                reasons,
             )
         )
     return tuple(rows)
@@ -603,6 +710,34 @@ def build_remaining_rows(cache: ResponseCache, season_code: str) -> RemainingDer
     segments = _stable_segments(validation, schedule)
     usage = _usage_from_segments(segments)
     identifiers = _lineup_id_map(usage.units)
+
+    sides = _sides_by_game(schedule)
+    segments_by_game: dict[int, list[StableSegment]] = {}
+    for segment in segments:
+        segments_by_game.setdefault(segment.gamecode, []).append(segment)
+
+    possession_rows: list[PossessionRow] = []
+    event_possession: dict[tuple[int, int], int] = {}
+    gate_failures: set[int] = set()
+    for gamecode, game_segments in segments_by_game.items():
+        home_team, away_team = sides[gamecode]
+        events = validation.games[gamecode].candidate.events
+        rows, attached = _possession_rows_for_game(
+            season_code,
+            gamecode,
+            events,
+            tuple(game_segments),
+            identifiers,
+            home_team,
+            away_team,
+        )
+        possession_rows.extend(rows)
+        for ingest_index, possession_index in attached.items():
+            event_possession[(gamecode, ingest_index)] = possession_index
+        home_count = sum(1 for row in rows if row.offense_team_code == home_team)
+        away_count = sum(1 for row in rows if row.offense_team_code == away_team)
+        if abs(home_count - away_count) > POSSESSION_GATE_TOLERANCE:
+            gate_failures.add(gamecode)
 
     lineup_rows = tuple(LineupRow(identifiers[unit], *unit) for unit in usage.units)
     stint_rows: list[LineupStintRow] = []
@@ -640,7 +775,7 @@ def build_remaining_rows(cache: ResponseCache, season_code: str) -> RemainingDer
                 home_id,
                 away_id,
                 segment.stint_index,
-                None,
+                event_possession.get((segment.gamecode, events[position].ingest_index)),
             )
             for position in range(segment.start_position, segment.end_position + 1)
         )
@@ -650,5 +785,6 @@ def build_remaining_rows(cache: ResponseCache, season_code: str) -> RemainingDer
         stints=tuple(stint_rows),
         event_attachments=tuple(attachments),
         player_minutes=_player_minutes_rows(cache, season_code, validation),
-        game_qualities=_game_quality_rows(season_code, validation),
+        game_qualities=_game_quality_rows(season_code, validation, gate_failures),
+        possessions=tuple(possession_rows),
     )

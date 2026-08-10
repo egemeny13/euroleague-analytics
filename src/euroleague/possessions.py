@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
 from euroleague.events import EventRecord
@@ -65,6 +65,9 @@ class PossessionTeamError(ValueError):
     """Raised when a ball event does not belong to either game team."""
 
 
+POINTS_BY_PLAYTYPE = {"2FGM": 2, "3FGM": 3, "FTM": 1}
+
+
 @dataclass(frozen=True)
 class CountedPossession:
     """One independently observed possession ending."""
@@ -75,6 +78,7 @@ class CountedPossession:
     end_ingest_index: int
     period: int
     end_reason: str
+    points_scored: int
 
 
 @dataclass(frozen=True)
@@ -83,17 +87,32 @@ class GamePossessionResult:
 
     teams: tuple[str, str]
     possessions: tuple[CountedPossession, ...]
+    # Points from free throws that belong to no possession: technical and
+    # unsportsmanlike awards, which are shot while the other team may hold the
+    # ball. Excluding them from possession scoring is the standard treatment,
+    # but they are real points, so they are reported rather than dropped.
+    # Possession points plus these equal the official final score exactly.
+    off_possession_points: dict[str, int]
 
     @property
     def team_counts(self) -> dict[str, int]:
         counts = Counter(possession.offense_team_code for possession in self.possessions)
         return {team: counts[team] for team in self.teams}
 
+    @property
+    def team_points(self) -> dict[str, int]:
+        """Possession points only. Add `off_possession_points` for the score."""
+        scored: Counter[str] = Counter()
+        for possession in self.possessions:
+            scored[possession.offense_team_code] += possession.points_scored
+        return {team: scored[team] for team in self.teams}
+
 
 @dataclass(frozen=True)
 class _FreeThrowContext:
     is_last: bool
     ignored_as_ending: bool
+    is_and_one: bool
 
 
 def _other_team(team_code: str, teams: tuple[str, str]) -> str:
@@ -133,6 +152,7 @@ def _free_throw_contexts(events: Sequence[EventRecord]) -> dict[int, _FreeThrowC
             contexts[shot.event.ingest_index] = _FreeThrowContext(
                 is_last=shot.is_last_in_inferred_trip,
                 ignored_as_ending=is_and_one or has_retaining_foul,
+                is_and_one=is_and_one,
             )
     return contexts
 
@@ -146,6 +166,14 @@ def count_game_possessions(
     teams = (home_team, away_team)
     open_starts: dict[str, tuple[int, int] | None] = {home_team: None, away_team: None}
     possessions: list[CountedPossession] = []
+    # Points are accumulated beside the frozen rows so an and-one bonus, which
+    # arrives after its possession has already closed at the basket, can still
+    # be credited to it. Without that the season understates scoring by every
+    # and-one free throw made.
+    points: list[int] = []
+    open_points: dict[str, int] = {home_team: 0, away_team: 0}
+    last_closed: dict[str, int | None] = {home_team: None, away_team: None}
+    off_possession_points: dict[str, int] = {home_team: 0, away_team: 0}
     previous_ingest_index: int | None = None
     previous_event: EventRecord | None = None
     free_throw_contexts = _free_throw_contexts(events)
@@ -175,8 +203,12 @@ def count_game_possessions(
                 end_ingest_index=end_event.ingest_index,
                 period=start[1],
                 end_reason=end_reason,
+                points_scored=0,
             )
         )
+        points.append(open_points[offense_team])
+        last_closed[offense_team] = len(possessions) - 1
+        open_points[offense_team] = 0
         open_starts[offense_team] = None
 
     for event in events:
@@ -209,6 +241,17 @@ def count_game_possessions(
             context = free_throw_contexts[event.ingest_index]
             if context.ignored_as_ending:
                 previous_ball_was_excluded_free_throw = True
+                if event.playtype == "FTM" and event.team_code:
+                    if context.is_and_one:
+                        # The basket already closed this possession. The bonus
+                        # point still belongs to it.
+                        closed = last_closed.get(event.team_code)
+                        if closed is not None:
+                            points[closed] += 1
+                        else:
+                            open_points[event.team_code] += 1
+                    else:
+                        off_possession_points[event.team_code] += 1
                 continue
             previous_ball_was_excluded_free_throw = False
             if not event.team_code:
@@ -218,6 +261,8 @@ def count_game_possessions(
             _other_team(event.team_code, teams)
             if open_starts[event.team_code] is None:
                 open_starts[event.team_code] = (event.ingest_index, event.period)
+            if event.playtype == "FTM":
+                open_points[event.team_code] += 1
             if event.playtype == "FTM" and context.is_last:
                 close_possession(
                     event.team_code,
@@ -258,6 +303,8 @@ def count_game_possessions(
         if open_starts[event.team_code] is None:
             open_starts[event.team_code] = (event.ingest_index, event.period)
 
+        open_points[event.team_code] += POINTS_BY_PLAYTYPE.get(event.playtype, 0)
+
         if event.playtype not in {"2FGM", "3FGM", "TO"}:
             continue
 
@@ -277,4 +324,12 @@ def count_game_possessions(
                 start_if_missing=False,
             )
 
-    return GamePossessionResult(teams=teams, possessions=tuple(possessions))
+    scored = tuple(
+        replace(possession, points_scored=points[position])
+        for position, possession in enumerate(possessions)
+    )
+    return GamePossessionResult(
+        teams=teams,
+        possessions=scored,
+        off_possession_points=off_possession_points,
+    )
