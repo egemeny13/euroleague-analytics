@@ -176,6 +176,31 @@ E2024 and E2025 independently.
 
 With both answered, the counting rule can now be written.
 
+**The counting rule exists and does not yet pass.**
+`docs/PHASE_6_POSSESSIONS_REPORT.md`. Each team's total is built independently
+from the five approved endings, all 31 event types are classified, and free-throw
+trips carry their dead-ball foul rows as raw observation. Review of that session
+found one general defect — the rebound of an and-one or technical free throw was
+closing a second possession for a team whose possession had already ended, 272
+times in E2024 — and fixing it took the gate from 296 to **314 of 330** passing
+in E2024 and 367 to **385 of 402** in E2025.
+
+**Parts D, E and F are blocked and must stay blocked.** No possession row is
+persisted, `possession` is still empty, and the straddle rate and the storage
+re-measurement have not started. The gate is unchanged and honestly red.
+
+Four candidate causes for the residual are measured and eliminated, so the next
+session needs a new instrument rather than a rerun: the free-throw suppression
+rule (three alternatives, all worse), unresolved missed shots (12 in E2024,
+explaining none of the failures), end-of-period double closing (zero cases), and
+trip splitting (9, too rare). The direction is known — the failures are a
+**missing ending for one team**, not an invented one.
+
+**The trap to avoid is named.** Ending a possession whenever the next ball event
+belongs to the other team would pass the gate almost everywhere and prove
+nothing, because it forces the very alternation the gate exists to test. That is
+the hole Decision 6 closes.
+
 **Owner dependency:** read the possession chapter of Dean Oliver's *Basketball
 on Paper* before the implementation half. The owner cannot review this code, so
 he must be able to review the *definitions* it implements. M1 and M2 produce
