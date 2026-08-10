@@ -299,11 +299,11 @@ def test_remaining_rows_load_in_one_transaction_and_leave_possession_untouched(
     counts = load_remaining_rows(connection, rows, "E2024")
 
     assert counts == {
-        "lineup": 321,
-        "lineup_stint": 417,
-        "game_event_attached": 5087,
-        "player_game_minutes": 212,
-        "game_quality": 9,
+        "lineup": 748,
+        "lineup_stint": 997,
+        "game_event_attached": 12_269,
+        "player_game_minutes": 521,
+        "game_quality": 22,
         "possession": 0,
     }
     assert connection.transactions_started == 1

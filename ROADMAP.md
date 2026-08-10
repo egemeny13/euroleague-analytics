@@ -147,13 +147,37 @@ specifically, not the common case.
 Remember: every offensive foul already carries its own `TO` row. Count the `TO`
 and ignore the `OF`, or the season gains 1,185 phantom turnovers.
 
+**The definitions are approved.** `docs/PHASE_6_POSSESSION_DEFINITIONS.md`,
+approved 2026-08-10, is the specification: possessions continue through
+offensive rebounds, the and-one ends at the basket, and a free-throw trip is
+broken by a ball-touching event or a new foul. Two questions were withdrawn from
+approval because they asked the owner to choose between unmeasured
+possibilities — the period-end markers (M1) and team rebounds (M2) — and they
+open the implementation session as measurements.
+
 **Owner dependency:** read the possession chapter of Dean Oliver's *Basketball
-on Paper* before this phase begins. The owner cannot review this code, so he
-must be able to review the *definitions* it implements.
+on Paper* before the implementation half. The owner cannot review this code, so
+he must be able to review the *definitions* it implements. M1 and M2 produce
+facts rather than definitions and do not wait on the reading.
 
 **Gate:** both teams' possession counts within 1–2 of each other in every game;
 lineup possessions sum to team totals; the straddle rate is measured and
 reported per `DECISIONS.md` item 5.
+
+**The gate as written above has a hole, and the fix is part of it.** An
+implementation that tracks who holds the ball and counts handovers satisfies
+"within 1–2" *by construction*, in every game of every season, even when the
+rule is badly wrong — it tests arithmetic, not basketball. The gate counts only
+if each team's total is built independently from the events attributed to that
+team and the two independent numbers are then compared. Additionally, the
+box-score possession formula is permitted as a **tolerance check only**, never
+as a stored value: validating against the estimate is a different act from
+estimating with it, and `CLAUDE.md`'s prohibition covers the second.
+
+**Do not accept pace as evidence.** Five measured variants of the counting rule
+all produced a believable 73–76 possessions per team, including the variants
+that were wrong by up to ten possessions in a single game. The output looks
+right whether or not the rule is right.
 
 **Re-measure the size gate when this phase finishes, then decide the window.**
 Possessions are the last thing that changes per-season cost before the backfill,

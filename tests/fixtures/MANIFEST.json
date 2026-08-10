@@ -9,7 +9,59 @@
       "sha256": {
         "Boxscore": "66db57074f8851c14d999a9697c8a5edea241856794c22c53032c0be1936d8fc",
         "PlaybyPlay": "43393b352c05637abc1cb8653770ac12aa343aedeff6583e67de5607104865df"
-      }
+      },
+      "free_throw_cases": [
+        {
+          "case": "and-one: made basket, personal foul, one free throw",
+          "why": "P007025 makes at 31, is fouled at 33, and takes the bonus at 35."
+        },
+        {
+          "case": "three-shot personal-foul award",
+          "why": "P006919 draws a personal foul at 423 and takes shots 425, 427, and 428; CM does not identify shooting versus non-shooting."
+        }
+      ]
+    },
+    "2": {
+      "defect": "one free-throw trip spans two clock readings",
+      "why": "P011199 takes one two-shot trip at 04:36 and 04:31.",
+      "sha256": {
+        "Boxscore": "5703cea482a6172a6bb98a4b3d8c9b3361d261f5bd8166a6a3bffb3a69f93076",
+        "PlaybyPlay": "d34aab8d8896b2ad3c8c33991c7daf1c8b071cf4d6efdc63cb70d51c2a2d9f43"
+      },
+      "free_throw_cases": [
+        {
+          "case": "same trip spans clock readings",
+          "why": "Shots 188 and 189 stay together despite different clock strings."
+        }
+      ]
+    },
+    "5": {
+      "defect": "unresolvable five-shot free-throw group",
+      "why": "The season's only length-five group must be flagged rather than split.",
+      "sha256": {
+        "Boxscore": "eae1e712358c91c0c3483488471cc24cd40fca37e838baf7a83819f41b5437cd",
+        "PlaybyPlay": "9bfe0d7fdfa187184c1973d6a75bae79d62000432d3ed3c3134d85998f7820fe"
+      },
+      "free_throw_cases": [
+        {
+          "case": "unresolvable length-five group",
+          "why": "P001288's five makes at 00:08 are preserved and flagged."
+        }
+      ]
+    },
+    "6": {
+      "defect": "substitutions between two free throws",
+      "why": "Four substitution rows sit between P006835's shots 98 and 103.",
+      "sha256": {
+        "Boxscore": "7da84e1f835e14815a1f162c7f0b72afe6c9214d53f41a9e12467a77dac70d9e",
+        "PlaybyPlay": "32becd27b5662bb48a91a0ccb39408a6d46b449ae2c2d35e509d6280afcf246c"
+      },
+      "free_throw_cases": [
+        {
+          "case": "substitution between shots",
+          "why": "Shots 98 and 103 remain one trip across substitutions 99-102."
+        }
+      ]
     },
     "23": {
       "defect": "phantom event - statistic credited to an off-court player",
@@ -17,7 +69,13 @@
       "sha256": {
         "Boxscore": "55e4fdfccd6a1bd215a39a2e31561bcb1d0227a8277e466e73432324e2dbb2a0",
         "PlaybyPlay": "71c54b486b322fe67ed7eb3046ddab8904b7204f0f61d42863cbc2c500188571"
-      }
+      },
+      "free_throw_cases": [
+        {
+          "case": "different shooters at the same clock reading",
+          "why": "P012640 shoots at 538 and P012613 at 539-540, all at 03:42."
+        }
+      ]
     },
     "35": {
       "defect": "minute mismatch the +-60 correction repairs",
@@ -27,6 +85,20 @@
         "PlaybyPlay": "66d16e0641def47226ff1df9843b1ff44b1b9505cf8cecb71c1539d4741888f6"
       }
     },
+    "39": {
+      "defect": "unresolvable four-shot group with a substitution between shots",
+      "why": "P007975's four-shot group spans substitution rows 400-401.",
+      "sha256": {
+        "Boxscore": "4c82c2578bccf34cbdb37e14a20b004d3c52b4d343a9491efdc56511b244c6ea",
+        "PlaybyPlay": "64ca622384d210f6920f1835da01d1edc35f92897003a4fcc5871e4ecb0c9696"
+      },
+      "free_throw_cases": [
+        {
+          "case": "unresolvable length-four group with substitution",
+          "why": "Shots 399, 402, 403, and 404 stay grouped and are flagged."
+        }
+      ]
+    },
     "43": {
       "defect": "minute mismatch the +-60 correction cannot repair - quarantined",
       "why": "Mismatches by 60 seconds but has no overtime, so the correction rule cannot reach it. One of the two games that stay quarantined. Proves the correction is narrow rather than a blanket 60-second nudge.",
@@ -34,6 +106,20 @@
         "Boxscore": "ea6587e63b461795a01b91b3d3e278d740ecd47e2d1c16c6d0af01130ab4c008",
         "PlaybyPlay": "32ab5ebbb1e87dd42716e10baa93ca81ed444cbca104d9f45b70947b76bc843f"
       }
+    },
+    "51": {
+      "defect": "substitution between two free throws",
+      "why": "P003526 takes shots 456 and 459 around substitution rows 457-458.",
+      "sha256": {
+        "Boxscore": "f6377cc24371f75f22a9176547d8957d56b9b54aa0cbe9dfd98729c00e0de67e",
+        "PlaybyPlay": "8d5960d9a88570b71d5d521eebdfc24802dcb2f1dd51a5a949c4096b97a55944"
+      },
+      "free_throw_cases": [
+        {
+          "case": "substitution between shots",
+          "why": "The substitution pair does not split the two-shot trip."
+        }
+      ]
     },
     "75": {
       "defect": "single overtime, otherwise clean",
@@ -67,14 +153,136 @@
         "PlaybyPlay": "505ef9016283f185c4e0a3584ff660577a19c5354485cb9690ac1b05e4c2589c"
       }
     },
+    "169": {
+      "defect": "substitution between two free throws",
+      "why": "P012640 takes shots 552 and 555 around substitution rows 553-554.",
+      "sha256": {
+        "Boxscore": "f722f4de7928f74455d336c74637499b468226b7b70b8a396177999f2161931a",
+        "PlaybyPlay": "5a464e967feada8e13543b9392f36686c6940f07eee3f86ccdf918b53f4869a1"
+      },
+      "free_throw_cases": [
+        {
+          "case": "substitution between shots",
+          "why": "The substitution pair does not split the two-shot trip."
+        }
+      ]
+    },
+    "195": {
+      "defect": "substitution between three free throws",
+      "why": "P011212's shots 380, 383, and 384 span substitutions 381-382.",
+      "sha256": {
+        "Boxscore": "8ab9013953381f4ff07de0e479c35bea56fd2d9edaaae96c82dfbc61f21f0dac",
+        "PlaybyPlay": "b6dd7114c708c3fc78131970fb20956e7275c5ab61bc884149e1f9cff66b9446"
+      },
+      "free_throw_cases": [
+        {
+          "case": "substitution between shots",
+          "why": "The substitution pair does not split the three-shot trip."
+        }
+      ]
+    },
+    "209": {
+      "defect": "new foul separates same-shooter free-throw trips",
+      "why": "A new personal foul eleven seconds later separates two ordinary trips.",
+      "sha256": {
+        "Boxscore": "9ff0dcdcb9632ff73975e7a39d66f69ee965b97188a41f972179573cdddaa79b",
+        "PlaybyPlay": "aab3304245fab1a63a5f248b1ff884d970e76f11b5a61ddc2998012e4d52f736"
+      },
+      "free_throw_cases": [
+        {
+          "case": "game 209 worked new-foul split",
+          "why": "Foul 82 separates shots 78/80 from 85/86 for P012201."
+        }
+      ]
+    },
+    "238": {
+      "defect": "unresolvable four-shot free-throw group",
+      "why": "Personal and coach technical awards cannot be separated from the shots.",
+      "sha256": {
+        "Boxscore": "e2c1e202c1aa988bdb6013af7b91c59228bc19de90816ce7ef661ce9b3270361",
+        "PlaybyPlay": "cf353ad6f6a573d01a7926aa9400c916ae8a1b12a3c51453d6bda191bd3762fd"
+      },
+      "free_throw_cases": [
+        {
+          "case": "unresolvable personal-plus-coach-technical group",
+          "why": "P005928's shots 57-60 remain one flagged group."
+        }
+      ]
+    },
+    "272": {
+      "defect": "new foul separates same-shooter free-throw trips",
+      "why": "A new personal foul ten seconds later separates two P007975 trips.",
+      "sha256": {
+        "Boxscore": "a64c86690972e1ecbaa69ac7e5206fe443c6c36aba3a89cc3b252b8ca389996a",
+        "PlaybyPlay": "d1cdfb2878b361b1f1791044baf9cb2f8c950d285b776ff203f62738e3d9876a"
+      },
+      "free_throw_cases": [
+        {
+          "case": "ordinary-looking new-foul split",
+          "why": "Foul 252 separates shots 250-251 from 256-257."
+        }
+      ]
+    },
+    "276": {
+      "defect": "unresolvable four-shot group with a substitution between shots",
+      "why": "P000796's four makes span substitution rows 317-318.",
+      "sha256": {
+        "Boxscore": "6b112e6fd15dca3c80f5194c46c96a74e429496f6de05babdc31499033492c98",
+        "PlaybyPlay": "73e8669c6c74262ccb45aa09a6ec097322dc42d04bac7f13ca2c6bb5d6c29be1"
+      },
+      "free_throw_cases": [
+        {
+          "case": "unresolvable length-four group with substitution",
+          "why": "Shots 315, 316, 319, and 320 stay grouped and are flagged."
+        }
+      ]
+    },
+    "302": {
+      "defect": "substitution between two free throws",
+      "why": "P012640 takes shots 419 and 422 around substitution rows 420-421.",
+      "sha256": {
+        "Boxscore": "250b44ff83be5d8004f4a63b022f406072eb7b360e1e75c5c727e4b58efaaab5",
+        "PlaybyPlay": "99ce7090d7d86d41b0f597a9e5853409c9d106d5d3128a6440ffeb0a2a1624fd"
+      },
+      "free_throw_cases": [
+        {
+          "case": "substitution between shots",
+          "why": "The substitution pair does not split the two-shot trip."
+        }
+      ]
+    },
+    "317": {
+      "defect": "unresolvable four-shot group with substitutions and an assist",
+      "why": "P012608's four shots span substitutions 199-200 and assist 202.",
+      "sha256": {
+        "Boxscore": "e80a88aa01cf2e1fdb1a4870a9bb8c2729b0fc19967d36ef74b92d61afdbbbb9",
+        "PlaybyPlay": "72f5634e4fbec4296785d98f51e40f35b7980ab16a7ff9d3b9008daee5560728"
+      },
+      "free_throw_cases": [
+        {
+          "case": "unresolvable length-four group with substitution",
+          "why": "Shots 198, 201, 203, and 204 stay grouped and are flagged."
+        }
+      ]
+    },
     "323": {
       "defect": "phantom event plus a full 60-second backwards clock step",
       "why": "Carries both an attribution defect and the largest backwards clock step observed. Two defects in one game is the case where a fix for one can quietly break the other.",
       "sha256": {
         "Boxscore": "09b293fe6df54fd95580d976e51edb12847bc3bbf51f22bd13b8596a7ec7d8cd",
         "PlaybyPlay": "e31683173eaa8b91bcd7d42a4d7ac34ecc40bbf877c27946fd95e9b79b98274e"
-      }
+      },
+      "free_throw_cases": [
+        {
+          "case": "substitution between three free throws",
+          "why": "P005985's shots 166, 171, and 172 span substitutions 167-170."
+        },
+        {
+          "case": "unresolvable length-four group",
+          "why": "P008099's four makes at 275-278 remain one flagged group."
+        }
+      ]
     }
   },
-  "schedule_sha256": "057f386683fe5c7374778eb2c8bf39bf0fefa2cd281bf31bd4664c01f25abb19"
+  "schedule_sha256": "342f4cad0432d1d3ae1792a94ded7b94e1ff023fbde8c513c58ebe23f858d844"
 }

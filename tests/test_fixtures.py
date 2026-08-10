@@ -18,8 +18,8 @@ SEASON_CODE = "E2024"
 
 
 def test_manifest_lists_the_expected_number_of_games(manifest: dict) -> None:
-    """Nine games, one per known defect. A change here should be deliberate."""
-    assert len(manifest["games"]) == 9
+    """Twenty-two games cover the lineup and free-throw hard cases."""
+    assert len(manifest["games"]) == 22
 
 
 def test_every_manifest_game_has_each_recorded_endpoint_on_disk(
@@ -100,6 +100,17 @@ def test_manifest_records_a_defect_and_a_reason_for_every_game(manifest: dict) -
     for gamecode, entry in manifest["games"].items():
         assert entry["defect"].strip(), f"Game {gamecode} has no stated defect"
         assert len(entry["why"].strip()) > 40, f"Game {gamecode} has no real explanation"
+
+
+def test_manifest_names_every_free_throw_case_and_why_it_matters(manifest: dict) -> None:
+    cases = [
+        case for entry in manifest["games"].values() for case in entry.get("free_throw_cases", [])
+    ]
+
+    assert len(cases) == 18
+    for case in cases:
+        assert case["case"].strip()
+        assert len(case["why"].strip()) > 20
 
 
 def test_reading_a_game_that_is_not_committed_says_so_usefully(

@@ -145,7 +145,7 @@ def test_season_safety_belt_disables_a_correction_that_does_not_strictly_help(
 def test_committed_fixtures_prove_the_correction_helps(fixture_cache: ResponseCache) -> None:
     season = validate_season(fixture_cache, SEASON_CODE)
 
-    assert season.raw_minute_mismatch_rows == 10
+    assert season.raw_minute_mismatch_rows == 18
     assert season.candidate_minute_mismatch_rows == 4
     assert season.correction_helps
     assert season.correction_enabled
