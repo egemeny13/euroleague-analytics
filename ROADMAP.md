@@ -152,8 +152,29 @@ approved 2026-08-10, is the specification: possessions continue through
 offensive rebounds, the and-one ends at the basket, and a free-throw trip is
 broken by a ball-touching event or a new foul. Two questions were withdrawn from
 approval because they asked the owner to choose between unmeasured
-possibilities — the period-end markers (M1) and team rebounds (M2) — and they
-open the implementation session as measurements.
+possibilities — the period-end markers (M1) and team rebounds (M2).
+
+**Free-throw trip grouping is done.** `docs/FREE_THROW_TRIP_GROUPING_REPORT.md`.
+The approved rule reproduces the five approved trip-length bins exactly and is
+pinned per season. One correction came out of review: the single-award flag is a
+one-sided test and was renamed to say so, because a short group can still hold
+two foul awards — games 120, 159 and 60 are hand-verified fixtures. Whether to
+split those groups changes the approved Section 4 rule and **needs the owner's
+decision**; it matters because a technical free throw does not end a possession.
+
+**M1 and M2 are done.** `docs/PHASE_6_M1_M2_MEASUREMENTS.md`, both measured over
+E2024 and E2025 independently.
+
+- **M1:** no period is lost or invented. `BP` is exactly one per period in both
+  seasons. The 14 surplus end markers in E2024 are 12 overtime games marking
+  their last period `EP` then `EG`, plus 2 duplicate `EG` rows; E2025 is 17 + 4.
+  Close a period on the array structure, never by counting end markers.
+- **M2:** team rebounds behave exactly like player rebounds on who had the ball
+  before and who has it after, so they end and continue possessions the same
+  way. They differ only in being booked on the same clock second as the miss,
+  the signature of a dead ball. The end-of-period hypothesis is refuted.
+
+With both answered, the counting rule can now be written.
 
 **Owner dependency:** read the possession chapter of Dean Oliver's *Basketball
 on Paper* before the implementation half. The owner cannot review this code, so
