@@ -29,6 +29,7 @@ is binding — the decision is only approved with it.
 | 14 | How the test suite gets its data | Committed edge-case fixtures; full season on demand |
 | 15 | How Python reaches Postgres | `psycopg` through the connection pooler |
 | 16 | Dependency tooling | `pip` with pinned requirements files |
+| 17 | `Points` is a coordinate source only | Approved with one condition |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -39,6 +40,9 @@ each one changes what the migrations must contain.
 
 Items 13 to 16 were raised at the start of Phase 2a, also on 2026-08-09,
 because each one changes what the scaffolding must contain.
+
+Item 17 was raised on 2026-08-09 when the production fetcher began archiving a
+third endpoint, and approved on 2026-08-10.
 
 ---
 
@@ -456,6 +460,27 @@ tool between the owner and code he is learning to read.
 
 **Revisit if** the dependency list grows past roughly ten, or if a transitive
 version conflict ever costs an afternoon.
+
+---
+
+## 17. `Points` is a coordinate source only — approved
+
+Build every shot population from the play-by-play event stream. Archive
+`Points` for its court coordinates and join it to the corresponding event by
+the shared play number, but never count `Points` rows as the population of shot
+attempts.
+
+**Why.** `Points` omits missed free throws entirely. A query that counts shots
+from `Points` and one that counts them from the event stream therefore return
+different answers without raising an error. The event stream is the complete
+source for attempts; `Points` contributes spatial fields only.
+
+**Condition.** Any shot query that includes free throws must start from
+`game_event`. `raw_shot` may be left-joined only to attach coordinates, and its
+`(-1, -1)` free-throw sentinel must remain excluded from plotting and distance
+calculations.
+
+**Timing.** Settled 2026-08-09; first implemented 2026-08-10.
 
 ---
 
