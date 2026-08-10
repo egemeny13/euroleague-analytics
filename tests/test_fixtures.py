@@ -18,8 +18,8 @@ SEASON_CODE = "E2024"
 
 
 def test_manifest_lists_the_expected_number_of_games(manifest: dict) -> None:
-    """Twenty-five games cover the lineup and free-throw hard cases."""
-    assert len(manifest["games"]) == 25
+    """Twenty-six games cover the lineup and free-throw hard cases."""
+    assert len(manifest["games"]) == 26
 
 
 def test_every_manifest_game_has_each_recorded_endpoint_on_disk(
@@ -107,7 +107,7 @@ def test_manifest_names_every_free_throw_case_and_why_it_matters(manifest: dict)
         case for entry in manifest["games"].values() for case in entry.get("free_throw_cases", [])
     ]
 
-    assert len(cases) == 21
+    assert len(cases) == 22
     for case in cases:
         assert case["case"].strip()
         assert len(case["why"].strip()) > 20

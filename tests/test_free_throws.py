@@ -157,6 +157,8 @@ def test_a_short_group_can_still_hold_two_awards_and_the_limit_flag_does_not_den
     assert trip.shooter_id == shooter
     assert trip.is_within_single_award_limit
     assert trip.over_award_limit_reason is None
+    assert tuple(foul.ingest_index for foul in trip.preceding_fouls) == foul_indexes
+    assert tuple(foul.playtype for foul in trip.preceding_fouls) == foul_types
     # The last observed shot is not a reliable award boundary here.
     assert trip.shots[-1].is_last_in_inferred_trip
 
@@ -210,6 +212,8 @@ def test_each_explicit_foul_type_closes_an_open_trip(foul_type: str) -> None:
     trips = group_free_throw_trips(events)
 
     assert [_shot_indexes(trip) for trip in trips] == [(0,), (2,)]
+    assert trips[0].preceding_fouls == ()
+    assert tuple(foul.playtype for foul in trips[1].preceding_fouls) == (foul_type,)
 
 
 def test_non_ball_touching_rows_do_not_close_an_open_trip() -> None:
@@ -227,6 +231,50 @@ def test_non_ball_touching_rows_do_not_close_an_open_trip() -> None:
     assert [_shot_indexes(trip) for trip in trips] == [(0, 5)]
 
 
+def test_trip_captures_preceding_foul_rows_from_its_dead_ball() -> None:
+    """Break caught: the possession layer cannot distinguish a technical award."""
+    events = [_event(0, "2FGM"), _event(1, "CM", "DEF"), _event(2, "FTM")]
+
+    trips = group_free_throw_trips(events)
+
+    assert len(trips) == 1
+    assert tuple(foul.ingest_index for foul in trips[0].preceding_fouls) == (1,)
+    assert tuple(foul.playtype for foul in trips[0].preceding_fouls) == ("CM",)
+
+
+def test_ball_touching_event_discards_preceding_fouls_from_an_older_dead_ball() -> None:
+    """Break caught: stale foul context leaks across a turnover into the next trip."""
+    events = [
+        _event(0, "CM", "OLD"),
+        _event(1, "TO", "OFF"),
+        _event(2, "CMT", "DEF"),
+        _event(3, "FTM"),
+    ]
+
+    trips = group_free_throw_trips(events)
+
+    assert len(trips) == 1
+    assert tuple(foul.ingest_index for foul in trips[0].preceding_fouls) == (2,)
+    assert tuple(foul.playtype for foul in trips[0].preceding_fouls) == ("CMT",)
+
+
+def test_trip_preserves_multiple_preceding_fouls_as_ordered_raw_observations() -> None:
+    """Break caught: multiple awards are classified, collapsed, or reordered."""
+    events = [
+        _event(0, "3FGM"),
+        _event(1, "CMT", "DEF"),
+        _event(2, "C", "DEF"),
+        _event(3, "OUT", "P2"),
+        _event(4, "FTM"),
+    ]
+
+    trips = group_free_throw_trips(events)
+
+    assert len(trips) == 1
+    assert tuple(foul.ingest_index for foul in trips[0].preceding_fouls) == (1, 2)
+    assert tuple(foul.playtype for foul in trips[0].preceding_fouls) == ("CMT", "C")
+
+
 def test_out_of_order_ingest_indexes_fail_instead_of_being_sorted() -> None:
     events = [_event(1, "FTM"), _event(0, "FTM")]
 
@@ -239,6 +287,7 @@ def test_e2024_trip_distribution_and_over_limit_identity_match_the_approved_meas
     cache = ResponseCache("exploration/cache")
     schedule = cache.read_schedule_json("E2024")
     distribution: Counter[int] = Counter()
+    preceding_foul_distribution: Counter[tuple[str, ...]] = Counter()
     over_limit: list[tuple[int, str | None, tuple[int, ...]]] = []
     substitution_trips: list[tuple[int, tuple[int, ...]]] = []
 
@@ -249,6 +298,7 @@ def test_e2024_trip_distribution_and_over_limit_identity_match_the_approved_meas
         event_positions = {event.ingest_index: position for position, event in enumerate(events)}
         for trip in group_free_throw_trips(events):
             distribution[trip.observed_shot_count] += 1
+            preceding_foul_distribution[tuple(foul.playtype for foul in trip.preceding_fouls)] += 1
             indexes = _shot_indexes(trip)
             if not trip.is_within_single_award_limit:
                 over_limit.append((gamecode, trip.shooter_id, indexes))
@@ -260,6 +310,42 @@ def test_e2024_trip_distribution_and_over_limit_identity_match_the_approved_meas
 
     assert sum(distribution.values()) == 6_835
     assert distribution == {1: 1_568, 2: 4_984, 3: 277, 4: 5, 5: 1}
+    assert preceding_foul_distribution == {
+        (): 93,
+        ("B",): 19,
+        ("B", "CMT"): 1,
+        ("C",): 58,
+        ("C", "C"): 1,
+        ("C", "CMU"): 2,
+        ("CM",): 6_000,
+        ("CM", "B"): 12,
+        ("CM", "C"): 20,
+        ("CM", "C", "CMT"): 1,
+        ("CM", "CM"): 289,
+        ("CM", "CM", "B"): 1,
+        ("CM", "CM", "C"): 1,
+        ("CM", "CM", "CM"): 18,
+        ("CM", "CM", "CM", "CM"): 3,
+        ("CM", "CM", "CMT"): 5,
+        ("CM", "CM", "CMU"): 1,
+        ("CM", "CMT"): 38,
+        ("CM", "CMT", "CMD"): 1,
+        ("CM", "CMT", "CMT"): 2,
+        ("CM", "CMT", "CMU", "CMT", "CMU"): 1,
+        ("CM", "CMU"): 14,
+        ("CM", "CMU", "CMT"): 1,
+        ("CM", "CMU", "CMU"): 1,
+        ("CMT",): 86,
+        ("CMT", "B"): 2,
+        ("CMT", "CM"): 1,
+        ("CMT", "CMT"): 2,
+        ("CMT", "CMT", "CM"): 1,
+        ("CMT", "CMU"): 1,
+        ("CMTI",): 2,
+        ("CMU",): 155,
+        ("CMU", "CMT"): 1,
+        ("CMU", "CMT", "CMU"): 1,
+    }
     assert sorted(over_limit) == [
         (5, "P001288", (527, 528, 529, 530, 531)),
         (39, "P007975", (399, 402, 403, 404)),
@@ -287,6 +373,7 @@ def test_e2025_trip_distribution_and_over_limit_identity_are_measured_separately
     cache = ResponseCache("exploration/cache")
     schedule = cache.read_schedule_json("E2025")
     distribution: Counter[int] = Counter()
+    preceding_foul_distribution: Counter[tuple[str, ...]] = Counter()
     over_limit: list[tuple[int, str | None, tuple[int, ...]]] = []
 
     for schedule_game in schedule["data"]:
@@ -294,12 +381,54 @@ def test_e2025_trip_distribution_and_over_limit_identity_are_measured_separately
         payload = cache.read_json("E2025", "PlaybyPlay", gamecode)
         for trip in group_free_throw_trips(flatten_play_by_play(payload)):
             distribution[trip.observed_shot_count] += 1
+            preceding_foul_distribution[tuple(foul.playtype for foul in trip.preceding_fouls)] += 1
             if not trip.is_within_single_award_limit:
                 over_limit.append((gamecode, trip.shooter_id, _shot_indexes(trip)))
 
     assert len(schedule["data"]) == 402
     assert sum(distribution.values()) == 8_660
     assert distribution == {1: 1_945, 2: 6_286, 3: 426, 4: 3}
+    assert preceding_foul_distribution == {
+        (): 78,
+        ("B",): 21,
+        ("B", "B", "CMD"): 1,
+        ("B", "C"): 1,
+        ("C",): 75,
+        ("C", "B"): 1,
+        ("C", "C"): 1,
+        ("C", "CM"): 1,
+        ("C", "CMT"): 1,
+        ("CM",): 7_600,
+        ("CM", "B"): 14,
+        ("CM", "C"): 34,
+        ("CM", "C", "C"): 1,
+        ("CM", "C", "CMT"): 1,
+        ("CM", "CM"): 430,
+        ("CM", "CM", "C"): 1,
+        ("CM", "CM", "CM"): 29,
+        ("CM", "CM", "CM", "C"): 1,
+        ("CM", "CM", "CM", "CM"): 2,
+        ("CM", "CM", "CM", "CM", "CM"): 1,
+        ("CM", "CM", "CMT"): 5,
+        ("CM", "CM", "CMU"): 2,
+        ("CM", "CMT"): 49,
+        ("CM", "CMT", "B"): 1,
+        ("CM", "CMT", "C"): 1,
+        ("CM", "CMT", "CMD", "B"): 1,
+        ("CM", "CMT", "CMT"): 3,
+        ("CM", "CMU"): 20,
+        ("CM", "CMU", "CMT"): 1,
+        ("CMD",): 1,
+        ("CMT",): 128,
+        ("CMT", "CMT"): 2,
+        ("CMTI",): 2,
+        ("CMU",): 141,
+        ("CMU", "C"): 3,
+        ("CMU", "CMT"): 2,
+        ("OF", "C"): 1,
+        ("OF", "CM"): 1,
+        ("OF", "CMT"): 2,
+    }
     assert sorted(over_limit) == [
         (14, "P013402", (418, 419, 420, 421)),
         (83, "P014094", (414, 415, 416, 417)),

@@ -78,6 +78,7 @@ class FreeThrowTrip:
     trip_id: int
     shooter_id: str | None
     shots: tuple[FreeThrowShot, ...]
+    preceding_fouls: tuple[EventRecord, ...]
     is_within_single_award_limit: bool
     over_award_limit_reason: str | None
 
@@ -87,7 +88,11 @@ class FreeThrowTrip:
         return len(self.shots)
 
 
-def _build_trip(trip_id: int, events: list[EventRecord]) -> FreeThrowTrip:
+def _build_trip(
+    trip_id: int,
+    events: list[EventRecord],
+    preceding_fouls: tuple[EventRecord, ...],
+) -> FreeThrowTrip:
     shot_count = len(events)
     within_limit = shot_count <= MAX_SHOTS_ONE_FOUL_CAN_AWARD
     reason = None
@@ -111,6 +116,7 @@ def _build_trip(trip_id: int, events: list[EventRecord]) -> FreeThrowTrip:
         trip_id=trip_id,
         shooter_id=events[0].player_id,
         shots=shots,
+        preceding_fouls=preceding_fouls,
         is_within_single_award_limit=within_limit,
         over_award_limit_reason=reason,
     )
@@ -140,22 +146,38 @@ def group_free_throw_trips(events: Sequence[EventRecord]) -> tuple[FreeThrowTrip
 
     trips: list[FreeThrowTrip] = []
     open_shots: list[EventRecord] = []
+    open_preceding_fouls: tuple[EventRecord, ...] = ()
+    pending_fouls: list[EventRecord] = []
 
     for event in events:
         if event.playtype in FREE_THROW_TYPES:
             shooter_changed = open_shots and event.player_id != open_shots[-1].player_id
             if shooter_changed:
-                trips.append(_build_trip(len(trips), open_shots))
+                trips.append(_build_trip(len(trips), open_shots, open_preceding_fouls))
                 open_shots = []
+                open_preceding_fouls = ()
+            if not open_shots:
+                open_preceding_fouls = tuple(pending_fouls)
             open_shots.append(event)
+            pending_fouls = []
             continue
 
-        closes_trip = event.playtype in BALL_TOUCHING_BOUNDARY_TYPES or event.playtype in FOUL_TYPES
-        if open_shots and closes_trip:
-            trips.append(_build_trip(len(trips), open_shots))
-            open_shots = []
+        if event.playtype in FOUL_TYPES:
+            if open_shots:
+                trips.append(_build_trip(len(trips), open_shots, open_preceding_fouls))
+                open_shots = []
+                open_preceding_fouls = ()
+            pending_fouls.append(event)
+            continue
+
+        if event.playtype in BALL_TOUCHING_BOUNDARY_TYPES:
+            if open_shots:
+                trips.append(_build_trip(len(trips), open_shots, open_preceding_fouls))
+                open_shots = []
+                open_preceding_fouls = ()
+            pending_fouls = []
 
     if open_shots:
-        trips.append(_build_trip(len(trips), open_shots))
+        trips.append(_build_trip(len(trips), open_shots, open_preceding_fouls))
 
     return tuple(trips)

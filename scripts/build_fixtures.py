@@ -345,6 +345,31 @@ FREE_THROW_FIXTURES: dict[int, dict[str, object]] = {
             384: ("FTM", "P011212"),
         },
     },
+    200: {
+        "defect": "five missed and-one free throws rebounded by the defence",
+        "why": (
+            "The worst Part C gate failure at eight possessions apart. Every one "
+            "came from the same defect: the bonus free throw is excluded from "
+            "ending a possession, but its defensive rebound closed a second one."
+        ),
+        "cases": [
+            {
+                "case": "defensive rebound of a missed and-one",
+                "why": (
+                    "PAN scores at 58, is fouled at 59, misses the bonus at 61, and "
+                    "ZAL rebounds at 62. The rebound must not end a second PAN "
+                    "possession; the first ended at the basket."
+                ),
+            }
+        ],
+        "events": {
+            58: ("2FGM", "P005161"),
+            59: ("CM", "P005504"),
+            60: ("RV", "P005161"),
+            61: ("FTA", "P005161"),
+            62: ("D", "P007513"),
+        },
+    },
     209: {
         "defect": "new foul separates same-shooter free-throw trips",
         "why": "A new personal foul eleven seconds later separates two ordinary trips.",

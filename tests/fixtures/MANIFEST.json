@@ -223,6 +223,20 @@
         }
       ]
     },
+    "200": {
+      "defect": "five missed and-one free throws rebounded by the defence",
+      "why": "The worst Part C gate failure at eight possessions apart. Every one came from the same defect: the bonus free throw is excluded from ending a possession, but its defensive rebound closed a second one.",
+      "sha256": {
+        "Boxscore": "43931892b8dc392431954d79d8f1844f5988109d3293fd2e663988b6c4795bcf",
+        "PlaybyPlay": "e70d970533856e5581a253266e44b1d24690b93bf8cce4dc730aea4b4fd97246"
+      },
+      "free_throw_cases": [
+        {
+          "case": "defensive rebound of a missed and-one",
+          "why": "PAN scores at 58, is fouled at 59, misses the bonus at 61, and ZAL rebounds at 62. The rebound must not end a second PAN possession; the first ended at the basket."
+        }
+      ]
+    },
     "209": {
       "defect": "new foul separates same-shooter free-throw trips",
       "why": "A new personal foul eleven seconds later separates two ordinary trips.",
@@ -326,5 +340,5 @@
       ]
     }
   },
-  "schedule_sha256": "ecb56e2c222c67f62eb15ff469007810378e9b2c7d89638c1d9d6298ff49a6a9"
+  "schedule_sha256": "968d1377cbf6aad71eca8628b26cc09a9ed020d90066906a83e958bda164fbac"
 }

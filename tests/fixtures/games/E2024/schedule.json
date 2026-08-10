@@ -1034,6 +1034,153 @@
       }
     },
     {
+      "id": "d1bc2ba6-a386-4fd0-b1be-8dcd92a3e696",
+      "identifier": "E2024_200",
+      "gameCode": 200,
+      "season": {
+        "name": "EuroLeague 2024-25",
+        "code": "E2024",
+        "alias": "2024-25",
+        "competitionCode": "E",
+        "year": 2024,
+        "startDate": "2024-06-29T00:00:00"
+      },
+      "group": {
+        "id": "653ea5d2-0ed0-4edf-9445-176b766c6b7a",
+        "order": 1,
+        "name": "Group Regular Season",
+        "rawName": "Regular Season"
+      },
+      "phaseType": {
+        "code": "RS",
+        "alias": "REGULAR SEASON",
+        "name": "Regular Season",
+        "isGroupPhase": true
+      },
+      "round": 23,
+      "roundAlias": "Round 23",
+      "roundName": "Round 23",
+      "played": true,
+      "date": "2025-01-23T20:15:00",
+      "confirmedDate": true,
+      "confirmedHour": true,
+      "localTimeZone": 2,
+      "localDate": "2025-01-23T21:15:00",
+      "utcDate": "2025-01-23T19:15:00Z",
+      "local": {
+        "club": {
+          "code": "PAN",
+          "name": "Panathinaikos AKTOR Athens",
+          "abbreviatedName": "Panathinaikos",
+          "editorialName": "",
+          "tvCode": "PAO",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.incrowdsports.com/e3dff28a-9ec6-4faf-9d96-ecbc68f75780.png"
+          }
+        },
+        "score": 89,
+        "standingsScore": 89,
+        "partials": {
+          "partials1": 17,
+          "partials2": 17,
+          "partials3": 26,
+          "partials4": 29,
+          "extraPeriods": {}
+        }
+      },
+      "road": {
+        "club": {
+          "code": "ZAL",
+          "name": "Zalgiris Kaunas",
+          "abbreviatedName": "Zalgiris",
+          "editorialName": "",
+          "tvCode": "ZAL",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.incrowdsports.com/0aa09358-3847-4c4e-b228-3582ee4e536d.png"
+          }
+        },
+        "score": 76,
+        "standingsScore": 76,
+        "partials": {
+          "partials1": 25,
+          "partials2": 26,
+          "partials3": 19,
+          "partials4": 6,
+          "extraPeriods": {}
+        }
+      },
+      "audience": 16733,
+      "audienceConfirmed": true,
+      "socialFeed": "",
+      "operationsCode": null,
+      "referee1": {
+        "code": "OJFC",
+        "name": "JAVOR, DAMIR",
+        "alias": "JAVOR, D.",
+        "country": {
+          "code": "SLO",
+          "name": "Slovenia"
+        },
+        "images": {
+          "verticalSmall": "883i7yokjhfy7pih"
+        },
+        "active": true
+      },
+      "referee2": {
+        "code": "OJLQ",
+        "name": "ALIAGA, JORDI",
+        "alias": "ALIAGA, J.",
+        "country": {
+          "code": "ESP",
+          "name": "Spain"
+        },
+        "images": {
+          "verticalSmall": "ayrigtbycwi5iitj"
+        },
+        "active": true
+      },
+      "referee3": {
+        "code": "OJCI",
+        "name": "KOWALSKI, MARCIN",
+        "alias": "KOWALSKI, M.",
+        "country": {
+          "code": "POL",
+          "name": "Poland"
+        },
+        "images": {
+          "verticalSmall": "88458wn9bg4cds6q"
+        },
+        "active": true
+      },
+      "referee4": null,
+      "venue": {
+        "name": "OAKA Altion",
+        "code": "AUM",
+        "capacity": 18310,
+        "address": "37 Kifisias Avenue, 15123 Marousi",
+        "images": {
+          "medium": null
+        },
+        "active": true,
+        "notes": ""
+      },
+      "isNeutralVenue": false,
+      "gameStatus": "Confirmed",
+      "winner": {
+        "code": "ULK",
+        "name": "Fenerbahce Beko Istanbul",
+        "abbreviatedName": "Fenerbahce",
+        "editorialName": "",
+        "tvCode": "FBB",
+        "isVirtual": false,
+        "images": {
+          "crest": "https://media-cdn.cortextech.io/1dU3kpCqReRp93/1BSdBWIjChWbHN/c91466d1-a620-4c0c-b47b-4a0cd9eee944.png"
+        }
+      }
+    },
+    {
       "id": "3bed0ab6-885f-4d0f-a90d-e74a0cbc01a0",
       "identifier": "E2024_195",
       "gameCode": 195,
@@ -3698,5 +3845,5 @@
       }
     }
   ],
-  "total": 25
+  "total": 26
 }

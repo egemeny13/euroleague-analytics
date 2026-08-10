@@ -1,0 +1,315 @@
+"""Validation tests for exact possession counting from ordered events."""
+
+from __future__ import annotations
+
+import pytest
+
+from euroleague.cache import ResponseCache
+from euroleague.events import EventRecord, flatten_play_by_play
+from euroleague.possessions import (
+    EVENT_ROLES,
+    EventRole,
+    UnclassifiedEventTypeError,
+    count_game_possessions,
+)
+
+ALL_E2024_EVENT_TYPES = {
+    "2FGA",
+    "2FGM",
+    "3FGA",
+    "3FGM",
+    "AG",
+    "AS",
+    "B",
+    "BP",
+    "C",
+    "CCH",
+    "CM",
+    "CMD",
+    "CMT",
+    "CMTI",
+    "CMU",
+    "D",
+    "EG",
+    "EP",
+    "FTA",
+    "FTM",
+    "FV",
+    "IN",
+    "JB",
+    "O",
+    "OF",
+    "OUT",
+    "RV",
+    "ST",
+    "TO",
+    "TOUT",
+    "TOUT_TV",
+}
+
+
+def _event(
+    index: int,
+    playtype: str,
+    team_code: str | None = "AAA",
+    player_id: str | None = "P1",
+    *,
+    period: int = 1,
+    score_a: int = 0,
+    score_b: int = 0,
+) -> EventRecord:
+    return EventRecord(
+        ingest_index=index,
+        source_list="FirstQuarter" if period == 1 else "SecondQuarter",
+        period=period,
+        numberofplay=index + 1,
+        playtype=playtype,
+        player_id=player_id,
+        team_code=team_code,
+        markertime="05:00",
+        minute=5,
+        points_a_raw=None,
+        points_b_raw=None,
+        elapsed_seconds_raw=(period - 1) * 600 + 300,
+        clock_moved_backwards=False,
+        score_a=score_a,
+        score_b=score_b,
+    )
+
+
+def test_vocabulary_explicitly_classifies_all_31_e2024_event_types() -> None:
+    """Break caught: a newly observed type is silently ignored by the counter."""
+    assert set(EVENT_ROLES) == ALL_E2024_EVENT_TYPES
+    assert sum(role is EventRole.ENDING for role in EVENT_ROLES.values()) == 5
+    assert sum(role is EventRole.CONTINUING for role in EVENT_ROLES.values()) == 4
+    assert sum(role is EventRole.NO_BALL for role in EVENT_ROLES.values()) == 22
+
+
+def test_unclassified_event_type_fails_instead_of_being_ignored() -> None:
+    """Break caught: an unknown API event changes possessions without an error."""
+    with pytest.raises(UnclassifiedEventTypeError, match="UNKNOWN"):
+        count_game_possessions([_event(0, "UNKNOWN")], "AAA", "BBB")
+
+
+def test_made_field_goal_closes_its_teams_open_possession() -> None:
+    """Break caught: a made basket is counted as points but not as an ending."""
+    events = [_event(0, "2FGA"), _event(1, "O"), _event(2, "2FGM", score_a=2)]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 0}
+    endings = [
+        (possession.offense_team_code, possession.end_reason) for possession in result.possessions
+    ]
+    assert endings == [("AAA", "made_shot")]
+
+
+def test_blank_player_team_turnover_is_a_real_possession_ending() -> None:
+    """Break caught: requiring a player ID drops team turnovers."""
+    result = count_game_possessions([_event(0, "TO", player_id=None)], "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 0}
+    assert result.possessions[0].end_reason == "turnover"
+
+
+def test_team_rebounds_behave_like_player_rebounds_for_ball_control() -> None:
+    """Break caught: team rebounds are skipped as bookkeeping rows."""
+    events = [
+        _event(0, "2FGA", "AAA"),
+        _event(1, "O", "AAA", player_id=None),
+        _event(2, "3FGA", "AAA"),
+        _event(3, "D", "BBB", player_id=None),
+        _event(4, "TO", "BBB"),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 1}
+    assert [possession.end_reason for possession in result.possessions] == [
+        "defensive_rebound",
+        "turnover",
+    ]
+
+
+def test_last_shot_outcome_decides_a_regular_free_throw_trip_ending() -> None:
+    """Break caught: every make ends a possession, or a final miss ends one early."""
+    made_trip = [
+        _event(0, "CM", "BBB", "DEF"),
+        _event(1, "FTM", "AAA", "P1"),
+        _event(2, "FTM", "AAA", "P1"),
+    ]
+    missed_trip_then_rebound = [
+        _event(0, "CM", "BBB", "DEF"),
+        _event(1, "FTM", "AAA", "P1"),
+        _event(2, "FTA", "AAA", "P1"),
+        _event(3, "D", "BBB", "P2"),
+        _event(4, "TO", "BBB", "P2"),
+    ]
+
+    made = count_game_possessions(made_trip, "AAA", "BBB")
+    missed = count_game_possessions(missed_trip_then_rebound, "AAA", "BBB")
+
+    assert made.team_counts == {"AAA": 1, "BBB": 0}
+    assert [possession.end_reason for possession in made.possessions] == ["made_free_throw"]
+    assert missed.team_counts == {"AAA": 1, "BBB": 1}
+    assert [possession.end_reason for possession in missed.possessions] == [
+        "defensive_rebound",
+        "turnover",
+    ]
+
+
+def test_and_one_free_throw_does_not_end_the_possession_twice() -> None:
+    """Break caught: the made basket and its bonus free throw both increment the count."""
+    events = [
+        _event(0, "2FGM", "AAA", "P1", score_a=2),
+        _event(1, "CM", "BBB", "DEF", score_a=2),
+        _event(2, "FTM", "AAA", "P1", score_a=3),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 0}
+    assert [possession.end_reason for possession in result.possessions] == ["made_shot"]
+
+
+@pytest.mark.parametrize("foul_type", ["CMT", "C", "B", "CMU"])
+def test_technical_or_unsportsmanlike_free_throw_does_not_end_control(
+    foul_type: str,
+) -> None:
+    """Break caught: a possession-retaining penalty free throw invents an ending."""
+    events = [
+        _event(0, "2FGA", "AAA", "P1"),
+        _event(1, foul_type, "BBB", "DEF"),
+        _event(2, "FTM", "AAA", "P1", score_a=1),
+        _event(3, "TO", "AAA", "P1", score_a=1),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 0}
+    assert [possession.end_reason for possession in result.possessions] == ["turnover"]
+
+
+def test_defensive_rebound_of_a_missed_and_one_does_not_invent_a_second_possession() -> None:
+    """Break caught: the bonus free throw is skipped but its rebound still closes.
+
+    The possession already ended at the basket. Rebounding the bonus miss hands
+    the ball to the defence; it must not close a second possession for the team
+    that scored.
+    """
+    events = [
+        _event(0, "2FGM", "AAA", "P1", score_a=2),
+        _event(1, "CM", "BBB", "DEF", score_a=2),
+        _event(2, "FTA", "AAA", "P1", score_a=2),
+        _event(3, "D", "BBB", "P9", score_a=2),
+        _event(4, "TO", "BBB", "P9", score_a=2),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 1}
+    assert [possession.end_reason for possession in result.possessions] == [
+        "made_shot",
+        "turnover",
+    ]
+
+
+def test_offensive_rebound_of_a_missed_and_one_starts_a_new_possession() -> None:
+    """Break caught: suppressing the rebound entirely loses a real second chance."""
+    events = [
+        _event(0, "2FGM", "AAA", "P1", score_a=2),
+        _event(1, "CM", "BBB", "DEF", score_a=2),
+        _event(2, "FTA", "AAA", "P1", score_a=2),
+        _event(3, "O", "AAA", "P2", score_a=2),
+        _event(4, "2FGM", "AAA", "P2", score_a=4),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 2, "BBB": 0}
+    assert [possession.end_reason for possession in result.possessions] == [
+        "made_shot",
+        "made_shot",
+    ]
+
+
+def test_game_200_and_one_rebounds_are_not_counted_as_extra_possessions(
+    fixture_cache: ResponseCache,
+) -> None:
+    """Break caught: the defect that produced 272 phantom E2024 possessions.
+
+    Game 200 carried five of them in one game and was the worst gate failure at
+    eight possessions apart. Indexes 58-62 are the worked case: PAN scores, the
+    bonus free throw misses, and ZAL rebounds it.
+    """
+    events = flatten_play_by_play(fixture_cache.read_json("E2024", "PlaybyPlay", 200))
+    by_index = {event.ingest_index: event for event in events}
+
+    assert by_index[58].playtype == "2FGM"
+    assert by_index[61].playtype == "FTA"
+    assert by_index[62].playtype == "D"
+    assert by_index[62].team_code != by_index[58].team_code
+
+    result = count_game_possessions(events, "PAN", "ZAL")
+    ending_at_the_rebound = [
+        possession for possession in result.possessions if possession.end_ingest_index == 62
+    ]
+
+    assert ending_at_the_rebound == []
+
+
+def test_offensive_foul_is_ignored_and_its_turnover_row_is_counted_once() -> None:
+    """Break caught: `OF` and its separate `TO` row create two endings."""
+    events = [_event(0, "OF", "AAA", "P1"), _event(1, "TO", "AAA", "P1")]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 0}
+    assert [possession.end_reason for possession in result.possessions] == ["turnover"]
+
+
+def test_period_end_uses_the_structural_period_transition_not_end_markers() -> None:
+    """Break caught: an open period is lost when `EP` or `EG` is absent or duplicated."""
+    events = [
+        _event(0, "2FGA", "AAA", "P1", period=1),
+        _event(1, "TO", "BBB", "P2", period=2),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 1}
+    assert [
+        (
+            possession.offense_team_code,
+            possession.end_ingest_index,
+            possession.end_reason,
+        )
+        for possession in result.possessions
+    ] == [
+        ("AAA", 0, "end_of_period"),
+        ("BBB", 1, "turnover"),
+    ]
+
+
+@pytest.mark.parametrize("season", ["E2024", "E2025"])
+@pytest.mark.full_season
+def test_each_team_is_within_two_independently_counted_possessions(season: str) -> None:
+    """Break caught: believable pace hides a team-level counting disagreement."""
+    cache = ResponseCache("exploration/cache")
+    failures: list[tuple[int, str, int, str, int]] = []
+
+    for game in cache.read_schedule_json(season)["data"]:
+        gamecode = int(game["gameCode"])
+        home_team = str(game["local"]["club"]["code"]).strip()
+        away_team = str(game["road"]["club"]["code"]).strip()
+        result = count_game_possessions(
+            flatten_play_by_play(cache.read_json(season, "PlaybyPlay", gamecode)),
+            home_team,
+            away_team,
+        )
+        home_count = result.team_counts[home_team]
+        away_count = result.team_counts[away_team]
+        if abs(home_count - away_count) > 2:
+            failures.append((gamecode, home_team, home_count, away_team, away_count))
+
+    assert failures == []
