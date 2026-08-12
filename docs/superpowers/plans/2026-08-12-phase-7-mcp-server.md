@@ -784,7 +784,19 @@ git commit -m "feat: MCP disclosure envelope that refuses unlabelled clock value
 
 **Interfaces:**
 - Consumes: the existing tables from migrations 0001–0003.
-- Produces: views `v_game`, `v_team_game`, `v_player_game`, `v_lineup_player`, `v_possession`, `v_play_by_play`, each exposing `excluded_by_default` and `quarantine_reasons` as columns rather than filtering on them.
+- Produces: views `v_game`, `v_team_game`, `v_player_game`, `v_lineup_player`, `v_possession`, `v_play_by_play`.
+
+  The five **game-grain** views — every one except `v_lineup_player` — expose
+  `excluded_by_default` and `quarantine_reasons` as columns rather than filtering
+  on them, so one view serves both the filtered and unfiltered case.
+
+  `v_lineup_player` is the exception, deliberately. It maps a five-man unit to its
+  five players, and a `lineup_id` is a global identity reused across games and
+  seasons: the same five reappear in every game they play together. There is no
+  game to be quarantined at that grain, so attaching a quarantine column would mean
+  changing the view's grain to one row per lineup per game — which is what
+  `v_possession` already provides. Quarantine filtering happens where lineups meet
+  games, in `v_possession`, and never in this bridge.
 
 Every SQL statement below was validated as a plain `SELECT` against the live E2024 warehouse on 2026-08-12 before being written here. `v_team_game` returned 660 rows with no missing possession counts; `v_lineup_player` returned 29,925 rows across 5,985 lineups.
 
