@@ -47,7 +47,8 @@ Read from the live warehouse on 2026-08-12:
 | File | Responsibility |
 |---|---|
 | `src/euroleague/mcp/__init__.py` | Package marker, exports `serve` |
-| `src/euroleague/mcp/protocol.py` | JSON-RPC framing, `initialize`, `tools/list`, `tools/call`, error codes. No basketball, no database. |
+| `src/euroleague/mcp/protocol.py` | JSON-RPC framing, `initialize`, `tools/list`, `tools/call`, error codes. No database, no queries, no tool names. |
+| `src/euroleague/mcp/identity.py` | `SERVER_INFO` and `SERVER_INSTRUCTIONS` — what this particular server calls itself and the prompt it hands the model at connection time |
 | `src/euroleague/mcp/envelope.py` | The disclosure wrapper, and the refusal when provenance is missing |
 | `src/euroleague/mcp/db.py` | Read-only connection factory over `DatabaseSettings` |
 | `src/euroleague/mcp/resolve.py` | Season, team and player identifier resolution, with disambiguation errors |
@@ -73,7 +74,18 @@ Read from the live warehouse on 2026-08-12:
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `Tool` (frozen dataclass with fields `name: str`, `description: str`, `input_schema: dict`, `handler: Callable[[dict], dict]`), `SERVER_INFO: dict`, `SUPPORTED_PROTOCOL_VERSIONS: tuple[str, ...]`, `LATEST_PROTOCOL_VERSION: str`, `handle_message(message: dict, tools: Mapping[str, Tool]) -> dict | None`, `serve(stdin: TextIO, stdout: TextIO, tools: Mapping[str, Tool]) -> None`.
+- Produces:
+  - `protocol.Tool` — frozen dataclass with fields `name: str`, `description: str`, `input_schema: dict`, `handler: Callable[[dict], dict]`, `title: str = ""`, `annotations: dict`.
+  - `protocol.SUPPORTED_PROTOCOL_VERSIONS: tuple[str, ...]`, `protocol.LATEST_PROTOCOL_VERSION: str`.
+  - `protocol.handle_message(message: dict, tools: Mapping[str, Tool], identity: Mapping[str, Any]) -> dict | None`
+  - `protocol.serve(stdin: TextIO, stdout: TextIO, tools: Mapping[str, Tool], identity: Mapping[str, Any]) -> None`
+  - `identity.SERVER_INFO: dict` (keys `name`, `title`, `version`), `identity.SERVER_INSTRUCTIONS: str`, and `identity.IDENTITY: dict` combining them as `{"serverInfo": SERVER_INFO, "instructions": SERVER_INSTRUCTIONS}` — the value callers pass as `identity`.
+
+**Why identity is a parameter rather than a constant inside `protocol.py`.** The
+instructions text names tools (`el_describe_warehouse`) and explains basketball
+metrics. Holding it in the protocol module makes that module's own boundary claim
+false and couples it to names defined in `tools.py`, so a renamed tool would leave
+stale instructions with nothing to catch it.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -3186,6 +3198,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from euroleague.config import DatabaseSettings  # noqa: E402
 from euroleague.mcp.db import connect  # noqa: E402
+from euroleague.mcp.identity import IDENTITY  # noqa: E402
 from euroleague.mcp.protocol import Tool, serve  # noqa: E402
 from euroleague.mcp.tools import build_registry  # noqa: E402
 
@@ -3208,7 +3221,7 @@ def main() -> int:
         f"on {settings.host}:{settings.port}",
         file=sys.stderr,
     )
-    serve(sys.stdin, sys.stdout, registry)
+    serve(sys.stdin, sys.stdout, registry, IDENTITY)
     return 0
 
 
