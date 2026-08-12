@@ -184,28 +184,52 @@ def test_non_object_params_produces_a_reply_not_a_crash():
     assert reply["error"]["code"] == -32602
 
 
-def test_exception_in_handle_message_leaves_the_loop_able_to_answer_the_next_request():
-    def bad_handler(arguments: dict) -> dict:
-        raise RuntimeError("Internal error in handler")
+def test_non_object_arguments_returns_invalid_params_not_internal_error():
+    reply = handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {"name": "el_echo", "arguments": 7},
+        },
+        _echo_tool(),
+        IDENTITY,
+    )
+    assert reply is not None
+    assert "error" in reply
+    assert reply["error"]["code"] == -32602
+    assert "value" in reply["error"]["message"]
 
-    tools = {
-        "el_boom": Tool(
-            name="el_boom",
-            description="Always fails. Test double only.",
-            input_schema={"type": "object", "properties": {}},
-            handler=bad_handler,
-        )
-    }
+
+def test_exception_outside_tool_handler_triggers_serve_catch_all():
+    class BadTool:
+        def to_wire(self) -> dict:
+            raise RuntimeError("Exception during tool serialization")
+
+    tools = {"el_bad": BadTool()}
     stdin = io.StringIO(
-        '{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"el_boom"}}\n'
         '{"jsonrpc":"2.0","id":12,"method":"tools/list"}\n'
+        '{"jsonrpc":"2.0","id":13,"method":"ping"}\n'
     )
     stdout = io.StringIO()
     serve(stdin, stdout, tools, IDENTITY)
     replies = [json.loads(line) for line in stdout.getvalue().splitlines() if line.strip()]
     assert len(replies) == 2
-    assert replies[0]["id"] == 11
-    assert replies[0]["result"]["isError"] is True
-    assert "Internal error" in replies[0]["result"]["content"][0]["text"]
-    assert replies[1]["id"] == 12
-    assert "tools" in replies[1]["result"]
+    assert replies[0]["id"] == 12
+    assert replies[0]["error"]["code"] == -32603
+    assert "internal error" in replies[0]["error"]["message"].lower()
+    assert replies[1]["id"] == 13
+    assert "result" in replies[1]
+
+
+def test_notification_that_raises_produces_no_reply():
+    class BadTool:
+        def to_wire(self) -> dict:
+            raise RuntimeError("Exception during tool serialization")
+
+    tools = {"el_bad": BadTool()}
+    stdin = io.StringIO('{"jsonrpc":"2.0","method":"tools/list"}\n')
+    stdout = io.StringIO()
+    serve(stdin, stdout, tools, IDENTITY)
+    replies = [json.loads(line) for line in stdout.getvalue().splitlines() if line.strip()]
+    assert len(replies) == 0

@@ -130,7 +130,7 @@ def handle_message(
                 f"Unknown tool {name!r}. Available tools: {available}.",
             )
 
-        arguments = params.get("arguments") or {}
+        arguments = _normalize_params(params.get("arguments"))
         missing = _missing_required(tool.input_schema, arguments)
         if missing:
             return _error(
