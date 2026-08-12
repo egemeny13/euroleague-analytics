@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from euroleague.mcp.db import READ_ONLY_STATEMENT
+from euroleague.mcp import db as mcp_db
+from euroleague.mcp.db import READ_ONLY_STATEMENT, ReadOnlyEnforcementError
 from euroleague.mcp.resolve import (
     AmbiguousNameError,
     UnknownPlayerError,
@@ -32,8 +33,91 @@ class FakeCursor:
         return self._current
 
 
+class FakeConnectionCursor:
+    """A context-managed cursor that reports one configured read-only state."""
+
+    def __init__(self, state: str) -> None:
+        self.state = state
+        self.statements: list[str] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return None
+
+    def execute(self, statement: str) -> None:
+        self.statements.append(statement)
+
+    def fetchone(self) -> tuple[str]:
+        return (self.state,)
+
+
+class FakeConnection:
+    """A connection double that makes closure and cursor use observable."""
+
+    def __init__(self, state: str) -> None:
+        self.read_only_cursor = FakeConnectionCursor(state)
+        self.closed = False
+
+    def cursor(self) -> FakeConnectionCursor:
+        return self.read_only_cursor
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class FakeSettings:
+    """The one DatabaseSettings behaviour db.connect consumes."""
+
+    def url(self) -> str:
+        return "postgresql://test.invalid/warehouse"
+
+
+def _install_fake_connection(monkeypatch, state: str) -> tuple[FakeConnection, list[dict]]:
+    connection = FakeConnection(state)
+    calls: list[dict] = []
+
+    def fake_connect(url: str, **kwargs):
+        calls.append({"url": url, **kwargs})
+        return connection
+
+    monkeypatch.setattr(mcp_db.psycopg, "connect", fake_connect)
+    return connection, calls
+
+
 def test_the_session_is_made_read_only():
     assert READ_ONLY_STATEMENT == "set session characteristics as transaction read only"
+
+
+def test_connect_returns_an_open_autocommit_connection_after_read_only_is_verified(monkeypatch):
+    connection, calls = _install_fake_connection(monkeypatch, "on")
+
+    returned = mcp_db.connect(FakeSettings())
+
+    assert returned is connection
+    assert connection.closed is False
+    assert calls == [{"url": "postgresql://test.invalid/warehouse", "autocommit": True}]
+    assert connection.read_only_cursor.statements == [
+        READ_ONLY_STATEMENT,
+        "show transaction_read_only",
+    ]
+
+
+def test_connect_refuses_a_session_that_reports_read_only_is_off(monkeypatch):
+    _install_fake_connection(monkeypatch, "off")
+
+    with pytest.raises(ReadOnlyEnforcementError, match="transaction_read_only is 'off'"):
+        mcp_db.connect(FakeSettings())
+
+
+def test_connect_closes_a_connection_when_read_only_enforcement_fails(monkeypatch):
+    connection, _ = _install_fake_connection(monkeypatch, "off")
+
+    with pytest.raises(ReadOnlyEnforcementError):
+        mcp_db.connect(FakeSettings())
+
+    assert connection.closed is True
 
 
 def test_a_loaded_season_resolves_to_itself():
@@ -54,6 +138,17 @@ def test_an_unloaded_season_names_the_ones_that_are_loaded():
 def test_a_team_code_resolves_without_a_name_lookup():
     cursor = FakeCursor([[("PAN",)]])
     assert resolve_team(cursor, "E2024", "pan") == "PAN"
+
+
+def test_case_differing_team_codes_are_ambiguous_and_never_guessed():
+    cursor = FakeCursor([[("PAN",), ("pan",)]])
+
+    with pytest.raises(AmbiguousNameError) as failure:
+        resolve_team(cursor, "E2024", "pan")
+
+    message = str(failure.value)
+    assert "PAN" in message
+    assert "pan" in message
 
 
 def test_a_team_name_resolves_to_its_code():

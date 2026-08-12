@@ -65,8 +65,14 @@ def resolve_team(cursor: Cursor, season_code: str, value: str) -> str:
         (season_code, candidate.upper()),
     )
     rows = cursor.fetchall()
-    if rows:
+    if len(rows) == 1:
         return rows[0][0]
+    if len(rows) > 1:
+        listed = ", ".join(row[0] for row in rows)
+        raise AmbiguousNameError(
+            f"{candidate!r} matches {len(rows)} team codes in {season_code}: {listed}. "
+            f"Pass one of the codes exactly as listed."
+        )
 
     cursor.execute(
         "select team_code, display_name from team_season "
