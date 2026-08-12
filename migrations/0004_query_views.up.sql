@@ -59,6 +59,11 @@ comment on view v_game is
 -- attempted columns include the makes.
 --
 -- Possessions are ours, because the official box score has no equivalent.
+--
+-- The opponent_* columns are a deliberate subset, not an oversight: they carry
+-- only what the four factors need from the other side of the matchup. A
+-- reader wanting the opponent's full line joins v_team_game to itself on
+-- (season_code, gamecode, opponent_team_code = team_code).
 create view v_team_game as
 with box as (
     select
@@ -134,10 +139,19 @@ select
     op.possessions                    as opponent_possessions,
     op.points_from_possessions        as opponent_points_from_possessions
 from box t
+-- This self-join assumes exactly two 'total' rows per game - one per team -
+-- so "the other team's row" is unambiguous. A third row would silently
+-- multiply this view's output. Checked on 2026-08-13: zero gamecodes in the
+-- warehouse have a 'total' row count other than 2.
 join box o
        on o.season_code = t.season_code
       and o.gamecode = t.gamecode
       and o.team_code <> t.team_code
+-- Inner join: a box-score row for a game absent from raw_game is dropped
+-- rather than kept with nulls. raw_boxscore_team carries no foreign key to
+-- raw_game, so nothing in the schema guarantees this can't happen - it is
+-- checked by hand instead. Checked on 2026-08-13: zero team-game rows point
+-- at a gamecode raw_game does not have.
 join v_game g
        on g.season_code = t.season_code and g.gamecode = t.gamecode
 left join poss tp
@@ -190,8 +204,18 @@ select
     tg.possessions                                        as team_possessions,
     tg.opponent_possessions
 from raw_boxscore_player b
-join player p
+-- Left join, not inner: raw_boxscore_player carries no foreign key to
+-- player. If the player dimension ever lagged behind for one id, an inner
+-- join here would silently delete that player's whole game line instead of
+-- just leaving player_name blank. v_play_by_play already treats this same
+-- relationship as a left join; this keeps the two views consistent.
+left join player p
        on p.player_id = b.player_id
+-- Inner join: a box-score row for a game absent from raw_game is dropped
+-- rather than kept with nulls. raw_boxscore_player carries no foreign key to
+-- raw_game, so nothing in the schema guarantees this can't happen - it is
+-- checked by hand instead. Checked on 2026-08-13: zero player-game rows
+-- point at a gamecode raw_game does not have.
 join v_game g
        on g.season_code = b.season_code and g.gamecode = b.gamecode
 left join player_game_minutes m
@@ -279,6 +303,11 @@ select
     g.excluded_by_default,
     g.quarantine_reasons
 from game_event e
+-- Inner join: an event row for a game absent from raw_game is dropped rather
+-- than kept with nulls. game_event carries no foreign key to raw_game, so
+-- nothing in the schema guarantees this can't happen - it is checked by hand
+-- instead. Checked on 2026-08-13: zero game_event rows point at a gamecode
+-- raw_game does not have.
 join v_game g
        on g.season_code = e.season_code and g.gamecode = e.gamecode
 left join player pl
