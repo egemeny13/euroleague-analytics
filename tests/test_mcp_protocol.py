@@ -1,0 +1,156 @@
+"""The JSON-RPC layer: framing, negotiation, dispatch, and stdout purity."""
+
+from __future__ import annotations
+
+import io
+import json
+
+from euroleague.mcp.protocol import (
+    LATEST_PROTOCOL_VERSION,
+    Tool,
+    handle_message,
+    serve,
+)
+
+
+def _echo_tool() -> dict[str, Tool]:
+    def handler(arguments: dict) -> dict:
+        return {"echoed": arguments.get("value")}
+
+    return {
+        "el_echo": Tool(
+            name="el_echo",
+            description="Echo a value back. Test double only.",
+            input_schema={
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+                "required": ["value"],
+            },
+            handler=handler,
+        )
+    }
+
+
+def test_initialize_echoes_a_supported_client_version():
+    reply = handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": "2024-11-05", "capabilities": {}},
+        },
+        _echo_tool(),
+    )
+    assert reply["result"]["protocolVersion"] == "2024-11-05"
+    assert reply["result"]["capabilities"]["tools"] == {"listChanged": False}
+    assert reply["result"]["serverInfo"]["name"] == "euroleague-analytics"
+
+
+def test_initialize_falls_back_to_our_latest_for_an_unknown_version():
+    reply = handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": "1.0.0", "capabilities": {}},
+        },
+        _echo_tool(),
+    )
+    assert reply["result"]["protocolVersion"] == LATEST_PROTOCOL_VERSION
+
+
+def test_notifications_get_no_reply():
+    assert handle_message({"jsonrpc": "2.0", "method": "notifications/initialized"}, {}) is None
+
+
+def test_tools_list_returns_the_registry():
+    reply = handle_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, _echo_tool())
+    tools = reply["result"]["tools"]
+    assert [tool["name"] for tool in tools] == ["el_echo"]
+    assert tools[0]["annotations"]["readOnlyHint"] is True
+
+
+def test_tools_call_wraps_the_handler_result_as_text_and_structured_content():
+    reply = handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {"name": "el_echo", "arguments": {"value": "hello"}},
+        },
+        _echo_tool(),
+    )
+    result = reply["result"]
+    assert result["isError"] is False
+    assert result["structuredContent"] == {"echoed": "hello"}
+    assert json.loads(result["content"][0]["text"]) == {"echoed": "hello"}
+
+
+def test_unknown_method_is_a_protocol_error():
+    reply = handle_message({"jsonrpc": "2.0", "id": 4, "method": "nope"}, {})
+    assert reply["error"]["code"] == -32601
+
+
+def test_unknown_tool_is_a_protocol_error_naming_the_available_tools():
+    reply = handle_message(
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "el_missing"}},
+        _echo_tool(),
+    )
+    assert reply["error"]["code"] == -32602
+    assert "el_echo" in reply["error"]["message"]
+
+
+def test_a_missing_required_argument_is_an_invalid_params_error():
+    reply = handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {"name": "el_echo", "arguments": {}},
+        },
+        _echo_tool(),
+    )
+    assert reply["error"]["code"] == -32602
+    assert "value" in reply["error"]["message"]
+
+
+def test_a_handler_failure_is_a_tool_error_not_a_protocol_error():
+    def explode(arguments: dict) -> dict:
+        raise ValueError("no season E2099 in the warehouse")
+
+    tools = {
+        "el_boom": Tool(
+            name="el_boom",
+            description="Always fails. Test double only.",
+            input_schema={"type": "object", "properties": {}},
+            handler=explode,
+        )
+    }
+    reply = handle_message(
+        {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "el_boom"}},
+        tools,
+    )
+    assert "error" not in reply
+    assert reply["result"]["isError"] is True
+    assert "E2099" in reply["result"]["content"][0]["text"]
+
+
+def test_malformed_json_produces_a_parse_error_and_the_loop_continues():
+    stdin = io.StringIO('not json\n{"jsonrpc":"2.0","id":9,"method":"tools/list"}\n')
+    stdout = io.StringIO()
+    serve(stdin, stdout, _echo_tool())
+    replies = [json.loads(line) for line in stdout.getvalue().splitlines() if line.strip()]
+    assert replies[0]["error"]["code"] == -32700
+    assert replies[1]["id"] == 9
+
+
+def test_serve_writes_only_json_lines_to_stdout():
+    stdin = io.StringIO(
+        '{"jsonrpc":"2.0","method":"notifications/initialized"}\n'
+        '{"jsonrpc":"2.0","id":1,"method":"tools/list"}\n'
+    )
+    stdout = io.StringIO()
+    serve(stdin, stdout, _echo_tool())
+    for line in stdout.getvalue().splitlines():
+        if line.strip():
+            json.loads(line)
