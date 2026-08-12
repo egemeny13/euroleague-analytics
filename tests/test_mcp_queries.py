@@ -10,8 +10,10 @@ from euroleague.mcp.queries import (
     MAX_LIMIT,
     clamp_limit,
     get_lineup_stats,
+    get_play_by_play,
     get_player_on_off,
     get_player_stats,
+    get_possessions,
     get_team_stats,
 )
 
@@ -184,3 +186,65 @@ def test_on_off_returns_one_on_row_and_one_off_row():
     assert cursor.parameters[2][0] == "P012774"
     assert [row["split"] for row in response["rows"]] == ["on", "off"]
     assert STRADDLE_CAVEAT in response["caveats"]
+
+
+def test_possessions_declare_a_minutes_basis_because_they_report_a_clock_value():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["total"], [(2493,)]),
+            (
+                ["gamecode", "possession_index", "seconds_remaining_at_start"],
+                [(1, 0, 118)],
+            ),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    response = get_possessions(cursor, {"season": "E2024"})
+
+    assert response["minutes_basis"]["value"] == "corrected"
+
+
+def test_the_clutch_filter_binds_both_thresholds_as_parameters():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["total"], [(2493,)]),
+            (["gamecode", "seconds_remaining_at_start"], []),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_possessions(
+        cursor,
+        {"season": "E2024", "max_seconds_remaining": 300, "max_margin": 5},
+    )
+
+    assert "seconds_remaining_at_start <= %s" in cursor.statements[1]
+    assert "abs(margin_at_start) <= %s" in cursor.statements[1]
+    assert cursor.parameters[1] == ("E2024", 300, 5)
+    assert cursor.parameters[2][1:3] == (300, 5)
+
+
+def test_play_by_play_orders_by_ingest_index_and_nothing_else():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["total"], [(458,)]),
+            (["ingest_index", "playtype"], [(0, "BP")]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_play_by_play(cursor, {"season": "E2024", "gamecode": 1})
+
+    statement = cursor.statements[2]
+    assert "order by ingest_index" in statement
+    assert "markertime" not in statement.split("order by")[1]
+    assert "numberofplay" not in statement

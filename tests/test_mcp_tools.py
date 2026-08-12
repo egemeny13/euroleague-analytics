@@ -36,6 +36,10 @@ def test_every_registered_tool_is_declared(registry):
     assert set(registry) <= set(TOOL_NAMES)
 
 
+def test_all_nine_declared_tools_are_registered(registry):
+    assert set(registry) == set(TOOL_NAMES)
+
+
 def test_every_tool_is_marked_read_only(registry):
     for tool in registry.values():
         assert tool.annotations["readOnlyHint"] is True

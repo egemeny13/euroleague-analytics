@@ -315,5 +315,111 @@ def build_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool]:
             ),
             handler=bind(queries.get_player_on_off),
         ),
+        Tool(
+            name="el_get_possessions",
+            title="Possessions, filtered",
+            description=(
+                "Individual possessions or their aggregate, filtered by game, team, "
+                "lineup, score margin, time remaining or how the possession ended. This "
+                "is how you answer any clutch question: pass max_seconds_remaining and "
+                "max_margin to state YOUR definition of clutch - the warehouse bakes in "
+                "none, because analysts disagree and the definition drifts. Possessions "
+                "are counted exactly from play-by-play events; never compare the count "
+                "with a box score estimate, which measures something different. Set "
+                "aggregate=true for one summary row per team instead of the raw rows."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "gamecode": {"type": "integer", "description": "Restrict to one game."},
+                    "team": {
+                        "type": "string",
+                        "description": "Restrict to possessions where this team had the ball.",
+                    },
+                    "lineup_id": {
+                        "type": "string",
+                        "description": "Restrict to one five-man unit, from el_get_lineup_stats.",
+                    },
+                    "max_seconds_remaining": {
+                        "type": "integer",
+                        "description": (
+                            "Possessions starting with at most this many seconds left in "
+                            "the game. 300 is the last five minutes of a 40-minute game."
+                        ),
+                    },
+                    "max_margin": {
+                        "type": "integer",
+                        "description": "Possessions starting within this many points either way.",
+                    },
+                    "end_reason": {
+                        "type": "string",
+                        "enum": [
+                            "made_shot",
+                            "defensive_rebound",
+                            "turnover",
+                            "end_of_period",
+                            "made_free_throw",
+                            "other",
+                        ],
+                        "description": "Restrict to possessions that ended this way.",
+                    },
+                    "aggregate": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "True for one summary row per team instead of raw possessions."
+                        ),
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season"],
+            ),
+            handler=bind(queries.get_possessions),
+        ),
+        Tool(
+            name="el_get_play_by_play",
+            title="Event stream with lineups",
+            description=(
+                "One game's play-by-play events with the five players on the floor for "
+                "both teams attached to every row, plus the stint and possession each "
+                "event belongs to. Rows come back in source order by ingest_index, which "
+                "is the only trustworthy ordering this data has - do not re-sort them. "
+                "Use it to see what actually happened in a stretch of a game rather than "
+                "a summary of it. Paginate with from_index or offset; a full game is "
+                "roughly 450 to 700 events."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "gamecode": {
+                        "type": "integer",
+                        "description": "The gamecode, from el_find_games.",
+                    },
+                    "period": {
+                        "type": "integer",
+                        "description": "1 to 4 for quarters, 5 and above for overtime periods.",
+                    },
+                    "playtype": {
+                        "type": "string",
+                        "description": (
+                            "Restrict to one event code, such as 2FGM made two, 3FGA missed "
+                            "three, TO turnover, D defensive rebound, O offensive rebound, "
+                            "CM personal foul, OF offensive foul."
+                        ),
+                    },
+                    "from_index": {
+                        "type": "integer",
+                        "description": (
+                            "Start at this ingest_index. Use it to continue a previous page."
+                        ),
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season", "gamecode"],
+            ),
+            handler=bind(queries.get_play_by_play),
+        ),
     ]
     return {tool.name: tool for tool in tools}

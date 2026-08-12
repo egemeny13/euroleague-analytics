@@ -582,3 +582,159 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
             "including games he did not play at all.",
         ],
     )
+
+
+def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Filtered possessions, as rows or as one aggregate row.
+
+    This is the clutch primitive. `margin_at_start` and
+    `seconds_remaining_at_start` are ordinary columns and clutch is an ordinary
+    filter on them, which is why no threshold is baked into the warehouse and no
+    rebuild is needed when somebody's definition of clutch changes.
+    """
+    include_quarantined = bool(arguments.get("include_quarantined", False))
+    season_code = resolve_season(cursor, arguments["season"])
+    limit = clamp_limit(arguments.get("limit"))
+    offset = max(int(arguments.get("offset", 0)), 0)
+
+    conditions = ["season_code = %s"]
+    params: list[Any] = [season_code]
+    if not include_quarantined:
+        conditions.append("not excluded_by_default")
+    if arguments.get("gamecode") is not None:
+        conditions.append("gamecode = %s")
+        params.append(int(arguments["gamecode"]))
+    if arguments.get("team"):
+        conditions.append("offense_team_code = %s")
+        params.append(resolve_team(cursor, season_code, arguments["team"]))
+    if arguments.get("lineup_id"):
+        conditions.append("offense_lineup_id = %s")
+        params.append(arguments["lineup_id"])
+    if arguments.get("max_seconds_remaining") is not None:
+        conditions.append("seconds_remaining_at_start <= %s")
+        params.append(int(arguments["max_seconds_remaining"]))
+    if arguments.get("max_margin") is not None:
+        conditions.append("abs(margin_at_start) <= %s")
+        params.append(int(arguments["max_margin"]))
+    if arguments.get("end_reason"):
+        conditions.append("end_reason = %s")
+        params.append(arguments["end_reason"])
+
+    where = " and ".join(conditions)
+
+    if bool(arguments.get("aggregate", False)):
+        cursor.execute(
+            f"select offense_team_code as team_code, count(*) as possessions, "
+            f"sum(points_scored) as points, "
+            f"round(100.0 * sum(points_scored) / nullif(count(*), 0), 2) "
+            f"  as points_per_100_possessions, "
+            f"count(*) filter (where straddles_substitution) as straddling_a_substitution, "
+            f"round(avg(seconds_remaining_at_start)::numeric, 1) "
+            f"  as mean_seconds_remaining_at_start "
+            f"from v_possession where {where} group by 1 order by possessions desc",
+            tuple(params),
+        )
+        rows = _rows(cursor)
+        total = len(rows)
+        page_limit = None
+    else:
+        cursor.execute(f"select count(*) as total from v_possession where {where}", tuple(params))
+        total = _rows(cursor)[0]["total"]
+        cursor.execute(
+            f"select gamecode, possession_index, offense_team_code, defense_team_code, "
+            f"offense_lineup_id, defense_lineup_id, points_scored, end_reason, "
+            f"margin_at_start, seconds_remaining_at_start, straddles_substitution, "
+            f"start_ingest_index, end_ingest_index "
+            f"from v_possession where {where} "
+            f"order by gamecode, possession_index limit %s offset %s",
+            (*params, limit, offset),
+        )
+        rows = _rows(cursor)
+        page_limit = limit
+
+    return build_response(
+        rows=rows,
+        coverage=coverage_for(cursor, season_code, include_quarantined),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        minutes_basis="corrected",
+        limit=page_limit,
+        offset=offset,
+        total_available=total,
+        caveats=[
+            "margin_at_start is from the offense's point of view at the moment the "
+            "possession began.",
+            "Possessions are counted exactly from the event stream. Never compare them "
+            "with a box score estimate such as FGA - ORB + TO + 0.44*FTA; the two are "
+            "different quantities.",
+        ],
+    )
+
+
+def get_play_by_play(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """One game's event stream, with the five on the floor attached to every row.
+
+    ORDER BY ingest_index AND NOTHING ELSE. markertime has one-second
+    resolution, collides, and runs backwards around substitutions during free
+    throws; numberofplay is entry order and is out of sequence in every game of
+    E2024. Sorting by either corrupts lineup data silently.
+    """
+    include_quarantined = bool(arguments.get("include_quarantined", False))
+    season_code = resolve_season(cursor, arguments["season"])
+    gamecode = int(arguments["gamecode"])
+    limit = clamp_limit(arguments.get("limit"))
+    offset = max(int(arguments.get("offset", 0)), 0)
+
+    conditions = ["season_code = %s", "gamecode = %s"]
+    params: list[Any] = [season_code, gamecode]
+    if not include_quarantined:
+        conditions.append("not excluded_by_default")
+    if arguments.get("period") is not None:
+        conditions.append("period = %s")
+        params.append(int(arguments["period"]))
+    if arguments.get("playtype"):
+        conditions.append("playtype = %s")
+        params.append(arguments["playtype"])
+    if arguments.get("from_index") is not None:
+        conditions.append("ingest_index >= %s")
+        params.append(int(arguments["from_index"]))
+
+    where = " and ".join(conditions)
+
+    cursor.execute(f"select count(*) as total from v_play_by_play where {where}", tuple(params))
+    total = _rows(cursor)[0]["total"]
+
+    cursor.execute(
+        f"select ingest_index, period, markertime, playtype, player_id, player_name, "
+        f"team_code, score_home, score_away, home_lineup_id, away_lineup_id, "
+        f"stint_index, possession_index, free_throw_trip_id, is_team_event, "
+        f"clock_moved_backwards, attribution_suspect, elapsed_seconds_corrected "
+        f"from v_play_by_play where {where} order by ingest_index limit %s offset %s",
+        (*params, limit, offset),
+    )
+    rows = _rows(cursor)
+    if not rows and offset == 0:
+        raise ValueError(
+            f"No events for game {gamecode} in {season_code}. Either the gamecode is "
+            f"wrong - call el_find_games - or the game is quarantined and you did not "
+            f"pass include_quarantined=true."
+        )
+
+    return build_response(
+        rows=rows,
+        coverage={"seasons": [season_code], "games_included": 1},
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        minutes_basis="corrected",
+        limit=limit,
+        offset=offset,
+        total_available=total,
+        caveats=[
+            "Rows are in source order by ingest_index, which is the ONLY trustworthy "
+            "ordering. Do not re-sort by markertime or by any other field.",
+            "clock_moved_backwards marks rows whose timestamp precedes the previous "
+            "row's. Recorded, never repaired, because the official box score is computed "
+            "from the same timestamps.",
+            "attribution_suspect marks a row credited to a player believed to be off "
+            "court. 7 rows in E2024.",
+            FREE_THROW_CAVEAT,
+        ],
+    )
