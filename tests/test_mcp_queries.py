@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import pytest
 
+from euroleague.mcp.envelope import STRADDLE_CAVEAT
 from euroleague.mcp.queries import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
     clamp_limit,
+    get_lineup_stats,
+    get_player_on_off,
     get_player_stats,
     get_team_stats,
 )
@@ -120,3 +123,64 @@ def test_player_stats_can_serve_raw_minutes_and_say_so():
 
     assert "sum(seconds_raw)" in cursor.statements[2]
     assert response["minutes_basis"]["value"] == "raw"
+
+
+def test_lineup_stats_carry_the_straddle_caveat_without_being_asked():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (
+                ["lineup_id", "team_code", "possessions", "points_for"],
+                [("5cb938769be71ec8eb6565979d6667ae", "PRS", 346, 394)],
+            ),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    response = get_lineup_stats(cursor, {"season": "E2024"})
+
+    assert STRADDLE_CAVEAT in response["caveats"]
+
+
+def test_lineup_stats_filter_by_a_player_through_the_unpivoted_view():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["player_id"], [("P012774",)]),
+            (["lineup_id", "team_code", "possessions"], []),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_lineup_stats(cursor, {"season": "E2024", "contains_player": "P012774"})
+
+    assert "v_lineup_player" in cursor.statements[2]
+    assert "P012774" in cursor.parameters[2]
+
+
+def test_on_off_returns_one_on_row_and_one_off_row():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["player_id"], [("P012774",)]),
+            (
+                ["split", "possessions", "points_for", "offensive_rating"],
+                [("on", 1200, 1450, 120.8), ("off", 1486, 1600, 107.7)],
+            ),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    response = get_player_on_off(cursor, {"season": "E2024", "player": "P012774"})
+
+    assert "case when o.is_on_court then 'on' else 'off'" in cursor.statements[2]
+    assert "order by o.is_on_court desc" in cursor.statements[2]
+    assert cursor.parameters[2][0] == "P012774"
+    assert [row["split"] for row in response["rows"]] == ["on", "off"]
+    assert STRADDLE_CAVEAT in response["caveats"]

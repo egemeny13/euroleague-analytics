@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from euroleague.mcp.envelope import FREE_THROW_CAVEAT, build_response
+from euroleague.mcp.envelope import FREE_THROW_CAVEAT, STRADDLE_CAVEAT, build_response
 from euroleague.mcp.resolve import resolve_player, resolve_season, resolve_team
 
 DEFAULT_LIMIT = 50
@@ -416,5 +416,169 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
             "points_per_100_team_possessions uses the TEAM's possessions while this "
             "player's team had the ball, not the player's own usage. It is a rate, "
             "not a usage measure.",
+        ],
+    )
+
+
+# A lineup's offensive possessions and its defensive possessions are two
+# different populations, so both sides are aggregated and then joined on the
+# lineup. Doing it as one pass with FILTER would count a possession once for the
+# offense and never for the defense.
+_LINEUP_SPLIT = """
+with offense as (
+    select offense_lineup_id as lineup_id,
+           count(*) as possessions,
+           sum(points_scored) as points_for
+    from v_possession
+    where season_code = %s {quarantine}
+    group by 1
+),
+defense as (
+    select defense_lineup_id as lineup_id,
+           count(*) as possessions_against,
+           sum(points_scored) as points_against
+    from v_possession
+    where season_code = %s {quarantine}
+    group by 1
+)
+select l.lineup_id, l.team_code,
+       (select string_agg(p.display_name, ' | ' order by p.display_name)
+          from v_lineup_player lp join player p on p.player_id = lp.player_id
+         where lp.lineup_id = l.lineup_id) as players,
+       coalesce(o.possessions, 0) as possessions,
+       coalesce(o.points_for, 0) as points_for,
+       coalesce(d.possessions_against, 0) as possessions_against,
+       coalesce(d.points_against, 0) as points_against,
+       round(100.0 * o.points_for / nullif(o.possessions, 0), 2) as offensive_rating,
+       round(100.0 * d.points_against / nullif(d.possessions_against, 0), 2)
+           as defensive_rating,
+       round(100.0 * o.points_for / nullif(o.possessions, 0)
+           - 100.0 * d.points_against / nullif(d.possessions_against, 0), 2) as net_rating
+from lineup l
+left join offense o on o.lineup_id = l.lineup_id
+left join defense d on d.lineup_id = l.lineup_id
+where coalesce(o.possessions, 0) + coalesce(d.possessions_against, 0) > 0
+"""
+
+
+def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Five-man units, ranked. The metric no other public EuroLeague project has."""
+    include_quarantined = bool(arguments.get("include_quarantined", False))
+    season_code = resolve_season(cursor, arguments["season"])
+    limit = clamp_limit(arguments.get("limit"))
+    offset = max(int(arguments.get("offset", 0)), 0)
+    minimum = int(arguments.get("min_possessions", 25))
+
+    quarantine = _quarantine_clause(include_quarantined)
+    sql = _LINEUP_SPLIT.format(quarantine=quarantine)
+    params: list[Any] = [season_code, season_code]
+
+    if arguments.get("team"):
+        sql += " and l.team_code = %s"
+        params.append(resolve_team(cursor, season_code, arguments["team"]))
+    if arguments.get("contains_player"):
+        sql += (
+            " and exists (select 1 from v_lineup_player lp "
+            "where lp.lineup_id = l.lineup_id and lp.player_id = %s)"
+        )
+        params.append(resolve_player(cursor, season_code, arguments["contains_player"]))
+
+    sql += (
+        " and coalesce(o.possessions, 0) >= %s"
+        " order by net_rating desc nulls last limit %s offset %s"
+    )
+    cursor.execute(sql, (*params, minimum, limit, offset))
+    rows = _rows(cursor)
+
+    return build_response(
+        rows=rows,
+        coverage=coverage_for(cursor, season_code, include_quarantined),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        limit=limit,
+        offset=offset,
+        total_available=offset + len(rows) + (1 if len(rows) == limit else 0),
+        caveats=[
+            "Lineup samples are small. A five-man unit with 30 possessions is noise; "
+            "raise min_possessions before drawing a conclusion.",
+            "Lineups have no external ground truth. They are validated by mechanical "
+            "invariants instead: five players on court at all times, 200 team minutes "
+            "per regulation game, every substitution paired, and lineup possessions "
+            "summing to team possessions.",
+        ],
+    )
+
+
+def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """How a team performs with one player on the floor, against without him."""
+    include_quarantined = bool(arguments.get("include_quarantined", False))
+    season_code = resolve_season(cursor, arguments["season"])
+    player_id = resolve_player(cursor, season_code, arguments["player"])
+    quarantine = _quarantine_clause(include_quarantined)
+
+    team_filter = ""
+    team_params: list[Any] = []
+    if arguments.get("team"):
+        team_filter = " where team_code = %s"
+        team_params.append(resolve_team(cursor, season_code, arguments["team"]))
+
+    cursor.execute(
+        f"""
+        with player_lineups as (
+            select lineup_id, team_code from v_lineup_player where player_id = %s
+        ),
+        his_teams as (
+            select distinct team_code from player_lineups{team_filter}
+        ),
+        offense as (
+            select p.offense_team_code as team_code,
+                   (p.offense_lineup_id in (select lineup_id from player_lineups))
+                       as is_on_court,
+                   count(*) as possessions,
+                   sum(p.points_scored) as points_for
+            from v_possession p
+            join his_teams h on h.team_code = p.offense_team_code
+            where p.season_code = %s{quarantine}
+            group by 1, 2
+        ),
+        defense as (
+            select p.defense_team_code as team_code,
+                   (p.defense_lineup_id in (select lineup_id from player_lineups))
+                       as is_on_court,
+                   count(*) as possessions_against,
+                   sum(p.points_scored) as points_against
+            from v_possession p
+            join his_teams h on h.team_code = p.defense_team_code
+            where p.season_code = %s{quarantine}
+            group by 1, 2
+        )
+        select case when o.is_on_court then 'on' else 'off' end as split,
+               o.team_code,
+               o.possessions, o.points_for,
+               d.possessions_against, d.points_against,
+               round(100.0 * o.points_for / nullif(o.possessions, 0), 2) as offensive_rating,
+               round(100.0 * d.points_against / nullif(d.possessions_against, 0), 2)
+                   as defensive_rating,
+               round(100.0 * o.points_for / nullif(o.possessions, 0)
+                   - 100.0 * d.points_against / nullif(d.possessions_against, 0), 2)
+                   as net_rating
+        from offense o
+        join defense d on d.team_code = o.team_code and d.is_on_court = o.is_on_court
+        order by o.is_on_court desc
+        """,
+        (player_id, *team_params, season_code, season_code),
+    )
+    rows = _rows(cursor)
+
+    return build_response(
+        rows=rows,
+        coverage=coverage_for(cursor, season_code, include_quarantined),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        caveats=[
+            STRADDLE_CAVEAT,
+            "On/off is not a measure of a player's value. It measures his team's "
+            "performance while he was on the floor, which depends on his teammates and "
+            "on who the opponent had on the floor at the same time.",
+            "The 'off' split includes every possession the team played without him, "
+            "including games he did not play at all.",
         ],
     )

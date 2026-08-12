@@ -250,5 +250,70 @@ def build_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool]:
             ),
             handler=bind(queries.get_player_stats),
         ),
+        Tool(
+            name="el_get_lineup_stats",
+            title="Five-man unit performance",
+            description=(
+                "Five-man units ranked by net rating per 100 possessions, with points "
+                "scored and allowed on their own possessions. Reconstructed from "
+                "substitution events, since the API publishes no lineup data - which is "
+                "why lineups carry no external ground truth and are validated by "
+                "mechanical invariants instead. Filter with contains_player to find every "
+                "unit a player appeared in. Raise min_possessions before drawing any "
+                "conclusion: a unit with 30 possessions is noise. A possession that spans "
+                "a substitution is credited to the unit on court when it started, which "
+                "the response reports as a measured rate."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "team": {"type": "string", "description": "Team code or club name."},
+                    "contains_player": {
+                        "type": "string",
+                        "description": "Only units containing this player, by id or name.",
+                    },
+                    "min_possessions": {
+                        "type": "integer",
+                        "default": 25,
+                        "description": (
+                            "Drop units below this many offensive possessions. Default 25. "
+                            "Raise it - lineup samples are small and noisy."
+                        ),
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season"],
+            ),
+            handler=bind(queries.get_lineup_stats),
+        ),
+        Tool(
+            name="el_get_player_on_off",
+            title="On/off split",
+            description=(
+                "How a team performed with one player on the floor against without him: "
+                "possessions, points, and offensive, defensive and net rating per 100 "
+                "for each split. This is a team measurement taken while the player was "
+                "present, NOT a measure of the player's individual value - it depends on "
+                "his teammates and on the opponent's units. The off split includes games "
+                "he did not play. Pass team for a player who appeared for more than one "
+                "club in the season."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "player": {
+                        "type": "string",
+                        "description": "Player id such as P012774, or a name.",
+                    },
+                    "team": {
+                        "type": "string",
+                        "description": "Restrict to one club, for a player who moved mid-season.",
+                    },
+                },
+                required=["season", "player"],
+            ),
+            handler=bind(queries.get_player_on_off),
+        ),
     ]
     return {tool.name: tool for tool in tools}
