@@ -77,6 +77,33 @@ python -m venv .venv
 The response cache is not committed — one season is 53 MB. Tests run against the
 fixtures and need no network and no database.
 
+## Running the MCP server
+
+The server is a read-only query layer over the warehouse. It speaks MCP over
+`stdio` and needs `DATABASE_URL` in `.env`.
+
+```bash
+python scripts/mcp_server.py
+```
+
+To use it from Claude Desktop, add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "euroleague": {
+      "command": "python",
+      "args": ["C:/Users/PC/Desktop/euroleague-analytics/scripts/mcp_server.py"]
+    }
+  }
+}
+```
+
+Nine tools, all read-only, all prefixed `el_`. Call `el_describe_warehouse`
+first: it reports which seasons are loaded and which games are excluded. Every
+response states its coverage, its exclusions, and whether minutes are raw or
+corrected.
+
 ## Licence
 
 MIT. Note that `euroleague_api` (giasemidis) is deliberately **not** a

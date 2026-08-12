@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import importlib.util
 import io
 import json
+import sys
+from pathlib import Path
 
 from euroleague.mcp.identity import IDENTITY
 from euroleague.mcp.protocol import (
@@ -233,3 +236,19 @@ def test_notification_that_raises_produces_no_reply():
     serve(stdin, stdout, tools, IDENTITY)
     replies = [json.loads(line) for line in stdout.getvalue().splitlines() if line.strip()]
     assert len(replies) == 0
+
+
+def _load_entry_point():
+    path = Path(__file__).resolve().parent.parent / "scripts" / "mcp_server.py"
+    spec = importlib.util.spec_from_file_location("mcp_server_entry", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["mcp_server_entry"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_entry_point_registers_all_nine_tools_without_connecting():
+    module = _load_entry_point()
+    registry = module.build_tool_registry(lambda: None)
+    assert len(registry) == 9
+    assert all(name.startswith("el_") for name in registry)
