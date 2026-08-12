@@ -214,10 +214,33 @@ and declared `ON DELETE SET NULL`, so a delete tries to null `season_code` too.
 The loader works around it; a later migration should scope the action to
 `possession_index`.
 
-### Phase 7 — the MCP server
-A thin query layer over pre-computed tables. No computation at query time.
-Tools prefixed `el_`, descriptions written as prompts, every response disclosing
-quarantine exclusions and minutes provenance.
+### Phase 7 — the MCP server. Complete.
+
+Nine read-only `el_` tools now expose warehouse coverage, games, team and player
+statistics, lineups, on/off splits, possessions, and source-ordered play by play.
+They aggregate through six versioned views; no table or dependency was added.
+Counting statistics come from the official box score, while possessions, pace,
+lineups, on/off, clutch filters, and per-100 rates remain the validated derived
+layer. The stdio entry point answers real MCP requests and keeps diagnostics off
+protocol stdout.
+
+**Gate: passed 2026-08-13.** All 18 live checks pass. The tools reconcile to
+47,831 E2024 possessions, 2,917 substitution-straddling possessions, 24 games
+excluded by default, and 330 games whose two team lines reproduce the official
+final score. The gate also found and fixed a query that trusted the source API's
+unreliable `IsPlaying` flag; player participation now follows positive official
+seconds. The normal database-free suite remains green. See
+`docs/PHASE_7_REPORT.md`.
+
+Every response reports coverage and exclusions. The shared envelope refuses to
+build a response containing a minute- or second-derived value without declaring
+whether its basis is corrected, raw, or official. Shot coordinates remain out of
+scope because `raw_shot` is empty; EuroCup and E2025 were not loaded.
+
+Three earlier issues remain open and visible: the storage hot-window decision,
+the named Phase 6 possession-gate residual, and the composite
+`game_event_possession_fkey` defect. Phase 7 discloses their effects but does not
+quietly redefine or repair them.
 
 ### Phase 8 — evaluations
 Write `evaluation.xml`: ten complex, realistic, verifiable questions the server

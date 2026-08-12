@@ -30,6 +30,7 @@ is binding — the decision is only approved with it.
 | 15 | How Python reaches Postgres | `psycopg` through the connection pooler |
 | 16 | Dependency tooling | `pip` with pinned requirements files |
 | 17 | `Points` is a coordinate source only | Approved with one condition |
+| 18 | MCP aggregation in views | Approved with a measurement |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -43,6 +44,9 @@ because each one changes what the scaffolding must contain.
 
 Item 17 was raised on 2026-08-09 when the production fetcher began archiving a
 third endpoint, and approved on 2026-08-10.
+
+Item 18 was raised and approved on 2026-08-12 while designing the Phase 7 MCP
+query layer.
 
 ---
 
@@ -481,6 +485,37 @@ source for attempts; `Points` contributes spatial fields only.
 calculations.
 
 **Timing.** Settled 2026-08-09; first implemented 2026-08-10.
+
+---
+
+## 18. The MCP layer aggregates in views, not in pre-computed tables — approved with a measurement
+
+`CLAUDE.md` requires the MCP server to be a thin query layer over pre-computed
+tables with no heavy computation at query time. Nothing it needs is pre-computed,
+and building those tables costs storage against a budget Phase 6 measured down to
+four seasons.
+
+Measured against the live warehouse: four factors for all 18 teams across a whole
+season runs in 403 ms; the lineup on/off leaderboard in 98 ms; a clutch filter in
+24 ms. Queries are season-scoped, so none of these grows as the archive deepens.
+
+**Why.** The rule's purpose is to stop the server reconstructing lineups on
+demand, which genuinely is heavy. Adding up one season is not. Views cost zero
+bytes and their SQL is versioned like the rest of the schema.
+
+**Condition — the measurement is the licence.** If any view is measured
+materially above the 403 ms recorded here, promote that one view to a table rather
+than widening this decision. The identified lever is an index on `possession
+(season_code, gamecode, offense_team_code)`, which would remove the 366 ms
+sequential scan that dominates the four-factors path.
+
+**Also settled here: counting statistics are served from the official box score,
+never recounted from events.** Recounting would create a second set of numbers
+that can silently drift from euroleague.net after any change to event logic. Our
+reconstruction is served where the official box score has no equivalent —
+possessions, pace, lineups, on/off, clutch, and every per-100 rate.
+
+**Timing.** Settled and first implemented 2026-08-12.
 
 ---
 
