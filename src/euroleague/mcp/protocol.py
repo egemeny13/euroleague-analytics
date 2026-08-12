@@ -1,8 +1,9 @@
 """JSON-RPC over stdio, and nothing else.
 
-This module knows nothing about basketball, holds no database connection, and
-receives the tool registry as an argument. That is what lets its tests feed it
-strings and assert strings.
+This module knows nothing about basketball, holds no database connection, runs
+no queries, and knows no tool names. It receives the tool registry and server
+identity as arguments. That is what lets its tests feed it strings and assert
+strings.
 
 Written against the standard library on purpose. The official MCP SDK pulls in
 pydantic, anyio, httpx and starlette, roughly tripling a dependency tree whose
@@ -26,23 +27,6 @@ from typing import Any, TextIO
 # the latest version we support.
 SUPPORTED_PROTOCOL_VERSIONS: tuple[str, ...] = ("2025-06-18", "2025-03-26", "2024-11-05")
 LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0]
-
-SERVER_INFO: dict[str, str] = {
-    "name": "euroleague-analytics",
-    "title": "EuroLeague Analytics Warehouse",
-    "version": "0.1.0",
-}
-
-# Shown to the model once, at connection time.
-SERVER_INSTRUCTIONS = (
-    "A validated EuroLeague warehouse built from play-by-play events. Possessions are "
-    "counted exactly from the event stream, never estimated from a box score formula. "
-    "Counting statistics are the official published box score; possessions, lineups, "
-    "on/off and every per-100 rate are this project's own reconstruction. Call "
-    "el_describe_warehouse first to learn which seasons are loaded and which games are "
-    "excluded. Every response reports what it excluded and whether minutes are raw or "
-    "corrected: quote those alongside the numbers."
-)
 
 # JSON-RPC 2.0 error codes.
 PARSE_ERROR = -32700
@@ -95,7 +79,14 @@ def _missing_required(schema: Mapping[str, Any], arguments: Mapping[str, Any]) -
     return [name for name in schema.get("required", []) if name not in arguments]
 
 
-def handle_message(message: Mapping[str, Any], tools: Mapping[str, Tool]) -> dict[str, Any] | None:
+def _normalize_params(params: Any) -> dict[str, Any]:
+    """Ensure params is a dict, treating non-dict values as empty dict."""
+    return params if isinstance(params, dict) else {}
+
+
+def handle_message(
+    message: Mapping[str, Any], tools: Mapping[str, Tool], identity: Mapping[str, Any]
+) -> dict[str, Any] | None:
     """Turn one parsed request into one reply, or None if it needs no reply."""
     request_id = message.get("id")
     method = message.get("method")
@@ -108,15 +99,16 @@ def handle_message(message: Mapping[str, Any], tools: Mapping[str, Tool]) -> dic
         return _error(request_id, INVALID_REQUEST, "A request must carry a string 'method'.")
 
     if method == "initialize":
-        requested = (message.get("params") or {}).get("protocolVersion")
+        params = _normalize_params(message.get("params"))
+        requested = params.get("protocolVersion")
         agreed = requested if requested in SUPPORTED_PROTOCOL_VERSIONS else LATEST_PROTOCOL_VERSION
         return _result(
             request_id,
             {
                 "protocolVersion": agreed,
                 "capabilities": {"tools": {"listChanged": False}},
-                "serverInfo": dict(SERVER_INFO),
-                "instructions": SERVER_INSTRUCTIONS,
+                "serverInfo": dict(identity.get("serverInfo", {})),
+                "instructions": identity.get("instructions", ""),
             },
         )
 
@@ -127,7 +119,7 @@ def handle_message(message: Mapping[str, Any], tools: Mapping[str, Tool]) -> dic
         return _result(request_id, {"tools": [tool.to_wire() for tool in tools.values()]})
 
     if method == "tools/call":
-        params = message.get("params") or {}
+        params = _normalize_params(message.get("params"))
         name = params.get("name")
         tool = tools.get(name)
         if tool is None:
@@ -171,7 +163,9 @@ def handle_message(message: Mapping[str, Any], tools: Mapping[str, Tool]) -> dic
     return _error(request_id, METHOD_NOT_FOUND, f"Unknown method {method!r}.")
 
 
-def serve(stdin: TextIO, stdout: TextIO, tools: Mapping[str, Tool]) -> None:
+def serve(
+    stdin: TextIO, stdout: TextIO, tools: Mapping[str, Tool], identity: Mapping[str, Any]
+) -> None:
     """Read requests until the input stream closes, writing one reply per line."""
     for line in stdin:
         if not line.strip():
@@ -186,7 +180,21 @@ def serve(stdin: TextIO, stdout: TextIO, tools: Mapping[str, Tool]) -> None:
             _write(stdout, _error(None, INVALID_REQUEST, "A request must be a JSON object."))
             continue
 
-        reply = handle_message(message, tools)
+        try:
+            reply = handle_message(message, tools, identity)
+        except Exception:
+            request_id = message.get("id")
+            if request_id is not None:
+                _write(
+                    stdout,
+                    _error(
+                        request_id,
+                        INTERNAL_ERROR,
+                        "An internal error occurred while processing this request.",
+                    ),
+                )
+            continue
+
         if reply is not None:
             _write(stdout, reply)
 
