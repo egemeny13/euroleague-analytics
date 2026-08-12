@@ -163,5 +163,92 @@ def build_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool]:
             ),
             handler=bind(queries.get_game),
         ),
+        Tool(
+            name="el_get_team_stats",
+            title="Team season profile",
+            description=(
+                "A team's season profile: the four factors, offensive and defensive "
+                "rating per 100 possessions, and possessions per game. Possessions are "
+                "counted exactly from play-by-play events, never estimated from a box "
+                "score formula, which is what makes these ratings comparable across "
+                "teams that play at different speeds. Omit the team argument to get "
+                "every team in the season, ranked by offensive rating. For a clutch "
+                "split, pass BOTH clutch_max_seconds_remaining and clutch_max_margin - "
+                "there is no default, because definitions of clutch differ."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "team": {
+                        "type": "string",
+                        "description": "Team code or club name. Omit for every team in the season.",
+                    },
+                    "clutch_max_seconds_remaining": {
+                        "type": "integer",
+                        "description": (
+                            "Restrict to possessions starting with at most this many seconds "
+                            "left in the game. 300 is the last five minutes. Must be given "
+                            "with clutch_max_margin."
+                        ),
+                    },
+                    "clutch_max_margin": {
+                        "type": "integer",
+                        "description": (
+                            "Restrict to possessions starting within this many points either "
+                            "way. Must be given with clutch_max_seconds_remaining."
+                        ),
+                    },
+                },
+                required=["season"],
+            ),
+            handler=bind(queries.get_team_stats),
+        ),
+        Tool(
+            name="el_get_player_stats",
+            title="Player season line",
+            description=(
+                "A player's season totals or per-game averages. Counting statistics are "
+                "the official euroleague.net box score. Minutes are this project's "
+                "reconstruction and the response states which kind it served: "
+                "'corrected' is the default and applies a measured 60-second "
+                "substitution correction, 'raw' uses the source timestamps untouched, "
+                "'official' is the published figure. Always repeat that basis when you "
+                "quote a minutes figure or any per-minute rate. Omit the player argument "
+                "to rank a team or a whole season."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "player": {
+                        "type": "string",
+                        "description": (
+                            "Player id such as P012774, or a name. Names are stored "
+                            "'SURNAME, FORENAME'; a surname alone usually works. An "
+                            "ambiguous name returns the candidates rather than a guess."
+                        ),
+                    },
+                    "team": {"type": "string", "description": "Team code or club name."},
+                    "per_game": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "True for per-game averages, false for season totals.",
+                    },
+                    "minutes_basis": {
+                        "type": "string",
+                        "enum": ["corrected", "raw", "official"],
+                        "default": "corrected",
+                        "description": "Which minutes reconstruction to serve. Default corrected.",
+                    },
+                    "min_seconds": {
+                        "type": "integer",
+                        "description": "Drop players below this many total seconds played.",
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season"],
+            ),
+            handler=bind(queries.get_player_stats),
+        ),
     ]
     return {tool.name: tool for tool in tools}

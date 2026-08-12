@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from euroleague.mcp.queries import DEFAULT_LIMIT, MAX_LIMIT, clamp_limit
+from euroleague.mcp.queries import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    clamp_limit,
+    get_player_stats,
+    get_team_stats,
+)
 
 
 def test_the_default_limit_applies_when_none_is_given():
@@ -18,3 +24,99 @@ def test_an_oversized_limit_is_clamped_rather_than_refused():
 def test_a_limit_below_one_is_refused():
     with pytest.raises(ValueError):
         clamp_limit(0)
+
+
+class RecordingCursor:
+    """Captures SQL and returns canned rows, so query shape is testable offline."""
+
+    def __init__(self, answers: list[tuple[list[str], list[tuple]]]) -> None:
+        self.answers = answers
+        self.statements: list[str] = []
+        self.parameters: list[tuple] = []
+        self.description: list[tuple] = []
+        self._rows: list[tuple] = []
+
+    def execute(self, sql: str, params: tuple = ()) -> None:
+        self.statements.append(sql)
+        self.parameters.append(params)
+        columns, rows = self.answers.pop(0)
+        self.description = [(name,) for name in columns]
+        self._rows = rows
+
+    def fetchall(self) -> list[tuple]:
+        return self._rows
+
+
+def test_team_stats_exclude_quarantined_games_by_default():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["team_code"], [("PAN",)]),
+            (["team_code", "possessions"], [("PAN", 2686)]),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    response = get_team_stats(cursor, {"season": "E2024", "team": "PAN"})
+
+    assert "not t.excluded_by_default" in cursor.statements[2]
+    assert response["excluded"]["games"] == 24
+
+
+def test_team_stats_include_quarantined_when_asked():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["team_code"], [("PAN",)]),
+            (["team_code", "possessions"], [("PAN", 2686)]),
+            (["games", "first_game", "last_game"], [(330, None, None)]),
+        ]
+    )
+
+    get_team_stats(
+        cursor,
+        {"season": "E2024", "team": "PAN", "include_quarantined": True},
+    )
+
+    assert "not t.excluded_by_default" not in cursor.statements[2]
+
+
+def test_player_stats_declare_their_minutes_basis():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["player_id"], [("P012774",)]),
+            (["player_id", "minutes"], [("P012774", 28.4)]),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    response = get_player_stats(cursor, {"season": "E2024", "player": "P012774"})
+
+    assert "sum(seconds_corrected)" in cursor.statements[2]
+    assert response["minutes_basis"]["value"] == "corrected"
+
+
+def test_player_stats_can_serve_raw_minutes_and_say_so():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["player_id"], [("P012774",)]),
+            (["player_id", "minutes"], [("P012774", 28.4)]),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    response = get_player_stats(
+        cursor,
+        {"season": "E2024", "player": "P012774", "minutes_basis": "raw"},
+    )
+
+    assert "sum(seconds_raw)" in cursor.statements[2]
+    assert response["minutes_basis"]["value"] == "raw"

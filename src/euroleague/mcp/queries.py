@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 from euroleague.mcp.envelope import FREE_THROW_CAVEAT, build_response
-from euroleague.mcp.resolve import resolve_season, resolve_team
+from euroleague.mcp.resolve import resolve_player, resolve_season, resolve_team
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
@@ -254,5 +254,167 @@ def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
             "Defensive rating uses the OPPONENT's possessions as its denominator, not "
             "this team's. The two differ by at most one possession per game.",
             FREE_THROW_CAVEAT,
+        ],
+    )
+
+
+# Clutch is a FILTER on two possession columns, never a hard-coded threshold and
+# never a pre-computed table (DECISIONS.md item 6). These two arguments are how a
+# caller states their own definition; there is no default, because privileging one
+# analyst's definition is exactly what the design refused to do.
+_CLUTCH_JOIN = (
+    "join (select season_code, gamecode, offense_team_code as team_code, "
+    "count(*) as clutch_possessions, sum(points_scored) as clutch_points "
+    "from v_possession where seconds_remaining_at_start <= %s and abs(margin_at_start) <= %s "
+    "group by 1, 2, 3) clutch "
+    "on clutch.season_code = t.season_code and clutch.gamecode = t.gamecode "
+    "and clutch.team_code = t.team_code"
+)
+
+
+def get_team_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """A team's season profile: four factors, ratings and pace."""
+    include_quarantined = bool(arguments.get("include_quarantined", False))
+    season_code = resolve_season(cursor, arguments["season"])
+
+    conditions = ["t.season_code = %s"]
+    params: list[Any] = [season_code]
+    if not include_quarantined:
+        conditions.append("not t.excluded_by_default")
+    if arguments.get("team"):
+        conditions.append("t.team_code = %s")
+        params.append(resolve_team(cursor, season_code, arguments["team"]))
+
+    clutch_seconds = arguments.get("clutch_max_seconds_remaining")
+    clutch_margin = arguments.get("clutch_max_margin")
+    if (clutch_seconds is None) != (clutch_margin is None):
+        raise ValueError(
+            "Give both clutch_max_seconds_remaining and clutch_max_margin, or neither. "
+            "A clutch window needs a time and a margin; there is no default, because "
+            "definitions of clutch differ between analysts."
+        )
+
+    if clutch_seconds is None:
+        join = ""
+        clutch_columns = ""
+        leading_params: list[Any] = []
+    else:
+        join = _CLUTCH_JOIN
+        clutch_columns = (
+            ", sum(clutch.clutch_possessions) as clutch_possessions"
+            ", round(100.0 * sum(clutch.clutch_points) "
+            "  / nullif(sum(clutch.clutch_possessions), 0), 2) as clutch_offensive_rating"
+        )
+        leading_params = [int(clutch_seconds), int(clutch_margin)]
+
+    where = " and ".join(conditions)
+    cursor.execute(
+        f"select t.team_code, count(*) as games, "
+        f"sum(t.points) as points, sum(t.opponent_points) as opponent_points, "
+        f"sum(t.possessions) as possessions, "
+        f"sum(t.opponent_possessions) as opponent_possessions, "
+        f"round((sum(t.field_goals_made) + 0.5 * sum(t.three_pointers_made))::numeric "
+        f"  / nullif(sum(t.field_goals_attempted), 0), 4) as effective_fg_pct, "
+        f"round(sum(t.turnovers)::numeric / nullif(sum(t.possessions), 0), 4) "
+        f"  as turnover_rate, "
+        f"round(sum(t.offensive_rebounds)::numeric "
+        f"  / nullif(sum(t.offensive_rebounds) + sum(t.opponent_defensive_rebounds), 0), 4) "
+        f"  as offensive_rebound_rate, "
+        f"round(sum(t.free_throws_attempted)::numeric "
+        f"  / nullif(sum(t.field_goals_attempted), 0), 4) as free_throw_rate, "
+        f"round(100.0 * sum(t.points) / nullif(sum(t.possessions), 0), 2) "
+        f"  as offensive_rating, "
+        f"round(100.0 * sum(t.opponent_points) / nullif(sum(t.opponent_possessions), 0), 2) "
+        f"  as defensive_rating, "
+        f"round(sum(t.possessions)::numeric / nullif(count(*), 0), 2) "
+        f"  as possessions_per_game{clutch_columns} "
+        f"from v_team_game t {join} where {where} "
+        f"group by t.team_code order by offensive_rating desc nulls last",
+        (*leading_params, *params),
+    )
+    rows = _rows(cursor)
+
+    return build_response(
+        rows=rows,
+        coverage=coverage_for(cursor, season_code, include_quarantined),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        caveats=[
+            "Counting statistics are the official box score. Possessions are counted "
+            "exactly from the event stream, never estimated from a box score formula.",
+            "Defensive rating uses the opponent's possessions as its denominator.",
+            "possessions_per_game is one team's possessions, not the game's total. "
+            "Doubling it gives the pace figure usually quoted.",
+        ],
+    )
+
+
+def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """A player's season totals or per-game averages, with per-100 rates."""
+    include_quarantined = bool(arguments.get("include_quarantined", False))
+    season_code = resolve_season(cursor, arguments["season"])
+    minutes_basis = arguments.get("minutes_basis", "corrected")
+    if minutes_basis not in ("corrected", "raw", "official"):
+        raise ValueError(
+            f"minutes_basis must be 'corrected', 'raw' or 'official', got "
+            f"{minutes_basis!r}. 'corrected' is the project default."
+        )
+    seconds_column = {
+        "corrected": "seconds_corrected",
+        "raw": "seconds_raw",
+        "official": "seconds_official",
+    }[minutes_basis]
+    per_game = bool(arguments.get("per_game", False))
+    limit = clamp_limit(arguments.get("limit"))
+    offset = max(int(arguments.get("offset", 0)), 0)
+
+    conditions = ["season_code = %s", "is_playing"]
+    params: list[Any] = [season_code]
+    if not include_quarantined:
+        conditions.append("not excluded_by_default")
+    if arguments.get("player"):
+        conditions.append("player_id = %s")
+        params.append(resolve_player(cursor, season_code, arguments["player"]))
+    if arguments.get("team"):
+        conditions.append("team_code = %s")
+        params.append(resolve_team(cursor, season_code, arguments["team"]))
+
+    where = " and ".join(conditions)
+    divisor = "count(*)" if per_game else "1"
+
+    cursor.execute(
+        f"select player_id, max(player_name) as player_name, "
+        f"max(team_code) as team_code, count(*) as games, "
+        f"round(sum({seconds_column})::numeric / 60.0 / {divisor}, 1) as minutes, "
+        f"round(sum(points)::numeric / {divisor}, 2) as points, "
+        f"round(sum(total_rebounds)::numeric / {divisor}, 2) as rebounds, "
+        f"round(sum(assists)::numeric / {divisor}, 2) as assists, "
+        f"round(sum(steals)::numeric / {divisor}, 2) as steals, "
+        f"round(sum(turnovers)::numeric / {divisor}, 2) as turnovers, "
+        f"round(sum(valuation)::numeric / {divisor}, 2) as valuation, "
+        f"round((sum(field_goals_made) + 0.5 * sum(three_pointers_made))::numeric "
+        f"  / nullif(sum(field_goals_attempted), 0), 4) as effective_fg_pct, "
+        f"round(100.0 * sum(points) / nullif(sum(team_possessions), 0), 2) "
+        f"  as points_per_100_team_possessions "
+        f"from v_player_game where {where} "
+        f"group by player_id having sum({seconds_column}) >= %s "
+        f"order by points desc nulls last limit %s offset %s",
+        (*params, int(arguments.get("min_seconds", 0)), limit, offset),
+    )
+    rows = _rows(cursor)
+
+    return build_response(
+        rows=rows,
+        coverage=coverage_for(cursor, season_code, include_quarantined),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        minutes_basis=minutes_basis,
+        limit=limit,
+        offset=offset,
+        total_available=offset + len(rows) + (1 if len(rows) == limit else 0),
+        caveats=[
+            "Counting statistics are the official euroleague.net box score, not "
+            "recounted from events.",
+            "points_per_100_team_possessions uses the TEAM's possessions while this "
+            "player's team had the ball, not the player's own usage. It is a rate, "
+            "not a usage measure.",
         ],
     )
