@@ -106,6 +106,23 @@ def test_player_stats_declare_their_minutes_basis():
     assert response["minutes_basis"]["value"] == "corrected"
 
 
+def test_player_stats_identify_participants_by_official_seconds_not_the_api_flag():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["player_id"], []),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_player_stats(cursor, {"season": "E2024"})
+
+    assert "seconds_official > 0" in cursor.statements[1]
+    assert "is_playing" not in cursor.statements[1]
+
+
 def test_player_stats_can_serve_raw_minutes_and_say_so():
     cursor = RecordingCursor(
         [

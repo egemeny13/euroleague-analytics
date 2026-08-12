@@ -367,7 +367,7 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     limit = clamp_limit(arguments.get("limit"))
     offset = max(int(arguments.get("offset", 0)), 0)
 
-    conditions = ["season_code = %s", "is_playing"]
+    conditions = ["season_code = %s", "seconds_official > 0"]
     params: list[Any] = [season_code]
     if not include_quarantined:
         conditions.append("not excluded_by_default")
