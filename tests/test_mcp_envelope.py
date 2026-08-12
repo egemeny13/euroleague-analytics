@@ -105,3 +105,62 @@ def test_a_complete_page_is_not_marked_truncated():
     )
     assert response["truncated"] is False
     assert "next_offset" not in response
+
+
+def test_home_away_lineup_ids_with_possessions_gain_the_straddle_caveat():
+    response = build_response(
+        rows=[{"home_lineup_id": "h1", "away_lineup_id": "a1", "possession_index": 5}],
+        coverage=COVERAGE,
+        excluded=EXCLUDED,
+    )
+    assert STRADDLE_CAVEAT in response["caveats"]
+
+
+def test_away_lineup_id_with_possessions_gains_the_straddle_caveat():
+    response = build_response(
+        rows=[{"away_lineup_id": "a1", "possessions": 42}],
+        coverage=COVERAGE,
+        excluded=EXCLUDED,
+    )
+    assert STRADDLE_CAVEAT in response["caveats"]
+
+
+@pytest.mark.parametrize(
+    "column_name",
+    [
+        "minutes",
+        "minute",
+        "minutes_per_game",
+        "seconds_raw",
+        "seconds_corrected",
+        "seconds_official",
+        "seconds_remaining_at_start",
+        "mean_seconds_remaining_at_start",
+        "elapsed_seconds_corrected",
+    ],
+)
+def test_clock_derived_columns_are_detected(column_name):
+    with pytest.raises(MinutesProvenanceError):
+        build_response(
+            rows=[{column_name: 1.0}],
+            coverage=COVERAGE,
+            excluded=EXCLUDED,
+        )
+
+
+@pytest.mark.parametrize(
+    "column_name",
+    [
+        "second_chance",
+        "points_scored",
+        "possessions",
+        "offensive_rebounds",
+    ],
+)
+def test_non_clock_columns_are_not_detected(column_name):
+    response = build_response(
+        rows=[{column_name: 42}],
+        coverage=COVERAGE,
+        excluded=EXCLUDED,
+    )
+    assert response["row_count"] == 1

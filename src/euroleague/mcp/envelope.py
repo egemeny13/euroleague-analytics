@@ -48,15 +48,23 @@ FREE_THROW_CAVEAT = (
     "mid-sequence, which is exactly where free-throw questions concentrate."
 )
 
-# Any column whose name contains one of these needs a declared basis. Deliberately
-# broad: `seconds_remaining_at_start` is caught too, and should be, because it is
-# read off the same defective clock as everything else here.
-_CLOCK_SUBSTRINGS = ("minute", "second")
+# Any column whose name contains one of these needs a declared basis. Match on
+# underscore-separated tokens, not substrings, to avoid false positives like
+# `second_chance` or `points_scored`. A column is clock-derived when any token
+# (after splitting on "_") is "minutes" or "seconds", or the whole column name
+# is exactly "minutes" or "minute".
+_CLOCK_TOKENS = ("minutes", "seconds")
 
 # The straddle caveat attaches when a response reports possessions AT LINEUP GRAIN.
 # Team-grain possession totals do not need it: the approximation is about which of
 # two lineups gets the credit, and both belong to the same team.
-_LINEUP_KEYS = ("lineup_id", "offense_lineup_id", "defense_lineup_id")
+_LINEUP_KEYS = (
+    "lineup_id",
+    "offense_lineup_id",
+    "defense_lineup_id",
+    "home_lineup_id",
+    "away_lineup_id",
+)
 _POSSESSION_SUBSTRINGS = ("possession", "per_100", "rating", "pace")
 
 
@@ -69,8 +77,15 @@ def _needs_minutes_basis(rows: Sequence[Mapping[str, Any]]) -> list[str]:
     for row in rows:
         for key in row:
             lowered = key.lower()
-            if any(part in lowered for part in _CLOCK_SUBSTRINGS) and key not in offenders:
-                offenders.append(key)
+            # Check if whole column name matches exactly.
+            if lowered in ("minutes", "minute"):
+                if key not in offenders:
+                    offenders.append(key)
+            else:
+                # Check if any underscore-separated token matches.
+                tokens = lowered.split("_")
+                if any(token in _CLOCK_TOKENS for token in tokens) and key not in offenders:
+                    offenders.append(key)
     return offenders
 
 
