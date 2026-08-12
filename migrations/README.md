@@ -8,6 +8,7 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0001_raw_layer` | The archive (`raw_api_response`, `raw_api_fetch`) and the parsed mirror (`raw_game`, `raw_event`, `raw_boxscore_player`, `raw_boxscore_team`, `raw_shot`) |
 | `0002_dimensions` | `player`, `team`, `team_season` |
 | `0003_derived_layer` | `lineup`, `lineup_stint`, `possession`, `game_event`, `player_game_minutes`, `game_quality` |
+| `0004_query_views` | `v_game`, `v_team_game`, `v_player_game`, `v_lineup_player`, `v_possession`, `v_play_by_play` — read-only views, no tables |
 
 Sixteen tables.
 
