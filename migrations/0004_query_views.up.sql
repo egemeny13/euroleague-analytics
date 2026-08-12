@@ -160,7 +160,7 @@ left join poss op
        on op.season_code = t.season_code and op.gamecode = t.gamecode and op.team_code = o.team_code;
 
 comment on view v_team_game is
-    'One team in one game: the official box score line, the opponent''s line, and our possession counts for both sides.';
+    'One team in one game: the official box score line, the opponent''s line, and our possession counts for both sides. Opponent columns are a deliberate subset for the four factors, not the full line.';
 
 -- One player in one game: the official line, beside our two reconstructions of
 -- his minutes and the official figure they are measured against.
@@ -228,7 +228,7 @@ left join v_team_game tg
       and tg.team_code = b.team_code;
 
 comment on view v_player_game is
-    'One player in one game: the official box score line plus our raw and corrected minutes beside the official figure.';
+    'One player in one game: the official box score line plus our raw and corrected minutes beside the official figure. player is left-joined so a missing dimension row nulls the name rather than deleting the line.';
 
 -- The five players of each lineup, one row each, so a contains-player filter is
 -- a join rather than five ORs against five separate columns.

@@ -9,6 +9,7 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0002_dimensions` | `player`, `team`, `team_season` |
 | `0003_derived_layer` | `lineup`, `lineup_stint`, `possession`, `game_event`, `player_game_minutes`, `game_quality` |
 | `0004_query_views` | `v_game`, `v_team_game`, `v_player_game`, `v_lineup_player`, `v_possession`, `v_play_by_play` — read-only views, no tables |
+| `0004a_query_views_join_safety` | Fix: `v_player_game` joins `player` with `left join` instead of `inner join`, so a missing dimension row nulls the name instead of deleting the row; documents unenforced join assumptions on `v_team_game` and `v_player_game`. No tables, `create or replace view` only. |
 
 Sixteen tables.
 
