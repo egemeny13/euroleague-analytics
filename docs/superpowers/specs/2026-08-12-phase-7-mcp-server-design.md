@@ -87,6 +87,22 @@ regression has a baseline. If any view is ever measured materially slower than
 that, promoting that one view to a table is the obvious next step — but that is
 an observation, not a decision taken here.
 
+**The decision to serve counting statistics from the official box score
+partly removes this cost.** Re-measured on 2026-08-12 with the same method,
+four factors sourced from `raw_boxscore_team` rather than recounted from
+`game_event` runs in **403 ms**, and 366 ms of that is a single sequential scan
+of `possession` to count possessions per team-game. An index on
+`possession (season_code, gamecode, offense_team_code)` is the identified lever
+if it ever matters; it is not added in this phase, because 0.4 seconds is not
+worth a schema change.
+
+Two facts were verified before choosing that source, both across all 660 E2024
+team-games. The `total` row of `raw_boxscore_team` already equals the player
+lines plus the `team_only` line for turnovers, offensive rebounds and defensive
+rebounds — so team rebounds and team turnovers are included and are not double
+counted. And `points` equals `2×FGM2 + 3×FGM3 + FTM` in every row, so the
+attempt columns include makes.
+
 ## Components
 
 Five new modules under `src/euroleague/mcp/`, each independently testable, plus
@@ -159,10 +175,10 @@ the filter lives in the query with the parameter that controls it.
 | View | Grain | Holds |
 |---|---|---|
 | `v_game` | one game | teams, date, phase, round, official final score, quarantine flag and reasons |
-| `v_team_game` | one team in one game | four-factor tallies, possessions for and against, points for and against |
+| `v_team_game` | one team in one game | the official team box score line, the opponent's, and possessions for and against |
 | `v_player_game` | one player in one game | official box score line, our raw and corrected minutes, official minutes, starter flag |
 | `v_possession` | one possession | the possession row plus the game's quarantine flag |
-| `v_lineup_possession` | one possession | possession joined to the five players of each lineup, for contains-player filters |
+| `v_lineup_player` | one player in one lineup | the five players of each lineup unpivoted to one row each, so a contains-player filter is a join rather than five `OR`s |
 | `v_play_by_play` | one event | `game_event` with lineup, stint and possession identifiers attached |
 
 ## The nine tools
