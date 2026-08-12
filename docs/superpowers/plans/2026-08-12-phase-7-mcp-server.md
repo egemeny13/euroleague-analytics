@@ -1144,7 +1144,7 @@ from __future__ import annotations
 
 import pytest
 
-from euroleague.mcp.db import READ_ONLY_OPTIONS
+from euroleague.mcp.db import READ_ONLY_STATEMENT
 from euroleague.mcp.resolve import (
     AmbiguousNameError,
     UnknownPlayerError,
@@ -1172,8 +1172,8 @@ class FakeCursor:
         return self._current
 
 
-def test_the_connection_is_opened_read_only():
-    assert "default_transaction_read_only=on" in READ_ONLY_OPTIONS
+def test_the_session_is_made_read_only():
+    assert READ_ONLY_STATEMENT == "set session characteristics as transaction read only"
 
 
 def test_a_loaded_season_resolves_to_itself():
@@ -1240,13 +1240,22 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'euroleague.mcp.db'`
 # src/euroleague/mcp/db.py
 """One connection, opened so that it cannot write.
 
-Setting `default_transaction_read_only` means a stray UPDATE is refused by
-PostgreSQL itself rather than by our own care. The server is a query layer; the
-guarantee should not depend on every future tool author remembering that.
+Making the session read-only means a stray UPDATE is refused by PostgreSQL
+itself rather than by our own care. The server is a query layer, and that
+guarantee should not depend on every future tool author remembering it.
 
-The connection goes through the session pooler, per DECISIONS.md item 15.
-`DatabaseSettings` already refuses the direct host and the transaction pooler,
-so nothing here needs to re-check them.
+WHY A `SET` AND NOT A STARTUP OPTION. The obvious implementation passes
+`options=-c default_transaction_read_only=on` to libpq, which would make the
+session read-only from its first byte. This project connects through Supabase's
+shared pooler (DECISIONS.md item 15), and PgBouncer rejects startup parameters
+it does not recognise - so that version can fail at connect time with an error
+about an unsupported startup parameter, on the pooler only, which is the
+works-locally-fails-in-CI shape this project already went out of its way to
+avoid once. Issuing the SET after connecting works on both.
+
+The cost is a window of a few milliseconds between connect and SET, during
+which only our own code runs. The verification below closes the real risk,
+which is not that window but a SET that silently did nothing.
 """
 
 from __future__ import annotations
@@ -1255,13 +1264,33 @@ import psycopg
 
 from euroleague.config import DatabaseSettings
 
-# libpq passes this to the backend as startup options.
-READ_ONLY_OPTIONS = "-c default_transaction_read_only=on"
+READ_ONLY_STATEMENT = "set session characteristics as transaction read only"
+
+
+class ReadOnlyEnforcementError(RuntimeError):
+    """Raised when the session could not be made read-only."""
 
 
 def connect(settings: DatabaseSettings) -> psycopg.Connection:
-    """Open a read-only autocommit connection to the warehouse."""
-    return psycopg.connect(settings.url(), autocommit=True, options=READ_ONLY_OPTIONS)
+    """Open an autocommit connection and prove it cannot write."""
+    connection = psycopg.connect(settings.url(), autocommit=True)
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(READ_ONLY_STATEMENT)
+            # Verify rather than assume. A SET that was swallowed by a pooler
+            # leaves a writable session that looks exactly like a safe one.
+            cursor.execute("show transaction_read_only")
+            state = cursor.fetchone()[0]
+        if state != "on":
+            raise ReadOnlyEnforcementError(
+                f"The warehouse session did not become read-only: "
+                f"transaction_read_only is {state!r}. Refusing to serve queries from a "
+                f"session that can write."
+            )
+    except Exception:
+        connection.close()
+        raise
+    return connection
 ```
 
 ```python
@@ -1554,7 +1583,11 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 from euroleague.mcp.envelope import FREE_THROW_CAVEAT, build_response
-from euroleague.mcp.resolve import resolve_player, resolve_season, resolve_team
+
+# Only what this file uses today. Tasks 6 and 8 add resolve_player to this line
+# when they add the functions that call it - an unused import fails ruff, and
+# "ruff must pass" is a global constraint of this plan.
+from euroleague.mcp.resolve import resolve_season, resolve_team
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
@@ -1655,11 +1688,15 @@ def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, A
     )
     teams = _rows(cursor)
 
+    # Teams belong in coverage, not bolted onto the finished envelope from
+    # outside. build_response owns the response shape; a caller that reaches
+    # around it to add a key is how the shape drifts tool by tool.
     return build_response(
         rows=seasons,
         coverage={
             "seasons": [row["season_code"] for row in seasons],
             "games_included": sum(row["games"] for row in seasons),
+            "teams": teams,
         },
         excluded={
             "games": sum(row["excluded_games"] for row in seasons),
@@ -1680,9 +1717,13 @@ def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, A
             "reconstruction from the play-by-play event stream.",
             "Shot coordinates are not loaded in this warehouse. Shot counts are available; "
             "shot locations are not.",
+            "Minutes come in three kinds and every response says which it served. "
+            "'corrected' is the default and applies a measured 60-second substitution "
+            "correction; 'raw' uses the source timestamps untouched and is what anything "
+            "positional uses; 'official' is the published box score figure. Repeat the "
+            "basis whenever you quote a minutes figure or a per-minute rate.",
         ],
-        minutes_basis="corrected",
-    ) | {"teams": teams}
+    )
 
 
 def find_games(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -2080,6 +2121,15 @@ Run: `python -m pytest tests/test_mcp_queries.py -v`
 Expected: FAIL — `ImportError: cannot import name 'get_team_stats'`
 
 - [ ] **Step 3: Append the implementation to `queries.py`**
+
+First widen the resolve import at the top of the file, because `get_player_stats`
+is the first function that needs it:
+
+```python
+from euroleague.mcp.resolve import resolve_player, resolve_season, resolve_team
+```
+
+Then append:
 
 ```python
 # append to src/euroleague/mcp/queries.py
@@ -2532,10 +2582,13 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
     player_id = resolve_player(cursor, season_code, arguments["player"])
     quarantine = _quarantine_clause(include_quarantined)
 
+    # The team filter must restrict BOTH sides or the two halves describe
+    # different populations: his offence at one club and his defence at every
+    # club he played for. Applied to his_teams, so one filter governs both.
     team_filter = ""
     team_params: list[Any] = []
     if arguments.get("team"):
-        team_filter = " and p.offense_team_code = %s"
+        team_filter = " where team_code = %s"
         team_params.append(resolve_team(cursor, season_code, arguments["team"]))
 
     # The player's team is taken from the lineups he appears in, so a player who
@@ -2546,7 +2599,9 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
         with player_lineups as (
             select lineup_id, team_code from v_lineup_player where player_id = %s
         ),
-        his_teams as (select distinct team_code from player_lineups),
+        his_teams as (
+            select distinct team_code from player_lineups{team_filter}
+        ),
         offense as (
             select p.offense_team_code as team_code,
                    (p.offense_lineup_id in (select lineup_id from player_lineups))
@@ -2555,7 +2610,7 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
                    sum(p.points_scored) as points_for
             from v_possession p
             join his_teams h on h.team_code = p.offense_team_code
-            where p.season_code = %s{quarantine}{team_filter}
+            where p.season_code = %s{quarantine}
             group by 1, 2
         ),
         defense as (
@@ -2583,7 +2638,7 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
         join defense d on d.team_code = o.team_code and d.is_on_court = o.is_on_court
         order by o.is_on_court desc
         """,
-        (player_id, season_code, *team_params, season_code),
+        (player_id, *team_params, season_code, season_code),
     )
     rows = _rows(cursor)
 
@@ -3296,7 +3351,7 @@ def test_describe_warehouse_reports_the_loaded_season_and_its_exclusions(cursor)
     assert [row["season_code"] for row in response["rows"]] == [SEASON]
     assert response["rows"][0]["games"] == TOTAL_GAMES
     assert response["excluded"]["games"] == EXCLUDED_GAMES
-    assert len(response["teams"]) == 18
+    assert len(response["coverage"]["teams"]) == 18
 
 
 def test_all_possessions_including_quarantined_match_the_phase_6_total(cursor):
@@ -3333,22 +3388,57 @@ def test_every_game_reports_the_official_final_score(cursor):
     assert cursor.fetchall()[0][0] == 0
 
 
-def test_lineup_possessions_sum_to_team_possessions(cursor):
-    """The invariant that stands in for ground truth the lineup layer does not have."""
+def test_every_possession_is_credited_to_a_lineup_of_the_team_that_had_the_ball(cursor):
+    """The invariant that stands in for the ground truth the lineup layer does not have.
+
+    Note what this does NOT test. "Lineup possessions sum to team possessions" is
+    structurally true here and cannot fail: offense_lineup_id is NOT NULL, so
+    grouping possessions by lineup and re-summing returns the same count by
+    construction. A test asserting it would pass forever and prove nothing.
+
+    What CAN fail, and therefore is worth asserting, is whether the lineup
+    attached to a possession belongs to the team that actually had the ball. A
+    lineup mis-attached to the wrong side would keep every total intact while
+    making every on/off and lineup number wrong.
+    """
     cursor.execute(
-        "select count(*) from ("
-        "  select p.gamecode, p.offense_team_code, count(*) as by_team,"
-        "         sum(count(*)) over () as ignored"
-        "    from v_possession p where p.season_code = %s"
-        "   group by 1, 2) team_totals "
-        "where by_team <> ("
-        "  select count(*) from v_possession q "
-        "   where q.season_code = %s and q.gamecode = team_totals.gamecode "
-        "     and q.offense_team_code = team_totals.offense_team_code "
-        "     and q.offense_lineup_id is not null)",
-        (SEASON, SEASON),
+        "select count(*) from v_possession p "
+        "join lineup o on o.lineup_id = p.offense_lineup_id "
+        "join lineup d on d.lineup_id = p.defense_lineup_id "
+        "where p.season_code = %s and (o.team_code <> p.offense_team_code "
+        "   or d.team_code <> p.defense_team_code)",
+        (SEASON,),
     )
     assert cursor.fetchall()[0][0] == 0
+
+
+def test_lineup_stats_possessions_reconcile_to_the_team_total(cursor):
+    """Summed across every lineup of one team, offensive possessions equal the team's.
+
+    Unlike the structural identity above, this one runs through the tool's own
+    query path, so it fails if get_lineup_stats filters, joins or paginates in a
+    way that loses possessions.
+    """
+    # PRS deliberately. It is the only E2024 team whose lineup count - 162 across
+    # both sides - fits inside MAX_LIMIT, so this reconciliation is exact rather
+    # than a partial sum that happens to look right. PAN has 272 and would not fit.
+    response = get_lineup_stats(
+        cursor,
+        {
+            "season": SEASON,
+            "team": "PRS",
+            "min_possessions": 0,
+            "limit": 200,
+            "include_quarantined": True,
+        },
+    )
+    assert len(response["rows"]) == 162, "PRS lineup count changed; the cap may now truncate"
+    from_tool = sum(row["possessions"] for row in response["rows"])
+    cursor.execute(
+        "select count(*) from v_possession where season_code = %s and offense_team_code = %s",
+        (SEASON, "PRS"),
+    )
+    assert from_tool == cursor.fetchall()[0][0] == 2_781
 
 
 def test_the_most_used_lineup_matches_the_measured_baseline(cursor):
@@ -3399,11 +3489,34 @@ def test_play_by_play_returns_the_stream_in_source_order(cursor):
     assert indexes[0] == 0
 
 
-def test_the_whole_event_stream_is_reachable_by_paging(cursor):
-    cursor.execute(
-        "select count(*) from v_play_by_play where season_code = %s", (SEASON,)
-    )
+def test_the_view_exposes_every_event_in_the_season(cursor):
+    cursor.execute("select count(*) from v_play_by_play where season_code = %s", (SEASON,))
     assert cursor.fetchall()[0][0] == TOTAL_EVENTS
+
+
+def test_paging_walks_a_game_without_dropping_or_repeating_an_event(cursor):
+    """Two pages, joined, must equal one unbroken run of indexes."""
+    first = get_play_by_play(
+        cursor,
+        {"season": SEASON, "gamecode": 1, "limit": 100, "include_quarantined": True},
+    )
+    second = get_play_by_play(
+        cursor,
+        {
+            "season": SEASON,
+            "gamecode": 1,
+            "limit": 100,
+            "offset": 100,
+            "include_quarantined": True,
+        },
+    )
+    assert first["truncated"] is True
+    assert first["next_offset"] == 100
+    walked = [row["ingest_index"] for row in first["rows"]] + [
+        row["ingest_index"] for row in second["rows"]
+    ]
+    assert walked == list(range(200))
+    assert first["total_available"] == second["total_available"]
 
 
 def test_player_stats_serve_the_official_counting_line(cursor):
