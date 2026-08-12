@@ -1128,7 +1128,8 @@ git commit -m "feat: migration 0004 adds six query views, no tables"
 - Consumes: `DatabaseSettings` from `euroleague.config`.
 - Produces:
   - `db.connect(settings: DatabaseSettings) -> psycopg.Connection` — read-only, autocommit.
-  - `db.READ_ONLY_OPTIONS: str` — the libpq `options` string carrying `default_transaction_read_only=on`.
+  - `db.READ_ONLY_STATEMENT: str` — the SQL that makes the session read-only.
+  - `db.ReadOnlyEnforcementError` — raised when the session did not become read-only.
   - `resolve.UnknownSeasonError`, `resolve.UnknownTeamError`, `resolve.UnknownPlayerError`, `resolve.AmbiguousNameError` (all subclasses of `ResolutionError(ValueError)`).
   - `resolve.resolve_season(cursor, value: str) -> str`
   - `resolve.resolve_team(cursor, season_code: str, value: str) -> str`
