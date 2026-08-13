@@ -15,7 +15,8 @@ Phases 1–7 should be complete before the first round.
 - `exploration/FINDINGS.md` — single-game API reconnaissance
 - `exploration/SEASON_SWEEP.md` — full-season validation, 330 games, 176,483 events
 - `exploration/SCHEMA_PROPOSAL.md` — schema design, approved
-- `DECISIONS.md` — six decisions resolved, two items left open
+- `DECISIONS.md` — the live decision log; the old count here was stale
+  throughout Phases 2 through 8, so follow the file rather than a copied total
 
 Established: lineup reconstruction is viable (99.54% of player-games reproduce
 official minutes to the second), overtime is safe to model, the clock must be
@@ -300,9 +301,11 @@ none of them created by Phase 8 and none of them hidden by it:
 3. **The composite `game_event_possession_fkey`** — declared `ON DELETE SET NULL`
    across a composite key. A later migration should scope it to
    `possession_index`.
-4. **Decision 17** — drafted in `docs/ARCHIVE_FETCHER_SESSION_REPORT.md`,
-   implemented in code, still unapproved.
-5. **Shot coordinates** — `raw_shot` is empty, so no shot-location tool exists.
+4. **Decision 17's unexercised condition** — approved in `DECISIONS.md` and
+   commit `11e3080`: any shot query including free throws must start from
+   `game_event`, with `raw_shot` left-joined only to attach coordinates.
+   `raw_shot` is still empty, so no shot query has exercised that condition and
+   no shot-location tool exists.
 
 **Published 2026-08-13.** `origin/master` and the local branch are the same
 commit, so Phases 5 through 8 are on GitHub and the repository exists somewhere
@@ -393,5 +396,7 @@ knowing before the first long run:
 - **`Points` is archived but not ingested.** The Phase 4 gate reconciles the
   cache against the warehouse for `Schedule`, `Boxscore` and `PlaybyPlay` only,
   and `raw_shot` stays empty until a later phase parses coordinates. Decision 17
-  is drafted in `docs/ARCHIVE_FETCHER_SESSION_REPORT.md` and still needs the
-  owner's approval; the code implements it already.
+  is approved in `DECISIONS.md` and commit `11e3080`, but its condition remains
+  unexercised: a shot query including free throws must start from `game_event`,
+  and `raw_shot` may be left-joined only to attach coordinates. Because
+  `raw_shot` is still empty, approved is not the same as satisfied.

@@ -60,6 +60,18 @@ is silent: joining `"BER       "` to `"BER"` returns an empty result rather
 than an error. The archive layer guarantees fidelity and the table layer
 guarantees usability, so neither has to be compromised.
 
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/SEASON_SWEEP.md` section 4 measures the inconsistent
+  padding and the silent empty-join failure across E2024; the archive/table
+  boundary is a design judgment recorded in `exploration/SCHEMA_PROPOSAL.md`
+  section 1.
+- Alternatives considered: preserve source padding in raw tables, or trim it
+  on ingest while preserving exact bytes in the archive.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in the approved schema
+  proposal commit `d2870c4` and first decision-log commit `8279e0f`. The
+  approving exchange itself is not in the repository.
+
 ---
 
 ## 2. Offensive-foul inference — approved, already applied
@@ -76,6 +88,17 @@ false positive under its own rule.
 carries its own separate `TO` row. The risk is double-counting, not
 under-counting. Count the `TO` row and ignore the `OF` row, or the season gains
 1,185 phantom turnovers.
+
+**Provenance.**
+- Basis: MEASURED
+- Evidence: `exploration/FINDINGS.md` lines 289-326 and
+  `exploration/SCHEMA_PROPOSAL.md` section 0b measure E2024 against the explicit
+  `OF` code: 1,525 co-occurrence-rule hits, 340 false positives, and a separate
+  `TO` row for all 1,185 offensive fouls.
+- Alternatives considered: infer offensive fouls from a foul and turnover at
+  the same clock reading, or read the explicit `PLAYTYPE` value.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commits `d2870c4` and
+  `8279e0f`. The approving exchange itself is not in the repository.
 
 ---
 
@@ -102,6 +125,20 @@ E2024. It must be re-measured against each new season. Build a mechanical
 safety belt: if the correction increases disagreement with the official box
 score for any season, it auto-disables for that season and its test fails red.
 
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/SCHEMA_PROPOSAL.md` section 4 and
+  `exploration/SEASON_SWEEP.md` measure the narrow correction: 32 affected rows
+  and 36 mismatched player-rows reduced to 4. Making corrected minutes the
+  default, requiring disclosure, and requiring per-season re-measurement are
+  policy choices rather than measured results.
+- Alternatives considered: raw minutes as the default; a blanket clock clamp;
+  a substitution-only clamp; the narrow overtime correction; or extending the
+  correction to the two residual games.
+- Approved: Egemen Yücelen on 2026-08-09 with both conditions; recorded in
+  commits `d2870c4` and `8279e0f`. The approving exchange itself is not in the
+  repository.
+
 ---
 
 ## 4. Matchup-bounded stints — approved as proposed
@@ -117,6 +154,19 @@ first substitution carrying a clock reading to the last one carrying it,
 absorbing intruders — combined with the union tolerance window for attribution
 checking. Measured at 0 on-court violations and 7 misattributed rows, the best
 result of any combination tested.
+
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/SCHEMA_PROPOSAL.md` section 6 records the reversible
+  grain argument and measures the substitution-batch alternatives across E2024:
+  the selected combination has 0 on-court violations and 7 misattributed rows.
+  The choice of matchup grain itself is a structural judgment, not a measured
+  performance result.
+- Alternatives considered: team-bounded versus matchup-bounded stints; split a
+  substitution batch when the clock changes versus span first-to-last and
+  absorb intruders; use either attribution window alone versus their union.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commits `d2870c4` and
+  `8279e0f`. The approving exchange itself is not in the repository.
 
 ---
 
@@ -134,6 +184,18 @@ straddle a substitution, as a number, in the season sweep output. Nobody
 currently knows whether this is 2% or 15% of possessions, and the two cases
 warrant different treatment. A documented approximation without a measured
 magnitude is not documented.
+
+**Provenance.**
+- Basis: ASSUMED
+- Evidence: none. `exploration/SCHEMA_PROPOSAL.md` section 6 explicitly says
+  there is no correct answer and records a convention. The later straddle-rate
+  measurement in `docs/PHASE_6_POSSESSIONS_REPORT.md` measures the convention's
+  magnitude, not whether start-lineup credit is the right convention.
+- Alternatives considered: another single-lineup attribution or splitting the
+  possession across the two lineups; no alternative rule was recorded by name.
+- Approved: Egemen Yücelen on 2026-08-09 with the measurement condition;
+  recorded in commits `d2870c4` and `8279e0f`. The approving exchange itself is
+  not in the repository.
 
 ---
 
@@ -169,6 +231,19 @@ played. This is acceptable: nearly every clutch metric worth publishing is
 per-possession — clutch offensive rating, clutch eFG%, clutch usage — and
 possessions are the correct denominator for all of them.
 
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/SCHEMA_PROPOSAL.md` section 7 records the grain
+  analysis and the rejected pre-computed-table design. The importance of clutch,
+  analyst demand, and the preference for possession metrics were not measured;
+  `docs/PHASE_7_REPORT.md` later measured the live clutch filter at 24 ms and
+  supports the claim that the filter is not heavy query-time computation.
+- Alternatives considered: split stints at a fixed clutch threshold; build a
+  pre-computed clutch table; or store possession-start state and let callers
+  supply the thresholds.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commits `d2870c4` and
+  `8279e0f`. The approving exchange itself is not in the repository.
+
 ---
 
 ## 7. Re-ingest policy — approved
@@ -196,6 +271,19 @@ re-check completed games at +6 hours, +24 hours, +72 hours, and +7 days. Reduce
 that provisional cadence only after those observations establish when revisions
 actually settle. The E2024 experiment cannot supply a near-game settlement
 time.
+
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/OPEN_ITEMS.md` item 7 measures 60 historical responses
+  with no byte or canonical-JSON checksum change and states the 440-674-day and
+  1.3-2.8-hour limits. Immutable versions, per-game transactional rebuilds, and
+  the prospective cadence are policies extrapolated beyond that measurement.
+- Alternatives considered: never re-fetch; overwrite cached bodies; store every
+  identical body again; rebuild a whole season after one changed response; or
+  version bodies and rebuild only the affected game.
+- Approved: Egemen Yücelen on 2026-08-09 with the prospective condition;
+  recorded in commit `8279e0f`. The approving exchange itself is not in the
+  repository.
 
 ## 8. Backfill scope and storage capacity — approved with a gate
 
@@ -248,6 +336,22 @@ all 23 seasons in the immutable archive and reduce only the hot PostgreSQL
 window. Do not invent that window size before the other tables and database
 overhead are measured.
 
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/OPEN_ITEMS.md` item 8 measures all 176,483 E2024
+  events, including 82.434 versus 51.572 logical bytes per row and the fields'
+  37.44% share. The 23-season amendment is recorded by commit `99e0f54`; later
+  physical measurements are in `docs/PHASE_4_REPORT.md` and
+  `docs/PHASE_6_POSSESSIONS_REPORT.md`. Archiving every season and using a hot
+  database window are scope and budget choices.
+- Alternatives considered: retain the three text fields in `raw_event`; move
+  them to a one-to-one side table; drop them but recover them from archived
+  payloads; load fewer seasons; or archive all seasons while gating the hot
+  PostgreSQL window on physical size.
+- Approved: Egemen Yücelen on 2026-08-09 with the physical-size gate; the
+  measured 19-to-23 season amendment was recorded on 2026-08-10 in commit
+  `99e0f54`. The approving exchanges themselves are not in the repository.
+
 ---
 
 ## 9. Where the immutable archive lives — Supabase Storage
@@ -276,6 +380,18 @@ whole archive and git handles opaque blobs that never diff badly. **Rejected:**
 local disk alone — GitHub Actions cannot verify a checksum against a file it
 cannot read, which makes the audit trail unenforceable in CI.
 
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/OPEN_ITEMS.md` measures 660 cached E2024 responses at
+  52,381,257 raw bytes; Decision 9 records 3,549,266 bytes under per-file gzip
+  and a 14.76× ratio. Choosing Supabase Storage depends additionally on the
+  free-tier budget and CI-access requirements, not only on compression.
+- Alternatives considered: store bodies in PostgreSQL; commit compressed
+  seasons to git; use local disk alone; or put bodies in Supabase Storage and
+  keep only checksum, metadata, and object path in PostgreSQL.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commit `8279e0f`. The
+  approving exchange itself is not in the repository.
+
 ---
 
 ## 10. Migration tooling — plain SQL, applied through the Supabase MCP
@@ -301,6 +417,17 @@ write them anyway, because the gate requires them.
 **Revisit if** local iteration becomes slow enough to be painful; a local
 Postgres is then worth its install cost.
 
+**Provenance.**
+- Basis: ASSUMED
+- Evidence: none. `ROADMAP.md` Phase 2c supplies the rollback gate, but the
+  choice among migration tools is a maintainability judgment based on the
+  owner's machine and support needs, not a repository measurement.
+- Alternatives considered: Supabase CLI; Docker with local Postgres;
+  Supabase's forward-only migration convention; or plain numbered up/down SQL
+  applied through the Supabase MCP.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commit `8279e0f`. The
+  approving exchange itself is not in the repository.
+
 ---
 
 ## 11. EuroCup — schema-ready, not loaded
@@ -315,6 +442,17 @@ projection, the 19-season plan. Loading a second competition would roughly
 double both the backfill fetch hours and the storage projection, against a
 budget whose physical size is still unmeasured. The column costs nothing now;
 the data can wait until the gate in item 8 has an answer.
+
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/OPEN_ITEMS.md` and `exploration/SEASON_SWEEP.md`
+  measure only EuroLeague and establish the E2024 event population and storage
+  inputs. The rough doubling, October-launch boundary, and decision to defer
+  EuroCup are estimates and scope choices rather than EuroCup measurements.
+- Alternatives considered: load EuroCup before launch; exclude EuroCup from the
+  schema; or make the shared schema competition-ready while deferring its data.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commit `8279e0f`. The
+  approving exchange itself is not in the repository.
 
 ---
 
@@ -342,6 +480,18 @@ care where the database is.
   prevents it. This is harmless during the August–September build, and the MCP
   server's own traffic should cover it after launch, but a quiet week in the
   off-season will pause the warehouse and it must be resumed by hand.
+
+**Provenance.**
+- Basis: MIXED
+- Evidence: the created project and its configuration are recorded in commit
+  `8279e0f`; commit `887a309` measures the empty project at 25,688,885 bytes and
+  corrects the usable database budget to 474,311,115 bytes. Choosing Frankfurt
+  rests on the owner's location and expected interactive-query usage, not on a
+  latency benchmark.
+- Alternatives considered: none recorded.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commit `8279e0f`. The
+  later empty-database correction is recorded in commit `887a309`. The
+  approving exchange itself is not in the repository.
 
 ---
 
@@ -376,6 +526,18 @@ inferring them from the code.
 **Reversible.** Removing one line from `.gitignore` publishes it. The reverse
 is not reversible, which is why the private direction was taken first.
 
+**Provenance.**
+- Basis: MIXED
+- Evidence: commit `8279e0f` records the public-repository and untracked-file
+  choices, and Decision 13 records the 2,000-minute private-repository allowance.
+  The central CV, employer-audience, reputational-risk, and hobby-budget claims
+  come from `CONTEXT.md`, which this sweep was expressly forbidden to inspect,
+  so they are not independently evidenced here.
+- Alternatives considered: a private repository; publish `CONTEXT.md`; or make
+  the repository public while keeping `CONTEXT.md` local and untracked.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commit `8279e0f`. The
+  approving exchange itself is not in the repository.
+
 ---
 
 ## 14. How the test suite gets its data — committed fixtures, full season on demand
@@ -400,6 +562,18 @@ the wrong offensive-foul rule.
 **What this does not do.** Fixtures prove the logic handles the known hard
 cases. They cannot prove a season-wide count. Any claim about a season number
 must come from the full run, never from the fixtures.
+
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/SEASON_SWEEP.md` and its result data establish the
+  330-game population and named defect classes; `tests/fixtures/MANIFEST.json`
+  records the derived fixture selection. Committing a small edge-case set for
+  CI and leaving the full season on demand are workflow choices.
+- Alternatives considered: rely only on the local full-season cache; hand-pick
+  convenient games; commit a defect-derived fixture set; or commit the full
+  season.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commit `8279e0f`. The
+  approving exchange itself is not in the repository.
 
 ---
 
@@ -449,6 +623,19 @@ failure mode is a partial load.
 error naming the fix, so a mis-pasted connection string fails at startup rather
 than halfway through loading a season.
 
+**Provenance.**
+- Basis: MIXED
+- Evidence: commit `9e22da8` records the Supabase connection-mode constraints
+  and the session-pooler correction; commit `887a309` records a successful live
+  round trip. The choice to ban transaction mode rather than disable psycopg's
+  prepared statements is an explicit policy judgment.
+- Alternatives considered: `supabase-py` through PostgREST; the direct IPv6
+  host; transaction pooling with prepared statements disabled; or psycopg
+  `COPY` through the session pooler.
+- Approved: Egemen Yücelen on 2026-08-09; the original pooler choice is recorded
+  in `8279e0f`, and the session-mode clarification in `9e22da8`. The approving
+  exchange itself is not in the repository.
+
 ---
 
 ## 16. Dependency tooling — `pip` and pinned requirements files
@@ -464,6 +651,17 @@ tool between the owner and code he is learning to read.
 
 **Revisit if** the dependency list grows past roughly ten, or if a transitive
 version conflict ever costs an afternoon.
+
+**Provenance.**
+- Basis: MIXED
+- Evidence: `requirements.txt`, `requirements-dev.txt`, and commit `8279e0f`
+  record the measured four direct dependencies and pinned versions. The claim
+  that `pip` is preferable at that size, and the roughly-ten revisit point, are
+  maintainability judgments.
+- Alternatives considered: `uv` with its lockfile, or `pip` with pinned
+  requirements files.
+- Approved: Egemen Yücelen on 2026-08-09; recorded in commit `8279e0f`. The
+  approving exchange itself is not in the repository.
 
 ---
 
@@ -485,6 +683,19 @@ source for attempts; `Points` contributes spatial fields only.
 calculations.
 
 **Timing.** Settled 2026-08-09; first implemented 2026-08-10.
+
+**Provenance.**
+- Basis: MEASURED
+- Evidence: `exploration/FINDINGS.md` lines 194-200 measures 152 play-by-play
+  shot events versus 150 `Points` rows in the reference game: the two omissions
+  are missed free throws, while all 150 present rows join by play number. This
+  is thin evidence from one game, not a full-season coverage measurement;
+  `docs/ARCHIVE_FETCHER_SESSION_REPORT.md` records the implementation boundary.
+- Alternatives considered: define the shot population from `Points`, or define
+  it from play-by-play and use `Points` only for coordinates.
+- Approved: Egemen Yücelen on 2026-08-10 with the `game_event`/left-join
+  condition; recorded in dedicated approval commit `11e3080`. The approving
+  exchange itself is not in the repository.
 
 ---
 
@@ -516,6 +727,18 @@ reconstruction is served where the official box score has no equivalent —
 possessions, pace, lineups, on/off, clutch, and every per-100 rate.
 
 **Timing.** Settled and first implemented 2026-08-12.
+
+**Provenance.**
+- Basis: MEASURED
+- Evidence: `docs/PHASE_7_REPORT.md` measures the three live query shapes at
+  403 ms, 98 ms, and 24 ms, identifies the 366 ms sequential scan, and verifies
+  the two official-box-score identities across all 660 E2024 team-games.
+- Alternatives considered: pre-computed aggregate tables versus versioned
+  views; recount counting statistics from events versus serve the official box
+  score.
+- Approved: Egemen Yücelen on 2026-08-12 with the performance condition;
+  recorded in commit `8278225` on 2026-08-13. The approving exchange itself is
+  not in the repository.
 
 ---
 
@@ -553,6 +776,18 @@ a fresh empty database.
 
 **Timing.** Settled and implemented 2026-08-13, migration `0005_game_winner`.
 
+**Provenance.**
+- Basis: MEASURED
+- Evidence: `docs/PHASE_4_REPORT.md` measures the source winner defect across
+  all 330 E2024 games; `docs/PHASE_8_REPORT.md` records 660 official team-game
+  score reconciliations with zero disagreements and the repeatable view-migration
+  gate.
+- Alternatives considered: pass through the raw null; trust the schedule's
+  repeated champion; back-fill the raw table; or derive one canonical winner in
+  `v_game` from the official final score.
+- Approved: not recorded. Commit `0e56322` records an agent's implementation and
+  writes the item as settled, but it does not preserve an owner approval.
+
 ---
 
 ## Rules to add to the project instruction file
@@ -575,3 +810,95 @@ a fresh empty database.
   A documented approximation without a measured magnitude is not
   documented.
 ```
+
+## Contradictions found in the S16 sweep
+
+### Decision 8 versus `exploration/SCHEMA_PROPOSAL.md`
+
+- Decision 8 says: "Drop `player_name`, `dorsal`, and `playinfo` from
+  `raw_event`; do not move them to a one-to-one side table."
+- The schema proposal says: "`player_name`, `dorsal` | Kept for debugging only"
+  and lists `playinfo` as a `raw_event` column.
+- `DECISIONS.md` is later: commit `8279e0f` followed schema-proposal commit
+  `d2870c4`, and the measured season-count amendment followed in `99e0f54`.
+  Decision 8 currently wins. This conflict was already noticed and licensed in
+  `CLAUDE.md` and `ROADMAP.md`.
+
+### Decisions 7 and 9 versus `exploration/SCHEMA_PROPOSAL.md`
+
+- Decisions 7 and 9 say that bodies are immutable and checksum-addressed, that
+  identical bodies are deduplicated, and that PostgreSQL "never stores a
+  response body."
+- The schema proposal says `raw_api_response` is "one HTTP response we ever
+  received" and says it "stores the untouched bytes of every response plus a
+  checksum."
+- `DECISIONS.md` is later and currently wins. `ROADMAP.md` already identifies
+  the proposal as superseded here, so this is a noticed and licensed amendment,
+  not a newly discovered conflict.
+
+### Decision 17 versus two stale statements in `ROADMAP.md`
+
+- Decision 17 says: "`Points` is a coordinate source only — approved" and
+  records the `game_event`/left-join condition.
+- The roadmap said both "Decision 17 — drafted ... implemented in code, still
+  unapproved" and "still needs the owner's approval."
+- Decision 17 is later than the fetcher-session wording and dedicated commit
+  `11e3080` records its approval. Decision 17 currently wins. Both roadmap
+  statements were corrected in this S16 session; the condition remains unmet
+  because `raw_shot` is empty and no shot query has exercised it.
+
+### Decision-log status versus the stale Phase 0 summary in `ROADMAP.md`
+
+- The decision log contains nineteen settled decision items, although Decision
+  19 has no recorded owner approval.
+- The roadmap said: "`DECISIONS.md` — six decisions resolved, two items left
+  open."
+- The live decision log is later and currently wins. The roadmap sentence was
+  corrected in this S16 session and now points to the file instead of repeating
+  a count.
+
+### Decision 18 versus `CLAUDE.md`
+
+- Decision 18 says: "The MCP layer aggregates in views, not in pre-computed
+  tables," licensed by measured live query times.
+- `CLAUDE.md` says: "The MCP server is a thin query layer over pre-computed
+  tables. No heavy computation at query time."
+- Decision 18 is later and currently wins under `CLAUDE.md`'s own precedence
+  rule. This is the known, measured, explicitly licensed override.
+
+No other disagreement was found between Decisions 1-19 and `CLAUDE.md`,
+`AGENTS.md`, `ROADMAP.md`, or `exploration/SCHEMA_PROPOSAL.md`. In particular,
+`AGENTS.md` contains only a pointer to `CLAUDE.md` and introduces no competing
+project rule. No previously unnoticed contradiction remains after the two stale
+roadmap statements above are corrected.
+
+### Decisions whose justification depends on goals, audience, or budget
+
+These need the owner's separate check against the unavailable `CONTEXT.md`:
+
+- Decision 3: an LLM-facing minutes value will be misquoted unless its raw or
+  corrected provenance travels with it.
+- Decision 5: one consistent, understandable attribution convention is valued
+  over a theoretically purer but harder-to-explain treatment.
+- Decision 6: clutch is the most important query shape, possession-based clutch
+  metrics are the useful audience need, and caller-defined thresholds matter.
+- Decision 7: preserving an audit trail and surviving later source revisions
+  are project goals beyond what the historical re-fetch measured.
+- Decisions 8 and 9: the 500 MB database limit, 1 GB Storage limit, complete
+  archive, and hot-window strategy are budget and scope constraints.
+- Decision 10: the owner's ability to install, understand, and debug migration
+  tooling is part of the choice.
+- Decision 11: the October launch boundary and decision to defer EuroCup are
+  scope and budget choices.
+- Decision 12: region choice rests on the owner's location and the assumption
+  that interactive MCP latency matters more than batch ETL latency.
+- Decision 13: the repository-as-CV goal, club audience, reputational risk, and
+  hobby-scale budget come directly from `CONTEXT.md` claims not checked here.
+- Decision 14: CI must protect an owner who cannot validate Python by reading
+  it, while the full cache remains on demand.
+- Decision 15: CI connectivity and minimizing partial-load failure modes for an
+  owner who cannot audit the loader shape the connection policy.
+- Decision 16: minimizing tooling between the owner and code he is learning to
+  read is part of choosing `pip`.
+- Decision 18: avoiding aggregate-table storage is partly a response to the hot
+  database budget, even though query performance itself was measured.
