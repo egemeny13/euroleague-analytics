@@ -292,9 +292,21 @@ none of them created by Phase 8 and none of them hidden by it:
    implemented in code, still unapproved.
 5. **Shot coordinates** — `raw_shot` is empty, so no shot-location tool exists.
 
-**Not yet pushed.** As of 2026-08-13 the repository is 34 commits ahead of
-`origin/master`: Phases 5, 6 and 7 have never reached GitHub, and CI has not run
-since 2026-08-09.
+**Published 2026-08-13.** `origin/master` and the local branch are the same
+commit, so Phases 5 through 8 are on GitHub and the repository exists somewhere
+other than the owner's machine. CI ran on that commit and reported
+`280 passed, 61 deselected in 6.18s` with lint and format clean.
+
+**What CI green does not cover, stated so it is not over-read.** Those 61
+deselected tests are the `warehouse` and `full_season` marks, which need the
+response cache and the live database — neither of which CI can reach. One of
+them, `test_live_phase_4_gate`, is deliberately red and will stay red until the
+hot-window decision is made. A green CI run means the database-free suite
+passes; it is not a statement that every gate in this roadmap passes.
+
+Verified at the same time: the response cache has never been committed — the
+largest blob in the whole history is a 172 KB fixture — and no key material,
+token or populated connection string appears in any of the 61 commits.
 
 ---
 

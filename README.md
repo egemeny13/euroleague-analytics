@@ -93,6 +93,13 @@ that read the live warehouse are excluded from it and opted into explicitly:
 .venv/Scripts/pytest -m warehouse
 ```
 
+Read the green CI badge on the commit for exactly what it says and no more. CI
+runs the 280 database-free tests and deselects 61; it cannot reach the response
+cache or the warehouse, and one of the deselected gates —
+`test_live_phase_4_gate` — is **deliberately red**, because the storage
+projection exceeds the free-tier budget and nobody has yet chosen a smaller hot
+window. A passing CI run is not a claim that every gate in this project passes.
+
 ## Running the MCP server
 
 The server is a read-only query layer over the warehouse. It speaks MCP over
@@ -144,5 +151,6 @@ both.
 
 ## Licence
 
-MIT. Note that `euroleague_api` (giasemidis) is deliberately **not** a
-dependency: it is GPLv3 and would bind this project's licence.
+MIT — the full text is in [`LICENSE`](LICENSE). Note that `euroleague_api`
+(giasemidis) is deliberately **not** a dependency: it is GPLv3 and would bind
+this project's licence.
