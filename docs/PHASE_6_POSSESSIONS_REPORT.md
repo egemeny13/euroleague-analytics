@@ -3,8 +3,8 @@
 **Status:** Parts A to F complete. The Part C gate is still red and the failing
 games are quarantined rather than blocking.
 **Revised:** 2026-08-11. Review found and fixed one general defect, then the
-owner decided to quarantine the residual and proceed. See "Review findings" and
-"Parts D to F" below.
+owner decided on 2026-08-11 to quarantine the residual and proceed. See "Review
+findings" and "Parts D to F" below.
 
 All six parts are implemented. 47,831 E2024 possessions are persisted. The
 sixteen E2024 games whose two independently counted totals still disagree by
@@ -494,9 +494,23 @@ End reasons cross-check against the definitions document exactly:
 | Made free throw | 4,103 | |
 | End of period | 829 | |
 
-### Points needed an exact identity, and it holds
+### Points need an exhaustiveness identity, and it holds
 
-The gate has no external ground truth. Points do: the official running score.
+Possession counts have no external ground truth: nobody publishes a comparable
+EuroLeague count. The only real test is mechanical. Each team's total is counted
+independently from the five approved endings, and the two totals must agree
+within `POSSESSION_GATE_TOLERANCE`, which is 2. That test fails in 16 of 330
+E2024 games and 17 of 402 E2025 games. The E2024 failures are quarantined in
+`game_quality` as `possession_gate` and excluded from every default answer. The
+failure direction is a missing ending for one team; five candidate causes have
+been measured and eliminated, and the residual is not explained.
+
+The final running score supplies the comparison total, but the check below is an
+exhaustiveness check on attribution, not external validation of possession
+boundaries. Every point is assigned either to a possession or to
+`off_possession_points` by construction. Equality proves that the attribution
+code drops, double-counts and invents no point; it would remain green if a
+possession boundary moved and the points moved into the adjacent possession.
 
 An and-one bonus arrives *after* its possession has closed at the basket, so it
 is credited back to it. Technical and unsportsmanlike free throws belong to no

@@ -4,12 +4,12 @@ A validated data warehouse for EuroLeague and EuroCup basketball, built from the
 public play-by-play API and exposed to language models through an MCP server.
 
 This is **not** an API wrapper. Thin wrappers already exist. The value is in the
-derived layer: possessions counted exactly from the event stream, four factors,
+derived layer: possessions reconstructed from the event stream, four factors,
 and lineup-level on/off metrics reconstructed play by play.
 
 **Status: pre-release, all eight phases complete for E2024.** The season is
 loaded, reconciled and reconstructed: 176,483 events, 5,985 lineups, 47,831
-exactly counted possessions, nine read-only MCP tools over six versioned views,
+derived possessions, nine read-only MCP tools over six versioned views,
 and ten published evaluations that a live gate re-earns on demand.
 
 Two things are deliberately unfinished. The physical-size projection exceeds the
@@ -19,6 +19,15 @@ games are quarantined by validation invariants and excluded from every default
 answer, 16 of them by a named possession residual that is measured but not yet
 explained. Both are disclosed by the server rather than smoothed over. The phase
 sequence and the remaining open decisions are in [`ROADMAP.md`](ROADMAP.md).
+
+Possession counts have no external ground truth: nobody publishes a comparable
+EuroLeague count. They rest on a mechanical invariant that counts each team's
+five approved endings independently and requires the totals to differ by no more
+than 2. That invariant fails in 16 of 330 E2024 games; those games are quarantined
+as `possession_gate` and excluded from every default answer. The separate check
+against the official final score proves point-attribution exhaustivenessâ€”no point
+was dropped, double-counted or inventedâ€”but cannot detect a misplaced possession
+boundary.
 
 ---
 

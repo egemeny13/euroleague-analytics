@@ -125,6 +125,10 @@ ran anyway, scoped hard to E2024, with no fetch, no second season and no
 backfill — nothing the blocked decision governs. Recorded here because the block
 was real and was passed, not because passing it was authorised in advance.
 
+**Decision provenance:** nobody approved this exception in advance. This is the
+precedent against which the rule forbidding self-granted roadmap-gate exemptions
+was written.
+
 **Storage: still failing, and now by more.** Loading the derived layer took the
 billing-aware 19-season projection from 725,786,624 bytes to 1,797,734,400
 against a 474,311,115-byte budget. `test_live_phase_4_gate` asserts that
@@ -183,15 +187,23 @@ from the five approved endings. 47,831 E2024 possessions are persisted, with
 fingerprint unchanged.
 
 - **Gate: 314 of 330 (E2024) and 385 of 402 (E2025).** The 16 failing E2024
-  games are quarantined in `game_quality` as `possession_gate` and excluded by
-  default, joining the 7 attribution and 2 minutes failures. The gate test
-  itself is unchanged and still red; it no longer blocks, because the failures
-  are named, counted and disclosed.
-- **The one check with external ground truth passes exactly.** Possession points
-  plus off-possession points equal the official final score in all 330 E2024 and
-  all 402 E2025 games. And-one bonuses are credited back to the possession that
-  closed at the basket; technical free throws belong to no possession and are
-  reported separately.
+  games and 17 failing E2025 games exceed `POSSESSION_GATE_TOLERANCE`, which is
+  2. The E2024 failures are quarantined in `game_quality` as `possession_gate`
+  and excluded by default, joining the 7 attribution and 2 minutes failures.
+  The gate test itself is unchanged and still red. By the owner's decision on
+  2026-08-11, the named failures are quarantined rather than blocking the phase.
+- **Possession counts have no external ground truth.** Nobody publishes a
+  comparable EuroLeague count. The real test is mechanical: each team's total
+  is counted independently from the five approved endings, and the two totals
+  must agree within the tolerance of 2. The failure direction is a missing
+  ending for one team. Five candidate causes have been measured and eliminated;
+  the residual is not explained.
+- **The point check is an exhaustiveness check, not possession validation.**
+  Possession points plus off-possession points equal the official final score in
+  all 330 E2024 and all 402 E2025 games. This proves the attribution code drops,
+  double-counts and invents no point, including around and-ones and technical
+  free throws. It would remain green if a possession boundary moved and the
+  points moved into the adjacent possession.
 - **Straddle rate: 6.10%** — 2,917 of 47,831, published as `DECISIONS.md` item 5
   requires. E2024 only; re-measure when the lineup layer's scope widens.
 - **Storage re-measured: 4 seasons fit, not 5.** Possessions cost about 14.2 MB

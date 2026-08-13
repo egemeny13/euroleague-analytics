@@ -1,0 +1,109 @@
+# Validation claim audit
+
+This audit covers completed-result claims in `README.md`, `ROADMAP.md`, and the
+documents under `docs/`. Repeated statements of the same claim are grouped into
+one row and every substantive location is listed. Design requirements, planned
+test steps, code examples, and commands that do not assert a completed result
+are not claims. Line numbers refer to the repository state produced by this
+audit.
+
+`EXTERNAL` means the result was compared with euroleague.net or another source
+outside this code. `MECHANICAL` means the check enforces consistency or a
+necessary invariant. `NEITHER` means it is a status or aggregate quality claim
+without either kind of ground truth.
+
+## Claims that read stronger than they are, worst first
+
+1. **Possession points equal the official final score.** Reworded: "The point
+   attribution is exhaustive; this identity cannot validate possession
+   boundaries."
+2. **A validated warehouse / validated derived layer.** Reworded: "The warehouse
+   has externally reconciled box-score fields and mechanical invariants, with a
+   disclosed possession gate that fails in 16 E2024 games."
+3. **Every evaluation is reproduced along two independent paths.** Reworded:
+   "The recorded SQL and tool handlers are independent query paths over the same
+   warehouse; they detect tool regressions, not a wrong warehouse."
+4. **The Phase 7 tools reconcile to the validated derived layer.** Reworded:
+   "The tools reproduce the Phase 6 warehouse baseline; the gate validates the
+   query layer, not the underlying possession boundaries."
+5. **A second load left every fingerprint unchanged.** Reworded: "The loader is
+   deterministic and idempotent for the observed input; deterministic errors
+   remain possible."
+6. **All archive checksums match.** Reworded: "The stored bytes match the cached
+   bytes; checksums do not establish that the API content is true or complete."
+7. **All lineup invariants are green.** Reworded: "The simulated lineups are
+   structurally self-consistent; these invariants are not player-identity ground
+   truth."
+8. **CI is green.** Reworded: "The 280 database-free tests pass; 61 full-season
+   and warehouse tests are deselected, including one deliberately red gate."
+
+## Claim-by-claim audit
+
+| Where it appears | Claim, quoted | What it proves | What it would fail to detect | Class | Wording over-reads? |
+|---|---|---|---|---|---|
+| `README.md:3`; `docs/PHASE_7_REPORT.md:15-18`; `docs/superpowers/specs/2026-08-12-phase-7-mcp-server-design.md:7-15` | "A validated data warehouse" / "validated warehouse" / "validated derived layer" | Some fields have external reconciliation and other layers have named regression checks and invariants. | A possession-boundary algorithm that is wrong in the same way for both teams, or wrong by no more than the tolerance, can remain inside this umbrella claim. | NEITHER | Yes |
+| `README.md:10-13`; `ROADMAP.md:179-187`; `docs/PHASE_6_POSSESSIONS_REPORT.md:9-18` | "47,831 derived possessions" and "Phase 6 is complete, with a named and quarantined residual." | The E2024 rows were persisted and the known gate failures were named, retained, and default-excluded. | A shared boundary defect in the 314 passing games would not be exposed merely by row count, persistence, or quarantine bookkeeping. | MECHANICAL | Yes, when "complete" is read as externally validated |
+| `README.md:68`; `ROADMAP.md:20`; `docs/PHASE_3_REPORT.md:7-28`; `docs/superpowers/specs/2026-08-09-phase-3-validation-design.md:43-47` | "Lineup reconstruction reproduces official minutes to the exact second for 99.54% of player-games." | Reconstructed player seconds agree exactly with the published Boxscore for the stated population, except the quarantined rows. | Two players whose reconstructed minutes are swapped but happen to have equal official minutes would preserve the aggregate match pattern while the event-level identities were wrong. | EXTERNAL | No |
+| `ROADMAP.md:86-92`; `docs/PHASE_3_REPORT.md:27-28`; `docs/superpowers/specs/2026-08-09-phase-3-validation-design.md:45-47` | "0 player or team points mismatches." | Event-coded made shots reconcile with official player and team points over all 330 E2024 games. | A possession boundary attached to the wrong scoring event would leave every player and team point total unchanged. | EXTERNAL | No |
+| `ROADMAP.md:86-92`; `docs/PHASE_5_REPORT.md:149-159`; `docs/superpowers/specs/2026-08-09-phase-5-derived-lineups-design.md:150-153` | "Raw official-minute mismatches fall from 36 player rows in 9 games to 4 rows" and the worsening correction "disables itself." | On E2024, the correction improves external minute agreement; the generic season code disables it when candidate disagreement is not strictly smaller, and a synthetic worsening case tests that branch. | A correction could improve the total mismatch-row count while making a smaller set of individual rows much more wrong; there is also no full-season E2025 minute re-measurement test yet. | EXTERNAL | No, with the E2024 scope stated |
+| `ROADMAP.md:112-116`; `docs/PHASE_3_REPORT.md:262`; `docs/PHASE_5_REPORT.md:135-145`; `docs/superpowers/specs/2026-08-09-phase-5-derived-lineups-design.md:141-149` | "Exactly 5 per team," "200 minutes, plus 25 per overtime," and "0 unpaired batches." | The lineup simulation preserves roster cardinality, team-time totals, and substitution balance. | Swapping one player from each team, while retaining five players and balanced minutes on both sides, can satisfy all three invariants. | MECHANICAL | Yes, if described as lineup truth rather than structural consistency |
+| `ROADMAP.md:112-116`; `docs/PHASE_5_REPORT.md:142-145` | "The quarantine list matches `SEASON_SWEEP.md` exactly." | Persisted diagnostics reproduce the previously measured failure populations and consumer exclusion flags. | The sweep and persistence path can share the same mistaken attribution rule and therefore agree on the same wrong quarantine list. | MECHANICAL | No |
+| `docs/PHASE_5_REPORT.md:120-130`; `docs/PHASE_7_REPORT.md:95` | "Event-to-stint lineup disagreements are zero" and "possessions attached to a lineup belonging to the wrong team: 0." | Stored references agree with the builder's team and stint identities. | A player assigned to the wrong lineup of the correct team would keep the lineup team code correct and leave both checks green. | MECHANICAL | No |
+| `docs/PHASE_5_REPORT.md:82-84`; `docs/superpowers/specs/2026-08-09-phase-5-derived-lineups-design.md:141-142` | "`game_event` is a one-for-one derived copy of `raw_event`." | Keys, copied payloads, and source order survive raw-to-derived persistence. | A source event that was already mistrimmed or semantically misclassified before both tables were built would be copied consistently. | MECHANICAL | No |
+| `README.md:82-86`; `docs/FREE_THROW_TRIP_GROUPING_REPORT.md:202-206` | "Each fixture is committed with a checksum, so a fixture cannot drift." | Fixture bytes and named ingest-index observations remain tied to the recorded archived payload. | The archived payload itself can be incomplete or wrong, and a missing edge-case game outside the fixture set is not detected. | MECHANICAL | No |
+| `README.md:96-110`; `ROADMAP.md:310-317` | "CI runs the 280 database-free tests and deselects 61" and "a passing CI run is not a claim that every gate ... passes." | The default fixture/unit suite passed on the published commit, with the excluded populations explicitly disclosed. | A regression visible only in the full cache or live warehouse remains invisible; `test_live_phase_4_gate` is deliberately red and deselected. | NEITHER | No; the limitation is already stated well |
+| `ROADMAP.md:65-72` | "The full cycle — up, down, up, down — [ran] against the empty project." | The original migrations created and removed the expected schema repeatably on that empty database. | A migration that preserves schema shape but corrupts data during transformation would not be exercised on an empty database. | MECHANICAL | No |
+| `ROADMAP.md:74-75` | "RLS denies the public REST endpoint. With one row present, the owning role saw 1 and `anon` saw 0." | The tested row was hidden from the anonymous role under the then-current policy. | A different table or a policy path involving update, insert, or a different JWT claim could still expose or mutate data. | MECHANICAL | No |
+| `ROADMAP.md:94-101`; `docs/PHASE_4_REPORT.md:20,78-82,247-251` | "Every parsed raw table reconciles per game." | Database row counts and stored archive metadata match parser output for every cached E2024 game. | If parser and loader share the same rule that drops a field or misinterprets a source row, their counts can reconcile perfectly. | MECHANICAL | No |
+| `ROADMAP.md:96-97`; `docs/PHASE_4_REPORT.md:20,78-82` | "All 661 archive checksums match." | Exact and canonical hashes recomputed from cached bodies match the stored metadata. | The API could have supplied false or incomplete content; hashing faithfully preserves the lie. | MECHANICAL | Yes, if read as source correctness |
+| `docs/PHASE_4_REPORT.md:43` | "The deterministic Schedule sample was downloaded, decompressed, and its exact-body SHA-256 matched the local file." | One object survived upload, storage, download, decompression, and hashing byte-for-byte. | Corruption, absence, or access failure in any of the other 660 objects would not be detected by this single-sample read-back. | MECHANICAL | No |
+| `ROADMAP.md:96-97,119-120,186-187`; `docs/PHASE_4_REPORT.md:62-82`; `docs/PHASE_5_REPORT.md:161-185`; `docs/PHASE_6_POSSESSIONS_REPORT.md:526-529` | "A second complete load left every content fingerprint unchanged." | The observed loaders are repeatable and do not duplicate or drift rows on an identical second input. | A loader that deterministically writes the same wrong rows passes on every run. | MECHANICAL | Yes |
+| `ROADMAP.md:99-108,128-139`; `docs/PHASE_4_REPORT.md:125-211`; `docs/PHASE_5_REPORT.md:193-266` | "The physical-size condition did not pass" and the measured warehouse exceeds the usable budget. | Live PostgreSQL size measurements and projections exceed the external Supabase quota under every recorded accounting basis. | The projection can miss future schema compression, growth in non-E2024 season sizes, or later tables not present in the measured phase. | EXTERNAL | No; the reports state those boundaries |
+| `docs/ARCHIVE_FETCHER_SESSION_REPORT.md:5,136-157,174-182` | "Implementation and offline verification complete" and sixteen offline behaviors are proved. | Deterministic stub-transport tests cover exact bytes, retry rules, restart behavior, pacing, interruption, and CLI behavior. | A real EuroLeague or Storage response with an unseen redirect, TLS, proxy, or rate-limit behavior can fail while every offline stub test stays green. | MECHANICAL | No, because it says offline |
+| `docs/FREE_THROW_TRIP_GROUPING_REPORT.md:130-132,195-198`; `ROADMAP.md:157-163` | "The E2024 distribution reproduces the five approved values exactly." | The production grouper reproduces the approved regression bins and pins E2024 and E2025 separately. | A wrong grouping rule can split one trip and merge another while preserving every length-bin total. | MECHANICAL | Yes, if treated as grouping correctness |
+| `docs/FREE_THROW_TRIP_GROUPING_REPORT.md:134-138` | "No trip spans a period" and "no trip spans two teams" in 15,495 trips. | Those two impossible-looking shapes are absent in both cached seasons. | Two awards for the same player and team within one period can still be merged into one trip; the known short multi-award fixtures do exactly that. | MECHANICAL | No |
+| `docs/FREE_THROW_TRIP_GROUPING_REPORT.md:138-139` | "Every free throw lands in exactly one trip ... matching the event counts exactly." | The grouper drops and duplicates no free-throw event. | A free throw assigned to the wrong adjacent trip still contributes one to both sides of the identity. | MECHANICAL | Yes, if treated as boundary validation |
+| `docs/FREE_THROW_TRIP_GROUPING_REPORT.md:68-93,202-217`; `ROADMAP.md:161` | "Three hand-verified short groups ... are certainly two awards." | Direct source-row review establishes that those three groups contain multiple foul awards despite fitting the one-award length limit. | The three cases cannot establish that all other short groups are single awards; another merged multi-award group can remain unrecognized. | EXTERNAL | No |
+| `docs/PHASE_6_M1_M2_MEASUREMENTS.md:32-99`; `ROADMAP.md:168-171` | "`BP` is exactly one per period, in both seasons" and the surplus end markers are fully explained. | Structural period lists and marker counts reconcile over E2024 and E2025, including overtime and duplicate `EG` causes. | Two periods whose labels were swapped would preserve one `BP` per period and every aggregate marker count. | MECHANICAL | No |
+| `docs/PHASE_6_M1_M2_MEASUREMENTS.md:120-184`; `ROADMAP.md:172-175` | "Team rebounds behave exactly like player rebounds on who had the ball before and who has it after." | More than 99% directional behavior and the observed transition shapes support treating team and player rebounds alike for possession control. | A rare team rebound with an incorrect team code or a special administrative rebound can be hidden inside the allowed fraction and still be mishandled. | MECHANICAL | Yes: "exactly" is stronger than the reported fractions |
+| `docs/PHASE_6_POSSESSION_DEFINITIONS.md:224-250` | "Only the gate catches" a plausible but wrong pace, provided each team is counted independently. | Independently derived team totals can expose one-sided missing or invented endings that plausible averages conceal. | A mirrored algorithmic error that adds or removes one ending for both teams leaves their difference unchanged. | MECHANICAL | No; the document names the independence requirement |
+| `README.md:23-31`; `ROADMAP.md:189-202`; `docs/PHASE_6_POSSESSIONS_REPORT.md:499-508` | "Possession counts have no external ground truth" and the independently counted totals must agree within 2. | The only possession-count gate is a mechanical alternation invariant; the full-cache run re-derived 16 E2024 and 17 E2025 failures, which are disclosed rather than erased. | Equal errors for both teams, errors of at most two, or a boundary shifted between adjacent possessions can all leave a game inside tolerance. | MECHANICAL | No; the corrected wording states the limitation |
+| `ROADMAP.md:201-209`; `docs/PHASE_6_POSSESSIONS_REPORT.md:510-522` | "Possession points plus off-possession points equal the official final score ... zero mismatches." | Point attribution is exhaustive against the final running score: points are not dropped, duplicated, or invented, including and-one and technical handling. | Moving a possession boundary and moving its points into the adjacent possession preserves the total exactly. | MECHANICAL | Yes in the old wording; corrected now |
+| `docs/PHASE_6_POSSESSIONS_REPORT.md:332-336` | "Made shots and turnovers now reconcile exactly against the official box score" in both seasons. | Those two ending families match published team totals for all games in E2024 and E2025. | Wrong defensive-rebound, free-throw, or end-of-period boundaries are outside this comparison; even a made shot can be attached to the wrong possession while its event count matches. | EXTERNAL | No |
+| `docs/PHASE_6_POSSESSIONS_REPORT.md:340-346`; `ROADMAP.md:185-194` | "Gate: 314 of 330 (E2024) and 385 of 402 (E2025)." | The shipped rule's independent team counts fall within tolerance in those populations and fail in 16 and 17 games respectively. | It does not identify the correct boundary in any passing game and cannot distinguish which team count is right in a failing game. | MECHANICAL | No |
+| `docs/superpowers/specs/2026-08-12-phase-7-mcp-server-design.md:99-104`; `docs/PHASE_7_REPORT.md:69-75` | "Two identities held without exception" across all 660 official team-game rows. | The official `total` row includes team-only turnovers/rebounds and official points are arithmetically consistent with made shots and free throws. | The official source can consistently assign a statistic to the wrong player or team while its own totals and formula still balance. | EXTERNAL | No |
+| `ROADMAP.md:239-245`; `docs/PHASE_7_REPORT.md:81-100` | "All 18 live checks pass" and every tool reconciles to the Phase 6 baseline. | The MCP query layer reproduces warehouse counts, exclusions, score fields, lineup-team ownership, and event coverage. | A wrong Phase 6 warehouse yields the same wrong answer through the views and handlers, so all 18 checks can pass. | MECHANICAL | Yes, if treated as derived-data validation |
+| `ROADMAP.md:247-249`; `docs/PHASE_7_REPORT.md:105-119` | "Minutes provenance is ... a code-enforced invariant." | The common envelope refuses returned minute/second columns without a declared `raw`, `corrected`, or `official` basis. | A handler can declare the wrong basis, or return a minute-derived value under an unrecognized column name, and satisfy the presence check. | MECHANICAL | No |
+| `docs/superpowers/plans/2026-08-12-phase-7-mcp-server.md:801` | "Every SQL statement below was validated as a plain `SELECT` against the live E2024 warehouse." | The planned view SQL parsed, executed, and returned the stated row populations on that snapshot. | A query can return the expected number of rows while joining the wrong opponent, lineup, or statistic into each row. | MECHANICAL | Yes: "executed" would be more precise than "validated" |
+| `docs/superpowers/specs/2026-08-12-phase-7-mcp-server-design.md:268-271`; `docs/superpowers/plans/2026-08-12-phase-7-mcp-server.md:3417-3467` | "Lineup-level possessions sum to team possessions." | At the stored-row level this is an accounting identity; through `get_lineup_stats` for PRS it also proves that the tool's filters, joins, limit, and aggregation lose no possession in that tested population. | A possession attached to the wrong same-team lineup, or a systematically wrong possession table, preserves the sum; the tool-path test also covers only PRS because other teams exceed the response cap. | MECHANICAL | Yes, if the structural identity is presented as lineup validation |
+| `README.md:145-153`; `ROADMAP.md:266-271`; `docs/PHASE_8_REPORT.md:13-35` | "Every answer is now reproduced along two independent paths." | Recorded SQL and public tool handlers agree with each published E2024 answer; a tool-layer regression can diverge from the SQL path. | Both paths read the same warehouse, so a wrong stored value or shared view definition can make both paths agree on the same wrong answer. | MECHANICAL | Yes |
+| `ROADMAP.md:279-283`; `docs/PHASE_8_REPORT.md:82-95` | "All 660 E2024 team-game lines reconcile against euroleague.net with zero disagreements" and every game winner matches the official score. | The score-derived winner agrees with externally published final scores for every E2024 team-game. | An incorrect game date, opponent, phase, or play-by-play sequence would not affect winner/score agreement. | EXTERNAL | No |
+| `docs/PHASE_8_REPORT.md:97-122` | "The down migration restored the previous state exactly and the second up was indistinguishable from the first." | For this view-only migration, column signature and winner population repeat across up/down/up without modifying rows. | A semantically wrong but shape-compatible view definition can repeat perfectly; table data migrations are not exercised. | MECHANICAL | No; the report scopes the equivalence |
+| `docs/PHASE_3_REPORT.md:267-291`; `docs/PHASE_5_REPORT.md:384-393`; `docs/PHASE_6_POSSESSIONS_REPORT.md:607-624`; `docs/PHASE_8_REPORT.md:33-36` | Historical summaries such as "66 passed," "113 passed," "197 passed," and "280 tests ... stayed green." | The named command selections passed at the recorded session snapshots. | Tests outside each selection, newly introduced defects, and later repository changes are not covered; several summaries explicitly deselect live gates. | NEITHER | No when the selection and date are retained |
+| `ROADMAP.md:319-321` | "The response cache has never been committed" and "no key material, token or populated connection string appears in any of the 61 commits." | The performed history/blob scan found neither the cache nor the named secret patterns. | A secret encoded, split across lines, stored under an unscanned pattern, or present outside Git history would evade the scan. | MECHANICAL | No |
+
+## Minutes-correction safety-belt finding
+
+The required auto-disable mechanism exists in `src/euroleague/validation.py`:
+the correction is enabled only when its candidate mismatch-row count is strictly
+smaller than the raw count; otherwise raw seconds are served. The synthetic test
+`test_season_safety_belt_disables_a_correction_that_does_not_strictly_help`
+proves the worsening branch disables. The E2024 full-season test proves the
+correction improves 36 mismatched player rows to 4. No equivalent full-season
+E2025 minutes test currently re-measures the correction, so Decision 3 condition
+B is implemented generically but has not yet been exercised on a second real
+season.
+
+## Gate-relaxation precedents
+
+- `ROADMAP.md:122-130`: Phase 5 proceeded while the Phase 4 size gate was still
+  blocking. **Decision-maker: nobody; no exception was approved in advance.**
+  This is the precedent against which the new no-self-exemption rule was
+  written.
+- `ROADMAP.md:189-194` and
+  `docs/PHASE_6_POSSESSIONS_REPORT.md:3-18`: the red possession gate stopped
+  blocking after its failures were quarantined. **Decision-maker: the owner, on
+  2026-08-11.** This was an explicit relaxation, unlike the Phase 5 precedent.
+
+No other place in `ROADMAP.md` or `docs/` records a phase proceeding through a
+failed gate or a gate being relaxed.

@@ -264,6 +264,10 @@ the event stream as a bug.
 - Do not move to the next phase until the current phase's tests are green.
 - Prove claims, do not assert them. When you state a fact about the data, show
   the measurement that establishes it.
+- **State what a check would fail to detect, not only what it proves.** A check
+  that cannot fail is not evidence. An accounting identity is not a validation.
+- **Never grant yourself an exemption from a roadmap gate.** If a gate must be
+  relaxed, stop and ask, and record who decided and when.
 
 ## Challenging these rules
 
