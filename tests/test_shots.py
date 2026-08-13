@@ -9,13 +9,13 @@ from pathlib import Path
 
 import psycopg
 import pytest
-from test_load import LoaderConnection
 
 import euroleague.load as raw_load
 import euroleague.parse as raw_parse
 from euroleague.cache import ResponseCache
 from euroleague.config import DatabaseSettings
 from euroleague.gate import public_table_sizes, warehouse_snapshot
+from test_load import LoaderConnection
 
 FULL_CACHE = ResponseCache(Path("exploration/cache"))
 FIELD_GOAL_ACTIONS = {"2FGM", "2FGA", "3FGM", "3FGA"}
