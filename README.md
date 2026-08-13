@@ -25,9 +25,9 @@ EuroLeague count. They rest on a mechanical invariant that counts each team's
 five approved endings independently and requires the totals to differ by no more
 than 2. That invariant fails in 16 of 330 E2024 games; those games are quarantined
 as `possession_gate` and excluded from every default answer. The separate check
-against the official final score proves point-attribution exhaustivenessâ€”no point
-was dropped, double-counted or inventedâ€”but cannot detect a misplaced possession
-boundary.
+against the official final score proves point-attribution exhaustiveness — no
+point was dropped, double-counted or invented — but cannot detect a misplaced
+possession boundary.
 
 ---
 
