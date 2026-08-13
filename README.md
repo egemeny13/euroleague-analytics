@@ -9,7 +9,7 @@ and lineup-level on/off metrics reconstructed play by play.
 
 **Status: pre-release, all eight phases complete for E2024.** The season is
 loaded, reconciled and reconstructed: 176,483 events, 5,985 lineups, 47,831
-derived possessions, nine read-only MCP tools over six versioned views,
+derived possessions, ten read-only MCP tools over seven versioned views,
 and ten published evaluations that a live gate re-earns on demand.
 
 Two things are deliberately unfinished. The physical-size projection exceeds the

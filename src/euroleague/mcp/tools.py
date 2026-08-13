@@ -1,4 +1,4 @@
-"""The nine tool definitions.
+"""The ten tool definitions.
 
 Descriptions are read by the model at call time, so they are written as prompts
 rather than as code comments: what the tool answers, what the numbers mean, and
@@ -24,6 +24,7 @@ TOOL_NAMES: tuple[str, ...] = (
     "el_get_player_on_off",
     "el_get_possessions",
     "el_get_play_by_play",
+    "el_get_shot_data",
 )
 
 _INCLUDE_QUARANTINED = {
@@ -86,8 +87,9 @@ def build_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool]:
                 "why, and the teams in each season. Counting statistics served by the "
                 "other tools are the official euroleague.net box score; possessions, "
                 "pace, lineups, on/off and every per-100 rate are this project's own "
-                "reconstruction from play-by-play events. Shot coordinates are not "
-                "loaded. Use this before assuming any season or team is available."
+                "reconstruction from play-by-play events. Shot-coordinate availability "
+                "is reported by season. Use this before assuming any season, team or "
+                "coordinate coverage is available."
             ),
             input_schema=_schema({}),
             handler=bind(queries.describe_warehouse),
@@ -420,6 +422,65 @@ def build_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool]:
                 required=["season", "gamecode"],
             ),
             handler=bind(queries.get_play_by_play),
+        ),
+        Tool(
+            name="el_get_shot_data",
+            title="Shot attempts and locations",
+            description=(
+                f"Shot attempts with optional court coordinates, paginated at default "
+                f"{queries.DEFAULT_LIMIT} and hard maximum {queries.MAX_LIMIT} rows. The "
+                "population ALWAYS starts from game_event, so made and missed free throws "
+                "remain complete. raw_shot is left-joined only to attach coord_x, coord_y "
+                "and zone: it holds made free throws but omits every missed free throw, and "
+                "all of its free throws use the (-1,-1) null sentinel. This tool returns "
+                "free throws with no coordinates and never serves that sentinel as a "
+                "location. Shot type comes from the event action code, never from distance "
+                "or coordinate geometry. The response distinguishes no matching shots from "
+                "a season with no coordinate coverage."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "gamecode": {"type": "integer", "description": "Restrict to one game."},
+                    "team": {
+                        "type": "string",
+                        "description": "Restrict to one team, by code or club name.",
+                    },
+                    "player": {
+                        "type": "string",
+                        "description": "Restrict to one player, by opaque id or name.",
+                    },
+                    "period": {
+                        "type": "integer",
+                        "description": "1 to 4 for quarters, 5 and above for overtime.",
+                    },
+                    "made": {
+                        "type": "boolean",
+                        "description": "True for makes, false for misses; omit for both.",
+                    },
+                    "shot_type": {
+                        "type": "string",
+                        "enum": ["2P", "3P", "FT"],
+                        "description": (
+                            "Two-pointer, three-pointer or free throw. Read from the action "
+                            "code, never inferred from coordinates or distance."
+                        ),
+                    },
+                    "only_with_real_coordinates": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Return only rows with a real court coordinate. This removes "
+                            "free throws and the nine E2024 field goals published at the "
+                            "(-1,-1) null sentinel."
+                        ),
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season"],
+            ),
+            handler=bind(queries.get_shot_data),
         ),
     ]
     return {tool.name: tool for tool in tools}

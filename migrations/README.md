@@ -11,6 +11,7 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0004_query_views` | `v_game`, `v_team_game`, `v_player_game`, `v_lineup_player`, `v_possession`, `v_play_by_play` — read-only views, no tables |
 | `0004a_query_views_join_safety` | Fix: `v_player_game` joins `player` with `left join` instead of `inner join`, so a missing dimension row nulls the name instead of deleting the row; documents unenforced join assumptions on `v_team_game` and `v_player_game`. No tables, `create or replace view` only. |
 | `0005_game_winner` | Fix: `v_game.winner_team_code` is derived from the official final score instead of passing through `raw_game`, where it is null for every game because the source schedule names the season champion in all 330 rows. See `DECISIONS.md` item 19. No tables, `create or replace view` only. |
+| `0006_shot_data_view` | `v_shot_data`, whose complete shot population starts from `game_event` and left-joins `raw_shot` only for real X, Y, and zone values. Free throws remain coordinate-null and `(-1,-1)` is never served. No tables. |
 
 Sixteen tables.
 
@@ -36,6 +37,7 @@ no row and drops no table, so its full cycle can be run in place:
 
 ```sh
 python scripts/view_migration_gate.py 0005_game_winner v_game
+python scripts/view_migration_gate.py 0006_shot_data_view v_shot_data --new-view
 ```
 
 That runs up, down and up again, comparing the view's column signature at every
@@ -45,6 +47,12 @@ not view-only and does not qualify. It is how `0005_game_winner` was gated on
 touches a table, and it proves only that the shape is safe: that the new
 definition is *correct* is asserted separately, in the phase gate, against the
 values the views actually serve.
+
+`--new-view` is for repeating a gate after a create-view migration is already
+applied. It first runs down and proves the named view is absent, then performs
+up/down/up and leaves it up. Before opening a database connection, the gate
+rejects SQL outside the named view's create/comment/drop statements; table DDL,
+row writes, and extra objects cannot qualify.
 
 ## Conventions
 

@@ -273,7 +273,9 @@ def test_every_registered_tool_executes_against_the_warehouse(cursor):
         "el_get_player_on_off": {"season": SEASON, "player": "SHORTS, TJ"},
         "el_get_possessions": {"season": SEASON, "limit": 5},
         "el_get_play_by_play": {"season": SEASON, "gamecode": 1, "limit": 5},
+        "el_get_shot_data": {"season": SEASON, "gamecode": 1, "limit": 5},
     }
+    assert set(calls) == set(registry)
     for name, arguments in calls.items():
         response = registry[name].handler(arguments)
         assert "coverage" in response, name
