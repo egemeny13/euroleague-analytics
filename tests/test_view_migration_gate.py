@@ -38,8 +38,12 @@ def test_view_gate_rejects_table_or_row_changes_before_connecting() -> None:
 
     safe_up = "create view v_shot_data as select 1; comment on view v_shot_data is 'safe';"
     safe_down = "drop view if exists v_shot_data;"
+    safe_replace_down = (
+        "create or replace view v_shot_data as select 1; comment on view v_shot_data is 'restored';"
+    )
     gate.validate_view_only_sql(safe_up, "up", "v_shot_data")
     gate.validate_view_only_sql(safe_down, "down", "v_shot_data")
+    gate.validate_view_only_sql(safe_replace_down, "down", "v_shot_data")
 
     for forbidden in (
         "create table stolen(id integer); create view v_shot_data as select 1;",

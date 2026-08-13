@@ -312,3 +312,41 @@ unexercised:
 
 No protected decision, roadmap, project-instruction, or exploration file was
 edited.
+
+## Review follow-up: free-throw gate and explicit classification
+
+Two review findings were closed without changing the shot population, any
+metric, or any loaded row. The first new warehouse test pins the E2024 view at
+53,925 shots: 41,533 field goals and 12,392 free throws, with the free throws
+split into 9,660 made and 2,732 missed. A second test builds independent
+team-game free-throw totals from `v_shot_data`, full-joins them to the official
+`raw_boxscore_team` totals, and requires exactly 660 team-games with zero
+attempted mismatches and zero made mismatches. The full join means a team-game
+missing from either side also fails instead of disappearing from the check.
+
+Migration 0007 replaces only the shot-type `CASE`: `FTM` and `FTA` are now
+named explicitly, and an unrecognised code yields `NULL` instead of being
+absorbed as `FT`. The rewritten live test checks both directions of the rule:
+every `FT` must come from `FTM` or `FTA`, and every `FTM` or `FTA` must be
+labelled `FT`. That catches a seventh action code mislabelled as a free throw,
+which the old mirrored `ELSE 'FT'` assertion could not catch. Its separate
+no-NULL assertion catches a widened population that exposes an unrecognised
+code, even though the safer view definition made the uncertainty visible.
+
+The down migration uses `create or replace view` to restore the 0006 definition
+and comment exactly; it does not remove the view. The in-place gate ran up,
+down, and up again. At all three steps the signature was identical:
+
+```text
+[('season_code', 'text', 1), ('gamecode', 'integer', 2), ('ingest_index', 'integer', 3), ('numberofplay', 'integer', 4), ('period', 'integer', 5), ('action_code', 'text', 6), ('shot_type', 'text', 7), ('made', 'boolean', 8), ('player_id', 'text', 9), ('player_name', 'text', 10), ('team_code', 'text', 11), ('coord_x', 'integer', 12), ('coord_y', 'integer', 13), ('zone', 'text', 14), ('has_real_coordinate', 'boolean', 15), ('excluded_by_default', 'boolean', 16), ('quarantine_reasons', 'ARRAY', 17)]
+```
+
+The gate left migration 0007 in the up state. The post-migration narrow shot
+file reported `5 passed, 16 deselected in 4.22s`; the narrow Phase 7 warehouse
+gate reported `18 passed in 14.45s`. This follow-up made zero EuroLeague API
+requests and did not parse or load E2025 shots.
+
+The Supabase migration history records `shot_data_ft_gate`. Post-migration
+security and performance advisors reported no finding for `v_shot_data`; their
+remaining notices concern pre-existing tables and views and were not changed in
+this scoped follow-up.

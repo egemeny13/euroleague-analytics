@@ -277,6 +277,16 @@ def test_view_forces_every_free_throw_coordinate_to_null() -> None:
     assert sql.count("e.playtype in ('2FGM', '2FGA', '3FGM', '3FGA')") >= 4
 
 
+def test_view_names_every_shot_type_action_code_explicitly() -> None:
+    """Break caught: an unknown action code is silently classified as a free throw."""
+    sql = (
+        Path(__file__).resolve().parent.parent / "migrations" / "0007_shot_data_ft_gate.up.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "when e.playtype in ('FTM', 'FTA') then 'FT'" in sql
+    assert "else null" in sql
+
+
 @pytest.fixture(scope="module")
 def warehouse_cursor():
     settings = DatabaseSettings.from_env()
@@ -313,6 +323,52 @@ def test_live_e2024_field_goal_population_and_real_coordinates_match_approved_co
 
 
 @pytest.mark.warehouse
+def test_live_e2024_shot_population_totals_are_pinned(warehouse_cursor) -> None:
+    """Break caught: the view silently gains or loses any E2024 shot population branch."""
+    warehouse_cursor.execute(
+        "select count(*), "
+        "count(*) filter (where action_code in ('2FGM', '2FGA', '3FGM', '3FGA')), "
+        "count(*) filter (where action_code in ('FTM', 'FTA')), "
+        "count(*) filter (where action_code in ('FTM', 'FTA') and made), "
+        "count(*) filter (where action_code in ('FTM', 'FTA') and not made) "
+        "from v_shot_data where season_code = 'E2024'"
+    )
+
+    assert warehouse_cursor.fetchall()[0] == (53_925, 41_533, 12_392, 9_660, 2_732)
+
+
+@pytest.mark.warehouse
+def test_live_e2024_free_throws_reconcile_to_official_box_scores(warehouse_cursor) -> None:
+    """Break caught: made or attempted free throws drift for any E2024 team-game."""
+    warehouse_cursor.execute(
+        "with shots as ("
+        "select season_code, gamecode, team_code, "
+        "count(*) as attempted, count(*) filter (where made) as made "
+        "from v_shot_data "
+        "where season_code = 'E2024' and action_code in ('FTM', 'FTA') "
+        "group by season_code, gamecode, team_code"
+        "), official as ("
+        "select season_code, gamecode, team_code, free_throws_attempted, free_throws_made "
+        "from raw_boxscore_team "
+        "where season_code = 'E2024' and row_kind = 'total'"
+        "), reconciled as ("
+        "select coalesce(shots.season_code, official.season_code) as season_code, "
+        "coalesce(shots.gamecode, official.gamecode) as gamecode, "
+        "coalesce(shots.team_code, official.team_code) as team_code, "
+        "shots.attempted, shots.made, "
+        "official.free_throws_attempted, official.free_throws_made "
+        "from shots full join official using (season_code, gamecode, team_code)"
+        ") "
+        "select count(*), "
+        "count(*) filter (where attempted is distinct from free_throws_attempted), "
+        "count(*) filter (where made is distinct from free_throws_made) "
+        "from reconciled"
+    )
+
+    assert warehouse_cursor.fetchall()[0] == (660, 0, 0)
+
+
+@pytest.mark.warehouse
 def test_live_shot_view_never_serves_the_null_sentinel(warehouse_cursor) -> None:
     """Break caught: (-1,-1) escapes as a location instead of becoming null."""
     warehouse_cursor.execute("select count(*) from v_shot_data where coord_x = -1 and coord_y = -1")
@@ -321,12 +377,14 @@ def test_live_shot_view_never_serves_the_null_sentinel(warehouse_cursor) -> None
 
 
 @pytest.mark.warehouse
-def test_live_shot_type_is_read_from_the_action_code(warehouse_cursor) -> None:
-    """Break caught: distance or coordinates are used to infer two versus three."""
+def test_live_shot_type_matches_the_action_code_in_both_directions(warehouse_cursor) -> None:
+    """Break caught: a non-free-throw code is absorbed as FT or a free throw is mislabeled."""
     warehouse_cursor.execute(
-        "select count(*) from v_shot_data where shot_type <> "
-        "case when action_code like '2FG_' then '2P' "
-        "when action_code like '3FG_' then '3P' else 'FT' end"
+        "select "
+        "count(*) filter (where (shot_type = 'FT') is distinct from "
+        "(action_code in ('FTM', 'FTA'))), "
+        "count(*) filter (where shot_type is null) "
+        "from v_shot_data"
     )
 
-    assert warehouse_cursor.fetchall()[0][0] == 0
+    assert warehouse_cursor.fetchall()[0] == (0, 0)

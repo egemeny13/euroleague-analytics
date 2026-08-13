@@ -106,9 +106,16 @@ def validate_view_only_sql(sql: str, direction: str, view: str) -> None:
             re.match(r"^create\s+(?:or\s+replace\s+)?view\b", s, re.I) for s in statements
         )
     else:
-        allowed = (re.compile(rf"^drop\s+view\s+(?:if\s+exists\s+)?{target}\b", re.IGNORECASE),)
-        required = "drop view"
-        has_required = any(re.match(r"^drop\s+view\b", s, re.I) for s in statements)
+        allowed = (
+            re.compile(rf"^drop\s+view\s+(?:if\s+exists\s+)?{target}\b", re.IGNORECASE),
+            re.compile(rf"^create\s+or\s+replace\s+view\s+{target}\b", re.IGNORECASE),
+            re.compile(rf"^comment\s+on\s+view\s+{target}\b", re.IGNORECASE),
+        )
+        required = "drop view or create or replace view"
+        has_required = any(
+            re.match(r"^(?:drop\s+view|create\s+or\s+replace\s+view)\b", s, re.I)
+            for s in statements
+        )
 
     forbidden = re.compile(
         r"\b(?:create|alter|drop|truncate)\s+table\b|"
