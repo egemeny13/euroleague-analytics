@@ -9,6 +9,7 @@ from euroleague.mcp.queries import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
     clamp_limit,
+    find_games,
     get_lineup_stats,
     get_play_by_play,
     get_player_on_off,
@@ -50,6 +51,33 @@ class RecordingCursor:
 
     def fetchall(self) -> list[tuple]:
         return self._rows
+
+
+def test_find_games_applies_date_bounds_to_calendar_dates():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["total"], [(1,)]),
+            (["gamecode", "game_date"], [(1, "2024-10-03")]),
+            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    response = find_games(
+        cursor,
+        {
+            "season": "E2024",
+            "from_date": "2024-10-03",
+            "to_date": "2024-10-03",
+        },
+    )
+
+    assert "utc_date::date >= %s" in cursor.statements[1]
+    assert "utc_date::date <= %s" in cursor.statements[1]
+    assert cursor.parameters[1] == ("E2024", "2024-10-03", "2024-10-03")
+    assert response["rows"] == [{"gamecode": 1, "game_date": "2024-10-03"}]
 
 
 def test_team_stats_exclude_quarantined_games_by_default():

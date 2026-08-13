@@ -168,10 +168,10 @@ def find_games(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
         conditions.append("(home_team_code = %s or away_team_code = %s)")
         params.extend([opponent, opponent])
     if arguments.get("from_date"):
-        conditions.append("utc_date >= %s")
+        conditions.append("utc_date::date >= %s")
         params.append(arguments["from_date"])
     if arguments.get("to_date"):
-        conditions.append("utc_date <= %s")
+        conditions.append("utc_date::date <= %s")
         params.append(arguments["to_date"])
     if arguments.get("phase"):
         conditions.append("phase_code = %s")
