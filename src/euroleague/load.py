@@ -14,8 +14,11 @@ from euroleague.parse import (
     RAW_BOXSCORE_TEAM_COLUMNS,
     RAW_EVENT_COLUMNS,
     RAW_GAME_COLUMNS,
+    RAW_SHOT_COLUMNS,
     ParsedGameRows,
+    RawShotRow,
     parse_cached_game,
+    parse_shots,
 )
 
 
@@ -101,6 +104,81 @@ def load_game(connection: Any, parsed: ParsedGameRows) -> dict[str, int]:
             column_sql = ", ".join(columns)
             cursor.execute(f"INSERT INTO {target} ({column_sql}) SELECT {column_sql} FROM {stage}")
     return counts
+
+
+def load_shots_for_game(
+    connection: Any,
+    season_code: str,
+    gamecode: int,
+    shots: Iterable[RawShotRow],
+) -> int:
+    """Replace one game's raw_shot rows without touching any dependent layer."""
+    shot_rows = tuple(shots)
+    mismatched = next(
+        (
+            shot
+            for shot in shot_rows
+            if shot.season_code != season_code or shot.gamecode != gamecode
+        ),
+        None,
+    )
+    if mismatched is not None:
+        raise ValueError(
+            f"raw_shot target {season_code} game {gamecode} received a row for "
+            f"{mismatched.season_code} game {mismatched.gamecode}."
+        )
+    with connection.transaction(), connection.cursor() as cursor:
+        cursor.execute(
+            "CREATE TEMP TABLE stage_raw_shot (LIKE raw_shot INCLUDING DEFAULTS) ON COMMIT DROP"
+        )
+        count = _copy_rows(cursor, "stage_raw_shot", RAW_SHOT_COLUMNS, shot_rows)
+        cursor.execute(
+            "DELETE FROM raw_shot WHERE season_code = %s AND gamecode = %s",
+            (season_code, gamecode),
+        )
+        column_sql = ", ".join(RAW_SHOT_COLUMNS)
+        cursor.execute(
+            f"INSERT INTO raw_shot ({column_sql}) SELECT {column_sql} FROM stage_raw_shot"
+        )
+    return count
+
+
+def load_cached_shots(
+    connection: Any,
+    cache: ResponseCache,
+    season_code: str,
+    *,
+    progress: Callable[[str], None] = print,
+) -> dict[str, int]:
+    """Replace raw_shot from every cached Points response in one season."""
+    schedule = cache.read_schedule_json(season_code)
+    games = sorted(schedule.get("data") or [], key=lambda game: int(game["gameCode"]))
+    total = 0
+    for index, schedule_game in enumerate(games, start=1):
+        gamecode = int(schedule_game["gameCode"])
+        season = schedule_game.get("season") or {}
+        competition_code = str(season.get("competitionCode") or "").strip()
+        payload = cache.read_json(season_code, "Points", gamecode)
+        shots = parse_shots(season_code, gamecode, competition_code, payload)
+        count = load_shots_for_game(connection, season_code, gamecode, shots)
+        total += count
+        progress(f"[{index:>3}/{len(games)}] game {gamecode:>3}: {count:,} shots")
+
+    with connection.cursor() as cursor:
+        cursor.execute("VACUUM (ANALYZE) raw_shot")
+    return {"raw_shot": total}
+
+
+def load_shot_season(
+    cache: ResponseCache,
+    settings: DatabaseSettings,
+    season_code: str,
+    *,
+    progress: Callable[[str], None] = print,
+) -> dict[str, int]:
+    """Open the session-pooler connection and load one cached Points season."""
+    with psycopg.connect(settings.url(), autocommit=True) as connection:
+        return load_cached_shots(connection, cache, season_code, progress=progress)
 
 
 def load_cached_season(

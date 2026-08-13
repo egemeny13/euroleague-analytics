@@ -117,6 +117,29 @@ RAW_BOXSCORE_TEAM_COLUMNS = (
     "valuation",
 )
 
+RAW_SHOT_COLUMNS = (
+    "season_code",
+    "gamecode",
+    "num_anot",
+    "competition_page",
+    "competition_code",
+    "player_id",
+    "team_code",
+    "action_code",
+    "action_name",
+    "points",
+    "coord_x",
+    "coord_y",
+    "zone",
+    "fastbreak",
+    "second_chance",
+    "points_off_turnover",
+    "minute",
+    "console",
+    "points_a",
+    "points_b",
+)
+
 
 class RawGameRow(NamedTuple):
     season_code: str
@@ -226,6 +249,29 @@ class RawBoxscoreTeamRow(NamedTuple):
     valuation: int | None
 
 
+class RawShotRow(NamedTuple):
+    season_code: str
+    gamecode: int
+    num_anot: int
+    competition_page: int | None
+    competition_code: str
+    player_id: str | None
+    team_code: str | None
+    action_code: str | None
+    action_name: str | None
+    points: int | None
+    coord_x: int | None
+    coord_y: int | None
+    zone: str | None
+    fastbreak: bool | None
+    second_chance: bool | None
+    points_off_turnover: bool | None
+    minute: int | None
+    console: str | None
+    points_a: int | None
+    points_b: int | None
+
+
 @dataclass(frozen=True)
 class ParsedGameRows:
     """All four raw-table row sets belonging to one complete cached game."""
@@ -245,6 +291,19 @@ def _trim(value: Any) -> str | None:
 
 def _integer(value: Any) -> int | None:
     return int(value) if value is not None and value != "" else None
+
+
+def _boolean(value: Any) -> bool | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"1", "true"}:
+        return True
+    if text in {"0", "false"}:
+        return False
+    raise ValueError(f"Expected a boolean value, found {value!r}.")
 
 
 def _timestamp(value: Any) -> datetime | None:
@@ -467,6 +526,43 @@ def parse_boxscore_teams(
             )
         )
     return result
+
+
+def parse_shots(
+    season_code: str,
+    gamecode: int,
+    competition_code: str,
+    payload: dict[str, Any],
+) -> list[RawShotRow]:
+    """Build raw_shot rows from Points without filtering or reordering them."""
+    rows = payload.get("Rows")
+    if not isinstance(rows, list):
+        raise ValueError("Points.Rows must be a list, including for a game with no rows.")
+    return [
+        RawShotRow(
+            season_code=_trim(season_code) or "",
+            gamecode=gamecode,
+            num_anot=int(row["NUM_ANOT"]),
+            competition_page=_integer(row.get("COMPETITION_PAGE")),
+            competition_code=_trim(competition_code) or "",
+            player_id=_trim(row.get("ID_PLAYER")),
+            team_code=_trim(row.get("TEAM")),
+            action_code=_trim(row.get("ID_ACTION")),
+            action_name=_trim(row.get("ACTION")),
+            points=_integer(row.get("POINTS")),
+            coord_x=_integer(row.get("COORD_X")),
+            coord_y=_integer(row.get("COORD_Y")),
+            zone=_trim(row.get("ZONE")),
+            fastbreak=_boolean(row.get("FASTBREAK")),
+            second_chance=_boolean(row.get("SECOND_CHANCE")),
+            points_off_turnover=_boolean(row.get("POINTS_OFF_TURNOVER")),
+            minute=_integer(row.get("MINUTE")),
+            console=_trim(row.get("CONSOLE")),
+            points_a=_integer(row.get("POINTS_A")),
+            points_b=_integer(row.get("POINTS_B")),
+        )
+        for row in rows
+    ]
 
 
 def parse_cached_game(
