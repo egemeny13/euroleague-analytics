@@ -31,6 +31,8 @@ is binding — the decision is only approved with it.
 | 16 | Dependency tooling | `pip` with pinned requirements files |
 | 17 | `Points` is a coordinate source only | Approved with one condition |
 | 18 | MCP aggregation in views | Approved with a measurement |
+| 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
+| 20 | The free-tier hot window | **Three complete seasons — E2025, E2024, E2023** |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -47,6 +49,13 @@ third endpoint, and approved on 2026-08-10.
 
 Item 18 was raised and approved on 2026-08-12 while designing the Phase 7 MCP
 query layer.
+
+Item 19 was implemented on 2026-08-13 during Phase 8. Its provenance block
+records that no owner approval is preserved for it.
+
+Item 20 closes the condition attached to item 8 and the failed physical-size
+gate from Phase 4. It was decided by the owner on 2026-08-13 from
+`docs/STORAGE_HOT_WINDOW_DECISION_BRIEF.md`.
 
 ---
 
@@ -787,6 +796,98 @@ a fresh empty database.
   `v_game` from the official final score.
 - Approved: not recorded. Commit `0e56322` records an agent's implementation and
   writes the item as settled, but it does not preserve an owner approval.
+
+---
+
+## 20. The free-tier hot window — three complete seasons, E2025, E2024, E2023
+
+The hot PostgreSQL window is **three complete seasons: E2025, E2024 and E2023**,
+with every relation loaded for each. E2022 and every older season live in the
+immutable Supabase Storage archive only. This closes the condition attached to
+item 8 and the physical-size gate Phase 4 failed.
+
+**Why this size.** Measured live on 2026-08-13 against the loaded E2024 season,
+on a billing-aware whole-database basis: 109,133,824 bytes of data-driven growth
+across 330 games, or **330,708.5576 bytes per game**. The three seasons are 1,063
+played games — 402, 330 and 331, the last two counted from freshly archived
+schedule responses. That projects to 351.543 MB of data plus Decision 12's
+25,688,885-byte empty-project baseline: **377.232 MB of the 500,000,000-byte
+ceiling, leaving 122.768 MB, or 24.55%.**
+
+Cost is expressed per game rather than per season because item 8's 2026-08-10
+amendment requires it: E2024 is 330 games and E2025 is 402, so a per-season
+figure understates a modern season by about 22%.
+
+**What was rejected, and why.**
+
+*Four complete seasons* — E2025 through E2022, 1,391 games — fits arithmetically
+at 485.704 MB but leaves 14.296 MB, or 2.86%. The whole-database reading drifts
+by hundreds of kilobytes through ordinary operation, which is the same order as
+the margin. It is a boundary demonstration, not an operational plan.
+
+*Four seasons with a derived-only tier for E2022 and E2023* reaches a lower
+steady state, 320.068 MB, and was the brief's own recommendation. It was rejected
+on three costs the steady-state figure does not show:
+
+- **The build corridor is nearly as tight as the option it beats.** Lineups and
+  possessions are reconstructed *from* event rows, so those rows must be resident
+  while an older season is built and only dropped afterwards. On the same
+  per-game figures that peaks near 402 MB, and the `VACUUM FULL` needed to
+  actually reclaim the dropped pages transiently needs a second copy of the rows
+  kept — pushing usage into the high 400s, the zone four complete seasons was
+  rejected for.
+- **It costs validation, not only queries.** The live gates re-check their
+  populations against the database, and the lineup and on-court attribution
+  invariants need event rows to do it. E2022 and E2023 could never be re-gated
+  without first rebuilding them from the archive. In a project whose argument is
+  that correctness rests on tests rather than on the owner reading code, half the
+  loaded seasons being un-re-checkable is a larger concession than losing a
+  play-by-play query.
+- **It is the more complicated build**: a per-season layer policy in the loader,
+  and a new exclusion to disclose in every MCP response.
+
+*Supabase Pro* was priced rather than silently excluded. $25 per month for 8 GB
+would hold all 23 known seasons — 5,950 games project to 1.993 GB — and would
+remove the hot-window policy entirely. It is 2.5 to 5 times the $5–10 monthly
+budget the project is built to, so it is refused on budget and on nothing else.
+
+**What is given up, stated plainly.** E2022 entirely. No four-season trend, and
+no E2022 comparison in any tool. The response bodies remain archived, so the
+season is recoverable, but it is not queryable.
+
+**Condition A — re-measure after E2025 loads.** The per-game cost comes from
+E2024 alone. Every projection here assumes a 20-team season costs the same per
+game as an 18-team one, which is reasonable and unmeasured. Re-derive the figure
+once E2025 is loaded, and again before any second competition.
+
+**Condition B — re-scope the gate, never relax it.** `test_live_phase_4_gate`
+asserts a 19-season projection inside budget and is deliberately red. This
+decision authorises re-scoping it to assert *this* window. It does not authorise
+weakening it, deleting it, or marking it xfail, and the re-scoped gate must fail
+if the chosen window stops fitting.
+
+**Condition C — do not pre-build the layer split.** The derived-only tier stays
+available later at no penalty: event rows can be dropped from a season already
+loaded, whereas a loader split into layer tiers cannot easily be un-split. Build
+it only if the historical depth is later judged worth the three costs above.
+
+**Timing.** Decided by the owner on 2026-08-13, from
+`docs/STORAGE_HOT_WINDOW_DECISION_BRIEF.md`.
+
+**Provenance.**
+- Basis: MIXED. The costs and season counts are measured; the assumption that a
+  402-game season costs the same per game as a 330-game one is not, and is
+  carried by Condition A.
+- Evidence: `docs/STORAGE_HOT_WINDOW_DECISION_BRIEF.md` — a live read-only
+  measurement of 109,133,824 bytes across 330 loaded E2024 games; freshly
+  archived E2022 and E2023 schedules giving 328 and 331 played games, each with a
+  recorded response checksum; Decision 12's measured 25,688,885-byte empty-project
+  baseline.
+- Alternatives considered: four complete seasons; four seasons with a
+  derived-only tier for E2022 and E2023; Supabase Pro at $25 per month.
+- Approved: the owner, 2026-08-13, choosing three complete seasons over the
+  brief's own recommendation after a supervisor audit added the build-corridor
+  and re-gating costs that the steady-state figures had hidden.
 
 ---
 

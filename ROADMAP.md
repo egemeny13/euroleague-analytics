@@ -294,8 +294,20 @@ the same reason `exploration` already was.
 The phase sequence is complete. What remains is a set of named, open decisions,
 none of them created by Phase 8 and none of them hidden by it:
 
-1. **The storage hot window** — Phase 4's size gate still fails deliberately.
-   Four seasons fit; no window chosen. Blocks production backfill.
+1. **The storage hot window — decided 2026-08-13, not yet implemented.** The
+   owner chose **three complete seasons: E2025, E2024, E2023**, every relation
+   loaded for each, with E2022 and older seasons archive-only. 1,063 games at the
+   measured 330,708.5576 bytes per game project to 377.232 MB of the 500 MB
+   ceiling, leaving 122.768 MB. The measurement, the three options and the
+   rejected alternatives are in `docs/STORAGE_HOT_WINDOW_DECISION_BRIEF.md`; the
+   decision and its three conditions are `DECISIONS.md` item 20.
+
+   Production backfill is unblocked. Two things are still open and are *not*
+   closed by the choice: `test_live_phase_4_gate` still asserts the old
+   19-season projection and stays deliberately red until it is re-scoped to this
+   window (condition B — re-scoping is authorised, relaxing is not), and the
+   per-game cost was measured on E2024 alone and must be re-derived once E2025 is
+   loaded (condition A).
 2. **The Phase 6 possession residual** — 16 E2024 games quarantined as
    `possession_gate`. Five candidate causes measured and eliminated.
 3. **The composite `game_event_possession_fkey`** — declared `ON DELETE SET NULL`
