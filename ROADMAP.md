@@ -242,13 +242,59 @@ the named Phase 6 possession-gate residual, and the composite
 `game_event_possession_fkey` defect. Phase 7 discloses their effects but does not
 quietly redefine or repair them.
 
-### Phase 8 — evaluations
-Write `evaluation.xml`: ten complex, realistic, verifiable questions the server
-must answer. Each independent, read-only, requiring several tool calls, with
-one stable correct answer computed by hand first.
+### Phase 8 — evaluations. Complete.
+
+`evaluation.xml` holds ten complex, realistic, verifiable questions the server
+must answer. Each is independent, read-only, needs several tool calls, and has
+one stable correct answer computed outside the tool path first.
 
 This phase is not optional. It is what separates this from every other
 EuroLeague repo on GitHub, and it is the thing worth showing a club.
+
+**Gate: passed 2026-08-13.** All 15 checks pass, and the Phase 7 gate's 18 stayed
+green beside them. `tests/test_phase_8_evaluations.py` re-earns every published
+answer on demand along two independent paths — the ground-truth SQL recorded in
+the file, and the `el_` handlers a model would actually call — and both must
+agree with the number printed in `<expected_answer>`. A verified-once file is a
+claim; a re-checked one is a regression suite. See `docs/PHASE_8_REPORT.md`.
+
+The gate found two things worth naming:
+
+- **A published rate was wrong.** The straddle rate for the default-covered
+  population is 6.07%, not the 6.06% the file claimed — 2,687 of 44,301 is
+  6.0653%. Counts were right, rounding was not. Corrected in both places. The
+  all-games 6.10% from Phase 6 is unaffected.
+- **`el_find_games` served a null winner for all 330 games.** `raw_game`
+  deliberately holds null, because the source schedule repeats the season champion
+  in every row; the derived layer had simply never computed the replacement.
+  Migration `0005_game_winner` derives it from the official final score, which all
+  660 team-game lines already reconcile against. `DECISIONS.md` item 19.
+
+Also fixed here: `ruff format --check .` failed on a committed plan document and
+would have turned CI red on the next push. `docs` is now excluded from ruff for
+the same reason `exploration` already was.
+
+---
+
+## After the phases
+
+The phase sequence is complete. What remains is a set of named, open decisions,
+none of them created by Phase 8 and none of them hidden by it:
+
+1. **The storage hot window** — Phase 4's size gate still fails deliberately.
+   Four seasons fit; no window chosen. Blocks production backfill.
+2. **The Phase 6 possession residual** — 16 E2024 games quarantined as
+   `possession_gate`. Five candidate causes measured and eliminated.
+3. **The composite `game_event_possession_fkey`** — declared `ON DELETE SET NULL`
+   across a composite key. A later migration should scope it to
+   `possession_index`.
+4. **Decision 17** — drafted in `docs/ARCHIVE_FETCHER_SESSION_REPORT.md`,
+   implemented in code, still unapproved.
+5. **Shot coordinates** — `raw_shot` is empty, so no shot-location tool exists.
+
+**Not yet pushed.** As of 2026-08-13 the repository is 34 commits ahead of
+`origin/master`: Phases 5, 6 and 7 have never reached GitHub, and CI has not run
+since 2026-08-09.
 
 ---
 

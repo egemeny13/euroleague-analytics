@@ -10,6 +10,7 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0003_derived_layer` | `lineup`, `lineup_stint`, `possession`, `game_event`, `player_game_minutes`, `game_quality` |
 | `0004_query_views` | `v_game`, `v_team_game`, `v_player_game`, `v_lineup_player`, `v_possession`, `v_play_by_play` — read-only views, no tables |
 | `0004a_query_views_join_safety` | Fix: `v_player_game` joins `player` with `left join` instead of `inner join`, so a missing dimension row nulls the name instead of deleting the row; documents unenforced join assumptions on `v_team_game` and `v_player_game`. No tables, `create or replace view` only. |
+| `0005_game_winner` | Fix: `v_game.winner_team_code` is derived from the official final score instead of passing through `raw_game`, where it is null for every game because the source schedule names the season champion in all 330 rows. See `DECISIONS.md` item 19. No tables, `create or replace view` only. |
 
 Sixteen tables.
 
@@ -28,6 +29,22 @@ passed: 16 tables created, removed, and recreated identically.
 If a future migration changes the schema, the honest version of this test is a
 fresh empty database — a Supabase branch or a local Postgres — not the
 production project.
+
+**View-only migrations are the one exception, and only in this exact shape.** A
+`create or replace view` that keeps the same column names, types and order writes
+no row and drops no table, so its full cycle can be run in place:
+
+```sh
+python scripts/view_migration_gate.py 0005_game_winner v_game
+```
+
+That runs up, down and up again, comparing the view's column signature at every
+step and failing if a column moved — because a migration that moves a column is
+not view-only and does not qualify. It is how `0005_game_winner` was gated on
+2026-08-13. It is not a licence to skip the empty database for anything that
+touches a table, and it proves only that the shape is safe: that the new
+definition is *correct* is asserted separately, in the phase gate, against the
+values the views actually serve.
 
 ## Conventions
 

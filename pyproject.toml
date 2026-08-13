@@ -45,7 +45,13 @@ src = ["src", "tests"]
 # FINDINGS.md and SEASON_SWEEP.md. They are kept so the measurements can be
 # reproduced, not maintained as pipeline code, and reformatting them would
 # edit the evidence. Excluded deliberately.
-extend-exclude = ["exploration"]
+#
+# `docs` is excluded for the same reason. The plan and report documents quote
+# code as it stood when they were written; ruff reformats fenced Python inside
+# markdown, which would silently edit the record. Found on 2026-08-13, when
+# `ruff format --check .` failed on a committed Phase 7 plan document and would
+# have turned CI red on the next push.
+extend-exclude = ["exploration", "docs"]
 
 [tool.ruff.lint]
 select = [

@@ -1,0 +1,852 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<evaluations season="E2024" count="10">
+  <scope>
+    Every question is pinned to the frozen E2024 season. Loading E2025 or any
+    later season will not change an expected answer because every SQL query and
+    every required tool call names E2024 explicitly. Ground truth was computed
+    first with the read-only SQL recorded below, without calling an el_ tool.
+
+    These answers are not a one-time claim. `tests/test_phase_8_evaluations.py`
+    re-earns every one of them on demand, along two independent paths: the
+    ground truth SQL recorded here, executed against the warehouse, and the el_
+    tool handlers a model would actually call. Both must agree with the number
+    written into expected_answer. Run it with `pytest -m warehouse`.
+  </scope>
+
+  <evaluation id="1" shape="five-man-unit-minimum-possessions">
+    <question>
+      Across non-quarantined E2024 games, which five-man unit had the best net
+      rating among units with at least 150 offensive possessions, and where did
+      that unit's team rank in season offensive rating?
+    </question>
+    <expected_answer>
+      Paris Basketball lineup bd982e4bacd185bfed7d9cf6f94c71a3: Kevarrius
+      Hayes, Sebastian Herrera, Mikael Jantunen, TJ Shorts and Tyson Ward. It
+      scored 195 points on 153 offensive possessions (127.45 per 100) and
+      allowed 153 points on 150 defensive possessions (102.00 per 100), for a
+      +25.45 net rating. Paris ranked 8th of 18 in team offensive rating at
+      117.81 per 100 possessions.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+WITH offense AS (
+    SELECT p.offense_lineup_id AS lineup_id,
+           count(*) AS possessions,
+           sum(p.points_scored) AS points_for
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND NOT q.excluded_by_default
+    GROUP BY 1
+), defense AS (
+    SELECT p.defense_lineup_id AS lineup_id,
+           count(*) AS possessions_against,
+           sum(p.points_scored) AS points_against
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND NOT q.excluded_by_default
+    GROUP BY 1
+), team_ranks AS (
+    SELECT team_code,
+           round(100.0 * sum(points) / sum(possessions), 2)
+               AS team_offensive_rating,
+           rank() OVER (
+               ORDER BY 100.0 * sum(points) / sum(possessions) DESC
+           ) AS team_offensive_rank
+    FROM v_team_game
+    WHERE season_code = 'E2024'
+      AND NOT excluded_by_default
+    GROUP BY team_code
+)
+SELECT l.lineup_id,
+       l.team_code,
+       ts.display_name AS team_name,
+       string_agg(pl.display_name, ' | ' ORDER BY pl.display_name) AS players,
+       o.possessions,
+       o.points_for,
+       d.possessions_against,
+       d.points_against,
+       round(100.0 * o.points_for / o.possessions, 2) AS offensive_rating,
+       round(100.0 * d.points_against / d.possessions_against, 2)
+           AS defensive_rating,
+       round(100.0 * o.points_for / o.possessions
+           - 100.0 * d.points_against / d.possessions_against, 2) AS net_rating,
+       tr.team_offensive_rating,
+       tr.team_offensive_rank
+FROM offense o
+JOIN defense d ON d.lineup_id = o.lineup_id
+JOIN lineup l ON l.lineup_id = o.lineup_id
+JOIN team_season ts
+  ON ts.season_code = 'E2024' AND ts.team_code = l.team_code
+JOIN team_ranks tr ON tr.team_code = l.team_code
+JOIN LATERAL (
+    VALUES (l.player_id_1), (l.player_id_2), (l.player_id_3),
+           (l.player_id_4), (l.player_id_5)
+) ids(player_id) ON true
+JOIN player pl ON pl.player_id = ids.player_id
+WHERE o.possessions >= 150
+GROUP BY l.lineup_id, l.team_code, ts.display_name,
+         o.possessions, o.points_for, d.possessions_against, d.points_against,
+         tr.team_offensive_rating, tr.team_offensive_rank
+ORDER BY net_rating DESC, l.lineup_id
+LIMIT 1;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
+      <tool name="el_get_lineup_stats"><![CDATA[Call with {"season":"E2024","min_possessions":150,"limit":200}.]]></tool>
+      <tool name="el_get_team_stats">Rank all E2024 teams by offensive rating.</tool>
+    </tools_required>
+    <must_disclose>
+      The default population excludes 24 games. Lineup samples remain noisy
+      even above the stated 150-possession bar. A possession that straddles a
+      substitution is credited to the lineup on court when it started; the
+      all-E2024 measured rate is 2,917 of 47,831 possessions (6.10%).
+    </must_disclose>
+    <notes>
+      This catches failures to apply the minimum after both lineup sides are
+      assembled, failures to use opponent possessions for defense, and answers
+      that confuse the best lineup with the best team offense.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server reproduced the lineup, ratings, team rating, rank and required disclosures.</tool_verification>
+  </evaluation>
+
+  <evaluation id="2" shape="player-on-off">
+    <question>
+      For TJ Shorts with Paris Basketball in non-quarantined E2024 games, what
+      was his corrected-minutes scoring line, and how did Paris perform with
+      him on the floor versus off it?
+    </question>
+    <expected_answer>
+      TJ Shorts played 34 included games, averaging 19.26 official points and
+      27.3 corrected minutes per game (927.5 corrected minutes total). With him
+      on court, Paris scored 1,936 points in 1,667 possessions and allowed
+      1,850 in 1,666: offensive rating 116.14, defensive rating 111.04, net
+      +5.09. Off court, Paris scored 961 in 821 and allowed 1,064 in 828:
+      offensive rating 117.05, defensive rating 128.50, net -11.45.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+SELECT b.player_id,
+       max(p.display_name) AS player_name,
+       max(b.team_code) AS team_code,
+       count(*) AS games,
+       round(sum(b.points)::numeric / count(*), 2) AS points_per_game,
+       round(sum(m.seconds_corrected)::numeric / 60.0 / count(*), 1)
+           AS corrected_minutes_per_game,
+       round(sum(m.seconds_corrected)::numeric / 60.0, 1)
+           AS corrected_minutes_total
+FROM raw_boxscore_player b
+JOIN player p USING (player_id)
+JOIN player_game_minutes m USING (season_code, gamecode, player_id)
+JOIN game_quality q USING (season_code, gamecode)
+WHERE b.season_code = 'E2024'
+  AND p.display_name = 'SHORTS, TJ'
+  AND b.team_code = 'PRS'
+  AND m.seconds_official > 0
+  AND NOT q.excluded_by_default
+GROUP BY b.player_id;
+
+WITH target AS (
+    SELECT player_id FROM player WHERE display_name = 'SHORTS, TJ'
+), player_lineups AS (
+    SELECT DISTINCT l.lineup_id
+    FROM lineup l
+    CROSS JOIN target t
+    WHERE t.player_id IN (
+        l.player_id_1, l.player_id_2, l.player_id_3,
+        l.player_id_4, l.player_id_5
+    )
+      AND l.team_code = 'PRS'
+), offense AS (
+    SELECT p.offense_lineup_id IN (SELECT lineup_id FROM player_lineups) AS is_on,
+           count(*) AS possessions,
+           sum(p.points_scored) AS points_for
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND p.offense_team_code = 'PRS'
+      AND NOT q.excluded_by_default
+    GROUP BY 1
+), defense AS (
+    SELECT p.defense_lineup_id IN (SELECT lineup_id FROM player_lineups) AS is_on,
+           count(*) AS possessions_against,
+           sum(p.points_scored) AS points_against
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND p.defense_team_code = 'PRS'
+      AND NOT q.excluded_by_default
+    GROUP BY 1
+)
+SELECT CASE WHEN o.is_on THEN 'on' ELSE 'off' END AS split,
+       o.possessions,
+       o.points_for,
+       d.possessions_against,
+       d.points_against,
+       round(100.0 * o.points_for / o.possessions, 2) AS offensive_rating,
+       round(100.0 * d.points_against / d.possessions_against, 2)
+           AS defensive_rating,
+       round(100.0 * o.points_for / o.possessions
+           - 100.0 * d.points_against / d.possessions_against, 2) AS net_rating
+FROM offense o
+JOIN defense d USING (is_on)
+ORDER BY o.is_on DESC;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
+      <tool name="el_get_player_stats"><![CDATA[Resolve TJ Shorts and call with {"season":"E2024","player":"SHORTS, TJ","team":"PRS","per_game":true,"minutes_basis":"corrected"}.]]></tool>
+      <tool name="el_get_player_on_off"><![CDATA[Call with {"season":"E2024","player":"SHORTS, TJ","team":"PRS"}.]]></tool>
+    </tools_required>
+    <must_disclose>
+      Minutes are corrected, while points are the official box score. The
+      default population excludes 24 games. On/off is team context, not an
+      estimate of individual value, and the off split includes games he did
+      not play. The substitution-straddle convention and 6.10% all-E2024 rate
+      must accompany the lineup-based split.
+    </must_disclose>
+    <notes>
+      This catches the former IsPlaying participation bug, missing minutes
+      provenance, and the common error of treating on/off as player value.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server reproduced the corrected-minutes scoring line and both on/off splits.</tool_verification>
+  </evaluation>
+
+  <evaluation id="3" shape="caller-defined-clutch">
+    <question>
+      Define clutch as possessions starting in the last 120 seconds with the
+      score within 3 points. Among E2024 teams with at least 20 such
+      non-quarantined possessions, which offense was best, and how did that
+      rating compare with its full-season offense?
+    </question>
+    <expected_answer>
+      Fenerbahce Beko Istanbul (ULK) was best: 48 points on 31 qualifying
+      possessions, or 154.84 points per 100. Its full non-quarantined E2024
+      offensive rating was 119.21, so the clutch-window rating was 35.63 points
+      per 100 higher.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+WITH clutch AS (
+    SELECT p.offense_team_code AS team_code,
+           count(*) AS clutch_possessions,
+           sum(p.points_scored) AS clutch_points,
+           round(100.0 * sum(p.points_scored) / count(*), 2)
+               AS clutch_offensive_rating
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND NOT q.excluded_by_default
+      AND p.seconds_remaining_at_start <= 120
+      AND abs(p.margin_at_start) <= 3
+    GROUP BY p.offense_team_code
+    HAVING count(*) >= 20
+), season AS (
+    SELECT team_code,
+           round(100.0 * sum(points) / sum(possessions), 2)
+               AS season_offensive_rating
+    FROM v_team_game
+    WHERE season_code = 'E2024'
+      AND NOT excluded_by_default
+    GROUP BY team_code
+)
+SELECT ts.display_name,
+       c.*,
+       s.season_offensive_rating,
+       round(c.clutch_offensive_rating - s.season_offensive_rating, 2)
+           AS rating_change
+FROM clutch c
+JOIN season s USING (team_code)
+JOIN team_season ts
+  ON ts.season_code = 'E2024' AND ts.team_code = c.team_code
+ORDER BY c.clutch_offensive_rating DESC, c.team_code
+LIMIT 1;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
+      <tool name="el_get_possessions"><![CDATA[Call with {"season":"E2024","max_seconds_remaining":120,"max_margin":3,"aggregate":true}; retain teams with at least 20 possessions.]]></tool>
+      <tool name="el_get_team_stats"><![CDATA[Call with {"season":"E2024","team":"ULK"} for the season comparison.]]></tool>
+    </tools_required>
+    <must_disclose>
+      The caller supplied both thresholds: 120 seconds and 3 points. No built-in
+      clutch definition was used. The sample is only 31 possessions and is
+      noisy. The default population excludes 24 games.
+    </must_disclose>
+    <notes>
+      This catches hard-coded clutch definitions, filters applied to possession
+      end state instead of start state, and rankings that ignore the requested
+      minimum sample.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server reproduced the caller-defined clutch population, leader and season comparison.</tool_verification>
+  </evaluation>
+
+  <evaluation id="4" shape="four-factors-comparison">
+    <question>
+      Compare Panathinaikos and Olympiacos across non-quarantined E2024 games on
+      all four factors and offensive/defensive rating, then list every valid
+      E2024 meeting between them and its result.
+    </question>
+    <expected_answer>
+      Olympiacos: eFG 0.5637, turnover rate 0.1590, offensive-rebound rate
+      0.3180, free-throw rate 0.3581, offensive rating 120.30 and defensive
+      rating 114.02 over 37 included games. Panathinaikos: eFG 0.5791,
+      turnover rate 0.1642, offensive-rebound rate 0.3212, free-throw rate
+      0.3125, offensive rating 120.92 and defensive rating 115.24 over 37.
+      Panathinaikos led eFG, offensive rebounding and offense; Olympiacos had
+      the lower turnover rate, higher free-throw rate and better defense. The
+      valid meetings were game 70 on 2024-11-08 (Panathinaikos 89-94
+      Olympiacos), game 259 on 2025-03-14 (Olympiacos 76-74 Panathinaikos), and
+      game 329 on 2025-05-25 (Olympiacos 97-93 Panathinaikos). Olympiacos won
+      all three.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+SELECT team_code,
+       count(*) AS games,
+       round((sum(field_goals_made) + 0.5 * sum(three_pointers_made))::numeric
+           / sum(field_goals_attempted), 4) AS effective_fg_pct,
+       round(sum(turnovers)::numeric / sum(possessions), 4) AS turnover_rate,
+       round(sum(offensive_rebounds)::numeric
+           / (sum(offensive_rebounds) + sum(opponent_defensive_rebounds)), 4)
+           AS offensive_rebound_rate,
+       round(sum(free_throws_attempted)::numeric
+           / sum(field_goals_attempted), 4) AS free_throw_rate,
+       round(100.0 * sum(points) / sum(possessions), 2) AS offensive_rating,
+       round(100.0 * sum(opponent_points) / sum(opponent_possessions), 2)
+           AS defensive_rating
+FROM v_team_game
+WHERE season_code = 'E2024'
+  AND NOT excluded_by_default
+  AND team_code IN ('PAN', 'OLY')
+GROUP BY team_code
+ORDER BY team_code;
+
+SELECT gamecode,
+       utc_date::date AS game_date,
+       home_team_code,
+       home_score,
+       away_team_code,
+       away_score
+FROM v_game
+WHERE season_code = 'E2024'
+  AND NOT excluded_by_default
+  AND ((home_team_code = 'PAN' AND away_team_code = 'OLY')
+    OR (home_team_code = 'OLY' AND away_team_code = 'PAN'))
+ORDER BY utc_date, gamecode;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
+      <tool name="el_get_team_stats">Fetch the E2024 team table and compare PAN with OLY.</tool>
+      <tool name="el_find_games"><![CDATA[Call with {"season":"E2024","team":"PAN","opponent":"OLY"}.]]></tool>
+    </tools_required>
+    <must_disclose>
+      The team profiles use exact reconstructed possessions and official box
+      score counting statistics. Defensive rating uses the opponent's
+      possession denominator. The season comparison excludes 24 games by
+      default; all three listed meetings are non-quarantined. The winner of each
+      meeting is derived from the official final score, not from the source
+      schedule's winner field, which names the season champion in every row.
+    </must_disclose>
+    <notes>
+      This catches swapped factor formulas, incorrect defensive denominators,
+      and a game finder that silently misses the Final Four meeting.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server reproduced all four factors, both ratings and all three meetings. The automated gate then found that el_find_games served a null winner for every game; migration 0005 derives it from the official final score, and the gate now asserts all three meetings return OLY.</tool_verification>
+  </evaluation>
+
+  <evaluation id="5" shape="specific-game-breakdown">
+    <question>
+      In E2024 game 1, ALBA Berlin versus Panathinaikos, what were the exact
+      team possessions and ratings, and how did each team's possessions end?
+    </question>
+    <expected_answer>
+      Panathinaikos won 87-77. ALBA had 71 possessions, offensive rating
+      108.45 and defensive rating 126.09. Its endings were 24 defensive
+      rebounds, 2 ends of period, 4 made-free-throw endings worth 7 points, 30
+      made-shot endings worth 70, and 11 turnovers. Panathinaikos had 69
+      possessions, offensive rating 126.09 and defensive rating 108.45. Its
+      endings were 28 defensive rebounds, 5 made-free-throw endings worth 10
+      points, 32 made-shot endings worth 77, and 4 turnovers.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+SELECT g.gamecode,
+       g.home_team_code,
+       g.home_score,
+       g.away_team_code,
+       g.away_score,
+       t.team_code,
+       t.possessions,
+       round(100.0 * t.points / t.possessions, 2) AS offensive_rating,
+       round(100.0 * t.opponent_points / t.opponent_possessions, 2)
+           AS defensive_rating
+FROM v_game g
+JOIN v_team_game t USING (season_code, gamecode)
+WHERE g.season_code = 'E2024'
+  AND g.gamecode = 1
+ORDER BY t.is_home DESC;
+
+SELECT offense_team_code AS team_code,
+       end_reason,
+       count(*) AS possessions,
+       sum(points_scored) AS points
+FROM possession
+WHERE season_code = 'E2024'
+  AND gamecode = 1
+GROUP BY offense_team_code, end_reason
+ORDER BY offense_team_code, end_reason;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm the season and quality vocabulary.</tool>
+      <tool name="el_find_games"><![CDATA[Find the 2024-10-03 BER-PAN game and obtain gamecode 1.]]></tool>
+      <tool name="el_get_game"><![CDATA[Call with {"season":"E2024","gamecode":1}.]]></tool>
+      <tool name="el_get_possessions"><![CDATA[Fetch all gamecode 1 possession rows and group by offense_team_code and end_reason.]]></tool>
+    </tools_required>
+    <must_disclose>
+      Game 1 is not quarantined. Possessions are exact event-stream counts, not
+      a box score estimate. Defensive rating uses opponent possessions. Free
+      throw sequence position is inferred; and-one bonuses are credited back
+      to the made-shot possession and technical free throws are off-possession.
+    </must_disclose>
+    <notes>
+      This catches incorrect game resolution, totals that do not reconcile to
+      the ending bins, and treating the two teams as if they must have equal
+      possessions.
+    </notes>
+    <tool_verification status="passed">After the calendar-date predicate fix, the live stdio MCP server found game 1 with equal from_date and to_date bounds and reproduced both team summaries and every possession-ending bin. The SQL ground truth was not changed.</tool_verification>
+  </evaluation>
+
+  <evaluation id="6" shape="player-per-100-with-minutes-basis">
+    <question>
+      Who led the non-quarantined E2024 population in official points, what was
+      his scoring rate per 100 team possessions and corrected-minutes total,
+      and where did his team rank in offensive rating?
+    </question>
+    <expected_answer>
+      Kendrick Nunn (P012774, Panathinaikos) led with 726 official points in 36
+      included games. He scored 27.75 points per 100 Panathinaikos team
+      possessions and played 1,112.2 corrected minutes. Panathinaikos ranked
+      1st of 18 in offensive rating at 120.92 per 100 possessions.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+WITH player_totals AS (
+    SELECT b.player_id,
+           max(p.display_name) AS player_name,
+           max(b.team_code) AS team_code,
+           count(*) AS games,
+           sum(b.points) AS points,
+           round(sum(m.seconds_corrected)::numeric / 60.0, 1)
+               AS corrected_minutes,
+           round(100.0 * sum(b.points) / sum(tg.possessions), 2)
+               AS points_per_100_team_possessions
+    FROM raw_boxscore_player b
+    JOIN player p USING (player_id)
+    JOIN player_game_minutes m USING (season_code, gamecode, player_id)
+    JOIN v_team_game tg
+      ON tg.season_code = b.season_code
+     AND tg.gamecode = b.gamecode
+     AND tg.team_code = b.team_code
+    WHERE b.season_code = 'E2024'
+      AND m.seconds_official > 0
+      AND NOT tg.excluded_by_default
+    GROUP BY b.player_id
+), team_ranks AS (
+    SELECT team_code,
+           round(100.0 * sum(points) / sum(possessions), 2)
+               AS offensive_rating,
+           rank() OVER (
+               ORDER BY 100.0 * sum(points) / sum(possessions) DESC
+           ) AS offensive_rating_rank
+    FROM v_team_game
+    WHERE season_code = 'E2024'
+      AND NOT excluded_by_default
+    GROUP BY team_code
+)
+SELECT pt.*,
+       tr.offensive_rating,
+       tr.offensive_rating_rank
+FROM player_totals pt
+JOIN team_ranks tr USING (team_code)
+ORDER BY pt.points DESC, pt.player_id
+LIMIT 1;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
+      <tool name="el_get_player_stats"><![CDATA[Call with {"season":"E2024","minutes_basis":"corrected","limit":1} to find the scoring leader.]]></tool>
+      <tool name="el_get_team_stats">Rank all E2024 teams and locate PAN.</tool>
+    </tools_required>
+    <must_disclose>
+      The 726 points are official box score points; 1,112.2 minutes are
+      corrected reconstruction minutes. The per-100 denominator is
+      Panathinaikos team possessions while Nunn appeared, not player usage.
+      The default population excludes 24 games.
+    </must_disclose>
+    <notes>
+      This directly tests the Phase 7 participation fix: positive official
+      seconds, not the unreliable IsPlaying flag, define an appearance.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server reproduced the scoring leader, per-100 rate, corrected minutes, team rating and rank.</tool_verification>
+  </evaluation>
+
+  <evaluation id="7" shape="find-then-measure-highest-scoring-game">
+    <question>
+      Among non-quarantined E2024 games, which had the highest combined final
+      score? Give the winner's exact possessions and offensive rating, then
+      break down how that winner scored in the fourth quarter by made twos,
+      made threes and made free throws.
+    </question>
+    <expected_answer>
+      Game 185 on 2025-01-14, Real Madrid 116-113 Maccabi Tel Aviv, had the
+      highest combined score at 229 points. Real Madrid scored 116 points on 77
+      exact possessions, an offensive rating of 150.65. In the fourth quarter
+      Madrid made 6 two-pointers, 0 three-pointers and 13 free throws, totaling
+      25 points.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+WITH target AS (
+    SELECT *
+    FROM v_game
+    WHERE season_code = 'E2024'
+      AND NOT excluded_by_default
+    ORDER BY home_score + away_score DESC, gamecode
+    LIMIT 1
+)
+SELECT g.gamecode,
+       g.utc_date::date AS game_date,
+       g.home_team_code,
+       g.home_score,
+       g.away_team_code,
+       g.away_score,
+       t.team_code AS winner_team_code,
+       t.possessions,
+       round(100.0 * t.points / t.possessions, 2) AS winner_offensive_rating,
+       count(*) FILTER (
+           WHERE e.period = 4 AND e.playtype = '2FGM'
+             AND e.codeteam = t.team_code
+       ) AS q4_made_twos,
+       count(*) FILTER (
+           WHERE e.period = 4 AND e.playtype = '3FGM'
+             AND e.codeteam = t.team_code
+       ) AS q4_made_threes,
+       count(*) FILTER (
+           WHERE e.period = 4 AND e.playtype = 'FTM'
+             AND e.codeteam = t.team_code
+       ) AS q4_made_free_throws
+FROM target g
+JOIN v_team_game t
+  ON t.season_code = g.season_code
+ AND t.gamecode = g.gamecode
+ AND t.team_code = CASE
+       WHEN g.home_score > g.away_score THEN g.home_team_code
+       ELSE g.away_team_code
+     END
+LEFT JOIN game_event e
+  ON e.season_code = g.season_code AND e.gamecode = g.gamecode
+GROUP BY g.gamecode, g.utc_date, g.home_team_code, g.home_score,
+         g.away_team_code, g.away_score, t.team_code, t.possessions, t.points;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
+      <tool name="el_find_games">Page through all 306 default-covered games and find the maximum combined score.</tool>
+      <tool name="el_get_game"><![CDATA[Call with {"season":"E2024","gamecode":185}.]]></tool>
+      <tool name="el_get_play_by_play">For game 185 and period 4, call separately for 2FGM, 3FGM and FTM and count Real Madrid events.</tool>
+    </tools_required>
+    <must_disclose>
+      The search population excluded 24 quarantined games. Game 185 itself is
+      not quarantined. Possessions are exact and the rating is per 100. Event
+      rows must remain in ingest_index order; markertime and numberofplay are
+      not valid sort keys.
+    </must_disclose>
+    <notes>
+      This forces complete pagination before discovery, then crosses game,
+      possession and event tools. The zero made threes is deliberately hard to
+      guess from a 116-point final.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server paged all 306 included games, found game 185, and reproduced its efficiency and fourth-quarter scoring mix.</tool_verification>
+  </evaluation>
+
+  <evaluation id="8" shape="season-total-with-exclusion-disclosure">
+    <question>
+      Across the default-covered E2024 season, how many games, exact
+      possessions, possession points and substitution-straddling possessions
+      are represented, and which team played at the fastest one-team
+      possession pace?
+    </question>
+    <expected_answer>
+      The default-covered population contains 306 games, 44,301 exact
+      possessions and 50,968 points credited to those possessions. Of the
+      possessions, 2,687 straddled a substitution (6.07%). ALBA Berlin (BER)
+      had the highest one-team pace: 2,412 possessions in 32 included games,
+      or 75.38 possessions per game.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+WITH totals AS (
+    SELECT count(DISTINCT (p.season_code, p.gamecode)) AS games,
+           count(*) AS possessions,
+           sum(p.points_scored) AS points,
+           count(*) FILTER (WHERE p.straddles_substitution)
+               AS straddling_possessions,
+           round(100.0 * count(*) FILTER (WHERE p.straddles_substitution)
+               / count(*), 2) AS straddle_rate_pct
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND NOT q.excluded_by_default
+), excluded AS (
+    SELECT count(*) AS excluded_games
+    FROM game_quality
+    WHERE season_code = 'E2024'
+      AND excluded_by_default
+), pace AS (
+    SELECT team_code,
+           count(*) AS games,
+           sum(possessions) AS possessions,
+           round(sum(possessions)::numeric / count(*), 2)
+               AS possessions_per_game
+    FROM v_team_game
+    WHERE season_code = 'E2024'
+      AND NOT excluded_by_default
+    GROUP BY team_code
+    ORDER BY possessions_per_game DESC, team_code
+    LIMIT 1
+)
+SELECT totals.*,
+       excluded.excluded_games,
+       pace.team_code AS fastest_team,
+       pace.games AS fastest_team_games,
+       pace.possessions AS fastest_team_possessions,
+       pace.possessions_per_game
+FROM totals
+CROSS JOIN excluded
+CROSS JOIN pace;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Obtain the mandatory exclusion count and reasons.</tool>
+      <tool name="el_get_possessions"><![CDATA[Call with {"season":"E2024","aggregate":true}; sum every team row.]]></tool>
+      <tool name="el_get_team_stats">Rank all teams by possessions_per_game.</tool>
+    </tools_required>
+    <must_disclose>
+      Exactly 24 of 330 E2024 games are excluded by default, leaving 306. An
+      answer giving the totals without that exclusion count is wrong. The
+      straddle convention credits the whole possession to the lineup on court
+      when it started. The 6.07% rate is for the default-covered population;
+      the all-games published rate is 6.10%.
+    </must_disclose>
+    <notes>
+      This is the required disclosure evaluation. It also catches summing team
+      possessions as though one game possession were a shared row and catches
+      pace answers that double the one-team figure.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server reproduced all season totals, the 24-game exclusion, the straddle count and ALBA's pace. An initial evaluator mismatch was confirmed to be only JSON numeric-string typing.</tool_verification>
+  </evaluation>
+
+  <evaluation id="9" shape="player-lineup-and-on-off-chain">
+    <question>
+      For Shane Larkin at Anadolu Efes in non-quarantined E2024 games, which
+      lineup containing him had the best net rating among units with at least
+      50 offensive possessions, and what was Efes's on/off split for Larkin?
+    </question>
+    <expected_answer>
+      The best qualifying lineup was 3b9da9d95beb1c909213b98e708fb229: Shane
+      Larkin, Jordan Nwora, Ercan Osmani, Vincent Poirier and Darius Thompson.
+      It scored 94 points on 74 possessions (127.03 per 100) and allowed 79 on
+      76 (103.95 per 100), net +23.08. With Larkin on court, Efes scored 1,531
+      in 1,276 possessions and allowed 1,410 in 1,259: ratings 119.98 offense,
+      111.99 defense, +7.99 net. Off court, Efes scored 1,682 in 1,443 and
+      allowed 1,683 in 1,467: ratings 116.56 offense, 114.72 defense, +1.84 net.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+WITH target AS (
+    SELECT player_id FROM player WHERE display_name = 'LARKIN, SHANE'
+), target_lineups AS (
+    SELECT l.lineup_id
+    FROM lineup l
+    CROSS JOIN target t
+    WHERE t.player_id IN (
+        l.player_id_1, l.player_id_2, l.player_id_3,
+        l.player_id_4, l.player_id_5
+    )
+      AND l.team_code = 'IST'
+), offense AS (
+    SELECT offense_lineup_id AS lineup_id,
+           count(*) AS possessions,
+           sum(points_scored) AS points_for
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND NOT q.excluded_by_default
+    GROUP BY 1
+), defense AS (
+    SELECT defense_lineup_id AS lineup_id,
+           count(*) AS possessions_against,
+           sum(points_scored) AS points_against
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND NOT q.excluded_by_default
+    GROUP BY 1
+)
+SELECT l.lineup_id,
+       string_agg(pl.display_name, ' | ' ORDER BY pl.display_name) AS players,
+       o.possessions,
+       o.points_for,
+       d.possessions_against,
+       d.points_against,
+       round(100.0 * o.points_for / o.possessions, 2) AS offensive_rating,
+       round(100.0 * d.points_against / d.possessions_against, 2)
+           AS defensive_rating,
+       round(100.0 * o.points_for / o.possessions
+           - 100.0 * d.points_against / d.possessions_against, 2) AS net_rating
+FROM target_lineups tl
+JOIN lineup l USING (lineup_id)
+JOIN offense o USING (lineup_id)
+JOIN defense d USING (lineup_id)
+JOIN LATERAL (
+    VALUES (l.player_id_1), (l.player_id_2), (l.player_id_3),
+           (l.player_id_4), (l.player_id_5)
+) ids(player_id) ON true
+JOIN player pl USING (player_id)
+WHERE o.possessions >= 50
+GROUP BY l.lineup_id, o.possessions, o.points_for,
+         d.possessions_against, d.points_against
+ORDER BY net_rating DESC, l.lineup_id
+LIMIT 1;
+
+WITH target AS (
+    SELECT player_id FROM player WHERE display_name = 'LARKIN, SHANE'
+), player_lineups AS (
+    SELECT l.lineup_id
+    FROM lineup l
+    CROSS JOIN target t
+    WHERE t.player_id IN (
+        l.player_id_1, l.player_id_2, l.player_id_3,
+        l.player_id_4, l.player_id_5
+    )
+      AND l.team_code = 'IST'
+), offense AS (
+    SELECT p.offense_lineup_id IN (SELECT lineup_id FROM player_lineups) AS is_on,
+           count(*) AS possessions,
+           sum(p.points_scored) AS points_for
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND p.offense_team_code = 'IST'
+      AND NOT q.excluded_by_default
+    GROUP BY 1
+), defense AS (
+    SELECT p.defense_lineup_id IN (SELECT lineup_id FROM player_lineups) AS is_on,
+           count(*) AS possessions_against,
+           sum(p.points_scored) AS points_against
+    FROM possession p
+    JOIN game_quality q USING (season_code, gamecode)
+    WHERE p.season_code = 'E2024'
+      AND p.defense_team_code = 'IST'
+      AND NOT q.excluded_by_default
+    GROUP BY 1
+)
+SELECT CASE WHEN o.is_on THEN 'on' ELSE 'off' END AS split,
+       o.possessions,
+       o.points_for,
+       d.possessions_against,
+       d.points_against,
+       round(100.0 * o.points_for / o.possessions, 2) AS offensive_rating,
+       round(100.0 * d.points_against / d.possessions_against, 2)
+           AS defensive_rating,
+       round(100.0 * o.points_for / o.possessions
+           - 100.0 * d.points_against / d.possessions_against, 2) AS net_rating
+FROM offense o
+JOIN defense d USING (is_on)
+ORDER BY o.is_on DESC;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
+      <tool name="el_get_player_stats">Resolve Shane Larkin and confirm his Efes team code.</tool>
+      <tool name="el_get_lineup_stats"><![CDATA[Call with {"season":"E2024","team":"IST","contains_player":"LARKIN, SHANE","min_possessions":50}.]]></tool>
+      <tool name="el_get_player_on_off"><![CDATA[Call with {"season":"E2024","player":"LARKIN, SHANE","team":"IST"}.]]></tool>
+    </tools_required>
+    <must_disclose>
+      The default population excludes 24 games. The qualifying lineup has only
+      74 offensive possessions, so it needs a small-sample warning. Lineup and
+      on/off results use the possession-start straddle convention and its 6.10%
+      all-E2024 measured rate. On/off is team context, not Larkin's individual
+      value.
+    </must_disclose>
+    <notes>
+      This is a three-stage identity-to-lineup-to-on/off chain and catches
+      accidental mixing of the Efes and Paris team codes.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server reproduced Larkin's best qualifying lineup and both Efes on/off splits.</tool_verification>
+  </evaluation>
+
+  <evaluation id="10" shape="find-then-measure-source-order-sequence">
+    <question>
+      Find the closest non-quarantined E2024 meeting between Panathinaikos and
+      Fenerbahce, then report its final five scoring events in source order and
+      the final score.
+    </question>
+    <expected_answer>
+      The closest valid meeting was game 220 on 2025-02-04, Panathinaikos 91-90
+      Fenerbahce. The final five scoring events in ingest order were: index 539,
+      1:03 Q4, Kostas Sloukas free throw for Panathinaikos, 88-88; index 542,
+      0:43, Nigel Hayes-Davis two-pointer for Fenerbahce, 88-90; index 567,
+      0:11, Sloukas free throw, 89-90; index 568, 0:11, Sloukas free throw,
+      90-90; index 576, 0:00, Kendrick Nunn free throw, 91-90.
+    </expected_answer>
+    <ground_truth_sql><![CDATA[
+WITH target AS (
+    SELECT *
+    FROM v_game
+    WHERE season_code = 'E2024'
+      AND NOT excluded_by_default
+      AND ((home_team_code = 'PAN' AND away_team_code = 'ULK')
+        OR (home_team_code = 'ULK' AND away_team_code = 'PAN'))
+    ORDER BY abs(home_score - away_score), utc_date, gamecode
+    LIMIT 1
+), scoring AS (
+    SELECT e.ingest_index,
+           e.period,
+           e.markertime,
+           e.playtype,
+           p.display_name AS player_name,
+           e.codeteam,
+           e.score_home,
+           e.score_away,
+           row_number() OVER (ORDER BY e.ingest_index DESC) AS reverse_rank
+    FROM game_event e
+    JOIN target g USING (season_code, gamecode)
+    LEFT JOIN player p USING (player_id)
+    WHERE e.playtype IN ('2FGM', '3FGM', 'FTM')
+)
+SELECT g.gamecode,
+       g.utc_date::date AS game_date,
+       g.home_team_code,
+       g.home_score,
+       g.away_team_code,
+       g.away_score,
+       s.ingest_index,
+       s.period,
+       s.markertime,
+       s.playtype,
+       s.player_name,
+       s.codeteam,
+       s.score_home,
+       s.score_away
+FROM target g
+JOIN scoring s ON s.reverse_rank <= 5
+ORDER BY s.ingest_index;
+    ]]></ground_truth_sql>
+    <tools_required>
+      <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
+      <tool name="el_find_games"><![CDATA[Call with {"season":"E2024","team":"PAN","opponent":"ULK"}; compare final margins.]]></tool>
+      <tool name="el_get_game"><![CDATA[Call with {"season":"E2024","gamecode":220}.]]></tool>
+      <tool name="el_get_play_by_play">For game 220, fetch 2FGM, 3FGM and FTM rows, merge them only by ingest_index, and take the final five.</tool>
+    </tools_required>
+    <must_disclose>
+      The discovery population excludes 24 quarantined games, and game 220 is
+      not quarantined. Source order is ingest_index only. The two Sloukas free
+      throws share a clock reading and must remain in API array order; sorting
+      by markertime or numberofplay is wrong.
+    </must_disclose>
+    <notes>
+      This catches the project's highest-risk silent failure: re-sorting the
+      event stream. It also checks team resolution, game discovery and merging
+      three playtype-specific result sets without losing tied timestamps.
+    </notes>
+    <tool_verification status="passed">The live stdio MCP server found game 220 and reproduced all five final scoring events in ingest_index order.</tool_verification>
+  </evaluation>
+</evaluations>

@@ -7,11 +7,18 @@ This is **not** an API wrapper. Thin wrappers already exist. The value is in the
 derived layer: possessions counted exactly from the event stream, four factors,
 and lineup-level on/off metrics reconstructed play by play.
 
-**Status: pre-release.** E2024 is loaded and reconciled in the private raw
-warehouse. The 19-season physical-size projection exceeds the free-tier budget,
-so historical backfill and Phase 5 are paused for an owner decision. The full
-measurement is in [`docs/PHASE_4_REPORT.md`](docs/PHASE_4_REPORT.md), and the
-phase sequence is in [`ROADMAP.md`](ROADMAP.md).
+**Status: pre-release, all eight phases complete for E2024.** The season is
+loaded, reconciled and reconstructed: 176,483 events, 5,985 lineups, 47,831
+exactly counted possessions, nine read-only MCP tools over six versioned views,
+and ten published evaluations that a live gate re-earns on demand.
+
+Two things are deliberately unfinished. The physical-size projection exceeds the
+free-tier budget, so no historical backfill has run and no hot window has been
+chosen — see [`docs/PHASE_4_REPORT.md`](docs/PHASE_4_REPORT.md). And 24 of 330
+games are quarantined by validation invariants and excluded from every default
+answer, 16 of them by a named possession residual that is measured but not yet
+explained. Both are disclosed by the server rather than smoothed over. The phase
+sequence and the remaining open decisions are in [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
@@ -24,8 +31,10 @@ source data lie, and proving it rather than assuming it.
 | Document | What it holds |
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | The rules. Event ordering, data handling, correctness requirements. |
-| [`DECISIONS.md`](DECISIONS.md) | Sixteen settled decisions with the measurement behind each. |
+| [`DECISIONS.md`](DECISIONS.md) | Nineteen settled decisions with the measurement behind each. |
 | [`ROADMAP.md`](ROADMAP.md) | Phase sequence and the gate that opens each phase. |
+| [`evaluation.xml`](evaluation.xml) | Ten questions the server must answer, with ground truth and required disclosures. |
+| [`docs/`](docs/) | One report per phase, each recording what its gate proved. |
 | [`exploration/FINDINGS.md`](exploration/FINDINGS.md) | Single-game API reconnaissance. |
 | [`exploration/SEASON_SWEEP.md`](exploration/SEASON_SWEEP.md) | Full-season validation across 330 games and 176,483 events. |
 | [`exploration/SCHEMA_PROPOSAL.md`](exploration/SCHEMA_PROPOSAL.md) | The schema, with what it makes hard as well as easy. |
@@ -52,10 +61,12 @@ source data lie, and proving it rather than assuming it.
 ## Layout
 
 ```
-src/euroleague/     the package
+src/euroleague/     the package, including the MCP server under mcp/
+migrations/         numbered SQL, each with a matching down
 tests/              tests, and the committed fixture games
 tests/fixtures/     nine games, each carrying one known defect
-scripts/            fixture builder
+scripts/            fixture builder, archive fetcher, migration gate, MCP entry point
+docs/               one report per phase
 exploration/        reconnaissance, kept as the record of how the findings were produced
 ```
 
@@ -74,8 +85,13 @@ python -m venv .venv
 .venv/Scripts/pytest
 ```
 
-The response cache is not committed — one season is 53 MB. Tests run against the
-fixtures and need no network and no database.
+The response cache is not committed — one season is 53 MB. The default run needs
+no network and no database: 280 tests against the committed fixtures. The gates
+that read the live warehouse are excluded from it and opted into explicitly:
+
+```sh
+.venv/Scripts/pytest -m warehouse
+```
 
 ## Running the MCP server
 
@@ -102,7 +118,29 @@ To use it from Claude Desktop, add to `claude_desktop_config.json`:
 Nine tools, all read-only, all prefixed `el_`. Call `el_describe_warehouse`
 first: it reports which seasons are loaded and which games are excluded. Every
 response states its coverage, its exclusions, and whether minutes are raw or
-corrected.
+corrected. That last one is enforced rather than remembered: the response builder
+refuses to return a minute-derived value that does not declare its basis.
+
+## The evaluations
+
+[`evaluation.xml`](evaluation.xml) holds ten questions of the kind this warehouse
+exists to answer — the best five-man unit above a possession floor, a
+caller-defined clutch window, a player's on/off split, the final five scoring
+events of the closest game in source order. Each names the tools it requires, the
+ground-truth SQL that produced its answer without calling a tool, and the caveats
+an honest answer has to carry.
+
+They are not a one-time claim. `tests/test_phase_8_evaluations.py` re-earns every
+answer along two independent paths — the recorded SQL and the tool handlers a
+model would actually call — and both must agree with the published number:
+
+```sh
+.venv/Scripts/pytest -m warehouse tests/test_phase_8_evaluations.py
+```
+
+Writing that gate found a rounding error in a published rate and a `null` winner
+served for all 330 games. [`docs/PHASE_8_REPORT.md`](docs/PHASE_8_REPORT.md) has
+both.
 
 ## Licence
 

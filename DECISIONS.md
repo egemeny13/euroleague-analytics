@@ -519,6 +519,42 @@ possessions, pace, lineups, on/off, clutch, and every per-100 rate.
 
 ---
 
+## 19. The game winner is derived from the official final score, in the view
+
+`raw_game.winner_team_code` is null for all 330 E2024 games, and that is correct:
+the source schedule repeats the season champion (`ULK`) in every row, naming a
+team that did not play in 291 of them and disagreeing with the final score in 302.
+Phase 4 stored null rather than a value known to be false.
+
+The Phase 8 evaluations found that `v_game` then passed those 330 nulls straight
+through to `el_find_games`, so a model asking who won a game was handed a blank
+field with the two final scores sitting beside it.
+
+**Why derive it.** The winner is not an inference. Both scores come from the
+official box score, and all 660 E2024 team-game lines reconcile against
+euroleague.net with zero disagreements, so "whoever scored more points won" adds
+no assumption. It is also the rule evaluation 7's own ground-truth SQL already
+used. The raw layer keeps its null; the derived layer computes. That is the
+division of labour the whole schema is built on.
+
+**Condition.** The derivation lives in `v_game` and nowhere else, so there is one
+reviewable definition. A tie yields null rather than a team, and the Phase 8 gate
+asserts E2024 has no ties, no winner who did not play in the game, and no winner
+disagreeing with the score. `raw_game.winner_team_code` must never be
+back-filled from this.
+
+**Gate.** The empty-database migration gate of item 10 cannot be re-run against a
+warehouse holding data. For a `create or replace view` that writes no row and
+drops no table, the honest equivalent was run in place on 2026-08-13: up, down,
+up. The column signature was identical at every step, the down migration restored
+all 330 nulls exactly, and the second up was indistinguishable from the first.
+That equivalence holds only for view-only migrations; a table change still needs
+a fresh empty database.
+
+**Timing.** Settled and implemented 2026-08-13, migration `0005_game_winner`.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```
