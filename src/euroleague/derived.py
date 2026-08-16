@@ -1,4 +1,4 @@
-"""Build migration-shaped rows for the E2024 derived lineup layer."""
+"""Build migration-shaped rows for one explicitly selected season."""
 
 from __future__ import annotations
 
@@ -12,12 +12,11 @@ from euroleague.lineups import COACH_IDS
 from euroleague.possessions import count_game_possessions
 from euroleague.validation import validate_season
 
-PHASE_5_SEASON = "E2024"
 LINEUP_ID_HEX_CHARACTERS = 32
 
 
-class E2024OnlyError(ValueError):
-    """Raised before Phase 5 can read or write a season outside its scope."""
+class SeasonScopeError(ValueError):
+    """Raised before derived work can mix rows from different seasons."""
 
 
 @dataclass(frozen=True)
@@ -306,16 +305,14 @@ def _trim(value: Any) -> str | None:
     return text or None
 
 
-def _assert_e2024(season_code: str) -> None:
-    if season_code != PHASE_5_SEASON:
-        raise E2024OnlyError(
-            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
-        )
+def _assert_season_code(season_code: str) -> None:
+    if not season_code or season_code != season_code.strip():
+        raise SeasonScopeError(f"Expected a non-blank trimmed season; received {season_code!r}.")
 
 
 def build_dimensions(cache: ResponseCache, season_code: str) -> DimensionRows:
     """Read cached Boxscores and schedule facts into the three dimension tables."""
-    _assert_e2024(season_code)
+    _assert_season_code(season_code)
     schedule = cache.read_schedule_json(season_code)
     players: dict[str, str | None] = {}
     teams: dict[str, tuple[str, str | None]] = {}
@@ -360,7 +357,7 @@ def _corrected_elapsed_seconds(event: EventRecord, correction_applied: bool) -> 
 
 def build_game_events(cache: ResponseCache, season_code: str) -> tuple[GameEventRow, ...]:
     """Persist Phase 3 event results one-for-one, without lineup or possession fields."""
-    _assert_e2024(season_code)
+    _assert_season_code(season_code)
     validation = validate_season(cache, season_code)
     schedule = cache.read_schedule_json(season_code)
     competition_by_game = {
@@ -525,7 +522,7 @@ def _usage_from_segments(segments: tuple[StableSegment, ...]) -> LineupUsage:
 
 def discover_lineup_usage(cache: ResponseCache, season_code: str) -> LineupUsage:
     """Count stable lineup values and references without creating lineup identifiers."""
-    _assert_e2024(season_code)
+    _assert_season_code(season_code)
     validation = validate_season(cache, season_code)
     schedule = cache.read_schedule_json(season_code)
     return _usage_from_segments(_stable_segments(validation, schedule))
@@ -722,7 +719,7 @@ def _game_quality_rows(
 
 def build_remaining_rows(cache: ResponseCache, season_code: str) -> RemainingDerivedRows:
     """Build all post-decision Phase 5 rows while leaving possessions empty."""
-    _assert_e2024(season_code)
+    _assert_season_code(season_code)
     validation = validate_season(cache, season_code)
     schedule = cache.read_schedule_json(season_code)
     segments = _stable_segments(validation, schedule)

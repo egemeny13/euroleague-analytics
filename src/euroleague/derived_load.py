@@ -1,4 +1,4 @@
-"""Transactional PostgreSQL loader for the E2024 Phase 5 rows."""
+"""Transactional PostgreSQL loader for one explicitly selected season."""
 
 from __future__ import annotations
 
@@ -11,13 +11,12 @@ from euroleague.derived import (
     GAME_QUALITY_COLUMNS,
     LINEUP_COLUMNS,
     LINEUP_STINT_COLUMNS,
-    PHASE_5_SEASON,
     PLAYER_GAME_MINUTES_COLUMNS,
     POSSESSION_COLUMNS,
     DimensionRows,
-    E2024OnlyError,
     GameEventRow,
     RemainingDerivedRows,
+    SeasonScopeError,
 )
 
 _DIMENSION_TABLES = (
@@ -54,22 +53,20 @@ class LineupCollisionError(RuntimeError):
 
 
 def _assert_season_code(season_code: str) -> None:
-    if season_code != PHASE_5_SEASON:
-        raise E2024OnlyError(
-            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
-        )
+    if not season_code or season_code != season_code.strip():
+        raise SeasonScopeError(f"Expected a non-blank trimmed season; received {season_code!r}.")
 
 
-def _assert_dimension_scope(rows: DimensionRows) -> None:
-    invalid = {row[0] for row in rows.team_seasons if row[0] != PHASE_5_SEASON}
+def _assert_dimension_scope(rows: DimensionRows, expected_season: str) -> None:
+    invalid = {row[0] for row in rows.team_seasons if row[0] != expected_season}
     if invalid:
-        raise E2024OnlyError(
-            "E2024 is the only allowed season in Phase 5; "
-            f"found dimension rows for {sorted(invalid)}."
+        raise SeasonScopeError(
+            f"Season scope mismatch: expected {expected_season}; "
+            f"received dimension rows for {sorted(invalid)}."
         )
 
 
-def _assert_remaining_scope(rows: RemainingDerivedRows) -> None:
+def _assert_remaining_scope(rows: RemainingDerivedRows, expected_season: str) -> None:
     invalid: set[str] = set()
     for row_set in (
         rows.stints,
@@ -78,11 +75,11 @@ def _assert_remaining_scope(rows: RemainingDerivedRows) -> None:
         rows.game_qualities,
         rows.possessions,
     ):
-        invalid.update(row.season_code for row in row_set if row.season_code != PHASE_5_SEASON)
+        invalid.update(row.season_code for row in row_set if row.season_code != expected_season)
     if invalid:
-        raise E2024OnlyError(
-            "E2024 is the only allowed season in Phase 5; "
-            f"found derived rows for {sorted(invalid)}."
+        raise SeasonScopeError(
+            f"Season scope mismatch: expected {expected_season}; "
+            f"received derived rows for {sorted(invalid)}."
         )
 
 
@@ -96,9 +93,10 @@ def _copy_rows(cursor: Any, table: str, columns: tuple[str, ...], rows: Iterable
     return count
 
 
-def load_dimensions(connection: Any, rows: DimensionRows) -> dict[str, int]:
+def load_dimensions(connection: Any, rows: DimensionRows, season_code: str) -> dict[str, int]:
     """Upsert all three dimension tables before any Phase 5 fact table."""
-    _assert_dimension_scope(rows)
+    _assert_season_code(season_code)
+    _assert_dimension_scope(rows, season_code)
     source_rows = {
         "player": rows.players,
         "team": rows.teams,
@@ -146,12 +144,13 @@ def load_game_events(
     rows: tuple[GameEventRow, ...],
     season_code: str,
 ) -> dict[str, int]:
-    """Replace the E2024 one-to-one event layer before lineup identities exist."""
+    """Replace one season's event layer before lineup identities exist."""
     _assert_season_code(season_code)
-    invalid = {row.season_code for row in rows if row.season_code != PHASE_5_SEASON}
+    invalid = {row.season_code for row in rows if row.season_code != season_code}
     if invalid:
-        raise E2024OnlyError(
-            f"E2024 is the only allowed season in Phase 5; found event rows for {sorted(invalid)}."
+        raise SeasonScopeError(
+            f"Season scope mismatch: expected {season_code}; "
+            f"received event rows for {sorted(invalid)}."
         )
 
     with connection.transaction(), connection.cursor() as cursor:
@@ -159,6 +158,11 @@ def load_game_events(
             "CREATE TEMP TABLE stage_game_event (LIKE game_event INCLUDING DEFAULTS) ON COMMIT DROP"
         )
         count = _copy_rows(cursor, "stage_game_event", GAME_EVENT_COLUMNS, rows)
+        cursor.execute(
+            "CREATE UNIQUE INDEX stage_game_event_identity_idx ON stage_game_event "
+            "(season_code, gamecode, ingest_index)"
+        )
+        cursor.execute("ANALYZE stage_game_event")
         column_sql = ", ".join(GAME_EVENT_COLUMNS)
         refresh_sql = ", ".join(
             f"{column} = EXCLUDED.{column}" for column in _GAME_EVENT_REFRESH_COLUMNS
@@ -197,7 +201,10 @@ def assert_pre_lineup_safe(
     if rebuilding_possessions:
         return
     with connection.cursor() as cursor:
-        cursor.execute("SELECT count(*) FROM possession")
+        cursor.execute(
+            "SELECT count(*) FROM possession WHERE season_code = %s",
+            (season_code,),
+        )
         possession_rows = int(cursor.fetchone()[0])
     if possession_rows:
         raise Phase5StateError(
@@ -216,15 +223,15 @@ def load_phase5_base_rows(
 ) -> dict[str, int]:
     """Refresh dimensions first, then events without clearing derived attachments."""
     _assert_season_code(season_code)
-    _assert_dimension_scope(dimensions)
-    invalid_events = {row.season_code for row in events if row.season_code != PHASE_5_SEASON}
+    _assert_dimension_scope(dimensions, season_code)
+    invalid_events = {row.season_code for row in events if row.season_code != season_code}
     if invalid_events:
-        raise E2024OnlyError(
-            "E2024 is the only allowed season in Phase 5; "
-            f"found event rows for {sorted(invalid_events)}."
+        raise SeasonScopeError(
+            f"Season scope mismatch: expected {season_code}; "
+            f"received event rows for {sorted(invalid_events)}."
         )
     assert_pre_lineup_safe(connection, season_code, rebuilding_possessions=rebuilding_possessions)
-    counts = load_dimensions(connection, dimensions)
+    counts = load_dimensions(connection, dimensions, season_code)
     counts.update(load_game_events(connection, events, season_code))
     return counts
 
@@ -234,9 +241,9 @@ def load_remaining_rows(
     rows: RemainingDerivedRows,
     season_code: str,
 ) -> dict[str, int]:
-    """Replace every post-decision E2024 table and event attachment atomically."""
+    """Replace one season's post-decision tables and event attachments atomically."""
     _assert_season_code(season_code)
-    _assert_remaining_scope(rows)
+    _assert_remaining_scope(rows, season_code)
     row_sets = (
         ("lineup", "stage_lineup", LINEUP_COLUMNS, rows.lineups),
         (

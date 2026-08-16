@@ -6,7 +6,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from euroleague.derived import DimensionRows, E2024OnlyError, GameEventRow, build_remaining_rows
+from euroleague.derived import DimensionRows, GameEventRow, SeasonScopeError, build_remaining_rows
 from euroleague.derived_load import (
     LineupCollisionError,
     Phase5StateError,
@@ -53,7 +53,7 @@ class Cursor:
     def fetchone(self):
         if "JOIN stage_lineup" in self.last_query:
             return (self.connection.lineup_collisions,)
-        if self.last_query == "SELECT count(*) FROM possession":
+        if self.last_query == "SELECT count(*) FROM possession WHERE season_code = %s":
             return (self.connection.possession_rows,)
         return self.connection.safety_counts
 
@@ -95,11 +95,11 @@ def test_dimensions_load_in_foreign_key_order_in_one_transaction() -> None:
     rows = DimensionRows(
         players=(("P1", "One"),),
         teams=(("AAA",),),
-        team_seasons=(("E2024", "AAA", "E", "Alpha"),),
+        team_seasons=(("E2025", "AAA", "E", "Alpha"),),
     )
     connection = Connection()
 
-    counts = load_dimensions(connection, rows)
+    counts = load_dimensions(connection, rows, "E2025")
 
     assert counts == {"player": 1, "team": 1, "team_season": 1}
     assert connection.transactions_started == 1
@@ -160,6 +160,14 @@ def test_game_events_replace_only_e2024_after_dimensions_are_available() -> None
     inserts = [query for query, _ in connection.executions if query.startswith("INSERT INTO")]
     assert len(inserts) == 1
     assert inserts[0].startswith("INSERT INTO game_event")
+    queries = [query for query, _ in connection.executions]
+    index_index = queries.index(
+        "CREATE UNIQUE INDEX stage_game_event_identity_idx ON stage_game_event "
+        "(season_code, gamecode, ingest_index)"
+    )
+    analyze_index = queries.index("ANALYZE stage_game_event")
+    delete_index = queries.index(deletes[0][0])
+    assert index_index < analyze_index < delete_index
 
 
 def test_base_loader_commits_dimensions_before_game_events() -> None:
@@ -223,8 +231,8 @@ def test_base_loader_refuses_an_existing_possession_row_unless_it_is_being_rebui
     load_phase5_base_rows(connection, empty, (), "E2024", rebuilding_possessions=True)
 
 
-def test_base_loader_rejects_every_non_e2024_value_before_any_write() -> None:
-    """Break caught: a bad argument or nested row commits dimensions before rejection."""
+def test_base_loader_rejects_every_value_outside_the_explicit_target_before_any_write() -> None:
+    """Break caught: a nested row commits dimensions before its season mismatch is found."""
     dimensions = DimensionRows(
         players=(("P1", "One"),),
         teams=(("AAA",),),
@@ -232,8 +240,8 @@ def test_base_loader_rejects_every_non_e2024_value_before_any_write() -> None:
     )
     connection = Connection()
 
-    with pytest.raises(E2024OnlyError):
-        load_phase5_base_rows(connection, dimensions, (), "E2023")
+    with pytest.raises(SeasonScopeError, match=r"expected E2025.*received.*E2023"):
+        load_phase5_base_rows(connection, dimensions, (), "E2025")
 
     assert connection.transactions_started == 0
     assert connection.copied == {}
@@ -344,7 +352,9 @@ def test_remaining_loader_rolls_back_if_selected_id_collides_with_stored_unit(
     assert connection.transactions_rolled_back == 1
 
 
-def test_remaining_loader_rejects_nested_non_e2024_rows_before_any_write(fixture_cache) -> None:
+def test_remaining_loader_rejects_nested_rows_outside_the_target_before_any_write(
+    fixture_cache,
+) -> None:
     """Break caught: the argument is E2024 but a staged fact belongs to another season."""
     rows = build_remaining_rows(fixture_cache, "E2024")
     rows = rows.__class__(
@@ -356,8 +366,22 @@ def test_remaining_loader_rejects_nested_non_e2024_rows_before_any_write(fixture
     )
     connection = Connection()
 
-    with pytest.raises(E2024OnlyError):
+    with pytest.raises(SeasonScopeError):
         load_remaining_rows(connection, rows, "E2024")
+
+    assert connection.transactions_started == 0
+    assert connection.copied == {}
+
+
+def test_remaining_loader_rejects_rows_outside_the_callers_explicit_season(
+    fixture_cache,
+) -> None:
+    """Break caught: one season's facts are loaded into another season's rebuild."""
+    rows = build_remaining_rows(fixture_cache, "E2024")
+    connection = Connection()
+
+    with pytest.raises(SeasonScopeError, match=r"expected E2025.*received.*E2024"):
+        load_remaining_rows(connection, rows, "E2025")
 
     assert connection.transactions_started == 0
     assert connection.copied == {}

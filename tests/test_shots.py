@@ -338,18 +338,22 @@ def test_e2024_shots_join_to_events_only_on_the_exact_play_number() -> None:
 
 
 @pytest.mark.full_season
-def test_e2024_two_and_three_point_splits_match_every_official_box_score() -> None:
+@pytest.mark.parametrize(("season_code", "expected_games"), [("E2024", 330), ("E2025", 402)])
+def test_two_and_three_point_splits_match_every_official_box_score(
+    season_code: str, expected_games: int
+) -> None:
     """Break caught: any team's 2P/3P made or attempted total differs from publication."""
     mismatches = []
     team_games_checked = 0
     values_checked = 0
 
-    for game in _e2024_schedule():
+    schedule = FULL_CACHE.read_schedule_json(season_code).get("data") or []
+    for game in schedule:
         gamecode = int(game["gameCode"])
-        points = FULL_CACHE.read_json("E2024", "Points", gamecode)
-        boxscore = FULL_CACHE.read_json("E2024", "Boxscore", gamecode)
+        points = FULL_CACHE.read_json(season_code, "Points", gamecode)
+        boxscore = FULL_CACHE.read_json(season_code, "Boxscore", gamecode)
         observed = defaultdict(Counter)
-        for shot in raw_parse.parse_shots("E2024", gamecode, "E", points):
+        for shot in raw_parse.parse_shots(season_code, gamecode, "E", points):
             if shot.action_code in {"2FGM", "2FGA"}:
                 observed[shot.team_code]["attempted_2"] += 1
                 observed[shot.team_code]["made_2"] += shot.action_code == "2FGM"
@@ -376,9 +380,51 @@ def test_e2024_two_and_three_point_splits_match_every_official_box_score() -> No
                 if actual[metric] != expected_value:
                     mismatches.append((gamecode, team_code, metric, expected_value, actual[metric]))
 
-    assert team_games_checked == 660
-    assert values_checked == 2_640
+    assert len(schedule) == expected_games
+    assert team_games_checked == expected_games * 2
+    assert values_checked == expected_games * 2 * 4
     assert not mismatches, f"Official 2P/3P mismatches: {mismatches}"
+
+
+@pytest.mark.full_season
+@pytest.mark.parametrize(("season_code", "expected_games"), [("E2024", 330), ("E2025", 402)])
+def test_free_throws_from_events_match_every_official_box_score(
+    season_code: str, expected_games: int
+) -> None:
+    """Break caught: missed free throws disappear because Points defines the population."""
+    mismatches = []
+    team_games_checked = 0
+    schedule = FULL_CACHE.read_schedule_json(season_code).get("data") or []
+
+    for game in schedule:
+        gamecode = int(game["gameCode"])
+        play_by_play = FULL_CACHE.read_json(season_code, "PlaybyPlay", gamecode)
+        boxscore = FULL_CACHE.read_json(season_code, "Boxscore", gamecode)
+        observed = defaultdict(Counter)
+        for event in raw_parse.parse_events(season_code, gamecode, "E", play_by_play):
+            if event.playtype == "FTM":
+                observed[event.codeteam]["made"] += 1
+                observed[event.codeteam]["attempted"] += 1
+            elif event.playtype == "FTA":
+                observed[event.codeteam]["attempted"] += 1
+
+        for team in boxscore.get("Stats") or []:
+            total = team.get("totr") or {}
+            players = team.get("PlayersStats") or []
+            team_code = str((players[0] if players else {}).get("Team") or "").strip()
+            expected = {
+                "made": int(total.get("FreeThrowsMade") or 0),
+                "attempted": int(total.get("FreeThrowsAttempted") or 0),
+            }
+            actual = {metric: observed[team_code][metric] for metric in expected}
+            team_games_checked += 1
+            for metric, expected_value in expected.items():
+                if actual[metric] != expected_value:
+                    mismatches.append((gamecode, team_code, metric, expected_value, actual[metric]))
+
+    assert len(schedule) == expected_games
+    assert team_games_checked == expected_games * 2
+    assert not mismatches, f"Official free-throw mismatches: {mismatches}"
 
 
 @pytest.mark.full_season

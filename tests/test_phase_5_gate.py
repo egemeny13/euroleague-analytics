@@ -111,6 +111,47 @@ def test_full_compaction_targets_each_public_table_then_rebuilds_its_indexes() -
     ]
 
 
+def test_derived_snapshot_scopes_every_fingerprint_to_the_requested_season() -> None:
+    """Break caught: loading E2025 changes the fingerprint reported for E2024."""
+
+    class Cursor:
+        def __init__(self) -> None:
+            self.executions: list[tuple[str, tuple]] = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def execute(self, query, params=()) -> None:
+            self.executions.append((" ".join(query.split()), params))
+
+        def fetchone(self):
+            return (0, "empty")
+
+    class Connection:
+        def __init__(self) -> None:
+            self.cursor_instance = Cursor()
+
+        def cursor(self):
+            return self.cursor_instance
+
+    connection = Connection()
+
+    snapshot = derived_snapshot(connection, "E2025")
+
+    assert set(snapshot) == {
+        "lineup",
+        "lineup_stint",
+        "game_event",
+        "player_game_minutes",
+        "game_quality",
+        "possession",
+    }
+    assert all(params == ("E2025",) for _, params in connection.cursor_instance.executions)
+
+
 @pytest.mark.warehouse
 @pytest.mark.full_season
 def test_live_lineup_identifier_width_measurement_uses_real_e2024_population() -> None:
@@ -148,6 +189,13 @@ def test_live_completed_phase_5_gate() -> None:
         "player_game_minutes": 7863,
         "game_quality": 330,
         "possession": 47_831,
+        "attribution_issues": 7,
+        "raw_minute_mismatches": 36,
+        "corrected_minute_mismatches": 4,
+        "corrected_event_rows": 32,
+        "suspect_event_rows": 7,
+        "minute_quarantine_games": (43, 98),
+        "attribution_quarantine_games": (23, 63, 72, 131, 139, 242, 323),
     }
 
 

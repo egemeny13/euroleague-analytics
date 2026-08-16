@@ -11,7 +11,7 @@ from psycopg import sql
 
 from euroleague.archive import build_archive_object
 from euroleague.cache import ResponseCache
-from euroleague.derived import PHASE_5_SEASON, E2024OnlyError, LineupUsage
+from euroleague.derived import LineupUsage
 from euroleague.lineups import COACH_IDS
 from euroleague.parse import parse_cached_game
 
@@ -334,23 +334,19 @@ def projected_database_growth_bytes(
 
 
 def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str, int]:
-    """Prove E2024 dimensions and event rows still match the raw layer."""
-    if season_code != PHASE_5_SEASON:
-        raise E2024OnlyError(
-            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
-        )
-
+    """Prove one season's dimensions and event rows still match the raw layer."""
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT
-                (SELECT count(*) FROM player),
-                (SELECT count(*) FROM team),
+                (SELECT count(DISTINCT player_id) FROM raw_boxscore_player
+                 WHERE season_code = %s),
+                (SELECT count(*) FROM team_season WHERE season_code = %s),
                 (SELECT count(*) FROM team_season WHERE season_code = %s),
                 (SELECT count(*) FROM game_event WHERE season_code = %s),
-                (SELECT count(*) FROM possession)
+                (SELECT count(*) FROM possession WHERE season_code = %s)
             """,
-            (season_code, season_code),
+            (season_code,) * 5,
         )
         player_count, team_count, team_season_count, event_count, possession_count = (
             int(value) for value in cursor.fetchone()
@@ -561,24 +557,25 @@ def measure_lineup_identifier_widths(
     return {width: _measure_lineup_width(connection, usage, width) for width in (64, 32, 12)}
 
 
-def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int]:
-    """Enforce every persisted E2024 lineup, minute, quality, and scope gate."""
-    if season_code != PHASE_5_SEASON:
-        raise E2024OnlyError(
-            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
-        )
+def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int | tuple[int, ...]]:
+    """Enforce every persisted lineup, minute, quality, and scope gate for one season."""
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT
-                (SELECT count(*) FROM lineup),
+                (SELECT count(*) FROM lineup stored
+                 WHERE EXISTS (
+                     SELECT 1 FROM game_event event
+                     WHERE event.season_code = %s
+                       AND stored.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+                 )),
                 (SELECT count(*) FROM lineup_stint WHERE season_code = %s),
                 (SELECT count(*) FROM game_event WHERE season_code = %s),
                 (SELECT count(*) FROM player_game_minutes WHERE season_code = %s),
                 (SELECT count(*) FROM game_quality WHERE season_code = %s),
-                (SELECT count(*) FROM possession)
+                (SELECT count(*) FROM possession WHERE season_code = %s)
             """,
-            (season_code,) * 4,
+            (season_code,) * 6,
         )
         lineup_count, stint_count, event_count, minute_count, quality_count, possession_count = (
             int(value) for value in cursor.fetchone()
@@ -719,6 +716,8 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
                 expected_reasons.append("off_court_attribution")
             if oncourt_violations:
                 expected_reasons.append("not_five_on_court")
+            if "substitution_state" in quarantine_reasons:
+                expected_reasons.append("substitution_state")
             # Phase 6 adds its own reason, and it is appended last.
             if "possession_gate" in quarantine_reasons:
                 expected_reasons.append("possession_gate")
@@ -727,18 +726,6 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
                 or list(quarantine_reasons) != expected_reasons
             ):
                 quarantine_control_failures.append(int(gamecode))
-        cursor.execute(
-            """
-            SELECT
-                (SELECT count(*) FROM game_event WHERE season_code <> %s)
-              + (SELECT count(*) FROM lineup_stint WHERE season_code <> %s)
-              + (SELECT count(*) FROM player_game_minutes WHERE season_code <> %s)
-              + (SELECT count(*) FROM game_quality WHERE season_code <> %s)
-            """,
-            (season_code,) * 4,
-        )
-        other_season_rows = int(cursor.fetchone()[0])
-
     failures = {
         "wrong_width": wrong_width,
         "unattached_events": unattached_events,
@@ -750,26 +737,10 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
         "pairing": pairing,
         "unhelpful_applied": int(unhelpful_applied),
         "quarantine_controls": len(quarantine_control_failures),
-        "other_season_rows": other_season_rows,
         "possession_missing": int(possession_count == 0),
     }
     if any(failures.values()):
         raise AssertionError(f"Phase 5 warehouse invariant failures: {failures}")
-    if (attribution, raw_minutes, corrected_minutes) != (7, 36, 4):
-        raise AssertionError(
-            "Quality totals differ from E2024: "
-            f"attribution={attribution}, raw_minutes={raw_minutes}, "
-            f"corrected_minutes={corrected_minutes}."
-        )
-    if tuple(minute_games or ()) != (43, 98):
-        raise AssertionError(f"Corrected-minute quarantine differs: {minute_games}.")
-    if tuple(attribution_games or ()) != (23, 63, 72, 131, 139, 242, 323):
-        raise AssertionError(f"Attribution quarantine differs: {attribution_games}.")
-    if (corrected_event_rows, suspect_event_rows) != (32, 7):
-        raise AssertionError(
-            f"Event diagnostics differ: corrected={corrected_event_rows}, "
-            f"suspect={suspect_event_rows}."
-        )
     return {
         "lineup": lineup_count,
         "lineup_stint": stint_count,
@@ -777,6 +748,13 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
         "player_game_minutes": minute_count,
         "game_quality": quality_count,
         "possession": possession_count,
+        "attribution_issues": attribution,
+        "raw_minute_mismatches": raw_minutes,
+        "corrected_minute_mismatches": corrected_minutes,
+        "corrected_event_rows": corrected_event_rows,
+        "suspect_event_rows": suspect_event_rows,
+        "minute_quarantine_games": tuple(minute_games or ()),
+        "attribution_quarantine_games": tuple(attribution_games or ()),
     }
 
 
@@ -788,8 +766,13 @@ def derived_snapshot(connection: Any, season_code: str) -> dict[str, TableFinger
             SELECT count(*), md5(coalesce(string_agg(
                 md5(to_jsonb(t)::text), '' ORDER BY lineup_id
             ), '')) FROM lineup t
+            WHERE EXISTS (
+                SELECT 1 FROM game_event event
+                WHERE event.season_code = %s
+                  AND t.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+            )
             """,
-            (),
+            (season_code,),
         ),
         "lineup_stint": (
             """
@@ -827,9 +810,9 @@ def derived_snapshot(connection: Any, season_code: str) -> dict[str, TableFinger
             """
             SELECT count(*), md5(coalesce(string_agg(
                 md5(to_jsonb(t)::text), '' ORDER BY season_code, gamecode, possession_index
-            ), '')) FROM possession t
+            ), '')) FROM possession t WHERE season_code = %s
             """,
-            (),
+            (season_code,),
         ),
     }
     result: dict[str, TableFingerprint] = {}

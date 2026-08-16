@@ -173,3 +173,27 @@ def test_e2024_full_season_matches_the_measured_regression_baseline() -> None:
     assert season.team_point_mismatches == 0
     assert season.correction_helps
     assert season.correction_enabled
+
+
+@pytest.mark.full_season
+def test_e2025_quarantines_its_single_duplicate_noop_substitution_batch() -> None:
+    """Break caught: E2025's one source-state defect aborts all 402 games."""
+    season = validate_season(ResponseCache(Path("exploration/cache")), "E2025")
+
+    assert season.game_count == 402
+    assert season.substitution_state_issues == 2
+    assert season.substitution_state_issue_gamecodes == (215,)
+    assert "substitution_state" in season.games[215].quarantine_reasons
+    assert season.raw_minute_mismatch_games == 20
+    assert season.raw_minute_mismatch_rows == 99
+    assert season.raw_minute_delta_magnitudes == frozenset({60, 120, 180, 468})
+    assert season.correction_candidate_rows == 96
+    assert season.candidate_minute_mismatch_rows == 14
+    assert season.corrected_minute_mismatch_rows == 14
+    assert season.corrected_minute_mismatch_gamecodes == (21, 116, 215)
+    assert season.oncourt_violations == 0
+    assert season.attribution_issues == 16
+    assert season.player_point_mismatches == 0
+    assert season.team_point_mismatches == 0
+    assert season.correction_helps
+    assert season.correction_enabled

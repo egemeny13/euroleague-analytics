@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from euroleague.derived import (
-    E2024OnlyError,
     build_dimensions,
     build_game_events,
     build_remaining_rows,
@@ -17,8 +16,11 @@ from euroleague.derived import (
 class DimensionCache:
     """Small complete cache shape for dimension behavior tests."""
 
+    def __init__(self, season_code: str = "E2024") -> None:
+        self.season_code = season_code
+
     def read_schedule_json(self, season_code: str) -> dict:
-        assert season_code == "E2024"
+        assert season_code == self.season_code
         return {
             "data": [
                 {
@@ -37,7 +39,7 @@ class DimensionCache:
         }
 
     def read_json(self, season_code: str, endpoint: str, gamecode: int) -> dict:
-        assert (season_code, endpoint) == ("E2024", "Boxscore")
+        assert (season_code, endpoint) == (self.season_code, "Boxscore")
         first_name = "PLAYER, FIRST" if gamecode == 2 else "Player, First"
         return {
             "Stats": [
@@ -52,10 +54,11 @@ class DimensionCache:
         }
 
 
-def test_dimensions_are_e2024_only() -> None:
-    """Break caught: a future caller accidentally starts a cross-season load."""
-    with pytest.raises(E2024OnlyError, match="E2024 is the only allowed season"):
-        build_dimensions(DimensionCache(), "E2023")
+def test_dimensions_use_the_callers_explicit_season() -> None:
+    """Break caught: a global season constant overrides the caller's target."""
+    rows = build_dimensions(DimensionCache("E2025"), "E2025")
+
+    assert {row[0] for row in rows.team_seasons} == {"E2025"}
 
 
 def test_dimensions_put_teams_before_team_seasons_and_never_make_coaches_players() -> None:
