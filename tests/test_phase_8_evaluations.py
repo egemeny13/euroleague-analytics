@@ -162,10 +162,21 @@ def test_every_game_names_a_winner_that_matches_its_official_score(cursor):
 
 
 def test_the_population_every_evaluation_is_pinned_to(cursor):
+    """Every evaluation below is pinned to E2024, and this proves E2024 is intact.
+
+    It used to assert that E2024 was the *only* season loaded, which went red as
+    soon as E2025 arrived. That assertion was protecting the wrong thing: what
+    the evaluations need is not an empty warehouse beside them, it is that
+    E2024's own population has not shifted underneath their published answers.
+    Every evaluation passes `season` to the tool it calls, so a second season
+    does not enter their results - and each of those tests is the real proof of
+    that, not this one.
+    """
     response = describe_warehouse(cursor, {})
-    assert [row["season_code"] for row in response["rows"]] == [SEASON]
-    assert response["rows"][0]["games"] == GAMES_IN_SEASON
-    assert response["excluded"]["games"] == EXCLUDED_GAMES
+    loaded = {row["season_code"]: row for row in response["rows"]}
+    assert SEASON in loaded
+    assert loaded[SEASON]["games"] == GAMES_IN_SEASON
+    assert loaded[SEASON]["excluded_games"] == EXCLUDED_GAMES
 
 
 # --------------------------------------------------------------------------

@@ -130,12 +130,22 @@ was real and was passed, not because passing it was authorised in advance.
 precedent against which the rule forbidding self-granted roadmap-gate exemptions
 was written.
 
-**Storage: still failing, and now by more.** Loading the derived layer took the
+**Storage: resolved 2026-08-19.** Loading the derived layer took the
 billing-aware 19-season projection from 725,786,624 bytes to 1,797,734,400
-against a 474,311,115-byte budget. `test_live_phase_4_gate` asserts that
-projection is inside budget and is therefore red, deliberately, exactly as
-Phase 4 left it. The suite cannot be all-green until the hot-window decision is
-made, and that is the point of leaving it red.
+against a 474,311,115-byte budget, and `test_live_phase_4_gate` was left
+deliberately red on that assertion until a hot window was chosen.
+
+The window was chosen on 2026-08-18 (E2024, E2025, E2026 — `DECISIONS.md`
+item 20 as amended) and the compaction that made it fit ran the same day,
+taking the database from 454,859,573 to 291,380,021 bytes
+(`docs/STORAGE_COMPACTION_RESULT.md`). Under Condition B the gate now asserts
+**that** window: 732 loaded games plus a complete 380-game E2026 priced at the
+measured per-game rate, projecting 429,307,113 bytes against the unchanged
+474,311,115-byte budget. **It is green, and the budget was not touched.**
+
+The 23-season assertion is kept, inverted, as a standing measurement: the full
+backfill must continue *not* to fit. If it ever starts fitting, the reasoning
+behind Decision 20 has changed and somebody should look.
 
 **The capacity figure is provisional and borderline.** Roughly 5 complete
 E2024-sized seasons fit. Two reasons not to choose a window on that number yet:

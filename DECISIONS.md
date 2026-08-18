@@ -32,7 +32,7 @@ is binding — the decision is only approved with it.
 | 17 | `Points` is a coordinate source only | Approved with one condition |
 | 18 | MCP aggregation in views | Approved with a measurement |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
-| 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom, Condition A closed |
+| 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -990,6 +990,34 @@ Three qualifications, none of which change the answer:
   re-runs the derived pipeline every week, and that is what created the 163 MB
   in the first place. Routine maintenance is now a standing requirement, not a
   one-off.
+
+**Condition B is closed, 2026-08-19.** `test_live_phase_4_gate` had been red
+since Phase 4 because it asserted that all 23 archived seasons fit the free
+tier. It now asserts the chosen window instead — 732 loaded games plus a
+complete 380-game E2026 at the measured per-game rate, projecting 429,307,113
+bytes against the same unchanged 474,311,115-byte budget. **It is green.**
+
+What Condition B forbade was not done: the assertion was not relaxed, not
+deleted, not marked expected-to-fail, and the budget was not moved. Three
+things guard against it drifting back:
+
+- The 23-season assertion is kept and **inverted**. The full backfill must
+  continue not to fit. If it ever does, the reasoning here has changed.
+- E2026 is priced at its full 380 scheduled games from the first day, never at
+  games played so far. A gate that counted only what is loaded would enlarge
+  its own budget weekly and fail only once the season was over.
+- Both properties are unit-tested, including that the gate goes red against the
+  pre-compaction 454,859,573-byte database. A gate that cannot fail is not a
+  gate.
+
+**A second staleness was found while doing it, and it was the reason the gate
+was actually failing.** `assert_warehouse_reconciles` required `raw_shot` to be
+*empty*, which was correct when `Points` was archived and unparsed and stopped
+being correct when Decision 17 was implemented in commit `11b681b`. So the gate
+had been red on that, not on storage, since E2024's shots were loaded. The
+emptiness rule is replaced by a per-game reconciliation of `raw_shot` against
+the archived `Points` responses — a stronger check, since an emptiness rule can
+only ever prove that nothing was loaded.
 
 ---
 
