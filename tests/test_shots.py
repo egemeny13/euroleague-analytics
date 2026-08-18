@@ -15,7 +15,6 @@ import euroleague.parse as raw_parse
 from euroleague.cache import ResponseCache
 from euroleague.config import DatabaseSettings
 from euroleague.gate import public_table_sizes, warehouse_snapshot
-from test_load import LoaderConnection
 
 FULL_CACHE = ResponseCache(Path("exploration/cache"))
 FIELD_GOAL_ACTIONS = {"2FGM", "2FGA", "3FGM", "3FGA"}
@@ -104,10 +103,10 @@ def test_raw_shot_boolean_fields_reject_ambiguous_values() -> None:
         raw_parse.parse_shots("E2024", 1, "E", payload)
 
 
-def test_one_game_replaces_only_its_raw_shot_rows_in_one_transaction() -> None:
+def test_one_game_replaces_only_its_raw_shot_rows_in_one_transaction(loader_connection) -> None:
     """Break caught: a shot load is partial or deletes another raw table."""
     shots = tuple(raw_parse.parse_shots("E2024", 1, "E", _points_payload()))
-    connection = LoaderConnection()
+    connection = loader_connection()
 
     count = raw_load.load_shots_for_game(connection, "E2024", 1, shots)
 
@@ -132,10 +131,10 @@ def test_one_game_replaces_only_its_raw_shot_rows_in_one_transaction() -> None:
     ]
 
 
-def test_one_game_rejects_rows_for_a_different_target_before_deleting() -> None:
+def test_one_game_rejects_rows_for_a_different_target_before_deleting(loader_connection) -> None:
     """Break caught: loading one game deletes it and inserts another game's rows."""
     shots = tuple(raw_parse.parse_shots("E2024", 1, "E", _points_payload()))
-    connection = LoaderConnection()
+    connection = loader_connection()
 
     with pytest.raises(ValueError, match=r"target E2024 game 2.*row for E2024 game 1"):
         raw_load.load_shots_for_game(connection, "E2024", 2, shots)
@@ -152,7 +151,7 @@ def _write_cached_shot_game(root, gamecode: int) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def test_cached_shot_season_requires_every_points_response(tmp_path) -> None:
+def test_cached_shot_season_requires_every_points_response(tmp_path, loader_connection) -> None:
     """Break caught: an absent game is silently omitted from raw_shot."""
     season = tmp_path / "E2024"
     season.mkdir()
@@ -172,14 +171,16 @@ def test_cached_shot_season_requires_every_points_response(tmp_path) -> None:
 
     with pytest.raises(FileNotFoundError, match=r"cached Points response.*game 1"):
         raw_load.load_cached_shots(
-            LoaderConnection(),
+            loader_connection(),
             ResponseCache(tmp_path),
             "E2024",
             progress=lambda message: None,
         )
 
 
-def test_cached_shot_season_loads_every_game_and_vacuums_only_raw_shot(tmp_path) -> None:
+def test_cached_shot_season_loads_every_game_and_vacuums_only_raw_shot(
+    tmp_path, loader_connection
+) -> None:
     """Break caught: a complete Points season is partially loaded or broad maintenance runs."""
     season = tmp_path / "E2024"
     season.mkdir()
@@ -196,7 +197,7 @@ def test_cached_shot_season_loads_every_game_and_vacuums_only_raw_shot(tmp_path)
     )
     _write_cached_shot_game(tmp_path, 1)
     _write_cached_shot_game(tmp_path, 2)
-    connection = LoaderConnection()
+    connection = loader_connection()
     progress = []
 
     totals = raw_load.load_cached_shots(
