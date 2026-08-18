@@ -1,7 +1,16 @@
-# Storage compaction plan — proposal, awaiting owner approval
+# Storage compaction plan — executed 2026-08-18
 
-**Status: nothing has been written to the database. This document proposes; it
-does not act.** Every number below came from a read-only query run on
+**Status: approved by the owner on 2026-08-18 and carried out the same day.
+The result, including three defects found in this plan by running it, is in
+`docs/STORAGE_COMPACTION_RESULT.md`, and that document is later than this one.**
+The database went from 454,859,573 to 291,380,021 bytes.
+
+The most important correction to what follows: **Option C as written below would
+have recovered nothing.** A file is shortened only from its end, and the rows on
+the final page are exactly the rows this method cannot move. Step 3b, clearing
+that page, was added after the pilot measured it, and is not described below.
+
+Every number in the rest of this document came from a read-only query run on
 2026-08-16 between 13:52 and 13:58 UTC. No EuroLeague API request was made.
 
 ---

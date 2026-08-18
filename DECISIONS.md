@@ -32,7 +32,7 @@ is binding — the decision is only approved with it.
 | 17 | `Points` is a coordinate source only | Approved with one condition |
 | 18 | MCP aggregation in views | Approved with a measurement |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
-| 20 | The free-tier hot window | **Three seasons — E2025, E2024, E2023**; window amended to E2026, E2025, E2024 on 2026-08-18 |
+| 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom, Condition A closed |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -955,6 +955,41 @@ which seasons are loaded must say so rather than returning an empty result.
   (rejected — drops the season all validation baselines were measured against,
   for headroom not yet shown to be needed).
 - Approved: the owner, 2026-08-18.
+
+**Condition A is closed, 2026-08-18, and the window is confirmed to fit.**
+
+The compaction ran the same day (`docs/STORAGE_COMPACTION_RESULT.md`). The
+database went from 454,859,573 to 291,380,021 bytes — 163.5 MB recovered — with
+every content fingerprint unchanged. On that compacted state, measured on the
+same whole-database billing basis Decision 20 uses:
+
+| | Bytes per game |
+|---|---:|
+| **Measured, whole database, after compaction** | **362,966.0** |
+| E2024, 330 games, 18 teams (allocated) | 347,422.6 |
+| E2025, 402 games, 20 teams (allocated) | 359,504.6 |
+| What this decision originally assumed | 330,708.5576 |
+
+The real figure is **9.8% higher** than the one this decision was priced on,
+which is what the amendment above warned it would be. Condition A's specific
+question — whether a 20-team season costs the same per game as an 18-team one —
+is answered: **it does not, it costs 3.5% more.**
+
+**The E2024 + E2025 + E2026 window fits.** Loaded today at 291,380,021 bytes,
+plus a complete 380-game E2026 at the E2025 rate, projects to **427,991,775
+bytes: 72,008,225 of headroom, 14.40%** of the 500,000,000 ceiling, and
+52,008,225 below the 480,000,000 stop rule.
+
+Three qualifications, none of which change the answer:
+
+- The per-season split is an **allocation by row share**, not a measurement of
+  marginal cost. The whole-database 362,966.0 is the figure to quote.
+- **Condition D stands.** 380 is E2026's *scheduled* count. If the competition
+  changes it, this projects again.
+- The headroom assumes the warehouse does not re-bloat. It will: a live season
+  re-runs the derived pipeline every week, and that is what created the 163 MB
+  in the first place. Routine maintenance is now a standing requirement, not a
+  one-off.
 
 ---
 

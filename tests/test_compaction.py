@@ -14,9 +14,12 @@ import pytest
 from euroleague.compaction import (
     STOP_RULE_BYTES,
     FingerprintMismatch,
+    batch_moved_downwards,
     clear_page_by_repeated_rewrite,
     compare_fingerprints,
+    is_compact,
     pilot_passed,
+    rounds_needed_to_fill,
     truncation_threshold_pages,
     within_stop_rule,
 )
@@ -116,6 +119,66 @@ def test_a_small_file_uses_the_fraction() -> None:
 def test_the_full_move_clears_the_threshold_the_pilot_could_not() -> None:
     """Step 3's tail is E2025's whole 5,575-page range, far above the threshold."""
     assert truncation_threshold_pages(20_744) < 5_575
+
+
+def test_a_batch_that_landed_below_its_source_moved_downwards() -> None:
+    assert batch_moved_downwards(highest_landing_page=4_460, lowest_source_page=20_694) is True
+
+
+def test_a_batch_that_landed_on_its_own_source_page_did_not_move() -> None:
+    """The failure this guard exists for: reusing the pages just emptied."""
+    assert batch_moved_downwards(highest_landing_page=20_694, lowest_source_page=20_694) is False
+
+
+def test_a_batch_that_landed_above_its_source_did_not_move_downwards() -> None:
+    assert batch_moved_downwards(highest_landing_page=20_700, lowest_source_page=20_694) is False
+
+
+def test_a_full_page_fills_in_a_few_rounds() -> None:
+    """14 rows took 4 rounds live; the formula must not ask for fewer."""
+    assert rounds_needed_to_fill(14, 14 * 183) >= 4
+
+
+def test_a_page_holding_one_narrow_row_needs_more_than_forty_rounds() -> None:
+    """Measured live: 42 rounds left the row in place, about two short.
+
+    Break caught: a round budget derived from an average row count rather than
+    from the actual bytes on the page. It stopped two rounds before the page
+    filled, and reported that as the technique not working.
+    """
+    assert rounds_needed_to_fill(1, 183) > 42
+
+
+def test_a_full_page_needs_only_a_couple_of_rounds() -> None:
+    assert rounds_needed_to_fill(40, 40 * 183) == 4
+
+
+def test_the_round_count_is_capped() -> None:
+    """A page that will not fill must stop, not spin."""
+    assert rounds_needed_to_fill(1, 1) == 60
+
+
+def test_an_empty_page_needs_no_rounds() -> None:
+    assert rounds_needed_to_fill(0) == 0
+
+
+def test_an_unmeasured_page_falls_back_to_the_measured_row_size() -> None:
+    assert rounds_needed_to_fill(1) == rounds_needed_to_fill(1, 183)
+
+
+def test_the_measured_end_state_reads_as_compact() -> None:
+    """The live result: 10,486 pages holding 399,459 rows is as short as it gets."""
+    assert is_compact(allocated=10_486, live_rows=399_459) is True
+
+
+def test_the_starting_state_did_not_read_as_compact() -> None:
+    """The same table before the work: twice the pages for the same rows."""
+    assert is_compact(allocated=20_744, live_rows=399_459) is False
+
+
+def test_a_file_recycling_its_own_emptied_pages_never_reads_as_compact() -> None:
+    """The failure mode: rows shuffle, the file never shortens, nothing is won."""
+    assert is_compact(allocated=20_000, live_rows=399_459) is False
 
 
 def test_repeated_rewrite_refuses_to_run_in_autocommit() -> None:

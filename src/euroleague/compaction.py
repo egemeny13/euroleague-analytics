@@ -95,6 +95,25 @@ E2025_BASELINE: dict[str, tuple[int, str]] = {
 TRUNCATE_MINIMUM_PAGES = 1_000
 TRUNCATE_FRACTION = 16
 
+# Measured: both seasons pack `game_event` at exactly 40 rows per page, and
+# every page holding rows is full. Used to work out how many rewrites it takes
+# to fill a page, never to decide whether something succeeded.
+ROWS_PER_PAGE = 40
+
+# What is actually available on a page once PostgreSQL's own page header is
+# taken out, and what each stored row costs beyond its data: a 23-byte tuple
+# header rounded up to 24, plus a 4-byte line pointer.
+USABLE_PAGE_BYTES = 8_160
+TUPLE_OVERHEAD_BYTES = 28
+
+# Measured on 2026-08-18: a `game_event` row is 183 bytes of data.
+DEFAULT_ROW_BYTES = 183
+
+# A page that has not filled after this many rewrites is not going to. Chosen
+# above the ~44 a single narrow row needs, and low enough that the transaction
+# stays inside PostgreSQL's per-transaction savepoint cache.
+MAX_REWRITE_ROUNDS = 60
+
 
 class StopRuleBreached(RuntimeError):
     """Raised when a whole-database reading reaches the stop rule."""
@@ -106,6 +125,14 @@ class BaselineChanged(RuntimeError):
 
 class PilotFailed(RuntimeError):
     """Raised when moved rows did not land inside the empty region."""
+
+
+class RowsLost(RuntimeError):
+    """Raised when a table holds a different number of rows than it should."""
+
+
+class MovedUpwards(RuntimeError):
+    """Raised when rows landed no lower than they started and the work is not done."""
 
 
 @dataclass(frozen=True)
@@ -260,6 +287,48 @@ def allocated_pages(connection: Any, table: str) -> int:
         return int(cursor.fetchone()[0])
 
 
+def last_used_page(connection: Any, table: str) -> int:
+    """The highest page in the table that still holds a live row.
+
+    Everything above this is empty tail, and empty tail is the only thing
+    `VACUUM` can hand back. This number falling is the whole point of the work,
+    which makes it the single best progress indicator there is.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT max((ctid::text::point)[0])::bigint FROM {table}")
+        return int(cursor.fetchone()[0])
+
+
+def is_compact(allocated: int, live_rows: int, rows_per_page: int = ROWS_PER_PAGE) -> bool:
+    """True when the file is already about as short as the rows allow.
+
+    This measures the goal directly instead of guessing at it. Two very
+    different situations both look like "the rows stopped moving": the work is
+    finished, and the work never worked. Every indirect signal - the frontier
+    holding still, a batch landing where it started, an empty tail - is
+    produced by both. The size of the file against the size of its contents is
+    produced by only one.
+
+    A tenth of slack, because rows are not all the same width and the packing
+    density is a measured average rather than a promise.
+    """
+    needed = -(-live_rows // rows_per_page)
+    return allocated <= needed * 1.1 + 2
+
+
+def batch_moved_downwards(highest_landing_page: int, lowest_source_page: int) -> bool:
+    """True when a batch's rows landed below where they were taken from.
+
+    The guard against the way this work could quietly waste an afternoon.
+    Vacuuming after each batch frees the pages the batch just left, and those
+    pages go back into the map of free space alongside the hole. If PostgreSQL
+    ever chose one of them for the *next* batch, rows would shuffle around the
+    top of the file forever, the file would never shorten, and every reading
+    would look reasonable while nothing was achieved.
+    """
+    return highest_landing_page < lowest_source_page
+
+
 def refresh_free_space_map(connection: Any, table: str) -> None:
     """Step 1: plain `VACUUM (ANALYZE)`, which updates the map of free space.
 
@@ -286,11 +355,13 @@ def move_rows(connection: Any, table: str, season_code: str, batch_size: int) ->
     the file, which is the only part a later `VACUUM` can cut off.
 
     Returns the identities of the rows moved, so where they landed can be
-    checked directly rather than inferred.
+    checked directly rather than inferred. Each identity carries the page the
+    row was taken from, which is what the downward-progress guard compares
+    against.
     """
     with connection.cursor() as cursor:
         cursor.execute(
-            f"SELECT gamecode, ingest_index FROM {table} "
+            f"SELECT gamecode, ingest_index, (ctid::text::point)[0]::bigint FROM {table} "
             "WHERE season_code = %s ORDER BY ctid DESC LIMIT %s",
             (season_code, batch_size),
         )
@@ -303,15 +374,40 @@ def move_rows(connection: Any, table: str, season_code: str, batch_size: int) ->
             "(SELECT unnest(%s::integer[]), unnest(%s::integer[]))",
             (
                 season_code,
-                [int(gamecode) for gamecode, _ in targets],
-                [int(ingest_index) for _, ingest_index in targets],
+                [int(gamecode) for gamecode, _, _ in targets],
+                [int(ingest_index) for _, ingest_index, _ in targets],
             ),
         )
     return targets
 
 
+def rounds_needed_to_fill(rows_on_page: int, bytes_on_page: int = 0) -> int:
+    """How many rewrites it takes to fill a page holding these rows.
+
+    Each round leaves one superseded copy of every row on the page behind, so a
+    page holding many rows fills quickly and a page holding one row fills
+    slowly. This is computed from the measured size of what is actually on the
+    page rather than from an average, because the average is what got this
+    wrong twice: a budget of 8 rounds abandoned a one-row page, and so did 42,
+    which was within about two rounds of enough.
+
+    `bytes_on_page` is the summed row size; the per-row overhead below is
+    PostgreSQL's tuple header rounded up plus its line pointer. Half again as
+    many rounds as the arithmetic asks for, because a page occasionally
+    reclaims a copy, and a hard cap so a page that will not fill stops rather
+    than spins.
+    """
+    if rows_on_page <= 0:
+        return 0
+    if bytes_on_page <= 0:
+        bytes_on_page = rows_on_page * DEFAULT_ROW_BYTES
+    bytes_per_round = bytes_on_page + rows_on_page * TUPLE_OVERHEAD_BYTES
+    rounds = -(-USABLE_PAGE_BYTES // max(bytes_per_round, 1))
+    return min(MAX_REWRITE_ROUNDS, int(rounds * 1.5) + 3)
+
+
 def clear_page_by_repeated_rewrite(
-    connection: Any, table: str, page: int, max_rounds: int = 8
+    connection: Any, table: str, page: int, max_rounds: int | None = None
 ) -> dict[str, int]:
     """Force the rows off one page that ordinary rewriting cannot empty.
 
@@ -339,6 +435,10 @@ def clear_page_by_repeated_rewrite(
 
     Measured on 2026-08-18 against `game_event` page 20,743: 14 rows, cleared
     in 4 rounds. It has not been measured on a page holding wider rows.
+
+    The number of rounds is chosen from how many rows are on the page, because
+    a page holding one row fills forty times more slowly than a page holding
+    forty. Pass `max_rounds` only to override that.
     """
     if connection.autocommit:
         raise RuntimeError(
@@ -348,7 +448,7 @@ def clear_page_by_repeated_rewrite(
         )
     with connection.cursor() as cursor:
         cursor.execute(
-            f"SELECT season_code, gamecode, ingest_index FROM {table} "
+            f"SELECT season_code, gamecode, ingest_index, pg_column_size({table}.*) FROM {table} "
             "WHERE (ctid::text::point)[0]::bigint = %s",
             (page,),
         )
@@ -356,17 +456,30 @@ def clear_page_by_repeated_rewrite(
         if not rows:
             return {"rows": 0, "rounds": 0, "still_on_page": 0}
 
-        seasons = [str(season) for season, _, _ in rows]
-        gamecodes = [int(gamecode) for _, gamecode, _ in rows]
-        indexes = [int(index) for _, _, index in rows]
+        seasons = [str(season) for season, _, _, _ in rows]
+        gamecodes = [int(gamecode) for _, gamecode, _, _ in rows]
+        indexes = [int(index) for _, _, index, _ in rows]
+        if max_rounds is None:
+            max_rounds = rounds_needed_to_fill(len(rows), sum(int(size) for _, _, _, size in rows))
 
         for round_number in range(1, max_rounds + 1):
-            cursor.execute(
-                f"UPDATE {table} SET season_code = season_code "
-                "WHERE (season_code, gamecode, ingest_index) IN "
-                "(SELECT unnest(%s::text[]), unnest(%s::integer[]), unnest(%s::integer[]))",
-                (seasons, gamecodes, indexes),
-            )
+            # Each round gets its own savepoint, and that is not a tidiness
+            # measure - it is the only reason this works. A row version that one
+            # transaction both creates and then supersedes was never visible to
+            # anybody, so PostgreSQL is free to clean it up on the spot, and it
+            # does. The page would never fill and the rows would never move. A
+            # savepoint gives each round a distinct transaction id, so the
+            # superseded copies are no longer "created and killed by the same
+            # transaction", cannot be cleaned up while the work is in progress,
+            # and stay on the page taking up the room that forces the next copy
+            # somewhere else.
+            with connection.transaction():
+                cursor.execute(
+                    f"UPDATE {table} SET season_code = season_code "
+                    "WHERE (season_code, gamecode, ingest_index) IN "
+                    "(SELECT unnest(%s::text[]), unnest(%s::integer[]), unnest(%s::integer[]))",
+                    (seasons, gamecodes, indexes),
+                )
             cursor.execute(
                 f"SELECT count(*) FROM {table} "
                 "WHERE (ctid::text::point)[0]::bigint = %s "
@@ -398,8 +511,8 @@ def landing_pages(
             "(SELECT unnest(%s::integer[]), unnest(%s::integer[]))",
             (
                 season_code,
-                [int(gamecode) for gamecode, _ in targets],
-                [int(ingest_index) for _, ingest_index in targets],
+                [int(gamecode) for gamecode, _, _ in targets],
+                [int(ingest_index) for _, ingest_index, _ in targets],
             ),
         )
         lowest, highest, found = cursor.fetchone()
@@ -407,4 +520,6 @@ def landing_pages(
         "lowest_page": int(lowest),
         "highest_page": int(highest),
         "rows_found": int(found),
+        "lowest_source_page": min(int(page) for _, _, page in targets),
+        "highest_source_page": max(int(page) for _, _, page in targets),
     }
