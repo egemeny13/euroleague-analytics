@@ -32,7 +32,7 @@ is binding — the decision is only approved with it.
 | 17 | `Points` is a coordinate source only | Approved with one condition |
 | 18 | MCP aggregation in views | Approved with a measurement |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
-| 20 | The free-tier hot window | **Three complete seasons — E2025, E2024, E2023** |
+| 20 | The free-tier hot window | **Three seasons — E2025, E2024, E2023**; window amended to E2026, E2025, E2024 on 2026-08-18 |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -888,6 +888,73 @@ it only if the historical depth is later judged worth the three costs above.
 - Approved: the owner, 2026-08-13, choosing three complete seasons over the
   brief's own recommendation after a supervisor audit added the build-corridor
   and re-gating costs that the steady-state figures had hidden.
+
+**Amendment, 2026-08-18 — E2023 is replaced by E2026, and the window is no
+longer static.**
+
+The hot window is now **E2026, E2025 and E2024**. E2023 leaves the window and
+joins E2022 in the archive-only tier: its response bodies stay archived and
+recoverable, but it is not queryable and no three-year trend spans back to it.
+
+**Why.** The owner's direction of 2026-08-16 is that two seasons of history are
+enough and that the live 2026-27 season is the priority. E2026 was fetched on
+2026-08-16: 380 games scheduled, first game **2026-09-24**, none yet played
+(`docs/DAY_1_E2026_DEADLINE_REPORT.md`, schedule checksum
+`fefa2ee…`). A window that excludes the season currently being played cannot
+serve the project's stated purpose.
+
+**What changes about the shape of the window, and it matters more than the
+count.** Every previous window held finished seasons and could be filled to a
+measured number. This one contains a season that grows every week from
+2026-09-24 until the following spring. The window must therefore be sized
+against E2026 *complete* — 380 games — from the first day, not against however
+many games have been played when the measurement is taken. A projection taken
+mid-season understates the requirement and will be wrong in the direction that
+fills the disk.
+
+**The projection, stated with its known error.** On Decision 20's own
+330,708.5576 bytes per game, 1,112 games (330 + 402 + 380) project to 367.748 MB
+of data plus the 25,688,885-byte baseline: **393.437 MB, leaving 106.563 MB or
+21.31%** of the 500,000,000-byte ceiling. That figure is **not to be quoted as
+the operative number**, for two reasons already measured in
+`docs/STORAGE_COMPACTION_PLAN.md` section 8:
+
+- the per-game figure predates `raw_shot` and is short by roughly 8%;
+- a 2025 game occupies 3.43% more table space than a 2024 game, so the two
+  20-team seasons in this window cost more per game than the one 18-team season
+  it was measured on.
+
+Carrying both corrections naively gives roughly 432 MB and 13.5% headroom, but
+that number double-counts bloat the compaction is about to remove. **The
+operative figure is the honest compacted cost per game produced by step 8 of the
+compaction plan, and this window is not confirmed to fit until that number
+exists.** Condition A is not closed by this amendment; it is sharpened.
+
+**Condition D — re-project against a complete E2026 before every backfill, and
+again when the season's real game count is known.** 380 is the scheduled count
+on 2026-08-16, not a played count. If the competition adds or removes games, the
+window must be re-projected, and the first response to a projection that no
+longer fits is to drop **E2024**, not E2025 — E2024 is the season every
+validation baseline was measured against, so dropping it is a fresh owner
+decision with a documented cost, not an automatic fallback. Nothing about this
+amendment authorises silently shrinking the window at load time.
+
+**What is given up, stated plainly.** E2023 entirely, in addition to E2022. No
+comparison against either season in any MCP tool, and every tool that reports
+which seasons are loaded must say so rather than returning an empty result.
+
+**Provenance.**
+- Basis: MIXED. The 380-game schedule and the 2026-09-24 start are measured from
+  an archived response with a recorded checksum. The storage projection is
+  carried forward from a per-game figure that is known to be wrong low, and is
+  explicitly not settled here.
+- Evidence: `docs/DAY_1_E2026_DEADLINE_REPORT.md`;
+  `docs/STORAGE_COMPACTION_PLAN.md` sections 8a and 8b.
+- Alternatives considered: keeping E2023 + E2024 + E2025 (rejected — excludes the
+  live season, which is the project's current purpose); E2025 + E2026 only
+  (rejected — drops the season all validation baselines were measured against,
+  for headroom not yet shown to be needed).
+- Approved: the owner, 2026-08-18.
 
 ---
 
