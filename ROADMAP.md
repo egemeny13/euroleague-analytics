@@ -147,6 +147,22 @@ The 23-season assertion is kept, inverted, as a standing measurement: the full
 backfill must continue *not* to fit. If it ever starts fitting, the reasoning
 behind Decision 20 has changed and somebody should look.
 
+**Two further gates were found red the same day, both predating the storage
+work and both the same staleness:** they asserted E2024 was the only season in
+the warehouse, which stopped being true when E2025 was loaded. `describe_warehouse`
+was correctly reporting both. Re-pinned per season, which is stronger than what
+they replaced — E2024's games, exclusions and team count are now asserted
+exactly rather than against cross-season totals that grow with every load.
+
+**The Phase 5 physical-size gate is now measured per game, not per season**
+(owner's decision, 2026-08-19). It memorised six exact byte totals taken when
+E2024 was the only season loaded, so it broke on E2025 arriving — correct growth
+it could not distinguish from a regression — and would have gone red weekly once
+E2026 began loading. It now asserts bytes per game inside a measured band, which
+holds through a live season. What that band cannot see is uniform growth under
+2.5%, about 6.4 MB across 732 games; the fixed-budget window projection in
+`test_live_phase_4_gate` is the check that catches that by another route.
+
 **The capacity figure is provisional and borderline.** Roughly 5 complete
 E2024-sized seasons fit. Two reasons not to choose a window on that number yet:
 `possession` is empty, so the per-season cost is going to rise in Phase 6; and

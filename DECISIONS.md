@@ -33,6 +33,7 @@ is binding — the decision is only approved with it.
 | 18 | MCP aggregation in views | Approved with a measurement |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
 | 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
+| 21 | The physical-size gate measures cost per game | Approved 2026-08-19 — a measured band that survives a live season |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -1018,6 +1019,48 @@ had been red on that, not on storage, since E2024's shots were loaded. The
 emptiness rule is replaced by a per-game reconciliation of `raw_shot` against
 the archived `Points` responses — a stronger check, since an emptiness rule can
 only ever prove that nothing was loaded.
+
+---
+
+## 21. The physical-size gate measures cost per game, not memorised totals
+
+`test_live_compacted_phase_5_physical_size_gate` asserts that the warehouse's
+public relations cost a measured **347,667.6 bytes per game, within 2.5%**,
+rather than matching six exact byte totals.
+
+**Why.** The gate previously memorised the totals measured on 2026-08-11, when
+E2024 was the only season loaded. It went red when E2025 was loaded — not
+because anything grew wrongly, but because it grew *correctly* and an exact pin
+cannot tell those apart. E2026 begins loading on 2026-09-24 and adds games every
+week after that, so the pin would have gone red weekly for a whole season, and a
+test that must be edited weekly is a test that ends up switched off.
+
+Bytes per game is the unit the project already settled on for storage, in item
+8's 2026-08-10 amendment and in item 20's figures. It holds steady as seasons
+are added while still noticing the warehouse getting fatter per game.
+
+**What the band absorbs, and what it therefore cannot see.** It absorbs the
+seasonal mix: a 20-team game costs a measured 3.5% more than an 18-team one, so
+a complete E2026 moves the blended figure about +0.5% and dropping E2024 — item
+20's Condition D escape hatch — moves it about +1.6%. **It cannot see uniform
+growth under 2.5%, which is about 6.4 MB across 732 games.** That is the price
+of a gate that survives a live season, and it is not the only guard: the window
+projection in `test_live_phase_4_gate` is measured against a fixed budget rather
+than against itself, so it catches slow growth by a different route.
+
+**What it still refuses to do.** The capacity assertions are kept in the same
+form as before, in games rather than seasons: the chosen 1,112-game window must
+fit, and all 5,950 played games the API serves must not. Four unit tests pin the
+band's behaviour, including that it rejects the pre-compaction warehouse.
+
+**Provenance.**
+- Basis: MEASURED. 254,492,672 bytes of public relations across 732 loaded games
+  on 2026-08-19, after compaction.
+- Alternatives considered: re-pinning the six exact totals to two-season figures
+  (rejected — goes red on 2026-09-24 and every week after); keeping both the
+  exact pin and the band (rejected — the exact half still has to be retired when
+  E2026 starts loading, so it defers this decision rather than settling it).
+- Approved: the owner, 2026-08-19, choosing the per-game band.
 
 ---
 

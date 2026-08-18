@@ -383,6 +383,25 @@ def projected_database_growth_bytes(
     return seasons * growth
 
 
+def games_within_budget(
+    bytes_per_game: float,
+    *,
+    budget: int = PHYSICAL_BUDGET_BYTES,
+    fixed_overhead: int = 0,
+) -> int:
+    """How many games of any season fit inside the usable budget.
+
+    The per-season equivalent, `seasons_within_budget`, answers a question the
+    project stopped being able to ask: it treats every season as the same size,
+    and they are not - E2024 is 330 games, E2025 is 402, E2026 is 380. Counting
+    in games is the unit that survives a league changing shape, which is the
+    same reason `DECISIONS.md` item 8 was amended to price in games.
+    """
+    if bytes_per_game <= 0:
+        raise ValueError("A game must cost at least one byte to be measured.")
+    return int((budget - fixed_overhead) // bytes_per_game)
+
+
 def projected_window_bytes(
     connection: Any,
     *,

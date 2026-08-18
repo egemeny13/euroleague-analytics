@@ -31,6 +31,19 @@ The plan predicted an end state "near 330 MB". The measured end state is
 `game_event`'s file went from **20,744 pages to 10,486** — against a floor of
 9,987 pages for the rows it holds. It is now within 5% of as small as it can be.
 
+**A further 4.3 MB arrived afterwards, and the reason is worth recording.** The
+plan deliberately refused a `VACUUM FULL` on `game_event`: it needs a complete
+second copy of the table, and at 454.9 MB there was nowhere to put one. Once
+this work had freed 163.5 MB there was, and the Phase 5 gate's own
+`compact_public_tables` ran it on 2026-08-19 as part of the test suite. It
+packs rows tighter than the row-move can — the move produces the same 40 rows
+per page a fresh load produces, a full rewrite manages a few more — and the
+database settled at **287,076,529 bytes**.
+
+That does not change any conclusion below; it improves the headroom from 14.40%
+to 15.67%. The figures in this report are the ones measured at 14:11 UTC on
+2026-08-18 and are left as measured.
+
 ## 2. Nothing changed except where the rows sit
 
 - **All ten E2024 content fingerprints are byte-identical** to the values
