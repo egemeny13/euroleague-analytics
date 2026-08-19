@@ -249,6 +249,29 @@ class ArchiveFetcher:
             return observation
         return None
 
+    def fetch_game_response(
+        self, season_code: str, endpoint: str, gamecode: int
+    ) -> FetchObservation | None:
+        """Fetch exactly one game response, for an audit rather than an ingest.
+
+        Decision 7's settlement re-checks need a single response on demand, and
+        they must not write it into the cache: the cached body is the one this
+        game was parsed from, and an audit that overwrote it would destroy the
+        evidence it exists to collect. Versioning the new body is the archive's
+        job, which stores it beside its predecessor only when the checksum
+        differs.
+
+        The nine-second cadence, the Retry-After handling and the retry backoff
+        all come from `_request_with_retry`, so an audit and an ingest share one
+        rate budget rather than each keeping its own and jointly earning 429s.
+        """
+        return self._request_with_retry(
+            season_code=season_code,
+            gamecode=gamecode,
+            endpoint=endpoint,
+            url=_game_url(season_code, endpoint, gamecode),
+        )
+
     def _request_schedule(self, season_code: str) -> FetchObservation | None:
         return self._request_with_retry(
             season_code=season_code,
