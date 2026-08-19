@@ -33,3 +33,14 @@ jobs:
           python -m pip install -e .
       - name: Fetch and archive newly played E2026 games
         run: python scripts/fetch_archive.py E2026 --live --require-fresh-schedule --cache-root .live-cache
+
+      # Loads and derives only the games the warehouse is missing, then leaves
+      # the season alone. Safe to re-run: a second run finds nothing new, which
+      # is what makes a retry after a failed fetch safe rather than duplicating.
+      #
+      # It restores the complete season cache from the archive first. That is a
+      # cache read, not a re-fetch: the derived build needs every played game
+      # present or Decision 3's minutes correction would be recomputed from
+      # whatever subset this run happened to fetch. See src/euroleague/live.py.
+      - name: Load and derive newly played E2026 games
+        run: python scripts/live_pipeline.py E2026 --live --cache-root .live-cache

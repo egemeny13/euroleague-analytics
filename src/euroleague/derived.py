@@ -401,6 +401,21 @@ def build_dimensions(cache: ResponseCache, season_code: str) -> DimensionRows:
             if team_code:
                 teams[team_code] = (competition_code, _trim(club.get("name")))
 
+        # ONLY A PLAYED GAME HAS A BOXSCORE, and from 2026-09-24 an E2026
+        # schedule lists 380 games of which most have not happened. Reading
+        # every scheduled game's Boxscore worked only because every season
+        # loaded so far was finished; against a live schedule it fails on the
+        # first unplayed fixture. The predicate is the one `played_games` and
+        # the fetcher share - being more generous here would hunt for responses
+        # that were never fetched.
+        #
+        # Teams are deliberately still taken from every scheduled game above:
+        # they come from the schedule itself, need no Boxscore, and a team is
+        # in the competition before it has played. For a finished season, where
+        # every game is played, this whole change is a no-op.
+        if game.get("played") is not True:
+            continue
+
         gamecode = int(game["gameCode"])
         boxscore = cache.read_json(season_code, "Boxscore", gamecode)
         for team_block in boxscore.get("Stats") or []:

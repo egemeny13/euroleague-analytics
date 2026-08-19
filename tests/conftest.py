@@ -138,3 +138,53 @@ def loader_connection():
         return LoaderConnection(**kwargs)
 
     return _make
+
+
+# ---------------------------------------------------------------------------
+# A writable cache tree for live-season tests
+#
+# Here rather than in a test module for the reason given above: pytest hands
+# fixtures over without an import, and a test module importing another test
+# module resolves only when the working directory happens to be on sys.path.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def live_cache(tmp_path):
+    """Build a cache holding chosen games, with a schedule marking chosen ones played.
+
+    A real live-season cache holds responses only for games already played,
+    because the fetcher fetches no others. The factory mirrors that: it stages
+    the responses you name, and marks played only the ones you name played.
+
+    No `Points` fixture is committed, so a valid placeholder is written. The
+    completeness guard checks that the file exists and the derived build reads
+    only Boxscore and PlaybyPlay, so nothing here rests on its contents.
+    """
+    import json
+    import shutil
+
+    from euroleague.cache import ResponseCache
+
+    def _make(season_code: str, staged, played) -> ResponseCache:
+        root = tmp_path / "live_cache"
+        source = ResponseCache(FIXTURE_GAMES_ROOT)
+        for gamecode in staged:
+            for endpoint in ("Boxscore", "PlaybyPlay"):
+                target = root / season_code / endpoint / f"{gamecode}.json"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source.path_for(season_code, endpoint, gamecode), target)
+            points = root / season_code / "Points" / f"{gamecode}.json"
+            points.parent.mkdir(parents=True, exist_ok=True)
+            points.write_text(json.dumps({"data": []}), encoding="utf-8")
+
+        schedule_games = [
+            {"gameCode": gamecode, "played": gamecode in set(played)}
+            for gamecode in sorted(set(staged) | set(played))
+        ]
+        schedule_path = root / season_code / "schedule.json"
+        schedule_path.parent.mkdir(parents=True, exist_ok=True)
+        schedule_path.write_text(json.dumps({"data": schedule_games}), encoding="utf-8")
+        return ResponseCache(root)
+
+    return _make

@@ -99,7 +99,13 @@ def test_event_reference_merge_refuses_an_extra_attachment() -> None:
 
 
 class DimensionCache:
-    """Small complete cache shape for dimension behavior tests."""
+    """Small complete cache shape for dimension behavior tests.
+
+    Both games carry `played: True` because every real schedule game does -
+    measured 330/330 in E2024 and 402/402 in E2025. The dimension builder reads
+    a Boxscore only for played games, since a live E2026 schedule lists games
+    that have no Boxscore and never will until they are played.
+    """
 
     def __init__(self, season_code: str = "E2024") -> None:
         self.season_code = season_code
@@ -110,12 +116,14 @@ class DimensionCache:
             "data": [
                 {
                     "gameCode": 2,
+                    "played": True,
                     "season": {"competitionCode": "E"},
                     "local": {"club": {"code": "AAA", "name": "Alpha Club"}},
                     "road": {"club": {"code": "BBB", "name": "Beta Club"}},
                 },
                 {
                     "gameCode": 3,
+                    "played": True,
                     "season": {"competitionCode": "E"},
                     "local": {"club": {"code": "BBB", "name": "Beta Club"}},
                     "road": {"club": {"code": "AAA", "name": "Alpha Club"}},
