@@ -34,6 +34,7 @@ is binding — the decision is only approved with it.
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
 | 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
 | 21 | The physical-size gate measures cost per game | Approved 2026-08-19 — a measured band that survives a live season |
+| 22 | Attach derived event references on first insert | Approved and implemented 2026-08-19 — zero `game_event` updates in both full-season database gates |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -57,6 +58,11 @@ records that no owner approval is preserved for it.
 Item 20 closes the condition attached to item 8 and the failed physical-size
 gate from Phase 4. It was decided by the owner on 2026-08-13 from
 `docs/STORAGE_HOT_WINDOW_DECISION_BRIEF.md`.
+
+Item 22 closes Block B's attachment-write decision. The owner approved Option A
+on 2026-08-19 from `docs/POSSESSION_ATTACHMENT_DECISION_BRIEF.md`, after the
+current and replacement writers were both measured on a disposable PostgreSQL
+17.6 database.
 
 ---
 
@@ -1061,6 +1067,64 @@ band's behaviour, including that it rejects the pre-compaction warehouse.
   exact pin and the band (rejected — the exact half still has to be retired when
   E2026 starts loading, so it defers this decision rather than settling it).
 - Approved: the owner, 2026-08-19, choosing the per-game band.
+
+---
+
+## 22. Attach derived event references on first insert, never by update
+
+The derived writer computes every event's `home_lineup_id`, `away_lineup_id`,
+`stint_index`, and `possession_index` before persistence. It writes lineup,
+lineup-stint, and possession parents first, then inserts each `game_event` once
+with all four references populated. Each game's parent and child writes are one
+transaction. A selected-game append refuses any game that already has a
+persisted event or derived fact.
+
+**Why.** The former writer updated every selected event three times: once to
+clear the stint reference, once to clear the possession reference, and once to
+attach all four derived references. The pre-change disposable-database gate
+measured **529,449 updates for E2024** and **668,928 for E2025**, exactly three
+per event. Under the E2025-density projection, a complete 380-game E2026 would
+generate **129,499,136 bytes** of heap churn against **72,008,225 bytes** of
+measured headroom. The replacement writer measured **zero event updates** for
+both seasons. Its controlled derived-phase growth was **81,272,832 bytes for
+E2024**, down **93,691,904 bytes (53.55%)**, and **99,450,880 bytes for E2025**,
+down **120,168,448 bytes (54.72%)** from the same local current-writer gate.
+
+**Conditions.**
+
+- The four attachment fields must be merged by the complete event primary key
+  `(season_code, gamecode, ingest_index)`; missing, extra, or duplicate keys are
+  errors before a write.
+- Parent rows must precede referenced events, and one game's complete write must
+  remain one transaction so a failure leaves none of that game behind.
+- A derived load must execute zero `UPDATE game_event` statements. Tests inspect
+  recorded SQL, and the disposable-database gate measures PostgreSQL update
+  statistics.
+- Incremental and single-pass content must stay identical at the approved split
+  points, and the first batch must remain byte-for-byte unchanged after the
+  second batch lands.
+- The latent composite `game_event_possession_fkey` remains a separate schema
+  defect. Option A no longer triggers its broken `ON DELETE SET NULL` action in
+  the normal write path because child events are deleted before possessions. No
+  migration repair is approved by this decision.
+
+**Provenance.**
+- Basis: MIXED. The update counts, fingerprints, physical sizes, and before/after
+  growth are measured; choosing a one-time write-path refactor over recurring
+  maintenance is an operational judgment.
+- Evidence: `docs/POSSESSION_ATTACHMENT_DECISION_BRIEF.md`;
+  `docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md`; disposable PostgreSQL 17.6
+  runs `abe2cd7fe4` (current writer) and `1483ce06ef` (Option A). Both runs
+  reproduced the recorded production content checksums for E2024 and E2025,
+  matched single-pass to batched rows in every relation and attachment column,
+  and preserved each first batch after the second was appended.
+- Alternatives considered: Option B, retain the updates and perform plain vacuum
+  plus measurement after every live-season load, with threshold-triggered heavy
+  compaction. Rejected because `VACUUM FULL` takes `ACCESS EXCLUSIVE`, blocks the
+  table, and needs a second copy of it—the wrong failure mode on a fixed 500 MB
+  budget during a live season.
+- Approved: the owner, 2026-08-19, from
+  `docs/POSSESSION_ATTACHMENT_DECISION_BRIEF.md` and the implementation handover.
 
 ---
 

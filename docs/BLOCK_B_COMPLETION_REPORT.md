@@ -2,21 +2,111 @@
 
 **Run date:** 2026-08-19  
 **Branch:** `codex/day1-compaction-pilot`  
-**Scope:** Tasks 1–4 from the Block B handover
+**Scope:** original Tasks 1–4 plus the database confirmation, Option A, and
+Decision 22
 
 ## Outcome
 
-The assigned work package is complete in four separate commits. The derived
-writer can add explicitly selected games without season-wide mutation, the two
-cached historical seasons pass an exact in-memory partition/reassembly gate,
-the possession-attachment trade-off is measured for the owner, and the public
-README matches the repository and live warehouse.
+Block B is complete. The database confirmation ran first against the former
+writer and passed. The owner-approved Option A writer then replaced event-wide
+attachment updates with parent-first, fully attached inserts and passed the
+same complete gate. Decision 22 records the choice. Production remained
+read-only throughout.
 
-Block B as an operational system still has one deliberate owner gate. The
-possession brief recommends attaching every derived event reference on the
-first insert, but neither option was chosen or implemented in this run. That is
-not unfinished agent work: Task 3 explicitly required measurement without a
+## Final database confirmation and Option A
+
+### Environment and safety boundary
+
+The gate ran on the local disposable `euroleague_test` database at port 5433,
+using PostgreSQL **17.6**, the same major.minor as production. Every write phase
+asserted that database name and port before writing. The connection was built
+explicitly from `EL_TEST_DATABASE_URL`; no warehouse-marked test or
+environment-default connection was pointed at production.
+
+All eight migrations apply, reverse, and reapply to an identical **16-table,
+7-view** schema. Migrations 0004 through 0007 had never been exercised through
+an up/down/up cycle before 2026-08-19. This local database now supplies the
+fresh-empty-database gate that Phase 2 required but did not previously have.
+
+### What both writer gates proved
+
+The former writer run was `abe2cd7fe4`; the Option A run was `1483ce06ef`.
+The former-writer confirmation is committed as `f84ba38`; the Option A writer
+and its repeated gate are committed as `1ab3bf1`.
+Each built E2024 as 330 games in one pass and as batches 1–137 then 138–330.
+Each built E2025 as 402 games in one pass and as batches 1–201 then 202–402.
+
+For both writers and both seasons:
+
+- `game_event`, `lineup`, `lineup_stint`, `player_game_minutes`,
+  `game_quality`, and `possession` had identical row counts and content
+  fingerprints between single-pass and batched loads, ordered by each
+  relation's real primary key;
+- the four event attachment columns—`home_lineup_id`, `away_lineup_id`,
+  `stint_index`, and `possession_index`—had a separate matching fingerprint
+  across every event;
+- the first batch's relation and attachment fingerprints were unchanged after
+  the second batch landed;
+- the local single-pass snapshots reproduced every E2024 and E2025 production
+  baseline checksum recorded in `src/euroleague/compaction.py`.
+
+The first E2024 attempt initially showed only `raw_game` different. No field
+value differed across its 29 columns and 330 rows; local PostgreSQL rendered
+`timestamptz` JSON in `Europe/Istanbul` while production rendered UTC. Pinning
+the confirmation session to UTC made the unchanged checksum definition
+portable, after which all ten recorded checksums per season matched exactly.
+
+### What Option A changed and measured
+
+The former writer generated exactly three event updates per row: **529,449 for
+E2024** and **668,928 for E2025**. Option A generated **zero** in both runs.
+Events now receive all four references in their only insert. Lineup,
+lineup-stint, and possession parents are inserted first, and all writes for one
+game share one transaction; an injected insert failure test observed the game
+transaction roll back with nothing from that game left behind.
+
+| Season | Former derived-phase growth | Option A derived-phase growth | Saved |
+|---|---:|---:|---:|
+| E2024 | 174,964,736 B | 81,272,832 B | **93,691,904 B (53.55%)** |
+| E2025 | 219,619,328 B | 99,450,880 B | **120,168,448 B (54.72%)** |
+
+The Option A E2024 start-to-post-derived database increase was 133,914,624
+bytes, **75,800,576 bytes (36.14%)** below the older 209,715,200-byte observation.
+That comparison is context, not a causal estimate: the starting allocation,
+environment, and inclusion of `raw_shot` differ. The controlled same-harness
+derived-phase comparison in the table is the before/after measurement.
+
+The composite `game_event_possession_fkey` remains incorrectly declared with
+`ON DELETE SET NULL` across a key containing non-null season and game columns.
+Option A makes the former workaround unnecessary in the normal path: it deletes
+child events before possession parents, so the broken action does not fire. No
+migration was written; repairing the constraint remains a separate owner
 decision.
+
+### What the final gates would fail to detect
+
+The local PostgreSQL instance has no Supabase RLS roles, pooler, or production
+grants, so environment-specific behavior remains untested. Two seasons and two
+split boundaries do not cover every future partition, independently computed
+partial-season correction, concurrent reader/writer timing, crash recovery, or
+real E2026 payloads. Fingerprints prove logical equality under the measured
+schema and checksum definition; they do not prove identical heap layout,
+index/WAL volume, or long-run free-space reuse. Recording SQL proves no update
+is issued through the tested loader, but would not detect an uninstalled
+production trigger that performs one.
+
+### Final verification
+
+- Default suite: **403 passed, 81 deselected in 8.15 seconds**.
+- Lint: `ruff check .` — **all checks passed**.
+- Format: `ruff format --check .` — **111 files already formatted**.
+- Local database: `euroleague_test`, port 5433, **26,848,403 bytes**, with
+  **zero** confirmation schemas left behind.
+- Production, queried inside an explicit read-only transaction:
+  **276,909,203 bytes**, **330 E2024 games**, and **402 E2025 games**.
+
+No production write, DDL, temporary schema, vacuum, or maintenance statement
+was issued. Nothing was merged to `master`.
 
 ## Task 1 — per-game derived writes
 
@@ -102,9 +192,10 @@ computing a partial season would reproduce a season-wide correction policy.
 That is intentional: the handover states that computation remains season-scoped
 and this task changes the write scope.
 
-The documented disposable-schema confirmation would close the writer gap for
-the measured schemas and split points. It would still not prove every possible
-split boundary or behavior unique to production. It was not run unattended.
+At that stage, the documented disposable-schema confirmation had not run. It
+has now closed the writer gap for the measured schemas and split points, as the
+final confirmation section above records. It still does not prove every
+possible split boundary or behavior unique to production.
 
 ## Task 3 — possession attachment trade-off
 
@@ -150,7 +241,9 @@ reuse rate are not measured.
   maintenance; full vacuum takes `ACCESS EXCLUSIVE`, blocks the table, and
   needs a second copy.
 
-The brief recommends **Option A**. It changes no code and records no decision.
+At publication, the brief recommended **Option A** without changing code or
+recording a decision. The owner subsequently approved it, the implementation
+passed the database gate, and Decision 22 now records the outcome.
 
 ### What the measurement would fail to detect
 
@@ -302,11 +395,9 @@ gate.
 
 ## Owner decisions required
 
-1. **Choose the possession-attachment path:** Option A, attach every derived
-   event reference on first insert; or Option B, keep update churn and accept
-   permanent weekly vacuum/measurement plus threshold-triggered blocking
-   maintenance. The brief recommends Option A.
+No Block B decision remains open. The owner chose Option A on 2026-08-19 and
+Decision 22 records it.
 
-No roadmap gate, published number, hot-window condition, or decision log entry
-was changed in this run.
-
+The composite `game_event_possession_fkey` repair remains a separate owner
+decision. It is not required by the Option A write path, and this run did not
+change the constraint.

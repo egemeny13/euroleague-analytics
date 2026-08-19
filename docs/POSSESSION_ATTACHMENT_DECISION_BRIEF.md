@@ -1,7 +1,8 @@
 # Possession attachment decision brief
 
 **Prepared:** 2026-08-19  
-**Decision status:** owner decision required; neither option is implemented here
+**Decision status:** Option A approved by the owner and implemented 2026-08-19;
+see Decision 22 and the measured addendum below
 
 ## The decision in one paragraph
 
@@ -19,8 +20,31 @@ event write because it consumes the cached event stream, not persisted
 recurring cost whose conservative full-season heap churn is larger than the
 72,008,225 bytes of measured headroom.
 
-This document recommends. It does not choose, implement, or amend
-`DECISIONS.md`.
+This document was the basis for the owner's 2026-08-19 approval. Decision 22
+records the choice; the original estimates below remain intact so the decision
+can be audited against what was known beforehand.
+
+## Measured implementation addendum — 2026-08-19
+
+Option A passed the complete disposable-database confirmation on PostgreSQL
+17.6. E2024 (330 games, split 137/193) and E2025 (402 games, split 201/201)
+matched their single-pass builds in every persisted relation and in a separate
+fingerprint of all four event attachment columns. Each first batch was unchanged
+after its second batch landed, and both local single-pass builds reproduced all
+recorded production baselines exactly.
+
+| Season | Former writer updates | Option A updates | Former derived growth | Option A derived growth | Saved |
+|---|---:|---:|---:|---:|---:|
+| E2024 | 529,449 | **0** | 174,964,736 B | 81,272,832 B | **93,691,904 B (53.55%)** |
+| E2025 | 668,928 | **0** | 219,619,328 B | 99,450,880 B | **120,168,448 B (54.72%)** |
+
+The writer now merges attachments by the complete event primary key, writes
+lineup/stint/possession parents before events, and commits one game at a time.
+The composite `game_event_possession_fkey` workaround is no longer exercised in
+the normal path because child events are deleted before possession parents. The
+constraint remains defective and Decision 22 deliberately does not authorize a
+migration. Full readings and limitations are in
+`docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md`.
 
 ## Measured inputs
 
@@ -204,10 +228,11 @@ incremental loading. Option B spends an unmeasured storage buffer and converts
 one engineering task into a permanent operational promise. That is a poor fit
 for a project designed to need attention only when a gate turns red.
 
-The recommendation would change if a prototype shows the parent-first
-transaction cannot stay within memory or transaction limits, or if measured
-weekly runs show ordinary vacuum keeps net growth effectively zero with ample
-margin. Neither condition has been measured today.
+At recommendation time, the choice would have changed if a prototype showed the
+parent-first transaction could not stay within memory or transaction limits, or
+if measured weekly runs showed ordinary vacuum kept net growth effectively zero
+with ample margin. The completed prototype and two-season gate resolved the
+first condition in Option A's favor; real weekly E2026 reuse remains unmeasured.
 
 ## Provenance
 
@@ -239,4 +264,3 @@ margin. Neither condition has been measured today.
 - Ten games is representative of a weekly incremental batch.
 - How much generated churn plain vacuum and later writes will reuse.
 - Index, write-ahead-log, and catalogue growth caused by the weekly updates.
-
