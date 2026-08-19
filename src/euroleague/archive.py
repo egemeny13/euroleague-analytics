@@ -5,6 +5,8 @@ from __future__ import annotations
 import gzip
 import json
 import os
+import shutil
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -298,6 +300,33 @@ def _write_bytes_atomically(path: Path, body: bytes) -> None:
     os.replace(part_path, path)
 
 
+def _cache_path(cache: ResponseCache, entry: ArchiveIndexEntry) -> Path:
+    """Return the canonical cache path for one season-level or game-level response."""
+    if entry.gamecode is None:
+        return cache.schedule_path(entry.season_code)
+    return cache.path_for(entry.season_code, entry.endpoint, entry.gamecode)
+
+
+def _replace_staged_season(
+    cache: ResponseCache, staged_cache: ResponseCache, season_code: str
+) -> None:
+    """Replace one verified season directory while retaining the prior cache on a failed swap."""
+    destination = cache.root / season_code
+    staged_season = staged_cache.root / season_code
+    backup = staged_cache.root.with_name(f"{staged_cache.root.name}-backup")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists():
+        os.replace(destination, backup)
+    try:
+        os.replace(staged_season, destination)
+    except OSError:
+        if backup.exists():
+            os.replace(backup, destination)
+        raise
+    if backup.exists():
+        shutil.rmtree(backup)
+
+
 def _identity_label(identity: tuple[str, int | None]) -> str:
     endpoint, gamecode = identity
     return endpoint if gamecode is None else f"{endpoint} game {gamecode}"
@@ -372,8 +401,7 @@ def restore_current_season_cache(
 
     schedule_entry = schedule_entries[0]
     schedule_body = storage.download_verified(schedule_entry.archive_object())
-    _write_bytes_atomically(cache.schedule_path(season_code), schedule_body)
-    games = list(cache.read_schedule_json(season_code).get("data") or [])
+    games = list(json.loads(schedule_body).get("data") or [])
     gamecodes = [int(game["gameCode"]) for game in games]
     duplicate_gamecodes = sorted(
         {gamecode for gamecode in gamecodes if gamecodes.count(gamecode) > 1}
@@ -393,15 +421,16 @@ def restore_current_season_cache(
             continue
         downloaded.append((entry, storage.download_verified(entry.archive_object())))
 
-    for entry, body in downloaded:
-        path = (
-            cache.schedule_path(season_code)
-            if entry.gamecode is None
-            else cache.path_for(season_code, entry.endpoint, entry.gamecode)
-        )
-        _write_bytes_atomically(path, body)
+    cache.root.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{season_code}-restore-", dir=cache.root.parent
+    ) as root:
+        staged_cache = ResponseCache(root)
+        for entry, body in downloaded:
+            _write_bytes_atomically(_cache_path(staged_cache, entry), body)
+        completeness = assert_complete_played_cache(staged_cache, season_code)
+        _replace_staged_season(cache, staged_cache, season_code)
 
-    completeness = assert_complete_played_cache(cache, season_code)
     return RestoreSummary(
         restored_responses=len(downloaded),
         exact_bytes=sum(len(body) for _, body in downloaded),

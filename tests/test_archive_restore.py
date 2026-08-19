@@ -70,12 +70,20 @@ class EmptyIndexConnection:
 class StorageDouble:
     """External archive boundary fake; local cache output remains real filesystem I/O."""
 
-    def __init__(self, objects: dict[str, bytes] | None = None) -> None:
+    def __init__(
+        self,
+        objects: dict[str, bytes] | None = None,
+        *,
+        fail_on: tuple[str, int | None] | None = None,
+    ) -> None:
         self.objects = objects or {}
+        self.fail_on = fail_on
         self.downloaded_identities: list[tuple[str, int | None]] = []
 
     def download_verified(self, archived) -> bytes:
         self.downloaded_identities.append((archived.endpoint, archived.gamecode))
+        if (archived.endpoint, archived.gamecode) == self.fail_on:
+            raise AssertionError(f"checksum verification failed for {archived.storage_path}")
         if archived.storage_path not in self.objects:
             raise AssertionError(f"unexpected archive download for {archived.storage_path}")
         body = gzip.decompress(self.objects[archived.storage_path])
@@ -105,6 +113,17 @@ def test_unplayed_schedule_rows_require_no_game_responses(tmp_path):
     observed = assert_complete_played_cache(cache, SEASON)
 
     assert observed == CacheCompleteness(380, 0, 0, ())
+
+
+@pytest.mark.parametrize("value", (1, "true"))
+def test_only_the_boolean_true_schedule_flag_requires_game_responses(tmp_path, value):
+    """Break caught: truthy schedule flags demand responses the fetcher never downloads."""
+    cache = cache_with_schedule(tmp_path, played=())
+    cache.schedule_path(SEASON).write_bytes(
+        json.dumps({"data": [{"gameCode": 7, "played": value}]}).encode()
+    )
+
+    assert assert_complete_played_cache(cache, SEASON) == CacheCompleteness(1, 0, 0, ())
 
 
 def test_duplicate_schedule_gamecodes_are_rejected_before_completeness_is_counted(tmp_path):
@@ -147,6 +166,8 @@ class ArchiveIndexCursor:
 
     def fetchall(self) -> list[tuple]:
         assert self.params == (SEASON,)
+        if "is_current" not in self.query:
+            return self.connection.rows + self.connection.historical_rows
         return self.connection.rows
 
     def __enter__(self):
@@ -157,8 +178,9 @@ class ArchiveIndexCursor:
 
 
 class ArchiveIndexConnection:
-    def __init__(self, rows: list[tuple]) -> None:
+    def __init__(self, rows: list[tuple], historical_rows: list[tuple] | None = None) -> None:
         self.rows = rows
+        self.historical_rows = historical_rows or []
         self.executed_insert_into_raw_api_fetch = False
 
     def cursor(self) -> ArchiveIndexCursor:
@@ -211,6 +233,14 @@ def archived_season(
     return ArchiveIndexConnection(rows), StorageDouble(objects)
 
 
+def cache_bytes(cache: ResponseCache) -> dict[str, bytes]:
+    return {
+        str(path.relative_to(cache.root)): path.read_bytes()
+        for path in cache.root.rglob("*")
+        if path.is_file()
+    }
+
+
 def test_restore_downloads_schedule_then_all_current_played_responses(tmp_path):
     """Break caught: an ephemeral runner restores only a weekly subset."""
     connection, archive_storage = archived_season(played=(7, 9), unplayed=(10,))
@@ -233,12 +263,68 @@ def test_restore_downloads_schedule_then_all_current_played_responses(tmp_path):
     assert cache.read_bytes(SEASON, "PlaybyPlay", 9) == b'{"game":9,"endpoint":"PlaybyPlay"}'
 
 
-def test_restore_refuses_missing_duplicate_or_noncurrent_required_entries(tmp_path):
-    """Break caught: a partial archive index produces a plausible partial cache."""
+def test_restore_creates_a_missing_cache_root_after_staging_succeeds(tmp_path):
+    """Break caught: a fresh ephemeral runner cannot install its verified staging tree."""
+    connection, archive_storage = archived_season(played=(7,))
+    cache = ResponseCache(tmp_path / "missing-cache-root")
+
+    restore_current_season_cache(connection, cache, archive_storage, SEASON)
+
+    assert cache.read_bytes(SEASON, "Points", 7) == b'{"game":7,"endpoint":"Points"}'
+
+
+def test_restore_rejects_a_missing_current_entry_without_changing_the_existing_cache(tmp_path):
+    """Break caught: a partial index overwrites a runner cache before failing."""
     connection, archive_storage = archived_season(played=(7,), omit=("Points", 7))
+    cache = cache_with_schedule(tmp_path, played=(99,))
+    write_three_endpoints(cache, 99)
+    before = cache_bytes(cache)
 
     with pytest.raises(ArchiveIndexError, match=r"Points.*7"):
-        restore_current_season_cache(connection, ResponseCache(tmp_path), archive_storage, SEASON)
+        restore_current_season_cache(connection, cache, archive_storage, SEASON)
+
+    assert cache_bytes(cache) == before
+
+
+def test_restore_rejects_duplicate_current_entries_without_changing_the_existing_cache(tmp_path):
+    """Break caught: duplicate current versions replace the schedule before rejection."""
+    connection, archive_storage = archived_season(played=(7,))
+    connection.rows.append(connection.rows[1])
+    cache = cache_with_schedule(tmp_path, played=(99,))
+    write_three_endpoints(cache, 99)
+    before = cache_bytes(cache)
+
+    with pytest.raises(ArchiveIndexError, match=r"duplicate.*Boxscore.*7"):
+        restore_current_season_cache(connection, cache, archive_storage, SEASON)
+
+    assert cache_bytes(cache) == before
+
+
+def test_restore_excludes_noncurrent_archive_versions(tmp_path):
+    """Break caught: a historical response is downloaded as if it were current."""
+    connection, archive_storage = archived_season(played=(7,))
+    historical, compressed = _entry(99, "Points", 7, b'{"historical":true}')
+    connection.historical_rows.append(tuple(historical.__dict__.values()))
+    archive_storage.objects[historical.storage_path] = compressed
+
+    restore_current_season_cache(connection, ResponseCache(tmp_path), archive_storage, SEASON)
+
+    assert ("Points", 7) in archive_storage.downloaded_identities
+    assert archive_storage.downloaded_identities.count(("Points", 7)) == 1
+
+
+def test_restore_keeps_the_existing_cache_when_checksum_verification_fails(tmp_path):
+    """Break caught: a failed download leaves an otherwise plausible mixed cache."""
+    connection, archive_storage = archived_season(played=(7,))
+    archive_storage.fail_on = ("Points", 7)
+    cache = cache_with_schedule(tmp_path, played=(99,))
+    write_three_endpoints(cache, 99)
+    before = cache_bytes(cache)
+
+    with pytest.raises(AssertionError, match="checksum verification failed"):
+        restore_current_season_cache(connection, cache, archive_storage, SEASON)
+
+    assert cache_bytes(cache) == before
 
 
 def test_restore_never_records_a_fetch_observation(tmp_path):
