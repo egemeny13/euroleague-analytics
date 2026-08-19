@@ -12,7 +12,7 @@ from euroleague.derived import (
     build_remaining_rows,
     discover_lineup_usage,
 )
-from euroleague.derived_load import load_phase5_base_rows, load_remaining_rows
+from euroleague.derived_load import load_derived_rows
 from euroleague.gate import (
     BACKFILL_SEASONS,
     DATABASE_OVERHEAD_ALLOWANCE_BYTES,
@@ -290,8 +290,7 @@ def test_live_phase_5_second_load_is_idempotent() -> None:
     rows = build_remaining_rows(cache, "E2024")
     with psycopg.connect(settings.url(), autocommit=True) as connection:
         before = derived_snapshot(connection, "E2024")
-        load_phase5_base_rows(connection, dimensions, events, "E2024", rebuilding_possessions=True)
-        load_remaining_rows(connection, rows, "E2024")
+        load_derived_rows(connection, dimensions, events, rows, "E2024")
         after = derived_snapshot(connection, "E2024")
 
     assert after == before

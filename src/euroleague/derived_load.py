@@ -17,6 +17,8 @@ from euroleague.derived import (
     GameEventRow,
     RemainingDerivedRows,
     SeasonScopeError,
+    attach_game_event_references,
+    select_remaining_games,
 )
 
 _DIMENSION_TABLES = (
@@ -126,10 +128,7 @@ def _assert_incremental_target_empty(
     connection: Any, season_code: str, gamecodes: list[int]
 ) -> None:
     params: tuple[Any, ...] = ()
-    clauses = [
-        "(SELECT count(*) FROM game_event WHERE season_code = %s "
-        "AND gamecode = ANY(%s) AND stint_index IS NOT NULL)"
-    ]
+    clauses = ["(SELECT count(*) FROM game_event WHERE season_code = %s AND gamecode = ANY(%s))"]
     params += (season_code, gamecodes)
     for table in ("lineup_stint", "player_game_minutes", "game_quality", "possession"):
         clauses.append(
@@ -337,6 +336,194 @@ def load_phase5_base_rows(
     return counts
 
 
+def _stage_rows(
+    cursor: Any,
+    target: str,
+    columns: tuple[str, ...],
+    rows: Iterable[tuple],
+) -> int:
+    stage = f"stage_{target}"
+    cursor.execute(f"CREATE TEMP TABLE {stage} (LIKE {target} INCLUDING DEFAULTS) ON COMMIT DROP")
+    return _copy_rows(cursor, stage, columns, rows)
+
+
+def _insert_staged_rows(cursor: Any, target: str, columns: tuple[str, ...]) -> None:
+    column_sql = ", ".join(columns)
+    cursor.execute(f"INSERT INTO {target} ({column_sql}) SELECT {column_sql} FROM stage_{target}")
+
+
+def _load_one_attached_game(
+    connection: Any,
+    events: tuple[GameEventRow, ...],
+    rows: RemainingDerivedRows,
+    season_code: str,
+    gamecode: int,
+    *,
+    replace: bool,
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    with connection.transaction(), connection.cursor() as cursor:
+        counts["lineup"] = _stage_rows(cursor, "lineup", LINEUP_COLUMNS, rows.lineups)
+        counts["lineup_stint"] = _stage_rows(
+            cursor, "lineup_stint", LINEUP_STINT_COLUMNS, rows.stints
+        )
+        counts["possession"] = _stage_rows(
+            cursor, "possession", POSSESSION_COLUMNS, rows.possessions
+        )
+        counts["game_event"] = _stage_rows(cursor, "game_event", GAME_EVENT_COLUMNS, events)
+        counts["player_game_minutes"] = _stage_rows(
+            cursor,
+            "player_game_minutes",
+            PLAYER_GAME_MINUTES_COLUMNS,
+            rows.player_minutes,
+        )
+        counts["game_quality"] = _stage_rows(
+            cursor, "game_quality", GAME_QUALITY_COLUMNS, rows.game_qualities
+        )
+
+        cursor.execute(
+            """
+            SELECT count(*)
+            FROM lineup stored
+            JOIN stage_lineup staged USING (lineup_id)
+            WHERE ROW(stored.team_code, stored.player_id_1, stored.player_id_2,
+                      stored.player_id_3, stored.player_id_4, stored.player_id_5)
+                  IS DISTINCT FROM
+                  ROW(staged.team_code, staged.player_id_1, staged.player_id_2,
+                      staged.player_id_3, staged.player_id_4, staged.player_id_5)
+            """
+        )
+        collisions = int(cursor.fetchone()[0])
+        if collisions:
+            raise LineupCollisionError(
+                f"The selected identifier conflicts with {collisions} stored lineup rows."
+            )
+
+        if replace:
+            params = (season_code, gamecode)
+            cursor.execute(
+                "DELETE FROM game_event WHERE season_code = %s AND gamecode = %s", params
+            )
+            for target in (
+                "possession",
+                "player_game_minutes",
+                "game_quality",
+                "lineup_stint",
+            ):
+                cursor.execute(
+                    f"DELETE FROM {target} WHERE season_code = %s AND gamecode = %s",
+                    params,
+                )
+
+        lineup_columns = ", ".join(LINEUP_COLUMNS)
+        cursor.execute(
+            f"INSERT INTO lineup ({lineup_columns}) "
+            f"SELECT {lineup_columns} FROM stage_lineup "
+            "ON CONFLICT (lineup_id) DO NOTHING"
+        )
+        _insert_staged_rows(cursor, "lineup_stint", LINEUP_STINT_COLUMNS)
+        _insert_staged_rows(cursor, "possession", POSSESSION_COLUMNS)
+        _insert_staged_rows(cursor, "game_event", GAME_EVENT_COLUMNS)
+        _insert_staged_rows(cursor, "player_game_minutes", PLAYER_GAME_MINUTES_COLUMNS)
+        _insert_staged_rows(cursor, "game_quality", GAME_QUALITY_COLUMNS)
+
+    return counts
+
+
+def load_derived_rows(
+    connection: Any,
+    dimensions: DimensionRows,
+    events: tuple[GameEventRow, ...],
+    remaining: RemainingDerivedRows,
+    season_code: str,
+    *,
+    gamecodes: Sequence[int] | None = None,
+) -> dict[str, int]:
+    """Write dimensions once, then one parent-first attached game per transaction."""
+    _assert_season_code(season_code)
+    _assert_dimension_scope(dimensions, season_code)
+    _assert_remaining_scope(remaining, season_code)
+    invalid_events = {row.season_code for row in events if row.season_code != season_code}
+    if invalid_events:
+        raise SeasonScopeError(
+            f"Season scope mismatch: expected {season_code}; "
+            f"received event rows for {sorted(invalid_events)}."
+        )
+
+    selected = _normalise_gamecodes(gamecodes)
+    if selected == []:
+        return {
+            "player": 0,
+            "team": 0,
+            "team_season": 0,
+            "lineup": 0,
+            "lineup_stint": 0,
+            "game_event": 0,
+            "game_event_attached": 0,
+            "player_game_minutes": 0,
+            "game_quality": 0,
+            "possession": 0,
+        }
+
+    if selected is None:
+        selected_events = events
+        selected_remaining = remaining
+        selected = sorted({row.gamecode for row in events})
+        replace = True
+    else:
+        selected_set = set(selected)
+        selected_events = tuple(row for row in events if row.gamecode in selected_set)
+        selected_remaining = select_remaining_games(remaining, selected)
+        replace = False
+        _assert_incremental_target_empty(connection, season_code, selected)
+
+    event_games = {row.gamecode for row in selected_events}
+    remaining_games = _remaining_gamecodes(selected_remaining)
+    if event_games != set(selected) or remaining_games != set(selected):
+        raise SeasonScopeError(
+            f"Selected games {selected} require complete event and derived rows; "
+            f"received events for {sorted(event_games)} and derived rows for "
+            f"{sorted(remaining_games)}."
+        )
+
+    attached_events = attach_game_event_references(
+        selected_events, selected_remaining.event_attachments
+    )
+    totals = load_dimensions(connection, dimensions, season_code)
+    totals.update(
+        {
+            "lineup": 0,
+            "lineup_stint": 0,
+            "game_event": 0,
+            "game_event_attached": 0,
+            "player_game_minutes": 0,
+            "game_quality": 0,
+            "possession": 0,
+        }
+    )
+    for gamecode in selected:
+        game_events = tuple(row for row in attached_events if row.gamecode == gamecode)
+        game_rows = select_remaining_games(selected_remaining, [gamecode])
+        counts = _load_one_attached_game(
+            connection,
+            game_events,
+            game_rows,
+            season_code,
+            gamecode,
+            replace=replace,
+        )
+        for target, count in counts.items():
+            totals[target] += count
+        totals["game_event_attached"] += len(game_events)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "VACUUM (ANALYZE) lineup, lineup_stint, game_event, player_game_minutes, "
+            "game_quality, possession"
+        )
+    return totals
+
+
 def load_remaining_rows(
     connection: Any,
     rows: RemainingDerivedRows,
@@ -344,7 +531,7 @@ def load_remaining_rows(
     *,
     gamecodes: Sequence[int] | None = None,
 ) -> dict[str, int]:
-    """Replace one season or add selected games and their attachments atomically."""
+    """Load parent facts only; Option A callers insert attached events separately."""
     _assert_season_code(season_code)
     _assert_remaining_scope(rows, season_code)
     selected = _normalise_gamecodes(gamecodes)
@@ -439,47 +626,15 @@ def load_remaining_rows(
         else:
             fact_scope = "season_code = %s AND gamecode = ANY(%s)"
             fact_params = (season_code, selected)
-        cursor.execute(
-            f"UPDATE game_event SET stint_index = NULL WHERE {fact_scope}",
-            fact_params,
-        )
-        # Clear the reference before deleting possessions. The foreign key is
-        # composite and declared ON DELETE SET NULL, so Postgres would try to
-        # null season_code and gamecode too, and both are NOT NULL. Releasing
-        # the reference first means the delete never fires that action.
-        cursor.execute(
-            f"UPDATE game_event SET possession_index = NULL WHERE {fact_scope}",
-            fact_params,
-        )
-        # possession is deleted before lineup_stint because it references the stint.
+        # This lower-level parent writer assumes callers deleted or never
+        # inserted child events. The Option A orchestrator enforces that order.
+        # Possession is deleted before lineup_stint because it references the stint.
         for target in ("possession", "player_game_minutes", "game_quality", "lineup_stint"):
             cursor.execute(f"DELETE FROM {target} WHERE {fact_scope}", fact_params)
 
         for target, stage, columns, _ in row_sets[1:]:
             column_sql = ", ".join(columns)
             cursor.execute(f"INSERT INTO {target} ({column_sql}) SELECT {column_sql} FROM {stage}")
-
-        attachment_scope = ""
-        attachment_params: tuple[Any, ...] = (season_code,)
-        if selected is not None:
-            attachment_scope = "AND event.gamecode = ANY(%s)"
-            attachment_params = (season_code, selected)
-        cursor.execute(
-            f"""
-            UPDATE game_event event
-            SET home_lineup_id = attachment.home_lineup_id,
-                away_lineup_id = attachment.away_lineup_id,
-                stint_index = attachment.stint_index,
-                possession_index = attachment.possession_index
-            FROM stage_game_event_attachment attachment
-            WHERE event.season_code = attachment.season_code
-              AND event.gamecode = attachment.gamecode
-              AND event.ingest_index = attachment.ingest_index
-              AND event.season_code = %s
-              {attachment_scope}
-            """,
-            attachment_params,
-        )
 
     with connection.cursor() as cursor:
         cursor.execute(

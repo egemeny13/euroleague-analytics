@@ -2,14 +2,14 @@
 
 ## Status
 
-**CURRENT WRITER RUN 2026-08-19 — PASS.** On disposable PostgreSQL 17.6, E2024
-passed at 137/193 and E2025 passed at 201/201. Single and batched row counts and
-content checksums matched for all six relations and the separate event
-attachment projection. Both first-batch snapshots were unchanged after the
-second batch. The local single-pass builds also reproduced the ten production
-checksums recorded for each season. See
-`docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md`. This status covers the
-pre-Option-A writer only; the same procedure must run again after Option A.
+**CURRENT WRITER AND OPTION A RUNS 2026-08-19 — PASS.** On disposable
+PostgreSQL 17.6, E2024 passed at 137/193 and E2025 passed at 201/201 before and
+after Option A. Single and batched row counts and content checksums matched for
+all six relations and the separate event attachment projection. Both
+first-batch snapshots were unchanged after the second batch. All four local
+single-pass builds reproduced the ten production checksums recorded for their
+season. Option A additionally measured zero `game_event` updates. See
+`docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md`.
 
 This procedure writes a complete historical season twice. It must run only
 against the disposable `euroleague_test` database on local port 5433. The live

@@ -5,12 +5,97 @@ from __future__ import annotations
 import pytest
 
 from euroleague.derived import (
+    EventAttachmentError,
+    GameEventAttachmentRow,
+    GameEventRow,
+    attach_game_event_references,
     build_dimensions,
     build_game_events,
     build_remaining_rows,
     discover_lineup_usage,
     lineup_identifier,
 )
+
+
+def _unattached_event(ingest_index: int) -> GameEventRow:
+    return GameEventRow(
+        "E2026",
+        51,
+        ingest_index,
+        "E",
+        "FirstQuarter",
+        ingest_index + 1,
+        "BP",
+        None,
+        None,
+        None,
+        1,
+        1,
+        0,
+        0,
+        False,
+        0,
+        0,
+        None,
+        None,
+        None,
+        None,
+        False,
+        False,
+        None,
+        False,
+    )
+
+
+def _attachment(ingest_index: int) -> GameEventAttachmentRow:
+    return GameEventAttachmentRow(
+        "E2026",
+        51,
+        ingest_index,
+        f"home-{ingest_index}",
+        f"away-{ingest_index}",
+        ingest_index + 10,
+        ingest_index + 20,
+    )
+
+
+def test_event_references_merge_by_key_without_changing_source_order() -> None:
+    """Break caught: attached insertion sorts events or pairs attachments positionally."""
+    events = (_unattached_event(0), _unattached_event(1))
+
+    attached = attach_game_event_references(events, (_attachment(1), _attachment(0)))
+
+    assert [(row.ingest_index, row.home_lineup_id) for row in attached] == [
+        (0, "home-0"),
+        (1, "home-1"),
+    ]
+    assert attached[0].away_lineup_id == "away-0"
+    assert attached[0].stint_index == 10
+    assert attached[0].possession_index == 20
+
+
+def test_event_reference_merge_refuses_a_missing_attachment() -> None:
+    """Break caught: an event reaches its insert with null foreign-key references."""
+    events = (_unattached_event(0), _unattached_event(1))
+
+    with pytest.raises(EventAttachmentError, match=r"missing.*1"):
+        attach_game_event_references(events, (_attachment(0),))
+
+
+def test_event_reference_merge_refuses_duplicate_attachment_keys() -> None:
+    """Break caught: duplicate attachment keys silently choose an arbitrary parent set."""
+    events = (_unattached_event(0),)
+
+    with pytest.raises(EventAttachmentError, match="duplicate"):
+        attach_game_event_references(events, (_attachment(0), _attachment(0)))
+
+
+def test_event_reference_merge_refuses_an_extra_attachment() -> None:
+    """Break caught: an attachment for a nonexistent event is silently discarded."""
+    events = (_unattached_event(0),)
+
+    with pytest.raises(EventAttachmentError, match=r"extra.*1"):
+        attach_game_event_references(events, (_attachment(0), _attachment(1)))
 
 
 class DimensionCache:

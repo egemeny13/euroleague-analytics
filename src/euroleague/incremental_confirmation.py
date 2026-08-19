@@ -20,9 +20,8 @@ from euroleague.derived import (
     build_dimensions,
     build_game_events,
     build_remaining_rows,
-    select_remaining_games,
 )
-from euroleague.derived_load import load_phase5_base_rows, load_remaining_rows
+from euroleague.derived_load import load_derived_rows
 from euroleague.gate import derived_snapshot, warehouse_snapshot
 from euroleague.load import load_cached_season, load_cached_shots
 
@@ -368,31 +367,15 @@ def current_derived_writer(
     season_code: str,
     gamecodes: Sequence[int] | None,
 ) -> dict[str, int]:
-    """Persist through the pre-Option-A two-step writer under confirmation."""
-    if gamecodes is None:
-        selected_events = events
-        selected_remaining = remaining
-    else:
-        selected = set(int(gamecode) for gamecode in gamecodes)
-        selected_events = tuple(event for event in events if event.gamecode in selected)
-        selected_remaining = select_remaining_games(remaining, gamecodes)
-    counts = load_phase5_base_rows(
+    """Persist through the parent-first Option A writer under confirmation."""
+    return load_derived_rows(
         connection,
         dimensions,
-        selected_events,
+        events,
+        remaining,
         season_code,
-        rebuilding_possessions=True,
         gamecodes=gamecodes,
     )
-    counts.update(
-        load_remaining_rows(
-            connection,
-            selected_remaining,
-            season_code,
-            gamecodes=gamecodes,
-        )
-    )
-    return counts
 
 
 def game_event_update_statistics(connection: Any, schema_name: str) -> dict[str, int]:

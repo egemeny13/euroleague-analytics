@@ -20,6 +20,10 @@ class SeasonScopeError(ValueError):
     """Raised before derived work can mix rows from different seasons."""
 
 
+class EventAttachmentError(ValueError):
+    """Raised when event and attachment identities are not exactly one-to-one."""
+
+
 @dataclass(frozen=True)
 class DimensionRows:
     """Dimension rows in foreign-key insertion order."""
@@ -163,10 +167,10 @@ class GameEventRow(NamedTuple):
     clock_moved_backwards: bool
     score_home: int
     score_away: int
-    home_lineup_id: None
-    away_lineup_id: None
-    stint_index: None
-    possession_index: None
+    home_lineup_id: str | None
+    away_lineup_id: str | None
+    stint_index: int | None
+    possession_index: int | None
     is_team_event: bool
     is_coach_event: bool
     free_throw_trip_id: None
@@ -297,6 +301,41 @@ class RemainingDerivedRows:
     player_minutes: tuple[PlayerGameMinutesRow, ...]
     game_qualities: tuple[GameQualityRow, ...]
     possessions: tuple[PossessionRow, ...] = ()
+
+
+def attach_game_event_references(
+    events: Sequence[GameEventRow],
+    attachments: Sequence[GameEventAttachmentRow],
+) -> tuple[GameEventRow, ...]:
+    """Merge one exact attachment into each event without changing event order."""
+    event_keys = [(row.season_code, row.gamecode, row.ingest_index) for row in events]
+    if len(set(event_keys)) != len(event_keys):
+        raise EventAttachmentError("Event rows contain duplicate primary keys.")
+
+    by_key: dict[tuple[str, int, int], GameEventAttachmentRow] = {}
+    for attachment in attachments:
+        key = (attachment.season_code, attachment.gamecode, attachment.ingest_index)
+        if key in by_key:
+            raise EventAttachmentError(f"Attachment rows contain duplicate key {key}.")
+        by_key[key] = attachment
+
+    missing = sorted(set(event_keys) - set(by_key))
+    extra = sorted(set(by_key) - set(event_keys))
+    if missing or extra:
+        raise EventAttachmentError(
+            f"Event attachment identities differ: missing {len(missing)} {missing[:3]}; "
+            f"extra {len(extra)} {extra[:3]}."
+        )
+
+    return tuple(
+        event._replace(
+            home_lineup_id=by_key[key].home_lineup_id,
+            away_lineup_id=by_key[key].away_lineup_id,
+            stint_index=by_key[key].stint_index,
+            possession_index=by_key[key].possession_index,
+        )
+        for event, key in zip(events, event_keys, strict=True)
+    )
 
 
 def select_remaining_games(

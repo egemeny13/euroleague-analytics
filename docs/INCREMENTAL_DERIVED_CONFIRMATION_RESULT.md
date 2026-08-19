@@ -4,13 +4,13 @@
 
 **Branch:** `codex/day1-compaction-pilot`
 
-**Writer:** current pre-Option-A writer
+**Writers:** current pre-Option-A writer and Option A parent-first writer
 
-**Run ID:** `abe2cd7fe4`
+**Run IDs:** `abe2cd7fe4` before Option A; `1483ce06ef` after Option A
 
 **Target:** disposable PostgreSQL 17.6, database `euroleague_test`, port 5433
 
-**Outcome:** **PASS — CURRENT WRITER DATABASE GATE GREEN**
+**Outcome:** **PASS — BOTH DATABASE GATES GREEN; OPTION A ZERO UPDATES**
 
 ## Outcome
 
@@ -25,8 +25,10 @@ recorded in `src/euroleague/compaction.py`. This comparison used the unchanged
 constants; the checksum definition therefore matched after the session
 timezone was pinned to UTC.
 
-This closes Task 1's real database-writer gate. It does not validate Option A;
-the complete confirmation must run again after that writer is implemented.
+The complete gate then ran again against Option A. It reproduced the same seven
+relation/attachment fingerprints, the same first-batch immutability readings,
+and the same ten production baselines, while `game_event.n_tup_upd` fell from
+529,449 to 0 for E2024 and from 668,928 to 0 for E2025.
 
 ## Target and production isolation
 
@@ -37,6 +39,8 @@ the complete confirmation must run again after that writer is implemented.
   did not call `DatabaseSettings.from_env()`, which resolves `DATABASE_URL`.
 - E2024 started with zero `confirm_*` schemas at 15,674,515 database bytes.
   E2025 finished with zero `confirm_*` schemas at 36,015,251 bytes.
+- The Option A rerun started at 24,202,387 bytes and finished at 44,502,163
+  bytes, again with zero `confirm_*` schemas.
 - The production database was queried only in a read-only transaction to
   isolate the checksum finding. That query measured 276,909,203 bytes, 330
   distinct E2024 games, and 402 distinct E2025 games. It issued no DDL, DML,
@@ -202,16 +206,168 @@ Each before checksum below was identical after the second batch landed.
 | `possession` | 47,831 / `acbb7c860d399fc53d03a0688b6b1178` | 59,483 / `15e5e7e0f7a1b04bc04323cefd66c01a` |
 | `game_quality` | 330 / `deb43192aa5da8507b9759a99809af45` | 402 / `ebe44c90defa90e56b050c548f3d90d7` |
 
+## Option A rerun
+
+Run `1483ce06ef` repeated every Task 1 check after replacing attachment repair
+updates with parent-first attached inserts. The single, batched, first-before,
+first-after, and production-baseline counts/checksums were byte-for-byte equal
+to the values already printed above for both seasons. A difference in any of
+those 62 count/checksum pairs would have stopped the run.
+
+### Option A database-size readings — E2024
+
+| Checkpoint | Bytes |
+|---|---:|
+| start | 24,202,387 |
+| before single migrations | 24,202,387 |
+| after single migrations | 24,751,251 |
+| before single raw load | 24,751,251 |
+| after single raw load, including `raw_shot` | 76,844,179 |
+| before single derived load | 76,844,179 |
+| after single derived load | **158,117,011** |
+| after single cleanup | 41,553,043 |
+| before batched migrations | 41,553,043 |
+| after batched migrations | 42,134,675 |
+| before batched raw load | 42,134,675 |
+| after batched raw load, including `raw_shot` | 86,404,243 |
+| before first derived batch | 86,404,243 |
+| after games 1–137 | 116,575,379 |
+| before second derived batch | 116,575,379 |
+| after games 138–330 | **158,928,019** |
+| after batched cleanup | 42,323,091 |
+
+### Option A database-size readings — E2025
+
+| Checkpoint | Bytes |
+|---|---:|
+| start | 41,853,455 |
+| before single migrations | 41,853,455 |
+| after single migrations | 42,435,087 |
+| before single raw load | 42,435,087 |
+| after single raw load, including `raw_shot` | 93,293,715 |
+| before single derived load | 93,293,715 |
+| after single derived load | **192,744,595** |
+| after single cleanup | 46,419,091 |
+| before batched migrations | 46,419,091 |
+| after batched migrations | 46,959,763 |
+| before batched raw load | 46,959,763 |
+| after batched raw load, including `raw_shot` | 93,105,299 |
+| before first derived batch | 93,105,299 |
+| after games 1–201 | 141,339,795 |
+| before second derived batch | 141,339,795 |
+| after games 202–402 | 190,876,819 |
+| after batched cleanup | 44,502,163 |
+
+### Zero-update and growth measurements
+
+| Season/build | Before Option A `n_tup_upd` | Option A `n_tup_upd` | Option A `n_dead_tup` |
+|---|---:|---:|---:|
+| E2024 single | 529,449 | **0** | 0 |
+| E2024 batched | 529,449 | **0** | 0 |
+| E2025 single | 668,928 | **0** | 0 |
+| E2025 batched | 668,928 | **0** | 0 |
+
+The controlled comparison is the derived-phase allocation delta from the
+reading immediately before derived persistence to the reading immediately
+after it:
+
+| Season | Current writer | Option A | Reduction |
+|---|---:|---:|---:|
+| E2024 | 174,964,736 bytes | 81,272,832 bytes | **93,691,904 bytes (53.55%)** |
+| E2025 | 219,619,328 bytes | 99,450,880 bytes | **120,168,448 bytes (54.72%)** |
+
+The earlier production attempt's broader start-to-after-derived increase was
+209,715,200 bytes. Option A's local E2024 start-to-after-derived increase was
+133,914,624 bytes, 75,800,576 bytes or 36.14% lower. That comparison is useful
+context but not causal: the environments start with different allocation and
+the local harness also loads `raw_shot`. The same-harness derived-phase deltas
+above are the defensible Option A savings measurement.
+
+### Foreign-key order and transaction result
+
+For each game, Option A inserts shared `lineup` parents, then `lineup_stint`,
+then `possession`, then the already-attached `game_event`, followed by minutes
+and quality. The two full database builds exercised all 399,459 events without
+a foreign-key failure. Recording-connection tests independently assert that
+SQL order and that an injected event-insert failure rolls back the game's
+parent rows and event together.
+
+The old `game_event_possession_fkey` workaround is no longer used: replacement
+deletes child `game_event` rows before deleting `possession`, so the composite
+`ON DELETE SET NULL` action does not fire. The constraint itself is still
+defective because it would try to null non-null key columns for another caller.
+Option A does not repair it and no migration was added.
+
+## Plain-language walkthrough of the non-trivial functions
+
+### `attach_game_event_references`
+
+1. Build the three-part identity for each source-ordered event and reject a
+   duplicate event key.
+2. Index each attachment by the same identity and reject a duplicate
+   attachment key.
+3. Compare the two key sets. Any missing attachment would create a null child;
+   any extra attachment identifies no event, so either condition stops before
+   persistence.
+4. Walk the original event tuple in its original order and replace only the
+   four reference fields. No sort and no positional pairing occurs.
+
+### `load_derived_rows`
+
+1. Validate the season on dimensions, events, and every remaining row before a
+   transaction starts.
+2. Normalize the optional gamecode list. An empty list returns an exact no-op.
+3. On the append path, query all five derived grains plus any selected event
+   and refuse existing games before writing dimensions.
+4. Select only the requested games and require complete event and remaining
+   populations for each selected game.
+5. Attach references in memory, then load shared player/team dimensions once.
+6. Iterate gamecodes numerically and hand each game's events and parents to one
+   transaction helper.
+7. Aggregate inserted-row counts and vacuum/analyze the six derived relations
+   only after all game transactions commit.
+
+### `_load_one_attached_game`
+
+1. Open one transaction and stage the six row sets for one game.
+2. Compare staged lineup identities with stored canonical units; an ID
+   collision aborts the transaction.
+3. For a replacement, delete `game_event` first, then possession, minutes,
+   quality, and stints. This child-first deletion avoids the defective
+   composite `ON DELETE SET NULL` path.
+4. Insert lineups with conflict-ignore only for an identical shared identity.
+5. Insert stints and possessions before events so every event foreign key has
+   a parent at insert time.
+6. Insert the event once with all four references, then minutes and quality.
+7. Leaving the context commits all six grains together; any exception rolls
+   the whole game's work back.
+
+### `run_confirmation`
+
+1. Assert the disposable database and port, then pin UTC so `timestamptz` JSON
+   hashes are comparable with production.
+2. Build dimensions, events, and remaining rows from the immutable cache.
+3. Create and migrate a unique single schema, load raw rows and shots, run the
+   writer, then capture seven gate hashes, ten production hashes, update stats,
+   and size readings.
+4. Stop before batching if any production count/checksum differs.
+5. Create a fresh batched schema, load the same raw rows, persist the first
+   approved game range, and capture its seven fingerprints.
+6. Persist the second range, recapture the first, require it unchanged, then
+   require the complete batched schema equal the single schema.
+7. Write artifacts at each decisive checkpoint and drop each schema in
+   `finally`, including after a failure.
+
 ## What this confirmation proved
 
-1. The current database writer persists the same values in one pass and at the
-   approved E2024 137/193 and E2025 201/201 boundaries.
+1. Both the current writer and Option A persist the same values in one pass and
+   at the approved E2024 137/193 and E2025 201/201 boundaries.
 2. Appending the second half does not mutate any first-half row covered by the
    six relations or the separate attachment fingerprint.
 3. A fresh PostgreSQL 17.6 build from the immutable cache reproduces the ten
    recorded production table checksums after canonicalizing timezone.
-4. The current writer performs exactly three `game_event` updates per event,
-   even though its post-vacuum dead-tuple estimate is zero.
+4. The current writer performs exactly three `game_event` updates per event;
+   Option A performs zero while reproducing every measured row value.
 5. Failure cleanup removes populated confirmation schemas, including when the
    production-baseline assertion stops the run.
 
@@ -242,5 +398,7 @@ Each before checksum below was identical after the second batch landed.
   persistence.
 - **The gate does not exercise replacement after a changed source response.**
   Decision 7's per-game rebuild remains a separate path.
-- **This is the pre-Option-A result.** It says nothing yet about parent-first
-  ordering, zero event updates, or per-game atomicity in the new writer.
+- **The recording transaction test** proves statements share one transaction;
+  it does not simulate a PostgreSQL process crash between WAL flush and client
+  acknowledgement. The full database run proves foreign keys accepted the
+  order but did not inject a mid-game failure on the real server.

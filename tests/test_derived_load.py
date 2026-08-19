@@ -8,8 +8,13 @@ import pytest
 
 from euroleague.derived import (
     DimensionRows,
+    GameEventAttachmentRow,
     GameEventRow,
     GameQualityRow,
+    LineupRow,
+    LineupStintRow,
+    PlayerGameMinutesRow,
+    PossessionRow,
     RemainingDerivedRows,
     SeasonScopeError,
     build_remaining_rows,
@@ -17,6 +22,7 @@ from euroleague.derived import (
 from euroleague.derived_load import (
     LineupCollisionError,
     Phase5StateError,
+    load_derived_rows,
     load_dimensions,
     load_game_events,
     load_phase5_base_rows,
@@ -52,6 +58,10 @@ class Cursor:
     def execute(self, query, params=None) -> None:
         self.last_query = " ".join(str(query).split())
         self.connection.executions.append((self.last_query, params))
+        if self.connection.fail_query_prefix and self.last_query.startswith(
+            self.connection.fail_query_prefix
+        ):
+            raise RuntimeError("injected database failure")
 
     def copy(self, query):
         table = str(query).split()[1]
@@ -75,6 +85,7 @@ class Connection:
         lineup_collisions: int = 0,
         possession_rows: int = 0,
         derived_game_rows: int = 0,
+        fail_query_prefix: str | None = None,
     ) -> None:
         self.executions: list[tuple[str, tuple | None]] = []
         self.copied: dict[str, list[tuple]] = {}
@@ -85,6 +96,7 @@ class Connection:
         self.lineup_collisions = lineup_collisions
         self.possession_rows = possession_rows
         self.derived_game_rows = derived_game_rows
+        self.fail_query_prefix = fail_query_prefix
 
     def cursor(self):
         return Cursor(self)
@@ -343,9 +355,10 @@ def test_remaining_rows_including_possessions_load_in_one_transaction(
         "game_quality, possession"
     ]
     queries = [query for query, _ in connection.executions]
-    detach_index = queries.index("UPDATE game_event SET stint_index = NULL WHERE season_code = %s")
-    delete_index = queries.index("DELETE FROM lineup_stint WHERE season_code = %s")
-    assert detach_index < delete_index
+    assert not any(query.startswith("UPDATE game_event") for query in queries)
+    possession_delete = queries.index("DELETE FROM possession WHERE season_code = %s")
+    stint_delete = queries.index("DELETE FROM lineup_stint WHERE season_code = %s")
+    assert possession_delete < stint_delete
 
 
 def test_remaining_loader_rolls_back_if_selected_id_collides_with_stored_unit(
@@ -432,6 +445,203 @@ def _remaining_games(gamecodes: range, season_code: str = "E2026") -> RemainingD
     )
 
 
+def _event(gamecode: int, ingest_index: int = 0) -> GameEventRow:
+    return GameEventRow(
+        "E2026",
+        gamecode,
+        ingest_index,
+        "E",
+        "FirstQuarter",
+        ingest_index + 1,
+        "BP",
+        None,
+        None,
+        None,
+        1,
+        1,
+        0,
+        0,
+        False,
+        0,
+        0,
+        None,
+        None,
+        None,
+        None,
+        False,
+        False,
+        None,
+        False,
+    )
+
+
+def _complete_game(gamecode: int) -> tuple[tuple[GameEventRow, ...], RemainingDerivedRows]:
+    home_id = f"home-{gamecode}"
+    away_id = f"away-{gamecode}"
+    lineups = (
+        LineupRow(home_id, "AAA", "H1", "H2", "H3", "H4", "H5"),
+        LineupRow(away_id, "BBB", "A1", "A2", "A3", "A4", "A5"),
+    )
+    remaining = RemainingDerivedRows(
+        lineups=lineups,
+        stints=(
+            LineupStintRow(
+                "E2026",
+                gamecode,
+                0,
+                home_id,
+                away_id,
+                0,
+                0,
+                0,
+                1,
+                0,
+                1,
+                1,
+                1,
+                0,
+                0,
+                1,
+                1,
+            ),
+        ),
+        event_attachments=(GameEventAttachmentRow("E2026", gamecode, 0, home_id, away_id, 0, 0),),
+        player_minutes=(
+            PlayerGameMinutesRow("E2026", gamecode, "H1", "AAA", 1, 1, 1, True, True, True),
+        ),
+        game_qualities=(_quality_row(gamecode),),
+        possessions=(
+            PossessionRow(
+                "E2026",
+                gamecode,
+                0,
+                "AAA",
+                "BBB",
+                0,
+                0,
+                0,
+                home_id,
+                away_id,
+                0,
+                "turnover",
+                0,
+                2400,
+                False,
+            ),
+        ),
+    )
+    return (_event(gamecode),), remaining
+
+
+def test_derived_load_emits_zero_game_event_updates() -> None:
+    """Break caught: Option A leaves any event-wide UPDATE in the derived path."""
+    events, remaining = _complete_game(51)
+    connection = Connection()
+
+    load_derived_rows(
+        connection,
+        DimensionRows((), (), ()),
+        events,
+        remaining,
+        "E2026",
+        gamecodes=[51],
+    )
+
+    assert not any(query.startswith("UPDATE game_event") for query, _ in connection.executions)
+
+
+def test_game_event_copy_contains_all_four_references_on_first_insert() -> None:
+    """Break caught: an event is inserted null-attached and expects a later repair."""
+    events, remaining = _complete_game(51)
+    connection = Connection()
+
+    load_derived_rows(
+        connection,
+        DimensionRows((), (), ()),
+        events,
+        remaining,
+        "E2026",
+        gamecodes=[51],
+    )
+
+    assert connection.copied["stage_game_event"][0][17:21] == (
+        "home-51",
+        "away-51",
+        0,
+        0,
+    )
+    assert (
+        sum(query.startswith("INSERT INTO game_event") for query, _ in connection.executions) == 1
+    )
+
+
+def test_parent_rows_are_inserted_before_attached_game_events() -> None:
+    """Break caught: attached events violate lineup, stint, or possession foreign keys."""
+    events, remaining = _complete_game(51)
+    connection = Connection()
+
+    load_derived_rows(
+        connection,
+        DimensionRows((), (), ()),
+        events,
+        remaining,
+        "E2026",
+        gamecodes=[51],
+    )
+
+    inserts = [query.split()[2] for query, _ in connection.executions if query.startswith("INSERT")]
+    assert inserts[-6:] == [
+        "lineup",
+        "lineup_stint",
+        "possession",
+        "game_event",
+        "player_game_minutes",
+        "game_quality",
+    ]
+
+
+def test_failed_game_write_rolls_back_its_parents_and_event_together() -> None:
+    """Break caught: a failed child insert commits parent facts for half a game."""
+    events, remaining = _complete_game(51)
+    connection = Connection(fail_query_prefix="INSERT INTO game_event")
+
+    with pytest.raises(RuntimeError, match="injected database failure"):
+        load_derived_rows(
+            connection,
+            DimensionRows((), (), ()),
+            events,
+            remaining,
+            "E2026",
+            gamecodes=[51],
+        )
+
+    assert connection.transactions_started == 2
+    assert connection.transactions_committed == 1
+    assert connection.transactions_rolled_back == 1
+
+
+def test_incremental_orchestrator_refuses_any_existing_selected_event_before_write() -> None:
+    """Break caught: a null-attached existing event bypasses append refusal until insert."""
+    events, remaining = _complete_game(51)
+    connection = Connection(derived_game_rows=1)
+
+    with pytest.raises(Phase5StateError, match="already has derived rows"):
+        load_derived_rows(
+            connection,
+            DimensionRows((), (), ()),
+            events,
+            remaining,
+            "E2026",
+            gamecodes=[51],
+        )
+
+    safety_query = next(
+        query for query, _ in connection.executions if "derived rows for selected games" in query
+    )
+    assert "stint_index" not in safety_query
+    assert connection.transactions_started == 0
+
+
 def test_incremental_base_and_remaining_writes_never_mutate_earlier_games() -> None:
     """Break caught: staging games 51-60 deletes season rows for games 1-50."""
     selected = list(range(51, 61))
@@ -464,7 +674,7 @@ def test_incremental_base_and_remaining_writes_never_mutate_earlier_games() -> N
 
 
 def test_incremental_possession_attachment_never_clears_or_rewrites_earlier_games() -> None:
-    """Break caught: adding week six rewrites every prior possession attachment."""
+    """Break caught: adding week six repairs event attachments with any UPDATE."""
     selected = list(range(51, 61))
     connection = Connection()
 
@@ -475,14 +685,7 @@ def test_incremental_possession_attachment_never_clears_or_rewrites_earlier_game
         gamecodes=selected,
     )
 
-    possession_updates = [
-        (query, params)
-        for query, params in connection.executions
-        if query.startswith("UPDATE game_event") and "possession_index" in query
-    ]
-    assert len(possession_updates) == 2
-    assert all("gamecode = ANY(%s)" in query for query, _ in possession_updates)
-    assert all(params == ("E2026", selected) for _, params in possession_updates)
+    assert not any(query.startswith("UPDATE game_event") for query, _ in connection.executions)
 
 
 def test_incremental_remaining_write_refuses_a_game_that_already_has_derived_rows() -> None:

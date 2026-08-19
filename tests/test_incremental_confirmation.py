@@ -19,6 +19,7 @@ from euroleague.incremental_confirmation import (
     assert_local_confirmation_target,
     assert_production_baseline_matches,
     assert_same_fingerprints,
+    current_derived_writer,
     fingerprint_relations,
     load_confirmation_raw_rows,
     managed_schema,
@@ -321,6 +322,37 @@ def test_confirmation_checks_production_baseline_before_starting_batched_build(
     assert "old-raw:E2024" not in calls
     assert calls.index("baseline:E2024") < calls.index("E2024 batched raw load")
     assert calls.index("baseline-assert:E2024") < calls.index("E2024 batched raw load")
+
+
+def test_confirmation_writer_uses_the_parent_first_option_a_orchestrator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Break caught: the post-refactor gate still exercises the obsolete two-stage writer."""
+    calls: list[tuple[str, object]] = []
+
+    def option_a(connection, dimensions, events, remaining, season_code, *, gamecodes):
+        calls.append(("option-a", gamecodes))
+        return {"game_event": 1}
+
+    def old_path(*args, **kwargs):
+        calls.append(("old-path", None))
+        return {}
+
+    monkeypatch.setattr(confirmation, "load_derived_rows", option_a, raising=False)
+    monkeypatch.setattr(confirmation, "load_phase5_base_rows", old_path, raising=False)
+    monkeypatch.setattr(confirmation, "load_remaining_rows", old_path, raising=False)
+
+    counts = current_derived_writer(
+        object(),
+        confirmation.DimensionRows((), (), ()),
+        (),
+        confirmation.RemainingDerivedRows((), (), (), (), ()),
+        "E2026",
+        [51],
+    )
+
+    assert counts == {"game_event": 1}
+    assert calls == [("option-a", [51])]
 
 
 def test_confirmation_drops_the_schema_when_a_load_callback_fails() -> None:
