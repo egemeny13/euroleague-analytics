@@ -6,7 +6,14 @@ from contextlib import contextmanager
 
 import pytest
 
-from euroleague.derived import DimensionRows, GameEventRow, SeasonScopeError, build_remaining_rows
+from euroleague.derived import (
+    DimensionRows,
+    GameEventRow,
+    GameQualityRow,
+    RemainingDerivedRows,
+    SeasonScopeError,
+    build_remaining_rows,
+)
 from euroleague.derived_load import (
     LineupCollisionError,
     Phase5StateError,
@@ -53,6 +60,8 @@ class Cursor:
     def fetchone(self):
         if "JOIN stage_lineup" in self.last_query:
             return (self.connection.lineup_collisions,)
+        if "derived rows for selected games" in self.last_query:
+            return (self.connection.derived_game_rows,)
         if self.last_query == "SELECT count(*) FROM possession WHERE season_code = %s":
             return (self.connection.possession_rows,)
         return self.connection.safety_counts
@@ -65,6 +74,7 @@ class Connection:
         safety_counts: tuple[int, int] = (0, 0),
         lineup_collisions: int = 0,
         possession_rows: int = 0,
+        derived_game_rows: int = 0,
     ) -> None:
         self.executions: list[tuple[str, tuple | None]] = []
         self.copied: dict[str, list[tuple]] = {}
@@ -74,6 +84,7 @@ class Connection:
         self.safety_counts = safety_counts
         self.lineup_collisions = lineup_collisions
         self.possession_rows = possession_rows
+        self.derived_game_rows = derived_game_rows
 
     def cursor(self):
         return Cursor(self)
@@ -385,3 +396,145 @@ def test_remaining_loader_rejects_rows_outside_the_callers_explicit_season(
 
     assert connection.transactions_started == 0
     assert connection.copied == {}
+
+
+# ---------------------------------------------------------------------------
+# Incremental derived writes for a season that is still being played
+# ---------------------------------------------------------------------------
+
+
+def _quality_row(gamecode: int, season_code: str = "E2026") -> GameQualityRow:
+    return GameQualityRow(
+        season_code,
+        gamecode,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        False,
+        None,
+        False,
+        [],
+    )
+
+
+def _remaining_games(gamecodes: range, season_code: str = "E2026") -> RemainingDerivedRows:
+    return RemainingDerivedRows(
+        lineups=(),
+        stints=(),
+        event_attachments=(),
+        player_minutes=(),
+        game_qualities=tuple(_quality_row(gamecode, season_code) for gamecode in gamecodes),
+        possessions=(),
+    )
+
+
+def test_incremental_base_and_remaining_writes_never_mutate_earlier_games() -> None:
+    """Break caught: staging games 51-60 deletes season rows for games 1-50."""
+    selected = list(range(51, 61))
+    connection = Connection()
+
+    load_game_events(connection, (), "E2026", gamecodes=selected)
+    load_remaining_rows(
+        connection,
+        _remaining_games(range(51, 61)),
+        "E2026",
+        gamecodes=selected,
+    )
+
+    fact_mutations = [
+        (query, params)
+        for query, params in connection.executions
+        if query.startswith(
+            (
+                "DELETE FROM game_event",
+                "DELETE FROM possession",
+                "DELETE FROM player_game_minutes",
+                "DELETE FROM game_quality",
+                "DELETE FROM lineup_stint",
+            )
+        )
+    ]
+    assert fact_mutations
+    assert all("gamecode = ANY(%s)" in query for query, _ in fact_mutations)
+    assert all(params == ("E2026", selected) for _, params in fact_mutations)
+
+
+def test_incremental_possession_attachment_never_clears_or_rewrites_earlier_games() -> None:
+    """Break caught: adding week six rewrites every prior possession attachment."""
+    selected = list(range(51, 61))
+    connection = Connection()
+
+    load_remaining_rows(
+        connection,
+        _remaining_games(range(51, 61)),
+        "E2026",
+        gamecodes=selected,
+    )
+
+    possession_updates = [
+        (query, params)
+        for query, params in connection.executions
+        if query.startswith("UPDATE game_event") and "possession_index" in query
+    ]
+    assert len(possession_updates) == 2
+    assert all("gamecode = ANY(%s)" in query for query, _ in possession_updates)
+    assert all(params == ("E2026", selected) for _, params in possession_updates)
+
+
+def test_incremental_remaining_write_refuses_a_game_that_already_has_derived_rows() -> None:
+    """Break caught: the add path becomes an undocumented replacement path."""
+    connection = Connection(derived_game_rows=1)
+
+    with pytest.raises(Phase5StateError, match="already has derived rows"):
+        load_remaining_rows(
+            connection,
+            _remaining_games(range(51, 52)),
+            "E2026",
+            gamecodes=[51],
+        )
+
+    assert connection.transactions_started == 0
+    assert connection.copied == {}
+
+
+def test_incremental_remaining_write_of_zero_games_is_a_clean_no_op() -> None:
+    """Break caught: an empty live-season week still stages, clears, or vacuums rows."""
+    connection = Connection(derived_game_rows=1)
+
+    counts = load_remaining_rows(
+        connection,
+        _remaining_games(range(0)),
+        "E2026",
+        gamecodes=[],
+    )
+
+    assert counts == {
+        "lineup": 0,
+        "lineup_stint": 0,
+        "game_event_attached": 0,
+        "player_game_minutes": 0,
+        "game_quality": 0,
+        "possession": 0,
+    }
+    assert connection.executions == []
+    assert connection.transactions_started == 0
+
+
+def test_incremental_remaining_write_rejects_another_season_before_any_write() -> None:
+    """Break caught: an E2025 row enters an explicitly E2026 incremental batch."""
+    connection = Connection()
+
+    with pytest.raises(SeasonScopeError, match=r"expected E2026.*received.*E2025"):
+        load_remaining_rows(
+            connection,
+            _remaining_games(range(51, 52), season_code="E2025"),
+            "E2026",
+            gamecodes=[51],
+        )
+
+    assert connection.executions == []
+    assert connection.transactions_started == 0

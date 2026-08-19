@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from euroleague.derived import (
@@ -52,6 +52,16 @@ class LineupCollisionError(RuntimeError):
     """Raised when one selected identifier names two different canonical units."""
 
 
+_EMPTY_REMAINING_COUNTS = {
+    "lineup": 0,
+    "lineup_stint": 0,
+    "game_event_attached": 0,
+    "player_game_minutes": 0,
+    "game_quality": 0,
+    "possession": 0,
+}
+
+
 def _assert_season_code(season_code: str) -> None:
     if not season_code or season_code != season_code.strip():
         raise SeasonScopeError(f"Expected a non-blank trimmed season; received {season_code!r}.")
@@ -80,6 +90,62 @@ def _assert_remaining_scope(rows: RemainingDerivedRows, expected_season: str) ->
         raise SeasonScopeError(
             f"Season scope mismatch: expected {expected_season}; "
             f"received derived rows for {sorted(invalid)}."
+        )
+
+
+def _normalise_gamecodes(gamecodes: Sequence[int] | None) -> list[int] | None:
+    if gamecodes is None:
+        return None
+    return sorted({int(gamecode) for gamecode in gamecodes})
+
+
+def _assert_selected_games(actual: Iterable[int], selected: list[int] | None) -> None:
+    if selected is None:
+        return
+    invalid = sorted({int(gamecode) for gamecode in actual} - set(selected))
+    if invalid:
+        raise SeasonScopeError(
+            f"Incremental game scope mismatch: selected {selected}; received rows for {invalid}."
+        )
+
+
+def _remaining_gamecodes(rows: RemainingDerivedRows) -> set[int]:
+    gamecodes: set[int] = set()
+    for row_set in (
+        rows.stints,
+        rows.event_attachments,
+        rows.player_minutes,
+        rows.game_qualities,
+        rows.possessions,
+    ):
+        gamecodes.update(int(row.gamecode) for row in row_set)
+    return gamecodes
+
+
+def _assert_incremental_target_empty(
+    connection: Any, season_code: str, gamecodes: list[int]
+) -> None:
+    params: tuple[Any, ...] = ()
+    clauses = [
+        "(SELECT count(*) FROM game_event WHERE season_code = %s "
+        "AND gamecode = ANY(%s) AND stint_index IS NOT NULL)"
+    ]
+    params += (season_code, gamecodes)
+    for table in ("lineup_stint", "player_game_minutes", "game_quality", "possession"):
+        clauses.append(
+            f"(SELECT count(*) FROM {table} WHERE season_code = %s AND gamecode = ANY(%s))"
+        )
+        params += (season_code, gamecodes)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT /* derived rows for selected games */ " + " + ".join(clauses),
+            params,
+        )
+        existing = int(cursor.fetchone()[0])
+    if existing:
+        raise Phase5StateError(
+            f"Season {season_code} already has derived rows for selected games {gamecodes}. "
+            "Incremental loading only adds new games; it never replaces one."
         )
 
 
@@ -143,8 +209,10 @@ def load_game_events(
     connection: Any,
     rows: tuple[GameEventRow, ...],
     season_code: str,
+    *,
+    gamecodes: Sequence[int] | None = None,
 ) -> dict[str, int]:
-    """Replace one season's event layer before lineup identities exist."""
+    """Replace one season or add explicitly selected games to its event layer."""
     _assert_season_code(season_code)
     invalid = {row.season_code for row in rows if row.season_code != season_code}
     if invalid:
@@ -152,6 +220,10 @@ def load_game_events(
             f"Season scope mismatch: expected {season_code}; "
             f"received event rows for {sorted(invalid)}."
         )
+    selected = _normalise_gamecodes(gamecodes)
+    _assert_selected_games((row.gamecode for row in rows), selected)
+    if selected == []:
+        return {"game_event": 0}
 
     with connection.transaction(), connection.cursor() as cursor:
         cursor.execute(
@@ -171,10 +243,16 @@ def load_game_events(
             f"INSERT INTO game_event ({column_sql}) SELECT {column_sql} FROM stage_game_event "
             f"ON CONFLICT (season_code, gamecode, ingest_index) DO UPDATE SET {refresh_sql}"
         )
+        if selected is None:
+            delete_scope = "target.season_code = %s"
+            delete_params: tuple[Any, ...] = (season_code,)
+        else:
+            delete_scope = "target.season_code = %s AND target.gamecode = ANY(%s)"
+            delete_params = (season_code, selected)
         cursor.execute(
-            """
+            f"""
             DELETE FROM game_event target
-            WHERE target.season_code = %s
+            WHERE {delete_scope}
               AND NOT EXISTS (
                   SELECT 1 FROM stage_game_event staged
                   WHERE staged.season_code = target.season_code
@@ -182,13 +260,17 @@ def load_game_events(
                     AND staged.ingest_index = target.ingest_index
               )
             """,
-            (season_code,),
+            delete_params,
         )
     return {"game_event": count}
 
 
 def assert_pre_lineup_safe(
-    connection: Any, season_code: str, *, rebuilding_possessions: bool = False
+    connection: Any,
+    season_code: str,
+    *,
+    rebuilding_possessions: bool = False,
+    gamecodes: Sequence[int] | None = None,
 ) -> None:
     """Refuse a base load that would strand Phase 6 rows built from other events.
 
@@ -200,11 +282,20 @@ def assert_pre_lineup_safe(
     _assert_season_code(season_code)
     if rebuilding_possessions:
         return
+    selected = _normalise_gamecodes(gamecodes)
+    if selected == []:
+        return
     with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT count(*) FROM possession WHERE season_code = %s",
-            (season_code,),
-        )
+        if selected is None:
+            cursor.execute(
+                "SELECT count(*) FROM possession WHERE season_code = %s",
+                (season_code,),
+            )
+        else:
+            cursor.execute(
+                "SELECT count(*) FROM possession WHERE season_code = %s AND gamecode = ANY(%s)",
+                (season_code, selected),
+            )
         possession_rows = int(cursor.fetchone()[0])
     if possession_rows:
         raise Phase5StateError(
@@ -220,6 +311,7 @@ def load_phase5_base_rows(
     season_code: str,
     *,
     rebuilding_possessions: bool = False,
+    gamecodes: Sequence[int] | None = None,
 ) -> dict[str, int]:
     """Refresh dimensions first, then events without clearing derived attachments."""
     _assert_season_code(season_code)
@@ -230,9 +322,18 @@ def load_phase5_base_rows(
             f"Season scope mismatch: expected {season_code}; "
             f"received event rows for {sorted(invalid_events)}."
         )
-    assert_pre_lineup_safe(connection, season_code, rebuilding_possessions=rebuilding_possessions)
+    selected = _normalise_gamecodes(gamecodes)
+    _assert_selected_games((row.gamecode for row in events), selected)
+    if selected == []:
+        return {"player": 0, "team": 0, "team_season": 0, "game_event": 0}
+    assert_pre_lineup_safe(
+        connection,
+        season_code,
+        rebuilding_possessions=rebuilding_possessions,
+        gamecodes=selected,
+    )
     counts = load_dimensions(connection, dimensions, season_code)
-    counts.update(load_game_events(connection, events, season_code))
+    counts.update(load_game_events(connection, events, season_code, gamecodes=selected))
     return counts
 
 
@@ -240,10 +341,18 @@ def load_remaining_rows(
     connection: Any,
     rows: RemainingDerivedRows,
     season_code: str,
+    *,
+    gamecodes: Sequence[int] | None = None,
 ) -> dict[str, int]:
-    """Replace one season's post-decision tables and event attachments atomically."""
+    """Replace one season or add selected games and their attachments atomically."""
     _assert_season_code(season_code)
     _assert_remaining_scope(rows, season_code)
+    selected = _normalise_gamecodes(gamecodes)
+    _assert_selected_games(_remaining_gamecodes(rows), selected)
+    if selected == []:
+        return dict(_EMPTY_REMAINING_COUNTS)
+    if selected is not None:
+        _assert_incremental_target_empty(connection, season_code, selected)
     row_sets = (
         ("lineup", "stage_lineup", LINEUP_COLUMNS, rows.lineups),
         (
@@ -324,28 +433,39 @@ def load_remaining_rows(
             "ON CONFLICT (lineup_id) DO NOTHING"
         )
 
+        if selected is None:
+            fact_scope = "season_code = %s"
+            fact_params: tuple[Any, ...] = (season_code,)
+        else:
+            fact_scope = "season_code = %s AND gamecode = ANY(%s)"
+            fact_params = (season_code, selected)
         cursor.execute(
-            "UPDATE game_event SET stint_index = NULL WHERE season_code = %s",
-            (season_code,),
+            f"UPDATE game_event SET stint_index = NULL WHERE {fact_scope}",
+            fact_params,
         )
         # Clear the reference before deleting possessions. The foreign key is
         # composite and declared ON DELETE SET NULL, so Postgres would try to
         # null season_code and gamecode too, and both are NOT NULL. Releasing
         # the reference first means the delete never fires that action.
         cursor.execute(
-            "UPDATE game_event SET possession_index = NULL WHERE season_code = %s",
-            (season_code,),
+            f"UPDATE game_event SET possession_index = NULL WHERE {fact_scope}",
+            fact_params,
         )
         # possession is deleted before lineup_stint because it references the stint.
         for target in ("possession", "player_game_minutes", "game_quality", "lineup_stint"):
-            cursor.execute(f"DELETE FROM {target} WHERE season_code = %s", (season_code,))
+            cursor.execute(f"DELETE FROM {target} WHERE {fact_scope}", fact_params)
 
         for target, stage, columns, _ in row_sets[1:]:
             column_sql = ", ".join(columns)
             cursor.execute(f"INSERT INTO {target} ({column_sql}) SELECT {column_sql} FROM {stage}")
 
+        attachment_scope = ""
+        attachment_params: tuple[Any, ...] = (season_code,)
+        if selected is not None:
+            attachment_scope = "AND event.gamecode = ANY(%s)"
+            attachment_params = (season_code, selected)
         cursor.execute(
-            """
+            f"""
             UPDATE game_event event
             SET home_lineup_id = attachment.home_lineup_id,
                 away_lineup_id = attachment.away_lineup_id,
@@ -356,8 +476,9 @@ def load_remaining_rows(
               AND event.gamecode = attachment.gamecode
               AND event.ingest_index = attachment.ingest_index
               AND event.season_code = %s
+              {attachment_scope}
             """,
-            (season_code,),
+            attachment_params,
         )
 
     with connection.cursor() as cursor:
