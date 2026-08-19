@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, NamedTuple
 
@@ -296,6 +297,42 @@ class RemainingDerivedRows:
     player_minutes: tuple[PlayerGameMinutesRow, ...]
     game_qualities: tuple[GameQualityRow, ...]
     possessions: tuple[PossessionRow, ...] = ()
+
+
+def select_remaining_games(
+    rows: RemainingDerivedRows, gamecodes: Sequence[int]
+) -> RemainingDerivedRows:
+    """Select one append-only game batch without changing source row order."""
+    selected = {int(gamecode) for gamecode in gamecodes}
+    stints = tuple(row for row in rows.stints if row.gamecode in selected)
+    attachments = tuple(row for row in rows.event_attachments if row.gamecode in selected)
+    player_minutes = tuple(row for row in rows.player_minutes if row.gamecode in selected)
+    game_qualities = tuple(row for row in rows.game_qualities if row.gamecode in selected)
+    possessions = tuple(row for row in rows.possessions if row.gamecode in selected)
+
+    lineup_ids = {
+        lineup_id for stint in stints for lineup_id in (stint.home_lineup_id, stint.away_lineup_id)
+    }
+    lineup_ids.update(
+        lineup_id
+        for attachment in attachments
+        for lineup_id in (attachment.home_lineup_id, attachment.away_lineup_id)
+    )
+    lineup_ids.update(
+        lineup_id
+        for possession in possessions
+        for lineup_id in (possession.offense_lineup_id, possession.defense_lineup_id)
+    )
+    lineups = tuple(row for row in rows.lineups if row.lineup_id in lineup_ids)
+
+    return RemainingDerivedRows(
+        lineups=lineups,
+        stints=stints,
+        event_attachments=attachments,
+        player_minutes=player_minutes,
+        game_qualities=game_qualities,
+        possessions=possessions,
+    )
 
 
 def _trim(value: Any) -> str | None:
