@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 import requests
 
-from euroleague.cache import CachedResponse, ResponseCache, sha256_of_bytes
+from euroleague.cache import ENDPOINTS, CachedResponse, ResponseCache, sha256_of_bytes
 from euroleague.config import StorageSettings
 
 
@@ -22,6 +24,14 @@ class ArchiveStorageError(RuntimeError):
 
 class PublicBucketError(ArchiveStorageError):
     """Raised when the archive bucket would allow unauthenticated downloads."""
+
+
+class ArchiveIndexError(RuntimeError):
+    """Raised when current archive metadata cannot reconstruct one cache."""
+
+
+class IncompleteSeasonCache(RuntimeError):
+    """Raised when cached game endpoint identities differ from the schedule."""
 
 
 @dataclass(frozen=True)
@@ -37,6 +47,55 @@ class ArchiveObject:
     storage_path: str
     fetched_at: datetime
     compressed_body: bytes
+
+
+@dataclass(frozen=True)
+class ArchiveIndexEntry:
+    """Current archive metadata needed to restore one exact response body."""
+
+    response_id: int
+    season_code: str
+    endpoint: str
+    gamecode: int | None
+    content_sha256: str
+    canonical_sha256: str
+    byte_size: int
+    storage_path: str
+    first_seen_at: datetime
+
+    def archive_object(self) -> ArchiveObject:
+        """Adapt index metadata to Storage's checksum-verifying download contract."""
+        return ArchiveObject(
+            season_code=self.season_code,
+            endpoint=self.endpoint,
+            gamecode=self.gamecode,
+            content_sha256=self.content_sha256,
+            canonical_sha256=self.canonical_sha256,
+            byte_size=self.byte_size,
+            storage_path=self.storage_path,
+            fetched_at=self.first_seen_at,
+            compressed_body=b"",
+        )
+
+
+@dataclass(frozen=True)
+class CacheCompleteness:
+    """The schedule and game-response counts observed in one cache."""
+
+    scheduled_games: int
+    played_games: int
+    response_files: int
+    played_gamecodes: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class RestoreSummary:
+    """The exact immutable archive data materialised for one pipeline run."""
+
+    restored_responses: int
+    exact_bytes: int
+    completeness: CacheCompleteness | None
+    bootstrap_required: bool
 
 
 def canonical_json_bytes(body: bytes) -> bytes:
@@ -178,6 +237,177 @@ class SupabaseStorage:
                 f"expected {archived.content_sha256}. Restore the archive before loading data."
             )
         return body
+
+
+def current_archive_entries(connection: Any, season_code: str) -> tuple[ArchiveIndexEntry, ...]:
+    """Return only the current metadata rows; historical bodies stay in Storage."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select response_id, season_code, endpoint, gamecode, content_sha256,
+                   canonical_sha256, byte_size, storage_path, first_seen_at
+            from raw_api_response
+            where season_code = %s and is_current
+            order by endpoint, gamecode nulls first, response_id
+            """,
+            (season_code,),
+        )
+        rows = cursor.fetchall()
+    return tuple(ArchiveIndexEntry(*row) for row in rows)
+
+
+def assert_complete_played_cache(cache: ResponseCache, season_code: str) -> CacheCompleteness:
+    """Require exactly the scheduled played identities for every source endpoint."""
+    games = list(cache.read_schedule_json(season_code).get("data") or [])
+    gamecodes = [int(game["gameCode"]) for game in games]
+    duplicate_gamecodes = sorted(
+        {gamecode for gamecode in gamecodes if gamecodes.count(gamecode) > 1}
+    )
+    if duplicate_gamecodes:
+        raise IncompleteSeasonCache(
+            f"Season {season_code} schedule has duplicate gamecodes: {duplicate_gamecodes}"
+        )
+
+    expected = {int(game["gameCode"]) for game in games if game.get("played") is True}
+    differences: list[str] = []
+    for endpoint in ENDPOINTS:
+        actual = set(cache.gamecodes(season_code, endpoint))
+        if actual != expected:
+            differences.append(
+                f"{endpoint}: missing={sorted(expected - actual)}, "
+                f"extra={sorted(actual - expected)}"
+            )
+    if differences:
+        raise IncompleteSeasonCache(
+            f"Season {season_code} cache is not complete for played games: "
+            + "; ".join(differences)
+        )
+    return CacheCompleteness(
+        scheduled_games=len(games),
+        played_games=len(expected),
+        response_files=len(expected) * len(ENDPOINTS),
+        played_gamecodes=tuple(sorted(expected)),
+    )
+
+
+def _write_bytes_atomically(path: Path, body: bytes) -> None:
+    """Materialise exact archive bytes without exposing a partly-written response."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    part_path = path.with_name(f"{path.name}.part")
+    part_path.write_bytes(body)
+    os.replace(part_path, path)
+
+
+def _identity_label(identity: tuple[str, int | None]) -> str:
+    endpoint, gamecode = identity
+    return endpoint if gamecode is None else f"{endpoint} game {gamecode}"
+
+
+def _required_archive_entries(
+    entries: tuple[ArchiveIndexEntry, ...], season_code: str, played_gamecodes: tuple[int, ...]
+) -> tuple[ArchiveIndexEntry, ...]:
+    expected_identities = {("Schedule", None)} | {
+        (endpoint, gamecode) for gamecode in played_gamecodes for endpoint in ENDPOINTS
+    }
+    entries_by_identity: dict[tuple[str, int | None], list[ArchiveIndexEntry]] = {}
+    for entry in entries:
+        entries_by_identity.setdefault((entry.endpoint, entry.gamecode), []).append(entry)
+
+    actual_identities = set(entries_by_identity)
+    missing = expected_identities - actual_identities
+    extra = actual_identities - expected_identities
+    duplicates = {
+        identity
+        for identity, matching_entries in entries_by_identity.items()
+        if len(matching_entries) != 1
+    }
+    if missing or extra or duplicates:
+        problems: list[str] = []
+        if missing:
+            problems.append(
+                "missing current " + ", ".join(_identity_label(key) for key in sorted(missing))
+            )
+        if extra:
+            problems.append(
+                "extra current " + ", ".join(_identity_label(key) for key in sorted(extra))
+            )
+        if duplicates:
+            problems.append(
+                "duplicate current " + ", ".join(_identity_label(key) for key in sorted(duplicates))
+            )
+        raise ArchiveIndexError(
+            f"Season {season_code} archive index cannot restore its played cache: "
+            + "; ".join(problems)
+        )
+    ordered_identities = [("Schedule", None)] + [
+        (endpoint, gamecode) for gamecode in played_gamecodes for endpoint in ENDPOINTS
+    ]
+    return tuple(entries_by_identity[identity][0] for identity in ordered_identities)
+
+
+def restore_current_season_cache(
+    connection: Any,
+    cache: ResponseCache,
+    storage: SupabaseStorage,
+    season_code: str,
+    *,
+    allow_bootstrap: bool = False,
+) -> RestoreSummary:
+    """Rebuild the canonical local cache from current, checksum-verified archive objects."""
+    entries = current_archive_entries(connection, season_code)
+    if not entries:
+        if allow_bootstrap:
+            return RestoreSummary(0, 0, None, True)
+        raise ArchiveIndexError(f"Season {season_code} archive has no current schedule entry.")
+
+    schedule_entries = [
+        entry for entry in entries if entry.endpoint == "Schedule" and entry.gamecode is None
+    ]
+    if not schedule_entries:
+        raise ArchiveIndexError(f"Season {season_code} archive has no current schedule entry.")
+    if len(schedule_entries) != 1:
+        raise ArchiveIndexError(
+            f"Season {season_code} archive has duplicate current Schedule entries."
+        )
+
+    schedule_entry = schedule_entries[0]
+    schedule_body = storage.download_verified(schedule_entry.archive_object())
+    _write_bytes_atomically(cache.schedule_path(season_code), schedule_body)
+    games = list(cache.read_schedule_json(season_code).get("data") or [])
+    gamecodes = [int(game["gameCode"]) for game in games]
+    duplicate_gamecodes = sorted(
+        {gamecode for gamecode in gamecodes if gamecodes.count(gamecode) > 1}
+    )
+    if duplicate_gamecodes:
+        raise ArchiveIndexError(
+            f"Season {season_code} schedule has duplicate gamecodes: {duplicate_gamecodes}"
+        )
+    played_gamecodes = tuple(
+        sorted({int(game["gameCode"]) for game in games if game.get("played") is True})
+    )
+
+    required_entries = _required_archive_entries(entries, season_code, played_gamecodes)
+    downloaded = [(schedule_entry, schedule_body)]
+    for entry in required_entries:
+        if entry == schedule_entry:
+            continue
+        downloaded.append((entry, storage.download_verified(entry.archive_object())))
+
+    for entry, body in downloaded:
+        path = (
+            cache.schedule_path(season_code)
+            if entry.gamecode is None
+            else cache.path_for(season_code, entry.endpoint, entry.gamecode)
+        )
+        _write_bytes_atomically(path, body)
+
+    completeness = assert_complete_played_cache(cache, season_code)
+    return RestoreSummary(
+        restored_responses=len(downloaded),
+        exact_bytes=sum(len(body) for _, body in downloaded),
+        completeness=completeness,
+        bootstrap_required=False,
+    )
 
 
 def record_archive_observation(connection: Any, archived: ArchiveObject) -> int:
