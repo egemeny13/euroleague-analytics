@@ -2,18 +2,20 @@
 
 ## Status
 
-**ABORTED SAFELY ON 2026-08-19; GATE RED.** The E2024 single-pass temporary
-schema reached 486,427,795 bytes immediately after its derived load, above the
-mandatory 460,000,000-byte stop line. The runner dropped the schema, verified
-zero `confirm_%` schemas remained, and measured 276,999,315 bytes after cleanup
-against a 276,712,595-byte start. No fingerprint comparison ran, E2025 did not
-start, and this procedure is not complete. See
-`docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md`.
+**CURRENT WRITER RUN 2026-08-19 — PASS.** On disposable PostgreSQL 17.6, E2024
+passed at 137/193 and E2025 passed at 201/201. Single and batched row counts and
+content checksums matched for all six relations and the separate event
+attachment projection. Both first-batch snapshots were unchanged after the
+second batch. The local single-pass builds also reproduced the ten production
+checksums recorded for each season. See
+`docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md`. This status covers the
+pre-Option-A writer only; the same procedure must run again after Option A.
 
 This procedure writes a complete historical season twice. It must run only
-while the owner is awake, against a disposable PostgreSQL database or two
-explicitly temporary schemas. It must never run against the live `public`
-schema or the E2024/E2025 production rows.
+against the disposable `euroleague_test` database on local port 5433. The live
+Supabase production database is read-only for this gate and may be queried only
+to compare fingerprints. No production DDL, DML, temporary schema, or vacuum is
+permitted.
 
 The automated gate in `tests/test_incremental_derived_equality.py` compares the
 builder's rows before any write. It proves that selecting E2025 in 201/201 game
@@ -24,19 +26,26 @@ different result.
 
 ## Preconditions
 
-1. Use a disposable database, or create two empty schemas named with a unique
-   run identifier. Do not reuse `public`.
-2. Apply the current migrations independently to both schemas.
-3. Set each connection's `search_path` explicitly and verify it with
+1. Build `DatabaseSettings` explicitly from `EL_TEST_DATABASE_URL`, never from
+   `DATABASE_URL` or `DatabaseSettings.from_env()`.
+2. Before every write phase, assert `current_database() = 'euroleague_test'`
+   and `inet_server_port() = 5433`. Abort before the write on either mismatch.
+3. Create two empty schemas named with a unique run identifier. Do not reuse
+   `public`.
+4. Apply the current migrations independently to both schemas.
+5. Set each connection's timezone to UTC before checksumming. The snapshot
+   definition uses `to_jsonb(row)` and otherwise renders `timestamptz` in the
+   session timezone.
+6. Set each connection's `search_path` explicitly and verify it with
    `select current_schema()` before loading a row. Abort unless it returns the
    expected temporary schema.
-4. Use the immutable local response cache. Do not fetch or refresh anything.
-5. Record the current commit and the checksums of both season schedules.
+7. Use the immutable local response cache. Do not fetch or refresh anything.
+8. Record the current commit and the checksums of both season schedules.
 
 ## Procedure
 
 1. In the first schema, load one fully cached season through the existing
-   single-pass raw and derived paths.
+   single-pass raw, `raw_shot`, and derived paths.
 2. In the second schema, load the same raw season, then persist its derived rows
    in two batches through the explicit `gamecodes` path:
    - E2025: games 1 through 201, then 202 through 402.
@@ -56,6 +65,10 @@ different result.
    `home_lineup_id`, `away_lineup_id`, `stint_index`, and
    `possession_index`. A matching event-row count alone is insufficient.
 6. Repeat for the other season at its different boundary.
+7. Recompute the ten `E2024_BASELINE` or `E2025_BASELINE` checksums from
+   `src/euroleague/compaction.py` against the local single-pass schema using the
+   unchanged `warehouse_snapshot` and `derived_snapshot` definitions. Stop
+   before the batched build if any count or checksum differs.
 
 ## Pass condition
 
@@ -72,3 +85,9 @@ unchanged after the second batch.
   rebuild is a separate path.
 - A split-boundary defect that occurs only at a boundary other than the two
   measured here.
+- Supabase-specific behavior absent from local PostgreSQL: RLS roles, the
+  session pooler, production grants, production-only triggers, and Data API
+  exposure.
+- A timezone-independent checksum definition. The run pins UTC and therefore
+  compares like with like, but the underlying `to_jsonb(timestamptz)` hash
+  changes if a future caller omits that session setting.

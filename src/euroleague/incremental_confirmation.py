@@ -12,6 +12,7 @@ from typing import Any, Protocol
 from psycopg import sql
 
 from euroleague.cache import ResponseCache
+from euroleague.compaction import E2024_BASELINE, E2025_BASELINE, compare_fingerprints
 from euroleague.derived import (
     DimensionRows,
     GameEventRow,
@@ -22,19 +23,94 @@ from euroleague.derived import (
     select_remaining_games,
 )
 from euroleague.derived_load import load_phase5_base_rows, load_remaining_rows
-from euroleague.load import load_cached_season
+from euroleague.gate import derived_snapshot, warehouse_snapshot
+from euroleague.load import load_cached_season, load_cached_shots
 
-DATABASE_SIZE_ABORT_BYTES = 460_000_000
+LOCAL_CONFIRMATION_DATABASE = "euroleague_test"
+LOCAL_CONFIRMATION_PORT = 5433
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 MIGRATIONS_ROOT = REPO_ROOT / "migrations"
 
 
-class DatabaseSizeLimitExceeded(RuntimeError):
-    """Raised before cleanup when a confirmation crosses its byte ceiling."""
+class ConfirmationTargetError(RuntimeError):
+    """Raised before a write when confirmation is not on the disposable local target."""
+
+
+class ProductionBaselineMismatch(RuntimeError):
+    """Raised when a fresh local build differs from the recorded production content."""
 
 
 class SchemaScopeError(RuntimeError):
     """Raised before a write when search_path does not select the owned schema."""
+
+
+def assert_local_confirmation_target(connection: Any) -> None:
+    """Refuse every write unless the connection is the named local test database."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT current_database(), inet_server_port()")
+        database_name, port = cursor.fetchone()
+    if database_name != LOCAL_CONFIRMATION_DATABASE or int(port) != LOCAL_CONFIRMATION_PORT:
+        raise ConfirmationTargetError(
+            f"Expected {LOCAL_CONFIRMATION_DATABASE!r} on port {LOCAL_CONFIRMATION_PORT}; "
+            f"received {database_name!r} on port {port}. No confirmation write was attempted."
+        )
+
+
+def prepare_confirmation_session(connection: Any) -> None:
+    """Pin timezone-sensitive JSON fingerprints to production's UTC session setting."""
+    assert_local_confirmation_target(connection)
+    with connection.cursor() as cursor:
+        cursor.execute("SET TIME ZONE 'UTC'")
+
+
+def assert_production_baseline_matches(
+    season_code: str,
+    observed: dict[str, RelationFingerprint],
+) -> None:
+    """Require the local snapshot to equal the recorded production snapshot exactly."""
+    baselines = {"E2024": E2024_BASELINE, "E2025": E2025_BASELINE}
+    try:
+        expected = baselines[season_code]
+    except KeyError as error:
+        raise ValueError(f"No production baseline is recorded for {season_code}.") from error
+    comparable = {
+        table: (fingerprint.count, fingerprint.checksum) for table, fingerprint in observed.items()
+    }
+    mismatches = compare_fingerprints(expected, comparable)
+    if mismatches:
+        detail = "; ".join(str(mismatch) for mismatch in mismatches)
+        raise ProductionBaselineMismatch(
+            f"{season_code} local build differs from the production baseline: {detail}"
+        )
+
+
+def production_baseline_fingerprints(
+    connection: Any, season_code: str
+) -> dict[str, RelationFingerprint]:
+    """Recompute checksums with the unchanged functions used to capture production."""
+    baselines = {"E2024": E2024_BASELINE, "E2025": E2025_BASELINE}
+    try:
+        baseline_tables = set(baselines[season_code])
+    except KeyError as error:
+        raise ValueError(f"No production baseline is recorded for {season_code}.") from error
+    snapshots = {
+        **warehouse_snapshot(connection, season_code),
+        **derived_snapshot(connection, season_code),
+    }
+    return {
+        table: RelationFingerprint(fingerprint.count, fingerprint.checksum)
+        for table, fingerprint in snapshots.items()
+        if table in baseline_tables
+    }
+
+
+def load_confirmation_raw_rows(
+    connection: Any, cache: ResponseCache, season_code: str
+) -> dict[str, int]:
+    """Load every raw relation covered by the recorded production baselines."""
+    counts = load_cached_season(connection, cache, season_code, progress=lambda _: None)
+    counts.update(load_cached_shots(connection, cache, season_code, progress=lambda _: None))
+    return counts
 
 
 @dataclass(frozen=True)
@@ -57,6 +133,7 @@ class SeasonConfirmation:
     first_before_second: dict[str, RelationFingerprint]
     first_after_second: dict[str, RelationFingerprint]
     batched: dict[str, RelationFingerprint]
+    production_baseline: dict[str, RelationFingerprint]
     sizes: tuple[SizeReading, ...]
     game_event_updates: dict[str, int]
 
@@ -95,17 +172,11 @@ def assert_current_schema(connection: Any, expected_schema: str) -> None:
 
 
 def measure_database_size(connection: Any, phase: str) -> SizeReading:
-    """Read the exact current-database byte count and enforce the safety ceiling."""
+    """Read the exact current-database byte count without applying a production ceiling."""
     with connection.cursor() as cursor:
         cursor.execute("SELECT pg_database_size(current_database())")
         database_bytes = int(cursor.fetchone()[0])
-    reading = SizeReading(phase, database_bytes)
-    if database_bytes > DATABASE_SIZE_ABORT_BYTES:
-        raise DatabaseSizeLimitExceeded(
-            f"Database size {database_bytes:,} exceeded the 460,000,000-byte confirmation limit "
-            f"at {phase}."
-        )
-    return reading
+    return SizeReading(phase, database_bytes)
 
 
 def run_guarded_step(
@@ -116,6 +187,7 @@ def run_guarded_step(
     readings: list[SizeReading],
 ) -> Any:
     """Check schema and size on both sides of one database load step."""
+    assert_local_confirmation_target(connection)
     assert_current_schema(connection, schema_name)
     readings.append(measure_database_size(connection, f"before {phase}"))
     result = action()
@@ -130,6 +202,7 @@ def managed_schema(connection: Any, schema_name: str):
     _assert_schema_name(schema_name)
     created = False
     try:
+        assert_local_confirmation_target(connection)
         with connection.cursor() as cursor:
             cursor.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema_name)))
             created = True
@@ -138,6 +211,7 @@ def managed_schema(connection: Any, schema_name: str):
         yield
     finally:
         if created:
+            assert_local_confirmation_target(connection)
             with connection.cursor() as cursor:
                 cursor.execute("SET search_path TO pg_catalog")
                 cursor.execute(
@@ -379,6 +453,7 @@ def run_confirmation(
     progress: Callable[[str], None] = print,
 ) -> SeasonConfirmation:
     """Run sequential single-pass and two-batch database builds for one season."""
+    prepare_confirmation_session(connection)
     if not run_id or not run_id.isalnum():
         raise ValueError("run_id must contain only letters and digits.")
     schedule = cache.read_schedule_json(season_code)
@@ -412,7 +487,7 @@ def run_confirmation(
             connection,
             single_schema,
             f"{season_code} single raw load",
-            lambda: load_cached_season(connection, cache, season_code, progress=lambda _: None),
+            lambda: load_confirmation_raw_rows(connection, cache, season_code),
             readings,
         )
         run_guarded_step(
@@ -424,6 +499,7 @@ def run_confirmation(
         )
         single = fingerprint_relations(connection, single_schema, season_code)
         single_stats = game_event_update_statistics(connection, single_schema)
+        production_baseline = production_baseline_fingerprints(connection, season_code)
         _write_artifact(
             artifact_path,
             _artifact_payload(
@@ -432,9 +508,11 @@ def run_confirmation(
                 readings,
                 single=_serialise_fingerprints(single),
                 single_game_event_stats=single_stats,
-                status="single captured",
+                production_baseline=_serialise_fingerprints(production_baseline),
+                status="single and production baseline captured before assertion",
             ),
         )
+        assert_production_baseline_matches(season_code, production_baseline)
     readings.append(measure_database_size(connection, f"{season_code} after single cleanup"))
     progress(f"{season_code}: single-pass schema captured and dropped")
 
@@ -451,7 +529,7 @@ def run_confirmation(
             connection,
             batched_schema,
             f"{season_code} batched raw load",
-            lambda: load_cached_season(connection, cache, season_code, progress=lambda _: None),
+            lambda: load_confirmation_raw_rows(connection, cache, season_code),
             readings,
         )
         run_guarded_step(
@@ -475,6 +553,7 @@ def run_confirmation(
                 readings,
                 single=_serialise_fingerprints(single),
                 single_game_event_stats=single_stats,
+                production_baseline=_serialise_fingerprints(production_baseline),
                 first_before_second=_serialise_fingerprints(first_before_second),
                 status="first batch captured",
             ),
@@ -508,6 +587,7 @@ def run_confirmation(
                 readings,
                 single=_serialise_fingerprints(single),
                 single_game_event_stats=single_stats,
+                production_baseline=_serialise_fingerprints(production_baseline),
                 first_before_second=_serialise_fingerprints(first_before_second),
                 first_after_second=_serialise_fingerprints(first_after_second),
                 batched=_serialise_fingerprints(batched),
@@ -529,6 +609,7 @@ def run_confirmation(
         first_before_second=first_before_second,
         first_after_second=first_after_second,
         batched=batched,
+        production_baseline=production_baseline,
         sizes=tuple(readings),
         game_event_updates=updates,
     )
@@ -543,6 +624,7 @@ def run_confirmation(
                 first_before_second=_serialise_fingerprints(first_before_second),
                 first_after_second=_serialise_fingerprints(first_after_second),
                 batched=_serialise_fingerprints(batched),
+                production_baseline=_serialise_fingerprints(production_baseline),
                 game_event_updates=updates,
             ),
             "status": "pass and cleaned",

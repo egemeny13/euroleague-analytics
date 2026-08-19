@@ -11,11 +11,29 @@ from pathlib import Path
 import psycopg
 
 from euroleague.cache import ResponseCache
-from euroleague.config import DatabaseSettings
-from euroleague.incremental_confirmation import current_derived_writer, run_confirmation
+from euroleague.config import DatabaseSettings, load_env_file
+from euroleague.incremental_confirmation import (
+    LOCAL_CONFIRMATION_DATABASE,
+    LOCAL_CONFIRMATION_PORT,
+    current_derived_writer,
+    run_confirmation,
+)
 
 SEASONS = (("E2024", 137), ("E2025", 201))
 ARTIFACT_ROOT = Path(".tmp/incremental-derived-confirmation")
+
+
+def load_test_database_settings(values: dict[str, str] | None = None) -> DatabaseSettings:
+    """Build settings only from the disposable-database variable."""
+    env_values = load_env_file() if values is None else values
+    settings = DatabaseSettings.from_url(env_values.get("EL_TEST_DATABASE_URL", ""))
+    if settings.database != LOCAL_CONFIRMATION_DATABASE or settings.port != LOCAL_CONFIRMATION_PORT:
+        raise ValueError(
+            f"EL_TEST_DATABASE_URL must name {LOCAL_CONFIRMATION_DATABASE!r} on port "
+            f"{LOCAL_CONFIRMATION_PORT}; received database {settings.database!r} on port "
+            f"{settings.port}."
+        )
+    return settings
 
 
 def _label(value: str) -> str:
@@ -33,7 +51,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     run_id = uuid.uuid4().hex[:10]
-    settings = DatabaseSettings.from_env()
+    settings = load_test_database_settings()
     cache = ResponseCache("exploration/cache")
     print(f"Confirmation run: {run_id}")
     print(f"Target: {settings.host}:{settings.port}/{settings.database}")

@@ -3,17 +3,29 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from types import SimpleNamespace
 
 import pytest
+from scripts.confirm_incremental_derived import load_test_database_settings
 
+import euroleague.incremental_confirmation as confirmation
 from euroleague.incremental_confirmation import (
-    DATABASE_SIZE_ABORT_BYTES,
-    DatabaseSizeLimitExceeded,
+    LOCAL_CONFIRMATION_DATABASE,
+    LOCAL_CONFIRMATION_PORT,
+    ConfirmationTargetError,
+    ProductionBaselineMismatch,
     RelationFingerprint,
     SchemaScopeError,
+    assert_local_confirmation_target,
+    assert_production_baseline_matches,
     assert_same_fingerprints,
     fingerprint_relations,
+    load_confirmation_raw_rows,
     managed_schema,
+    measure_database_size,
+    prepare_confirmation_session,
+    production_baseline_fingerprints,
+    run_confirmation,
     run_guarded_step,
 )
 
@@ -57,6 +69,8 @@ class Cursor:
     def fetchone(self):
         if self.last_query == "SELECT current_schema()":
             return (self.connection.current_schema,)
+        if self.last_query == "SELECT current_database(), inet_server_port()":
+            return (self.connection.database_name, self.connection.port)
         if self.last_query == "SELECT pg_database_size(current_database())":
             return (self.connection.database_sizes.pop(0),)
         if self.last_query.startswith("SELECT count(*) FROM pg_namespace"):
@@ -73,10 +87,14 @@ class Connection:
         self,
         *,
         current_schema: str | None = None,
+        database_name: str = LOCAL_CONFIRMATION_DATABASE,
+        port: int = LOCAL_CONFIRMATION_PORT,
         database_sizes: list[int] | None = None,
         fingerprint_answers: dict[str, tuple[int, str]] | None = None,
     ) -> None:
         self.current_schema = current_schema
+        self.database_name = database_name
+        self.port = port
         self.database_sizes = list(database_sizes or [])
         self.fingerprint_answers = fingerprint_answers or {}
         self.schemas: set[str] = set()
@@ -105,26 +123,204 @@ def test_confirmation_refuses_to_write_when_current_schema_is_not_expected() -> 
     assert action_called is False
 
 
-def test_confirmation_aborts_above_460_mb_and_still_drops_the_schema() -> None:
-    """Break caught: the free-tier safety margin is crossed without cleanup."""
-    connection = Connection(
-        database_sizes=[DATABASE_SIZE_ABORT_BYTES - 1, DATABASE_SIZE_ABORT_BYTES + 1]
+@pytest.mark.parametrize(
+    ("database_name", "port"),
+    (("postgres", LOCAL_CONFIRMATION_PORT), (LOCAL_CONFIRMATION_DATABASE, 5432)),
+)
+def test_confirmation_refuses_any_target_except_local_test_database(
+    database_name: str, port: int
+) -> None:
+    """Break caught: confirmation DDL or loads reach production or the wrong local database."""
+    connection = Connection(database_name=database_name, port=port)
+
+    with pytest.raises(ConfirmationTargetError, match="No confirmation write was attempted"):
+        assert_local_confirmation_target(connection)
+
+    assert connection.executions == [("SELECT current_database(), inet_server_port()", None)]
+
+
+def test_local_confirmation_records_sizes_above_retired_production_stop() -> None:
+    """Break caught: the retired 460 MB production stop aborts the disposable local run."""
+    connection = Connection(database_sizes=[486_427_795])
+
+    reading = measure_database_size(connection, "after local derived load")
+
+    assert reading.bytes == 486_427_795
+
+
+def test_confirmation_session_uses_utc_for_timezone_stable_content_hashes() -> None:
+    """Break caught: timestamptz JSON renders differently across otherwise equal databases."""
+    connection = Connection()
+
+    prepare_confirmation_session(connection)
+
+    assert connection.executions == [
+        ("SELECT current_database(), inet_server_port()", None),
+        ("SET TIME ZONE 'UTC'", None),
+    ]
+
+
+def test_confirmation_settings_use_only_the_explicit_local_test_url() -> None:
+    """Break caught: the warehouse-writing confirmation resolves DATABASE_URL production."""
+    settings = load_test_database_settings(
+        {
+            "DATABASE_URL": "postgresql://prod:secret@production.example:5432/postgres",
+            "EL_TEST_DATABASE_URL": ("postgresql://local:secret@localhost:5433/euroleague_test"),
+        }
     )
 
-    with (
-        pytest.raises(DatabaseSizeLimitExceeded, match="460,000,000"),
-        managed_schema(connection, "confirm_single_limit"),
-    ):
-        run_guarded_step(
-            connection,
-            "confirm_single_limit",
-            "raw load",
-            lambda: None,
-            [],
-        )
+    assert settings.host == "localhost"
+    assert settings.port == 5433
+    assert settings.database == "euroleague_test"
 
-    assert connection.schemas == set()
-    assert any(query.startswith("DROP SCHEMA") for query, _ in connection.executions)
+
+def test_production_baseline_comparison_refuses_a_content_difference() -> None:
+    """Break caught: local counts match production while persisted row content differs."""
+    observed = {
+        "raw_game": RelationFingerprint(330, "different-content"),
+    }
+
+    with pytest.raises(ProductionBaselineMismatch, match=r"raw_game.*checksum"):
+        assert_production_baseline_matches("E2024", observed)
+
+
+def test_production_baseline_uses_the_original_gate_snapshot_definitions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Break caught: a new checksum query is compared to constants captured another way."""
+    calls: list[tuple[str, str]] = []
+
+    def raw_snapshot(connection, season_code: str):
+        calls.append(("raw", season_code))
+        return {
+            "raw_game": SimpleNamespace(count=330, checksum="raw-checksum"),
+            "raw_api_fetch": SimpleNamespace(count=999, checksum="not-in-baseline"),
+        }
+
+    def derived_snapshot(connection, season_code: str):
+        calls.append(("derived", season_code))
+        return {
+            "game_event": SimpleNamespace(count=176_483, checksum="event-checksum"),
+            "lineup": SimpleNamespace(count=5_985, checksum="not-in-baseline"),
+        }
+
+    monkeypatch.setattr(confirmation, "warehouse_snapshot", raw_snapshot)
+    monkeypatch.setattr(confirmation, "derived_snapshot", derived_snapshot)
+
+    observed = production_baseline_fingerprints(object(), "E2024")
+
+    assert calls == [("raw", "E2024"), ("derived", "E2024")]
+    assert observed == {
+        "raw_game": RelationFingerprint(330, "raw-checksum"),
+        "game_event": RelationFingerprint(176_483, "event-checksum"),
+    }
+
+
+def test_confirmation_raw_load_includes_points_before_derived_fingerprinting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Break caught: local raw_shot stays empty and falsely disagrees with production."""
+    calls: list[str] = []
+
+    def load_raw(connection, cache, season_code: str, *, progress):
+        calls.append("raw")
+        return {"raw_event": 10}
+
+    def load_shots(connection, cache, season_code: str, *, progress):
+        calls.append("shots")
+        return {"raw_shot": 4}
+
+    monkeypatch.setattr(confirmation, "load_cached_season", load_raw)
+    monkeypatch.setattr(confirmation, "load_cached_shots", load_shots)
+
+    counts = load_confirmation_raw_rows(object(), object(), "E2024")
+
+    assert calls == ["raw", "shots"]
+    assert counts == {"raw_event": 10, "raw_shot": 4}
+
+
+def test_confirmation_checks_production_baseline_before_starting_batched_build(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Break caught: a real local/production mismatch is ignored while later work continues."""
+    calls: list[str] = []
+    fingerprints = {"game_event": RelationFingerprint(2, "same")}
+
+    class Cache:
+        def read_schedule_json(self, season_code: str):
+            return {
+                "data": [
+                    {"gameCode": 1, "played": True},
+                    {"gameCode": 2, "played": True},
+                ]
+            }
+
+    @contextmanager
+    def schema_context(connection, schema_name: str):
+        yield
+
+    def guarded(connection, schema_name: str, phase: str, action, readings):
+        calls.append(phase)
+        return action()
+
+    def raw_rows(connection, cache, season_code: str):
+        calls.append(f"raw:{season_code}")
+        return {}
+
+    def old_raw_rows(connection, cache, season_code: str, *, progress):
+        calls.append(f"old-raw:{season_code}")
+        return {}
+
+    def baseline(connection, season_code: str):
+        calls.append(f"baseline:{season_code}")
+        return fingerprints
+
+    def assert_baseline(season_code: str, observed):
+        calls.append(f"baseline-assert:{season_code}")
+
+    def writer(connection, dimensions, events, remaining, season_code, gamecodes):
+        scope = "single" if gamecodes is None else f"batch:{list(gamecodes)}"
+        calls.append(f"writer:{scope}")
+        return {}
+
+    monkeypatch.setattr(confirmation, "build_dimensions", lambda *args: object())
+    monkeypatch.setattr(confirmation, "build_game_events", lambda *args: ())
+    monkeypatch.setattr(confirmation, "build_remaining_rows", lambda *args: object())
+    monkeypatch.setattr(confirmation, "managed_schema", schema_context)
+    monkeypatch.setattr(confirmation, "run_guarded_step", guarded)
+    monkeypatch.setattr(confirmation, "apply_current_migrations", lambda connection: None)
+    monkeypatch.setattr(confirmation, "load_confirmation_raw_rows", raw_rows)
+    monkeypatch.setattr(confirmation, "load_cached_season", old_raw_rows)
+    monkeypatch.setattr(confirmation, "fingerprint_relations", lambda *args, **kwargs: fingerprints)
+    monkeypatch.setattr(
+        confirmation,
+        "game_event_update_statistics",
+        lambda *args: {"n_tup_upd": 0, "n_dead_tup": 0},
+    )
+    monkeypatch.setattr(
+        confirmation,
+        "measure_database_size",
+        lambda connection, phase: confirmation.SizeReading(phase, 1),
+    )
+    monkeypatch.setattr(confirmation, "production_baseline_fingerprints", baseline)
+    monkeypatch.setattr(confirmation, "assert_production_baseline_matches", assert_baseline)
+    monkeypatch.setattr(confirmation, "_write_artifact", lambda *args: None)
+    monkeypatch.setattr(confirmation, "prepare_confirmation_session", lambda connection: None)
+
+    run_confirmation(
+        object(),
+        Cache(),
+        "E2024",
+        1,
+        writer,
+        tmp_path / "artifact.json",
+        "testrun",
+        progress=lambda _: None,
+    )
+
+    assert "old-raw:E2024" not in calls
+    assert calls.index("baseline:E2024") < calls.index("E2024 batched raw load")
+    assert calls.index("baseline-assert:E2024") < calls.index("E2024 batched raw load")
 
 
 def test_confirmation_drops_the_schema_when_a_load_callback_fails() -> None:

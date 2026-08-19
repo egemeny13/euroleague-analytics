@@ -1,118 +1,246 @@
 # Incremental derived database confirmation result
 
-**Run date:** 2026-08-19  
-**Branch:** `codex/day1-compaction-pilot`  
-**Writer:** current pre-Option-A writer  
-**Outcome:** **ABORTED SAFELY — DATABASE-SIZE GATE RED**
+**Run date:** 2026-08-19
+
+**Branch:** `codex/day1-compaction-pilot`
+
+**Writer:** current pre-Option-A writer
+
+**Run ID:** `abe2cd7fe4`
+
+**Target:** disposable PostgreSQL 17.6, database `euroleague_test`, port 5433
+
+**Outcome:** **PASS — CURRENT WRITER DATABASE GATE GREEN**
 
 ## Outcome
 
-The confirmation did not reach its content-fingerprint pass condition. The
-E2024 single-pass schema crossed the mandatory 460,000,000-byte stop line
-immediately after the derived load. The runner raised, dropped the temporary
-schema in its exception cleanup, and did not start the batched E2024 build,
-E2025, or the Option A refactor.
+The current writer persisted E2024 and E2025 both as one complete derived load
+and as two explicit gamecode batches. All seven relation/attachment
+fingerprints matched between the single and batched builds. The first batch's
+seven fingerprints were unchanged after the second batch for both seasons.
 
-This is a red Block B gate. It is not evidence that single-pass and batched
-content differ, because the comparison never ran.
+The local single-pass builds also reproduced all ten production fingerprints
+recorded in `src/euroleague/compaction.py`. This comparison used the unchanged
+`warehouse_snapshot` and `derived_snapshot` functions that captured those
+constants; the checksum definition therefore matched after the session
+timezone was pinned to UTC.
 
-## Safety readings
+This closes Task 1's real database-writer gate. It does not validate Option A;
+the complete confirmation must run again after that writer is implemented.
 
-| Checkpoint | `pg_database_size(current_database())` | Meaning |
-|---|---:|---|
-| Read-only preflight | 276,712,595 bytes | Production state before a temporary schema existed |
-| External progress check, early single pass | 296,955,027 bytes | One `confirm_single_*` schema existed |
-| External progress check, later single pass | 346,557,587 bytes | Same single schema; still below the stop line |
-| Guard immediately after E2024 single derived load | **486,427,795 bytes** | **Hard stop: 26,427,795 bytes above 460,000,000** |
-| Read-only check after exception cleanup | 276,999,315 bytes | No temporary schema; 286,720 bytes above the starting reading |
+## Target and production isolation
 
-The temporary build increased the database by exactly **209,715,200 bytes
-(200 MiB)** between the starting reading and the stop reading.
+- Every schema create, migration, raw load, derived load, and schema drop first
+  asserted `current_database() = 'euroleague_test'` and
+  `inet_server_port() = 5433`.
+- The CLI built `DatabaseSettings` explicitly from `EL_TEST_DATABASE_URL`. It
+  did not call `DatabaseSettings.from_env()`, which resolves `DATABASE_URL`.
+- E2024 started with zero `confirm_*` schemas at 15,674,515 database bytes.
+  E2025 finished with zero `confirm_*` schemas at 36,015,251 bytes.
+- The production database was queried only in a read-only transaction to
+  isolate the checksum finding. That query measured 276,909,203 bytes, 330
+  distinct E2024 games, and 402 distinct E2025 games. It issued no DDL, DML,
+  temporary schema, or vacuum.
 
-The runner measured size before and after migrations, raw loading, and derived
-loading. It kept those readings in memory, but the first artifact write was
-scheduled after the first content fingerprints. The hard stop occurred before
-that point, so the intermediate guarded readings were not persisted. The table
-above therefore contains the independently observed readings plus the exact
-exception reading. This reporting gap does not weaken the stop: the exception
-contains the after-derived value and cleanup ran from `finally`. It does mean a
-future run should persist each reading as it is taken rather than waiting for a
-fingerprint checkpoint.
+## Cross-machine checksum finding
 
-## Schema and production isolation
+The first supervised attempt correctly stopped before the E2024 batched build.
+Nine of ten production fingerprints matched, while `raw_game` had 330 rows but
+checksum `19c671a484c53e0a04fa9b8abe75f6a1` instead of production's
+`706239e43e0f039eea2e09c0447fba4b`.
 
-- Before the run, a read-only connection reported `current_schema() = public`
-  and zero schemas matching `confirm_%`.
-- Every write phase called `select current_schema()` and required the unique
-  owned schema `confirm_single_894f58ceb6`.
-- The process held only that one temporary schema.
-- After the abort, a separate read-only connection found **zero** schemas
-  matching `confirm_%`.
-- No `public` DDL, insert, update, delete, truncate, or vacuum was issued. The
-  only observations outside the temporary schema were read-only size, namespace,
-  and progress queries.
+This was isolated to session rendering, not stored content:
 
-## Why the memory-safe sequence still did not fit
+- both servers reported PostgreSQL 17.6;
+- local reported timezone `Europe/Istanbul`, production reported `UTC`;
+- `raw_game` is the only baseline relation containing `timestamptz`;
+- the fingerprint uses `to_jsonb(row)`, whose `timestamptz` text follows the
+  session timezone;
+- a read-only field-by-field comparison checked all 29 columns of all 330
+  E2024 `raw_game` rows and found **0 differing values in 0 games**.
 
-The revised procedure removed the need to hold both the single-pass and batched
-schemas at once. It did not remove the current writer's internal row-version
-churn.
+The smallest failing scope was therefore one checksum definition at one
+relation, with no failing game or column. The confirmation session now sets
+timezone UTC after asserting the local target. The rerun then reproduced the
+recorded `raw_game` checksum and all other constants exactly. This demonstrates
+deterministic stored content across the two PostgreSQL 17.6 environments, but
+also demonstrates that the existing JSON checksum is not timezone-independent
+unless the session is canonicalized.
 
-E2024 contains 176,483 `game_event` rows. The current writer performs three
-event-wide updates: clear stint, clear possession, then attach all four
-references. At the measured 40 occupied rows per 8,192-byte page, the existing
-decision-brief arithmetic gives:
+## Database-size readings
 
-```text
-176,483 events × 3 updates ÷ 40 rows/page × 8,192 bytes/page
-= 108,431,155.2 bytes of generated heap churn
-```
+The 460,000,000-byte production stop was retired for this disposable database.
+Every reading was still recorded.
 
-That 108.4 MB is derived from previously measured page density, not an
-allocation of the live 200 MiB increase. The observed increase also includes
-the real raw and derived rows, seven `game_event` indexes, other relation
-indexes, and catalog allocation. Together they explain why one current-writer
-season cannot coexist with the 276.7 MB production database under a 460 MB
-safety line.
+### E2024
 
-The run dropped the schema before reading `pg_stat_all_tables`, so it did not
-capture an actual `n_tup_upd` or `n_dead_tup` value. Quoting the predicted
-529,449 updated tuple versions as a measurement would be false.
+| Checkpoint | Bytes |
+|---|---:|
+| start | 15,674,515 |
+| before single migrations | 15,674,515 |
+| after single migrations | 16,280,723 |
+| before single raw load | 16,280,723 |
+| after single raw load, including `raw_shot` | 65,121,427 |
+| before single derived load | 65,121,427 |
+| after single derived load | **240,086,163** |
+| after single cleanup | 21,892,243 |
+| before batched migrations | 21,892,243 |
+| after batched migrations | 22,539,411 |
+| before batched raw load | 22,539,411 |
+| after batched raw load, including `raw_shot` | 72,584,339 |
+| before first derived batch | 72,584,339 |
+| after games 1–137 | 146,320,531 |
+| before second derived batch | 146,320,531 |
+| after games 138–330 | 221,285,523 |
+| after batched cleanup | 29,155,855 |
 
-## What the aborted run proved
+The E2024 single-pass checkpoint grew by **224,411,648 bytes** from run start
+to the after-derived reading. The earlier production attempt measured
+209,715,200 bytes, but that older harness did not load `raw_shot`; the two
+figures are not a clean writer-only comparison. The before/after Option A
+comparison will use this same local harness and is the comparable measurement.
 
-1. The 460,000,000-byte guard can fail on a real post-load reading.
-2. A size-gate exception still drops the populated temporary schema.
-3. The database returns close to its starting size after `DROP SCHEMA CASCADE`:
-   the residual difference was 286,720 bytes.
-4. The written one-schema-at-a-time procedure is still not executable on the
-   production free-tier database with the current writer.
+### E2025
 
-## What it did not prove
+| Checkpoint | Bytes |
+|---|---:|
+| start | 29,155,855 |
+| before single migrations | 29,155,855 |
+| after single migrations | 29,778,447 |
+| before single raw load | 29,778,447 |
+| after single raw load, including `raw_shot` | 89,009,299 |
+| before single derived load | 89,009,299 |
+| after single derived load | **308,628,627** |
+| after single cleanup | 34,671,763 |
+| before batched migrations | 34,671,763 |
+| after batched migrations | 35,310,739 |
+| before batched raw load | 35,310,739 |
+| after batched raw load, including `raw_shot` | 90,352,787 |
+| before first derived batch | 90,352,787 |
+| after games 1–201 | 202,075,283 |
+| before second derived batch | 202,075,283 |
+| after games 202–402 | 262,245,523 |
+| after batched cleanup | 36,015,251 |
 
-- It did not compare a single-pass fingerprint with a batched fingerprint.
-- It did not test whether the first batch remains unchanged after the second.
-- It did not fingerprint any relation or the four event attachment columns.
-- It did not run E2025 or either approved split boundary.
-- It did not measure current-writer tuple statistics before cleanup.
-- It did not exercise Option A.
-- It cannot say whether a behavior unique to `public` differs from a disposable
-  schema; `public` was deliberately untouched.
+The E2025 single-pass checkpoint grew by **279,472,772 bytes** from run start
+to the after-derived reading.
 
-## Decision required before work can continue
+## Current-writer update measurement
 
-The current instructions forbid all three unilateral escape routes: raising the
-460 MB limit, weakening the full-season gate, or implementing Task 2 before
-Task 1 is green.
+| Season/build | `game_event.n_tup_upd` | `game_event.n_dead_tup` after loader vacuum |
+|---|---:|---:|
+| E2024 single | 529,449 | 0 |
+| E2024 batched | 529,449 | 0 |
+| E2025 single | 668,928 | 0 |
+| E2025 batched | 668,928 | 0 |
 
-The cleanest compliant next step is to run Task 1 against a genuinely empty
-disposable PostgreSQL database rather than a schema beside the 276.7 MB
-production warehouse. The observed 200 MiB temporary growth would fit easily
-under the same 460 MB stop line in an empty database. Provisioning or selecting
-that database requires the owner's direction.
+The update counts equal exactly three updates per event: 176,483 × 3 = 529,449
+and 222,976 × 3 = 668,928. `n_dead_tup = 0` was read after the writer's plain
+vacuum; it shows that PostgreSQL no longer estimated unreclaimed dead tuples at
+that checkpoint. It does not mean the updates allocated no pages, and it does
+not supersede the recorded database-size growth.
 
-The alternative is an explicit owner amendment that waives the pre-refactor
-database confirmation, implements Option A first, and then runs the full gate
-against the lower-churn writer. That changes the required task order and loses
-the requested database-level proof of the old writer, so the agent cannot grant
-itself that exemption.
+## Single-pass and batched fingerprints
+
+### E2024 — 330 games
+
+| Relation | Single rows | Single checksum | Batched rows | Batched checksum |
+|---|---:|---|---:|---|
+| `game_event` | 176,483 | `0a30f9b352103df5ea31781128988fff` | 176,483 | `0a30f9b352103df5ea31781128988fff` |
+| attachment columns | 176,483 | `c44a696488e50e7f9b4912cc474bb6e2` | 176,483 | `c44a696488e50e7f9b4912cc474bb6e2` |
+| `lineup` | 5,985 | `31543e1aa887b06de60809550bd32ff8` | 5,985 | `31543e1aa887b06de60809550bd32ff8` |
+| `lineup_stint` | 13,927 | `5643117a3abf966ccc6e9f63efbdc18a` | 13,927 | `5643117a3abf966ccc6e9f63efbdc18a` |
+| `player_game_minutes` | 7,863 | `89897157cf4e918165f7527e8dc42b81` | 7,863 | `89897157cf4e918165f7527e8dc42b81` |
+| `game_quality` | 330 | `deb43192aa5da8507b9759a99809af45` | 330 | `deb43192aa5da8507b9759a99809af45` |
+| `possession` | 47,831 | `acbb7c860d399fc53d03a0688b6b1178` | 47,831 | `acbb7c860d399fc53d03a0688b6b1178` |
+
+### E2025 — 402 games
+
+| Relation | Single rows | Single checksum | Batched rows | Batched checksum |
+|---|---:|---|---:|---|
+| `game_event` | 222,976 | `239ec26d95ffdd4e354c6ad9c15db8ef` | 222,976 | `239ec26d95ffdd4e354c6ad9c15db8ef` |
+| attachment columns | 222,976 | `082fc47beedfc5fb7d30b909da923df7` | 222,976 | `082fc47beedfc5fb7d30b909da923df7` |
+| `lineup` | 7,281 | `fabfb8b61192e2efffe7c865cbbf9a44` | 7,281 | `fabfb8b61192e2efffe7c865cbbf9a44` |
+| `lineup_stint` | 17,790 | `32ab77663e26ea8008d821b1f603326f` | 17,790 | `32ab77663e26ea8008d821b1f603326f` |
+| `player_game_minutes` | 9,540 | `81606d5aa9ab6f014afd9c1936cba809` | 9,540 | `81606d5aa9ab6f014afd9c1936cba809` |
+| `game_quality` | 402 | `ebe44c90defa90e56b050c548f3d90d7` | 402 | `ebe44c90defa90e56b050c548f3d90d7` |
+| `possession` | 59,483 | `15e5e7e0f7a1b04bc04323cefd66c01a` | 59,483 | `15e5e7e0f7a1b04bc04323cefd66c01a` |
+
+## First-batch immutability
+
+Each before checksum below was identical after the second batch landed.
+
+| Season | First batch | Relation | Rows | Before/after checksum |
+|---|---:|---|---:|---|
+| E2024 | 1–137 | `game_event` | 73,031 | `712a1cd897b58a7d73be3ccd2655afce` |
+| E2024 | 1–137 | attachment columns | 73,031 | `899500f2404f78bddd5019e8382ade3a` |
+| E2024 | 1–137 | `lineup` | 2,987 | `be4d02b4d4bc98be061f0bafa36ce7bc` |
+| E2024 | 1–137 | `lineup_stint` | 5,737 | `7e8675d81de964819bee26ef6fc6b3c2` |
+| E2024 | 1–137 | `player_game_minutes` | 3,269 | `24b2b68be2bde472db87e34dd4bb5bae` |
+| E2024 | 1–137 | `game_quality` | 137 | `16c5cfc4828f98710a5d138a6749d0a1` |
+| E2024 | 1–137 | `possession` | 19,822 | `5a01da7c73aae92f0ec5d027e987ae83` |
+| E2025 | 1–201 | `game_event` | 112,323 | `96d88d7f8b56c7c7b84e859aada50bc9` |
+| E2025 | 1–201 | attachment columns | 112,323 | `229826fa37f7432ae487c846eb01fa6b` |
+| E2025 | 1–201 | `lineup` | 4,398 | `669b9f20681046e5ec8a2778a2eac09c` |
+| E2025 | 1–201 | `lineup_stint` | 9,038 | `b21c96271a635887a1da5b64917878c9` |
+| E2025 | 1–201 | `player_game_minutes` | 4,796 | `f7d7c073a80cc4d4d79855d63cd4d4cb` |
+| E2025 | 1–201 | `game_quality` | 201 | `5bf1071dc378a9de4f73275c9830d865` |
+| E2025 | 1–201 | `possession` | 29,750 | `b6a276e41ad1d9f5e243fd3b73e292ef` |
+
+## Production-baseline reproduction
+
+| Relation | E2024 rows/checksum | E2025 rows/checksum |
+|---|---|---|
+| `raw_game` | 330 / `706239e43e0f039eea2e09c0447fba4b` | 402 / `b46eb1342f15a03578fcbcff6e9900e1` |
+| `raw_event` | 176,483 / `8903cbc6336b21f2a94a3d2212219f87` | 222,976 / `2a47f5c93746ba5edb419edfb2f6d7fe` |
+| `raw_shot` | 51,193 / `7eb905723f2626f32d9f7c364d95d085` | 64,137 / `3c701196fc4e0f0c93bd23dadf53c693` |
+| `raw_boxscore_player` | 7,863 / `986a2671f24298557a86d6111cc63fe8` | 9,540 / `110608ac93b854c6172b8ac7924a5c69` |
+| `raw_boxscore_team` | 1,320 / `30ddfdfa405dee9650247635711b5908` | 1,608 / `6da594c87af498c8065488db18a5f2e0` |
+| `game_event` | 176,483 / `0a30f9b352103df5ea31781128988fff` | 222,976 / `239ec26d95ffdd4e354c6ad9c15db8ef` |
+| `lineup_stint` | 13,927 / `5643117a3abf966ccc6e9f63efbdc18a` | 17,790 / `32ab77663e26ea8008d821b1f603326f` |
+| `player_game_minutes` | 7,863 / `89897157cf4e918165f7527e8dc42b81` | 9,540 / `81606d5aa9ab6f014afd9c1936cba809` |
+| `possession` | 47,831 / `acbb7c860d399fc53d03a0688b6b1178` | 59,483 / `15e5e7e0f7a1b04bc04323cefd66c01a` |
+| `game_quality` | 330 / `deb43192aa5da8507b9759a99809af45` | 402 / `ebe44c90defa90e56b050c548f3d90d7` |
+
+## What this confirmation proved
+
+1. The current database writer persists the same values in one pass and at the
+   approved E2024 137/193 and E2025 201/201 boundaries.
+2. Appending the second half does not mutate any first-half row covered by the
+   six relations or the separate attachment fingerprint.
+3. A fresh PostgreSQL 17.6 build from the immutable cache reproduces the ten
+   recorded production table checksums after canonicalizing timezone.
+4. The current writer performs exactly three `game_event` updates per event,
+   even though its post-vacuum dead-tuple estimate is zero.
+5. Failure cleanup removes populated confirmation schemas, including when the
+   production-baseline assertion stops the run.
+
+## What each check would fail to detect
+
+- **Single versus batched fingerprints** would not detect a defect shared by
+  both paths, an MD5 collision, or a source revision outside the cached
+  responses used here.
+- **First-batch before/after fingerprints** would not detect a boundary bug at
+  any split other than 137/193 or 201/201, nor a transient change that was
+  changed back before the second fingerprint.
+- **Production-baseline checks** cover the ten recorded tables, not
+  `raw_api_response`, `raw_api_fetch`, `lineup`, or the attachment-only
+  projection. The other gate fingerprints cover `lineup` and attachments, but
+  no check here proves archive-observation timestamps are equal across loads.
+- **Update statistics** count completed tuple updates but do not assign database
+  file pages to one SQL statement. The after-vacuum dead-tuple estimate can be
+  zero while allocated files remain larger.
+- **Database-size readings** include PostgreSQL allocation and catalog drift;
+  they do not isolate heap, index, WAL, or catalog bytes and are not a forecast
+  of production net growth.
+- **The local PostgreSQL environment** has no Supabase RLS roles, session
+  pooler, production grants, production-only triggers, or Data API behavior.
+  Environment-specific permission and pooling behavior remains untested.
+- **The run was serial and supervised.** It would not detect anomalies caused
+  by concurrent readers/writers, lock waits, connection loss at every possible
+  statement, or a process crash after PostgreSQL commit but before artifact
+  persistence.
+- **The gate does not exercise replacement after a changed source response.**
+  Decision 7's per-game rebuild remains a separate path.
+- **This is the pre-Option-A result.** It says nothing yet about parent-first
+  ordering, zero event updates, or per-game atomicity in the new writer.

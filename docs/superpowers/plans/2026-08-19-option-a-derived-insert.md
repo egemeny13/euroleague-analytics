@@ -10,6 +10,15 @@
 
 **Spec:** `docs/POSSESSION_ATTACHMENT_DECISION_BRIEF.md`, approved by the owner on 2026-08-19; the contradictory assertion in commit `97ef159` was explicitly superseded by the owner in this task.
 
+**Execution amendment, 2026-08-19:** the owner provisioned a disposable local
+PostgreSQL 17.6 database after this plan was written. The current execution uses
+`EL_TEST_DATABASE_URL` for `euroleague_test` on port 5433, asserts that target
+before every write, and never writes to production. The 460,000,000-byte stop,
+production temporary schemas, and `DatabaseSettings.from_env()` instructions
+below are retained only as historical context and are superseded. The gate also
+loads `raw_shot` and compares local single-pass fingerprints with
+`E2024_BASELINE` and `E2025_BASELINE` using the original snapshot functions.
+
 ## Global Constraints
 
 - Never write to or alter `public`; only read-only database-size queries may observe the database outside the temporary schema.
