@@ -52,12 +52,31 @@ def test_the_connection_refuses_a_write(cursor):
         cursor.execute("create temporary table should_not_exist (n integer)")
 
 
-def test_describe_warehouse_reports_the_loaded_season_and_its_exclusions(cursor):
+def test_describe_warehouse_reports_every_loaded_season_and_its_exclusions(cursor):
+    """The tool must disclose every season present, not only the first one loaded.
+
+    This asserted `== [SEASON]` while E2024 was the only season in the
+    warehouse, and went red the moment E2025 was loaded - not because the tool
+    broke but because it correctly started reporting more. A model asking what
+    it can query has to be told everything that is there, so the assertion is
+    now that E2024 is reported *with its numbers intact*, alongside whatever
+    else is loaded.
+    """
     response = describe_warehouse(cursor, {})
-    assert [row["season_code"] for row in response["rows"]] == [SEASON]
-    assert response["rows"][0]["games"] == TOTAL_GAMES
-    assert response["excluded"]["games"] == EXCLUDED_GAMES
-    assert len(response["coverage"]["teams"]) == 18
+    seasons = [row["season_code"] for row in response["rows"]]
+    assert SEASON in seasons
+    assert seasons == sorted(seasons), "seasons must be reported in a stable order"
+    assert len(seasons) == len(set(seasons)), "a season must not be reported twice"
+
+    # Asserted per season rather than on the cross-season totals. The totals
+    # legitimately grow with every season loaded, so an assertion on them would
+    # have to be loosened to a `>=` and would stop catching anything. E2024's
+    # own numbers do not move, and those are still pinned exactly.
+    loaded = {row["season_code"]: row for row in response["rows"]}
+    assert loaded[SEASON]["games"] == TOTAL_GAMES
+    assert loaded[SEASON]["excluded_games"] == EXCLUDED_GAMES
+    e2024_teams = [team for team in response["coverage"]["teams"] if team["season_code"] == SEASON]
+    assert len(e2024_teams) == 18
 
 
 def test_all_possessions_including_quarantined_match_the_phase_6_total(cursor):
@@ -273,7 +292,9 @@ def test_every_registered_tool_executes_against_the_warehouse(cursor):
         "el_get_player_on_off": {"season": SEASON, "player": "SHORTS, TJ"},
         "el_get_possessions": {"season": SEASON, "limit": 5},
         "el_get_play_by_play": {"season": SEASON, "gamecode": 1, "limit": 5},
+        "el_get_shot_data": {"season": SEASON, "gamecode": 1, "limit": 5},
     }
+    assert set(calls) == set(registry)
     for name, arguments in calls.items():
         response = registry[name].handler(arguments)
         assert "coverage" in response, name

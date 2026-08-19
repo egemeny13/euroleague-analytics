@@ -64,6 +64,8 @@ class SeasonValidationResult:
     corrected_minute_mismatch_gamecodes: tuple[int, ...]
     oncourt_violations: int
     attribution_issues: int
+    substitution_state_issues: int
+    substitution_state_issue_gamecodes: tuple[int, ...]
     player_point_mismatches: int
     team_point_mismatches: int
 
@@ -200,7 +202,7 @@ def validate_game(
 ) -> GameValidationCandidate:
     """Build one game's raw result and its not-yet-approved correction candidate."""
     events = tuple(flatten_play_by_play(play_by_play))
-    lineups = reconstruct_lineups(boxscore, list(events))
+    lineups = reconstruct_lineups(boxscore, list(events), quarantine_state_errors=True)
     timeline_before = lineups.lineup_timeline
     candidate_seconds, correction_rows = _candidate_corrected_seconds(
         events, lineups.player_seconds_raw
@@ -264,6 +266,8 @@ def validate_season(cache: ResponseCache, season_code: str) -> SeasonValidationR
             quarantine_reasons.append("off_court_attribution")
         if candidate.lineups.oncourt_violations:
             quarantine_reasons.append("not_five_on_court")
+        if candidate.lineups.substitution_state_issues:
+            quarantine_reasons.append("substitution_state")
         games[gamecode] = SeasonGameValidation(
             candidate=candidate,
             player_seconds_corrected=corrected_seconds,
@@ -305,6 +309,14 @@ def validate_season(cache: ResponseCache, season_code: str) -> SeasonValidationR
         ),
         attribution_issues=sum(
             len(candidate.lineups.attribution_issues) for candidate in candidates.values()
+        ),
+        substitution_state_issues=sum(
+            len(candidate.lineups.substitution_state_issues) for candidate in candidates.values()
+        ),
+        substitution_state_issue_gamecodes=tuple(
+            gamecode
+            for gamecode, candidate in candidates.items()
+            if candidate.lineups.substitution_state_issues
         ),
         player_point_mismatches=sum(
             len(candidate.player_point_mismatches) for candidate in candidates.values()

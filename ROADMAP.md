@@ -72,6 +72,14 @@ That gate could only be run once. After Phase 4 the database holds data and
 "rolls back cleanly" can never again be tested honestly against production; a
 future schema change must be gated on a fresh empty database instead.
 
+**Fresh-database gate now exists, 2026-08-19.** A disposable PostgreSQL 17.6
+instance—the same major.minor as production—runs locally on port 5433 with the
+empty `euroleague_test` database. All eight migrations have now completed an
+up/down/up cycle there and reproduced an identical **16-table, 7-view** schema.
+Migrations 0004 through 0007 had never been exercised through that complete
+reversal cycle before this date. Production was not used for the test and
+remains read-only for local database gates.
+
 Also verified: RLS denies the public REST endpoint. With one row present, the
 owning role saw 1 and `anon` saw 0.
 
@@ -130,12 +138,38 @@ was real and was passed, not because passing it was authorised in advance.
 precedent against which the rule forbidding self-granted roadmap-gate exemptions
 was written.
 
-**Storage: still failing, and now by more.** Loading the derived layer took the
+**Storage: resolved 2026-08-19.** Loading the derived layer took the
 billing-aware 19-season projection from 725,786,624 bytes to 1,797,734,400
-against a 474,311,115-byte budget. `test_live_phase_4_gate` asserts that
-projection is inside budget and is therefore red, deliberately, exactly as
-Phase 4 left it. The suite cannot be all-green until the hot-window decision is
-made, and that is the point of leaving it red.
+against a 474,311,115-byte budget, and `test_live_phase_4_gate` was left
+deliberately red on that assertion until a hot window was chosen.
+
+The window was chosen on 2026-08-18 (E2024, E2025, E2026 — `DECISIONS.md`
+item 20 as amended) and the compaction that made it fit ran the same day,
+taking the database from 454,859,573 to 291,380,021 bytes
+(`docs/STORAGE_COMPACTION_RESULT.md`). Under Condition B the gate now asserts
+**that** window: 732 loaded games plus a complete 380-game E2026 priced at the
+measured per-game rate, projecting 429,307,113 bytes against the unchanged
+474,311,115-byte budget. **It is green, and the budget was not touched.**
+
+The 23-season assertion is kept, inverted, as a standing measurement: the full
+backfill must continue *not* to fit. If it ever starts fitting, the reasoning
+behind Decision 20 has changed and somebody should look.
+
+**Two further gates were found red the same day, both predating the storage
+work and both the same staleness:** they asserted E2024 was the only season in
+the warehouse, which stopped being true when E2025 was loaded. `describe_warehouse`
+was correctly reporting both. Re-pinned per season, which is stronger than what
+they replaced — E2024's games, exclusions and team count are now asserted
+exactly rather than against cross-season totals that grow with every load.
+
+**The Phase 5 physical-size gate is now measured per game, not per season**
+(owner's decision, 2026-08-19). It memorised six exact byte totals taken when
+E2024 was the only season loaded, so it broke on E2025 arriving — correct growth
+it could not distinguish from a regression — and would have gone red weekly once
+E2026 began loading. It now asserts bytes per game inside a measured band, which
+holds through a live season. What that band cannot see is uniform growth under
+2.5%, about 6.4 MB across 732 games; the fixed-budget window projection in
+`test_live_phase_4_gate` is the check that catches that by another route.
 
 **The capacity figure is provisional and borderline.** Roughly 5 complete
 E2024-sized seasons fit. Two reasons not to choose a window on that number yet:
@@ -224,8 +258,9 @@ Decision 6 closes.
 
 **A latent schema defect is recorded.** `game_event_possession_fkey` is composite
 and declared `ON DELETE SET NULL`, so a delete tries to null `season_code` too.
-The loader works around it; a later migration should scope the action to
-`possession_index`.
+Decision 22's parent-first writer avoids firing the action by deleting child
+events before possession parents, but the constraint itself is still wrong; a
+later migration should scope the action to `possession_index`.
 
 ### Phase 7 — the MCP server. Complete.
 
@@ -287,31 +322,50 @@ Also fixed here: `ruff format --check .` failed on a committed plan document and
 would have turned CI red on the next push. `docs` is now excluded from ruff for
 the same reason `exploration` already was.
 
+### Block B — incremental live-season writes. Complete.
+
+Block B's real database gate ran on 2026-08-19 against the disposable PostgreSQL
+17.6 instance, never against production. The pre-Option-A writer and the final
+Option A writer each loaded E2024 (330 games, split 137/193) and E2025 (402
+games, split 201/201) both in one pass and incrementally. For every relation,
+row counts and primary-key-ordered content fingerprints matched; all four event
+attachment columns matched separately; and each first batch was unchanged after
+the second batch landed. Both fresh local builds reproduced all ten recorded
+production checksums per season exactly after the session timezone was fixed to
+UTC, proving the checksum definition was the same rather than merely similar.
+
+Decision 22 implements Option A: all event references are attached on the first
+insert, parent rows precede child events, and one game is one transaction. The
+database measured zero `game_event` updates for both seasons, versus 529,449 for
+E2024 and 668,928 for E2025 under the former writer. Controlled derived-phase
+growth fell from 174,964,736 to 81,272,832 bytes for E2024 (**53.55%**) and from
+219,619,328 to 99,450,880 bytes for E2025 (**54.72%**). The complete evidence and
+blind spots are in `docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md` and
+`docs/BLOCK_B_COMPLETION_REPORT.md`.
+
+The gate proves PostgreSQL persistence semantics for two complete cached
+seasons and two split points. It does not exercise Supabase RLS roles, its
+pooler, production grants, arbitrary future split points, concurrent readers or
+writers, crash recovery, or real E2026 payloads.
+
 ---
 
 ## After the phases
 
-The phase sequence is complete. What remains is a set of named, open decisions,
-none of them created by Phase 8 and none of them hidden by it:
+The phase sequence and Block B are complete. What remains is a set of named,
+open conditions and defects; Block B introduced no unresolved owner decision:
 
-1. **The storage hot window — decided 2026-08-13, not yet implemented.** The
-   owner chose **three complete seasons: E2025, E2024, E2023**, every relation
-   loaded for each, with E2022 and older seasons archive-only. 1,063 games at the
-   measured 330,708.5576 bytes per game project to 377.232 MB of the 500 MB
-   ceiling, leaving 122.768 MB. The measurement, the three options and the
-   rejected alternatives are in `docs/STORAGE_HOT_WINDOW_DECISION_BRIEF.md`; the
-   decision and its three conditions are `DECISIONS.md` item 20.
-
-   Production backfill is unblocked. Two things are still open and are *not*
-   closed by the choice: `test_live_phase_4_gate` still asserts the old
-   19-season projection and stays deliberately red until it is re-scoped to this
-   window (condition B — re-scoping is authorised, relaxing is not), and the
-   per-game cost was measured on E2024 alone and must be re-derived once E2025 is
-   loaded (condition A).
+1. **The storage hot window — implemented as E2026, E2025, E2024.** Decision
+   20's Conditions A and B are closed. Condition C still forbids pre-building a
+   derived-only tier, and Condition D still requires re-projection if E2026's
+   scheduled 380 games changes. The compacted projection leaves 72,008,225 bytes
+   of headroom; Decision 22 removes the recurring attachment-update churn that
+   threatened it.
 2. **The Phase 6 possession residual** — 16 E2024 games quarantined as
    `possession_gate`. Five candidate causes measured and eliminated.
 3. **The composite `game_event_possession_fkey`** — declared `ON DELETE SET NULL`
-   across a composite key. A later migration should scope it to
+   across a composite key. Option A avoids the broken action in the normal
+   writer, but a later owner-approved migration should still scope it to
    `possession_index`.
 4. **Decision 17's unexercised condition** — approved in `DECISIONS.md` and
    commit `11e3080`: any shot query including free throws must start from

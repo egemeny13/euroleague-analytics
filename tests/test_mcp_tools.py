@@ -23,9 +23,9 @@ def registry():
     return build_registry(lambda: NullConnection())
 
 
-def test_nine_tools_are_declared():
-    assert len(TOOL_NAMES) == 9
-    assert len(set(TOOL_NAMES)) == 9
+def test_ten_tools_are_declared():
+    assert len(TOOL_NAMES) == 10
+    assert len(set(TOOL_NAMES)) == 10
 
 
 def test_every_declared_name_starts_with_the_project_prefix():
@@ -36,7 +36,7 @@ def test_every_registered_tool_is_declared(registry):
     assert set(registry) <= set(TOOL_NAMES)
 
 
-def test_all_nine_declared_tools_are_registered(registry):
+def test_all_ten_declared_tools_are_registered(registry):
     assert set(registry) == set(TOOL_NAMES)
 
 

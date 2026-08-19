@@ -12,10 +12,9 @@ from euroleague.derived import (
     build_remaining_rows,
     discover_lineup_usage,
 )
-from euroleague.derived_load import load_phase5_base_rows, load_remaining_rows
+from euroleague.derived_load import load_derived_rows
 from euroleague.gate import (
     BACKFILL_SEASONS,
-    COMPACTION_DRIFT_ALLOWANCE_BYTES,
     DATABASE_OVERHEAD_ALLOWANCE_BYTES,
     EMPTY_PUBLIC_TABLE_BYTES,
     PHYSICAL_BUDGET_BYTES,
@@ -24,12 +23,43 @@ from euroleague.gate import (
     checksum_collision_probability,
     compact_public_tables,
     derived_snapshot,
+    games_within_budget,
     measure_lineup_identifier_widths,
     projected_database_growth_bytes,
-    projected_table_bytes,
     public_table_sizes,
     seasons_within_budget,
 )
+
+# Measured on 2026-08-19 against the compacted two-season warehouse: 732 games
+# across E2024 and E2025, 254,492,672 bytes of public relations above the empty
+# baseline. Recorded in docs/STORAGE_COMPACTION_RESULT.md.
+MEASURED_BYTES_PER_GAME = 347_667.6
+MEASURED_TABLE_BYTES_PER_GAME = {
+    "game_event": 159_206.8,
+    "raw_event": 96_905.1,
+    "possession": 39_404.4,
+    "raw_shot": 26_646.4,
+}
+
+# What the band has to absorb, and what it therefore cannot see.
+#
+# It absorbs the seasonal mix. A 20-team game is measured 3.5% more expensive
+# than an 18-team one, so the blended figure drifts as the mix changes: adding a
+# complete E2026 moves it about +0.5%, and dropping E2024 - which Decision 20
+# Condition D names as the first response to a window that stops fitting - moves
+# it about +1.6%. It also absorbs the page or two of compaction drift that made
+# the old exact figures wobble.
+#
+# What it cannot see is uniform growth under 2.5%, which across 732 games is
+# about 6.4 MB. That is the honest cost of a gate that survives a live season.
+# The check that would catch such growth by a different route is the window
+# projection in test_live_phase_4_gate, which is measured against a fixed
+# budget rather than against itself.
+SIZE_BAND = 0.025
+
+# The chosen hot window, and every played game the API serves (ROADMAP.md).
+WINDOW_GAMES = 330 + 402 + 380
+ALL_PLAYED_GAMES = 5_950
 
 
 @pytest.mark.warehouse
@@ -62,6 +92,54 @@ def test_seasons_within_budget_counts_only_complete_seasons() -> None:
     assert seasons_within_budget(100, budget=1_000) == 10
     assert seasons_within_budget(101, budget=1_000) == 9
     assert seasons_within_budget(100, budget=1_000, fixed_overhead=500) == 5
+
+
+def _outside_the_band(bytes_per_game: float) -> bool:
+    """The size gate's own comparison, so these tests exercise the real rule."""
+    return abs(bytes_per_game - MEASURED_BYTES_PER_GAME) > MEASURED_BYTES_PER_GAME * SIZE_BAND
+
+
+def test_the_size_band_rejects_the_warehouse_as_it_was_before_compaction() -> None:
+    """A gate that cannot fail is not a gate.
+
+    Before 2026-08-18 the public relations held 422,699,008 bytes for the same
+    732 games - 577,457 per game, 66% above the measured figure. If the
+    warehouse ever bloats back to anything like that, this goes red.
+    """
+    assert _outside_the_band(422_699_008 / 732)
+
+
+def test_the_size_band_accepts_a_fully_loaded_e2026() -> None:
+    """The drift the band exists to absorb: a third season, mostly 20-team games."""
+    assert not _outside_the_band(350_245)
+
+
+def test_the_size_band_accepts_dropping_e2024() -> None:
+    """Decision 20 Condition D's escape hatch must not itself break the gate."""
+    assert not _outside_the_band(353_796)
+
+
+def test_the_size_band_rejects_a_tenth_more_per_game() -> None:
+    """Real growth is measured in megabytes and lands far outside the band."""
+    assert _outside_the_band(MEASURED_BYTES_PER_GAME * 1.10)
+
+
+def test_games_within_budget_counts_games_not_seasons() -> None:
+    assert games_within_budget(100, budget=1_000) == 10
+    assert games_within_budget(100, budget=1_000, fixed_overhead=500) == 5
+
+
+def test_games_within_budget_rejects_a_game_that_costs_nothing() -> None:
+    """Break caught: a failed measurement divides by zero and reports infinite room."""
+    with pytest.raises(ValueError):
+        games_within_budget(0)
+
+
+def test_the_measured_capacity_holds_the_window_but_not_the_archive() -> None:
+    """The two assertions the live gate makes, on the measured figure."""
+    capacity = games_within_budget(MEASURED_BYTES_PER_GAME, fixed_overhead=EMPTY_PUBLIC_TABLE_BYTES)
+    assert capacity >= WINDOW_GAMES
+    assert capacity < ALL_PLAYED_GAMES
 
 
 def test_seasons_within_budget_rejects_a_season_that_costs_nothing() -> None:
@@ -111,6 +189,47 @@ def test_full_compaction_targets_each_public_table_then_rebuilds_its_indexes() -
     ]
 
 
+def test_derived_snapshot_scopes_every_fingerprint_to_the_requested_season() -> None:
+    """Break caught: loading E2025 changes the fingerprint reported for E2024."""
+
+    class Cursor:
+        def __init__(self) -> None:
+            self.executions: list[tuple[str, tuple]] = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def execute(self, query, params=()) -> None:
+            self.executions.append((" ".join(query.split()), params))
+
+        def fetchone(self):
+            return (0, "empty")
+
+    class Connection:
+        def __init__(self) -> None:
+            self.cursor_instance = Cursor()
+
+        def cursor(self):
+            return self.cursor_instance
+
+    connection = Connection()
+
+    snapshot = derived_snapshot(connection, "E2025")
+
+    assert set(snapshot) == {
+        "lineup",
+        "lineup_stint",
+        "game_event",
+        "player_game_minutes",
+        "game_quality",
+        "possession",
+    }
+    assert all(params == ("E2025",) for _, params in connection.cursor_instance.executions)
+
+
 @pytest.mark.warehouse
 @pytest.mark.full_season
 def test_live_lineup_identifier_width_measurement_uses_real_e2024_population() -> None:
@@ -148,6 +267,13 @@ def test_live_completed_phase_5_gate() -> None:
         "player_game_minutes": 7863,
         "game_quality": 330,
         "possession": 47_831,
+        "attribution_issues": 7,
+        "raw_minute_mismatches": 36,
+        "corrected_minute_mismatches": 4,
+        "corrected_event_rows": 32,
+        "suspect_event_rows": 7,
+        "minute_quarantine_games": (43, 98),
+        "attribution_quarantine_games": (23, 63, 72, 131, 139, 242, 323),
     }
 
 
@@ -164,8 +290,7 @@ def test_live_phase_5_second_load_is_idempotent() -> None:
     rows = build_remaining_rows(cache, "E2024")
     with psycopg.connect(settings.url(), autocommit=True) as connection:
         before = derived_snapshot(connection, "E2024")
-        load_phase5_base_rows(connection, dimensions, events, "E2024", rebuilding_possessions=True)
-        load_remaining_rows(connection, rows, "E2024")
+        load_derived_rows(connection, dimensions, events, rows, "E2024")
         after = derived_snapshot(connection, "E2024")
 
     assert after == before
@@ -187,42 +312,58 @@ def test_live_compacted_phase_5_physical_size_gate() -> None:
     with psycopg.connect(settings.url()) as connection:
         sizes = public_table_sizes(connection)
         billed_projection = projected_database_growth_bytes(connection)
+        with connection.cursor() as cursor:
+            cursor.execute("select count(*) from raw_game")
+            loaded_games = int(cursor.fetchone()[0])
+
+    # Counted, not assumed. The denominator has to be what is actually loaded,
+    # or a half-loaded season would read as every game suddenly getting cheaper.
+    assert loaded_games > 0, "no games are loaded; there is nothing to measure per game"
 
     public_total = sum(size.total_bytes for size in sizes.values())
     season_increment = public_total - EMPTY_PUBLIC_TABLE_BYTES
-    table_projection = projected_table_bytes(public_total)
-    billed_season_growth = billed_projection // BACKFILL_SEASONS
-    non_relation_growth = billed_season_growth - season_increment
+    per_game = season_increment / loaded_games
 
-    # The public relations hold every warehouse row, and they only move when the
-    # data moves. Measured on 2026-08-11 after Phase 6 and recorded in
-    # docs/PHASE_6_POSSESSIONS_REPORT.md.
-    #
-    # Bounded rather than pinned exactly. Four consecutive readings after one
-    # compaction were byte-identical at 104,783,872, but a second compaction of
-    # the same rows settled 8,192 bytes higher. The figure is stable within a
-    # compaction and wobbles by a page or two between them, so an equality
-    # assertion here would fail on a coin toss rather than on real growth --
-    # which is measured in megabytes, far outside this band.
     assert len(sizes) == 16
-    assert abs(public_total - 104_783_872) <= COMPACTION_DRIFT_ALLOWANCE_BYTES
-    assert abs(season_increment - 104_251_392) <= COMPACTION_DRIFT_ALLOWANCE_BYTES
-    assert abs(table_projection - 2_398_314_496) <= 23 * COMPACTION_DRIFT_ALLOWANCE_BYTES
-    assert abs(sizes["game_event"].total_bytes - 51_560_448) <= COMPACTION_DRIFT_ALLOWANCE_BYTES
-    assert sizes["raw_event"].total_bytes == 31_383_552
-    assert abs(sizes["possession"].total_bytes - 12_918_784) <= COMPACTION_DRIFT_ALLOWANCE_BYTES
+
+    # Measured per game rather than pinned to a total, decided by the owner on
+    # 2026-08-19.
+    #
+    # This gate used to memorise six exact byte figures, taken on 2026-08-11
+    # when E2024 was the only season loaded. That worked while the warehouse was
+    # static and broke the moment E2025 arrived - not because anything grew
+    # wrongly, but because it grew *correctly* and the test could not tell the
+    # difference. E2026 starts adding games on 2026-09-24 and adds more every
+    # week after that, so an exact pin would go red weekly all season, which in
+    # practice means it would be switched off.
+    #
+    # Bytes per game is the unit the project already settled on for storage
+    # (DECISIONS.md item 8's 2026-08-10 amendment, and item 20's cost figures).
+    # It holds steady as seasons are added, so it can stay green through a live
+    # season while still noticing the warehouse getting fatter per game.
+    assert abs(per_game - MEASURED_BYTES_PER_GAME) <= MEASURED_BYTES_PER_GAME * SIZE_BAND
+
+    # Localised to the four tables that hold nearly all of it, so a regression
+    # names the table it is in rather than only the total.
+    for table, measured in MEASURED_TABLE_BYTES_PER_GAME.items():
+        table_per_game = sizes[table].total_bytes / loaded_games
+        assert abs(table_per_game - measured) <= measured * SIZE_BAND, (
+            f"{table}: {table_per_game:,.0f} bytes per game against a measured {measured:,.0f}"
+        )
 
     # Everything else Supabase charges for: catalogue, system relations, work
     # space. It moves on its own, so it is bounded rather than pinned.
-    assert 0 <= non_relation_growth <= DATABASE_OVERHEAD_ALLOWANCE_BYTES
+    non_relation_growth = (billed_projection // BACKFILL_SEASONS) - season_increment
+    assert (
+        -DATABASE_OVERHEAD_ALLOWANCE_BYTES
+        <= non_relation_growth
+        <= (DATABASE_OVERHEAD_ALLOWANCE_BYTES)
+    )
 
-    # The decision this gate exists to protect. Twenty-three seasons do not fit,
-    # and that verdict is nowhere near the boundary. It was already the verdict
-    # at the unmeasured 19, and the measured 23 only widens the gap.
+    # The decision this gate exists to protect, in the unit that survives a
+    # league changing shape. The chosen window fits; every played game the API
+    # serves does not, and is nowhere near fitting.
+    capacity = games_within_budget(per_game, fixed_overhead=EMPTY_PUBLIC_TABLE_BYTES)
+    assert capacity >= WINDOW_GAMES, f"the chosen window no longer fits: {capacity} games"
+    assert capacity < ALL_PLAYED_GAMES, "the full archive should not fit; re-read Decision 20"
     assert billed_projection > PHYSICAL_BUDGET_BYTES
-    assert seasons_within_budget(season_increment, fixed_overhead=EMPTY_PUBLIC_TABLE_BYTES) == 4
-
-    # Phase 5 left this bounded at 4 or 5 because the two answers sat inside the
-    # reading drift. Possessions added about 14.2 MB a season and moved it clear
-    # of that band, so it is now pinned.
-    assert seasons_within_budget(billed_season_growth) == 4

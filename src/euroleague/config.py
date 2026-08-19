@@ -21,6 +21,7 @@ and the other two are refused here with an explanation.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from os import environ
 from pathlib import Path
@@ -31,6 +32,7 @@ SUPABASE_URL_ENV_VAR = "SUPABASE_URL"
 SUPABASE_SERVICE_KEY_ENV_VAR = "SUPABASE_SERVICE_ROLE_KEY"
 SUPABASE_BUCKET_ENV_VAR = "SUPABASE_STORAGE_BUCKET"
 DEFAULT_STORAGE_BUCKET = "euroleague-api-archive"
+LIVE_SECRET_NAMES = (ENV_VAR, SUPABASE_URL_ENV_VAR, SUPABASE_SERVICE_KEY_ENV_VAR)
 
 # The repository root, three levels up from src/euroleague/config.py.
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -221,3 +223,18 @@ class StorageSettings:
             _service_key=service_key,
             bucket=bucket.strip(),
         )
+
+
+def live_runtime_settings(values: Mapping[str, str]) -> tuple[DatabaseSettings, StorageSettings]:
+    """Build live credentials from the supplied environment mapping only."""
+    missing = [name for name in LIVE_SECRET_NAMES if not str(values.get(name, "")).strip()]
+    if missing:
+        raise ValueError(f"Missing required live setting(s): {', '.join(missing)}")
+    return (
+        DatabaseSettings.from_url(values[ENV_VAR]),
+        StorageSettings(
+            project_url=values[SUPABASE_URL_ENV_VAR].rstrip("/"),
+            _service_key=values[SUPABASE_SERVICE_KEY_ENV_VAR],
+            bucket=values.get(SUPABASE_BUCKET_ENV_VAR, DEFAULT_STORAGE_BUCKET),
+        ),
+    )

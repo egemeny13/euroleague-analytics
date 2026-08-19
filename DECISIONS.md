@@ -32,7 +32,9 @@ is binding — the decision is only approved with it.
 | 17 | `Points` is a coordinate source only | Approved with one condition |
 | 18 | MCP aggregation in views | Approved with a measurement |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
-| 20 | The free-tier hot window | **Three complete seasons — E2025, E2024, E2023** |
+| 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
+| 21 | The physical-size gate measures cost per game | Approved 2026-08-19 — a measured band that survives a live season |
+| 22 | Attach derived event references on first insert | Approved and implemented 2026-08-19 — zero `game_event` updates in both full-season database gates |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -56,6 +58,11 @@ records that no owner approval is preserved for it.
 Item 20 closes the condition attached to item 8 and the failed physical-size
 gate from Phase 4. It was decided by the owner on 2026-08-13 from
 `docs/STORAGE_HOT_WINDOW_DECISION_BRIEF.md`.
+
+Item 22 closes Block B's attachment-write decision. The owner approved Option A
+on 2026-08-19 from `docs/POSSESSION_ATTACHMENT_DECISION_BRIEF.md`, after the
+current and replacement writers were both measured on a disposable PostgreSQL
+17.6 database.
 
 ---
 
@@ -888,6 +895,236 @@ it only if the historical depth is later judged worth the three costs above.
 - Approved: the owner, 2026-08-13, choosing three complete seasons over the
   brief's own recommendation after a supervisor audit added the build-corridor
   and re-gating costs that the steady-state figures had hidden.
+
+**Amendment, 2026-08-18 — E2023 is replaced by E2026, and the window is no
+longer static.**
+
+The hot window is now **E2026, E2025 and E2024**. E2023 leaves the window and
+joins E2022 in the archive-only tier: its response bodies stay archived and
+recoverable, but it is not queryable and no three-year trend spans back to it.
+
+**Why.** The owner's direction of 2026-08-16 is that two seasons of history are
+enough and that the live 2026-27 season is the priority. E2026 was fetched on
+2026-08-16: 380 games scheduled, first game **2026-09-24**, none yet played
+(`docs/DAY_1_E2026_DEADLINE_REPORT.md`, schedule checksum
+`fefa2ee…`). A window that excludes the season currently being played cannot
+serve the project's stated purpose.
+
+**What changes about the shape of the window, and it matters more than the
+count.** Every previous window held finished seasons and could be filled to a
+measured number. This one contains a season that grows every week from
+2026-09-24 until the following spring. The window must therefore be sized
+against E2026 *complete* — 380 games — from the first day, not against however
+many games have been played when the measurement is taken. A projection taken
+mid-season understates the requirement and will be wrong in the direction that
+fills the disk.
+
+**The projection, stated with its known error.** On Decision 20's own
+330,708.5576 bytes per game, 1,112 games (330 + 402 + 380) project to 367.748 MB
+of data plus the 25,688,885-byte baseline: **393.437 MB, leaving 106.563 MB or
+21.31%** of the 500,000,000-byte ceiling. That figure is **not to be quoted as
+the operative number**, for two reasons already measured in
+`docs/STORAGE_COMPACTION_PLAN.md` section 8:
+
+- the per-game figure predates `raw_shot` and is short by roughly 8%;
+- a 2025 game occupies 3.43% more table space than a 2024 game, so the two
+  20-team seasons in this window cost more per game than the one 18-team season
+  it was measured on.
+
+Carrying both corrections naively gives roughly 432 MB and 13.5% headroom, but
+that number double-counts bloat the compaction is about to remove. **The
+operative figure is the honest compacted cost per game produced by step 8 of the
+compaction plan, and this window is not confirmed to fit until that number
+exists.** Condition A is not closed by this amendment; it is sharpened.
+
+**Condition D — re-project against a complete E2026 before every backfill, and
+again when the season's real game count is known.** 380 is the scheduled count
+on 2026-08-16, not a played count. If the competition adds or removes games, the
+window must be re-projected, and the first response to a projection that no
+longer fits is to drop **E2024**, not E2025 — E2024 is the season every
+validation baseline was measured against, so dropping it is a fresh owner
+decision with a documented cost, not an automatic fallback. Nothing about this
+amendment authorises silently shrinking the window at load time.
+
+**What is given up, stated plainly.** E2023 entirely, in addition to E2022. No
+comparison against either season in any MCP tool, and every tool that reports
+which seasons are loaded must say so rather than returning an empty result.
+
+**Provenance.**
+- Basis: MIXED. The 380-game schedule and the 2026-09-24 start are measured from
+  an archived response with a recorded checksum. The storage projection is
+  carried forward from a per-game figure that is known to be wrong low, and is
+  explicitly not settled here.
+- Evidence: `docs/DAY_1_E2026_DEADLINE_REPORT.md`;
+  `docs/STORAGE_COMPACTION_PLAN.md` sections 8a and 8b.
+- Alternatives considered: keeping E2023 + E2024 + E2025 (rejected — excludes the
+  live season, which is the project's current purpose); E2025 + E2026 only
+  (rejected — drops the season all validation baselines were measured against,
+  for headroom not yet shown to be needed).
+- Approved: the owner, 2026-08-18.
+
+**Condition A is closed, 2026-08-18, and the window is confirmed to fit.**
+
+The compaction ran the same day (`docs/STORAGE_COMPACTION_RESULT.md`). The
+database went from 454,859,573 to 291,380,021 bytes — 163.5 MB recovered — with
+every content fingerprint unchanged. On that compacted state, measured on the
+same whole-database billing basis Decision 20 uses:
+
+| | Bytes per game |
+|---|---:|
+| **Measured, whole database, after compaction** | **362,966.0** |
+| E2024, 330 games, 18 teams (allocated) | 347,422.6 |
+| E2025, 402 games, 20 teams (allocated) | 359,504.6 |
+| What this decision originally assumed | 330,708.5576 |
+
+The real figure is **9.8% higher** than the one this decision was priced on,
+which is what the amendment above warned it would be. Condition A's specific
+question — whether a 20-team season costs the same per game as an 18-team one —
+is answered: **it does not, it costs 3.5% more.**
+
+**The E2024 + E2025 + E2026 window fits.** Loaded today at 291,380,021 bytes,
+plus a complete 380-game E2026 at the E2025 rate, projects to **427,991,775
+bytes: 72,008,225 of headroom, 14.40%** of the 500,000,000 ceiling, and
+52,008,225 below the 480,000,000 stop rule.
+
+Three qualifications, none of which change the answer:
+
+- The per-season split is an **allocation by row share**, not a measurement of
+  marginal cost. The whole-database 362,966.0 is the figure to quote.
+- **Condition D stands.** 380 is E2026's *scheduled* count. If the competition
+  changes it, this projects again.
+- The headroom assumes the warehouse does not re-bloat. It will: a live season
+  re-runs the derived pipeline every week, and that is what created the 163 MB
+  in the first place. Routine maintenance is now a standing requirement, not a
+  one-off.
+
+**Condition B is closed, 2026-08-19.** `test_live_phase_4_gate` had been red
+since Phase 4 because it asserted that all 23 archived seasons fit the free
+tier. It now asserts the chosen window instead — 732 loaded games plus a
+complete 380-game E2026 at the measured per-game rate, projecting 429,307,113
+bytes against the same unchanged 474,311,115-byte budget. **It is green.**
+
+What Condition B forbade was not done: the assertion was not relaxed, not
+deleted, not marked expected-to-fail, and the budget was not moved. Three
+things guard against it drifting back:
+
+- The 23-season assertion is kept and **inverted**. The full backfill must
+  continue not to fit. If it ever does, the reasoning here has changed.
+- E2026 is priced at its full 380 scheduled games from the first day, never at
+  games played so far. A gate that counted only what is loaded would enlarge
+  its own budget weekly and fail only once the season was over.
+- Both properties are unit-tested, including that the gate goes red against the
+  pre-compaction 454,859,573-byte database. A gate that cannot fail is not a
+  gate.
+
+**A second staleness was found while doing it, and it was the reason the gate
+was actually failing.** `assert_warehouse_reconciles` required `raw_shot` to be
+*empty*, which was correct when `Points` was archived and unparsed and stopped
+being correct when Decision 17 was implemented in commit `11b681b`. So the gate
+had been red on that, not on storage, since E2024's shots were loaded. The
+emptiness rule is replaced by a per-game reconciliation of `raw_shot` against
+the archived `Points` responses — a stronger check, since an emptiness rule can
+only ever prove that nothing was loaded.
+
+---
+
+## 21. The physical-size gate measures cost per game, not memorised totals
+
+`test_live_compacted_phase_5_physical_size_gate` asserts that the warehouse's
+public relations cost a measured **347,667.6 bytes per game, within 2.5%**,
+rather than matching six exact byte totals.
+
+**Why.** The gate previously memorised the totals measured on 2026-08-11, when
+E2024 was the only season loaded. It went red when E2025 was loaded — not
+because anything grew wrongly, but because it grew *correctly* and an exact pin
+cannot tell those apart. E2026 begins loading on 2026-09-24 and adds games every
+week after that, so the pin would have gone red weekly for a whole season, and a
+test that must be edited weekly is a test that ends up switched off.
+
+Bytes per game is the unit the project already settled on for storage, in item
+8's 2026-08-10 amendment and in item 20's figures. It holds steady as seasons
+are added while still noticing the warehouse getting fatter per game.
+
+**What the band absorbs, and what it therefore cannot see.** It absorbs the
+seasonal mix: a 20-team game costs a measured 3.5% more than an 18-team one, so
+a complete E2026 moves the blended figure about +0.5% and dropping E2024 — item
+20's Condition D escape hatch — moves it about +1.6%. **It cannot see uniform
+growth under 2.5%, which is about 6.4 MB across 732 games.** That is the price
+of a gate that survives a live season, and it is not the only guard: the window
+projection in `test_live_phase_4_gate` is measured against a fixed budget rather
+than against itself, so it catches slow growth by a different route.
+
+**What it still refuses to do.** The capacity assertions are kept in the same
+form as before, in games rather than seasons: the chosen 1,112-game window must
+fit, and all 5,950 played games the API serves must not. Four unit tests pin the
+band's behaviour, including that it rejects the pre-compaction warehouse.
+
+**Provenance.**
+- Basis: MEASURED. 254,492,672 bytes of public relations across 732 loaded games
+  on 2026-08-19, after compaction.
+- Alternatives considered: re-pinning the six exact totals to two-season figures
+  (rejected — goes red on 2026-09-24 and every week after); keeping both the
+  exact pin and the band (rejected — the exact half still has to be retired when
+  E2026 starts loading, so it defers this decision rather than settling it).
+- Approved: the owner, 2026-08-19, choosing the per-game band.
+
+---
+
+## 22. Attach derived event references on first insert, never by update
+
+The derived writer computes every event's `home_lineup_id`, `away_lineup_id`,
+`stint_index`, and `possession_index` before persistence. It writes lineup,
+lineup-stint, and possession parents first, then inserts each `game_event` once
+with all four references populated. Each game's parent and child writes are one
+transaction. A selected-game append refuses any game that already has a
+persisted event or derived fact.
+
+**Why.** The former writer updated every selected event three times: once to
+clear the stint reference, once to clear the possession reference, and once to
+attach all four derived references. The pre-change disposable-database gate
+measured **529,449 updates for E2024** and **668,928 for E2025**, exactly three
+per event. Under the E2025-density projection, a complete 380-game E2026 would
+generate **129,499,136 bytes** of heap churn against **72,008,225 bytes** of
+measured headroom. The replacement writer measured **zero event updates** for
+both seasons. Its controlled derived-phase growth was **81,272,832 bytes for
+E2024**, down **93,691,904 bytes (53.55%)**, and **99,450,880 bytes for E2025**,
+down **120,168,448 bytes (54.72%)** from the same local current-writer gate.
+
+**Conditions.**
+
+- The four attachment fields must be merged by the complete event primary key
+  `(season_code, gamecode, ingest_index)`; missing, extra, or duplicate keys are
+  errors before a write.
+- Parent rows must precede referenced events, and one game's complete write must
+  remain one transaction so a failure leaves none of that game behind.
+- A derived load must execute zero `UPDATE game_event` statements. Tests inspect
+  recorded SQL, and the disposable-database gate measures PostgreSQL update
+  statistics.
+- Incremental and single-pass content must stay identical at the approved split
+  points, and the first batch must remain byte-for-byte unchanged after the
+  second batch lands.
+- The latent composite `game_event_possession_fkey` remains a separate schema
+  defect. Option A no longer triggers its broken `ON DELETE SET NULL` action in
+  the normal write path because child events are deleted before possessions. No
+  migration repair is approved by this decision.
+
+**Provenance.**
+- Basis: MIXED. The update counts, fingerprints, physical sizes, and before/after
+  growth are measured; choosing a one-time write-path refactor over recurring
+  maintenance is an operational judgment.
+- Evidence: `docs/POSSESSION_ATTACHMENT_DECISION_BRIEF.md`;
+  `docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md`; disposable PostgreSQL 17.6
+  runs `abe2cd7fe4` (current writer) and `1483ce06ef` (Option A). Both runs
+  reproduced the recorded production content checksums for E2024 and E2025,
+  matched single-pass to batched rows in every relation and attachment column,
+  and preserved each first batch after the second was appended.
+- Alternatives considered: Option B, retain the updates and perform plain vacuum
+  plus measurement after every live-season load, with threshold-triggered heavy
+  compaction. Rejected because `VACUUM FULL` takes `ACCESS EXCLUSIVE`, blocks the
+  table, and needs a second copy of it—the wrong failure mode on a fixed 500 MB
+  budget during a live season.
+- Approved: the owner, 2026-08-19, from
+  `docs/POSSESSION_ATTACHMENT_DECISION_BRIEF.md` and the implementation handover.
 
 ---
 

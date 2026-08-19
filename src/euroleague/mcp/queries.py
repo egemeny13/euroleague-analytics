@@ -5,6 +5,13 @@ is computed by the database from a view, so the definition of a metric lives in
 one reviewable place - `migrations/0004_query_views.up.sql` - rather than being
 half in SQL and half in a comprehension nobody reads.
 
+Shot queries follow the same rule with one extra safety boundary: their row
+population always starts from `game_event`. `raw_shot` is left-joined only for
+`coord_x`, `coord_y` and `zone`, because it contains made free throws but omits
+every missed free throw. Its `(-1,-1)` sentinel is converted to no coordinate,
+never served as a location. Shot type comes from the event action code, never
+from coordinate geometry or distance.
+
 Caller-supplied values are always bound, never interpolated. The only formatted
 SQL fragments are fixed clauses selected by this module.
 """
@@ -94,6 +101,33 @@ def exclusions_for(cursor: Cursor, season_code: str, include_quarantined: bool) 
     }
 
 
+def shot_coordinate_coverage_for(cursor: Cursor, season_code: str) -> dict[str, Any]:
+    """Say whether this season can answer a location question at all."""
+    cursor.execute(
+        "select count(*) as shot_events, "
+        "count(*) filter (where has_real_coordinate) as shots_with_real_coordinates "
+        "from v_shot_data where season_code = %s",
+        (season_code,),
+    )
+    row = _rows(cursor)[0]
+    real_coordinates = row["shots_with_real_coordinates"]
+    return {
+        "available": real_coordinates > 0,
+        "shot_events": row["shot_events"],
+        "shots_with_real_coordinates": real_coordinates,
+    }
+
+
+def _shot_boolean(arguments: dict[str, Any], name: str, default: bool | None) -> bool | None:
+    """Read an optional JSON Boolean without treating non-empty strings as true."""
+    if name not in arguments:
+        return default
+    value = arguments[name]
+    if type(value) is not bool:
+        raise ValueError(f"{name} must be true or false, not {value!r}. Correct the argument.")
+    return value
+
+
 def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """Coverage, quality and vocabulary - what a model should read first."""
     cursor.execute(
@@ -113,12 +147,37 @@ def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, A
     cursor.execute("select season_code, team_code, display_name from team_season order by 1, 2")
     teams = _rows(cursor)
 
+    cursor.execute(
+        "select season_code, count(*) as shot_events, "
+        "count(*) filter (where has_real_coordinate) as shots_with_real_coordinates "
+        "from v_shot_data group by season_code order by season_code"
+    )
+    coordinate_rows = _rows(cursor)
+    coordinates_by_season = {
+        row["season_code"]: {
+            "available": row["shots_with_real_coordinates"] > 0,
+            "shot_events": row["shot_events"],
+            "shots_with_real_coordinates": row["shots_with_real_coordinates"],
+        }
+        for row in coordinate_rows
+    }
+    for season in seasons:
+        coordinates_by_season.setdefault(
+            season["season_code"],
+            {
+                "available": False,
+                "shot_events": 0,
+                "shots_with_real_coordinates": 0,
+            },
+        )
+
     return build_response(
         rows=seasons,
         coverage={
             "seasons": [row["season_code"] for row in seasons],
             "games_included": sum(row["games"] for row in seasons),
             "teams": teams,
+            "shot_coordinates": coordinates_by_season,
         },
         excluded={
             "games": sum(row["excluded_games"] for row in seasons),
@@ -137,8 +196,9 @@ def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, A
             "Counting statistics are the official euroleague.net box score. Possessions, "
             "pace, lineups, on/off and every per-100 rate are this project's own "
             "reconstruction from the play-by-play event stream.",
-            "Shot coordinates are not loaded in this warehouse. Shot counts are available; "
-            "shot locations are not.",
+            "Shot-coordinate coverage is listed by season above. A season marked "
+            "available=false can still return shot attempts from game_event, but it cannot "
+            "answer where they were taken.",
             "Minutes come in three kinds and every response says which it served. "
             "'corrected' is the default and applies a measured 60-second substitution "
             "correction; 'raw' uses the source timestamps untouched and is what anything "
@@ -146,6 +206,104 @@ def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, A
             "basis whenever you quote a minutes figure or a per-minute rate.",
         ],
     )
+
+
+def get_shot_data(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Shot attempts from game_event, with raw_shot used only for coordinates."""
+    include_quarantined = _shot_boolean(arguments, "include_quarantined", False)
+    made = _shot_boolean(arguments, "made", None)
+    only_with_real_coordinates = _shot_boolean(arguments, "only_with_real_coordinates", False)
+    season_code = resolve_season(cursor, arguments["season"])
+    limit = clamp_limit(arguments.get("limit"))
+    offset = max(int(arguments.get("offset", 0)), 0)
+
+    conditions = ["season_code = %s"]
+    params: list[Any] = [season_code]
+    if not include_quarantined:
+        conditions.append("not excluded_by_default")
+    if arguments.get("gamecode") is not None:
+        conditions.append("gamecode = %s")
+        params.append(int(arguments["gamecode"]))
+    if arguments.get("team"):
+        conditions.append("team_code = %s")
+        params.append(resolve_team(cursor, season_code, arguments["team"]))
+    if arguments.get("player"):
+        conditions.append("player_id = %s")
+        params.append(resolve_player(cursor, season_code, arguments["player"]))
+    if arguments.get("period") is not None:
+        conditions.append("period = %s")
+        params.append(int(arguments["period"]))
+    if made is not None:
+        conditions.append("made = %s")
+        params.append(made)
+    if arguments.get("shot_type") is not None:
+        shot_type = str(arguments["shot_type"]).upper()
+        if shot_type not in {"2P", "3P", "FT"}:
+            raise ValueError(
+                f"Unknown shot_type {arguments['shot_type']!r}. Use 2P, 3P or FT; "
+                f"the type is read from the event action code."
+            )
+        conditions.append("shot_type = %s")
+        params.append(shot_type)
+    if only_with_real_coordinates:
+        conditions.append("has_real_coordinate")
+
+    coordinate_coverage = shot_coordinate_coverage_for(cursor, season_code)
+    where = " and ".join(conditions)
+    cursor.execute(f"select count(*) as total from v_shot_data where {where}", tuple(params))
+    total = _rows(cursor)[0]["total"]
+    cursor.execute(
+        f"select gamecode, ingest_index, numberofplay, period, action_code, shot_type, "
+        f"made, player_id, player_name, team_code, coord_x, coord_y, zone, "
+        f"has_real_coordinate, excluded_by_default, quarantine_reasons "
+        f"from v_shot_data where {where} "
+        f"order by gamecode, ingest_index limit %s offset %s",
+        (*params, limit, offset),
+    )
+    rows = _rows(cursor)
+    coverage = coverage_for(cursor, season_code, include_quarantined)
+    coverage["shot_coordinates"] = coordinate_coverage
+    response = build_response(
+        rows=rows,
+        coverage=coverage,
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        limit=limit,
+        offset=offset,
+        total_available=total,
+        caveats=[
+            "The shot population comes from game_event. raw_shot is left-joined only "
+            "for coord_x, coord_y and zone because it omits every missed free throw.",
+            "Free throws return with no coordinates: raw_shot contains only made free "
+            "throws and puts every one at the (-1,-1) null sentinel, which this tool "
+            "never serves as a location.",
+            "Shot type is read from the event action code. Coordinate geometry and "
+            "distance cannot reliably distinguish a two-pointer from a three-pointer.",
+        ],
+    )
+    if not rows:
+        if total > 0:
+            response["empty_result"] = {
+                "reason": "page_out_of_range",
+                "next_step": (
+                    f"The filters match {total} shots, but offset {offset} is beyond this "
+                    "page range. Retry with offset=0 or an offset below total_available."
+                ),
+            }
+        elif only_with_real_coordinates and not coordinate_coverage["available"]:
+            response["empty_result"] = {
+                "reason": "shot_coordinates_not_loaded",
+                "next_step": (
+                    "Call el_describe_warehouse to find a season with shot-coordinate "
+                    "coverage, or remove only_with_real_coordinates to return attempts "
+                    "from game_event without locations."
+                ),
+            }
+        else:
+            response["empty_result"] = {
+                "reason": "no_matching_shots",
+                "next_step": "Broaden the player, game, period, made or shot_type filter.",
+            }
+    return response
 
 
 def find_games(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:

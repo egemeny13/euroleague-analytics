@@ -1,8 +1,9 @@
-"""Build migration-shaped rows for the E2024 derived lineup layer."""
+"""Build migration-shaped rows for one explicitly selected season."""
 
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, NamedTuple
 
@@ -12,12 +13,15 @@ from euroleague.lineups import COACH_IDS
 from euroleague.possessions import count_game_possessions
 from euroleague.validation import validate_season
 
-PHASE_5_SEASON = "E2024"
 LINEUP_ID_HEX_CHARACTERS = 32
 
 
-class E2024OnlyError(ValueError):
-    """Raised before Phase 5 can read or write a season outside its scope."""
+class SeasonScopeError(ValueError):
+    """Raised before derived work can mix rows from different seasons."""
+
+
+class EventAttachmentError(ValueError):
+    """Raised when event and attachment identities are not exactly one-to-one."""
 
 
 @dataclass(frozen=True)
@@ -163,10 +167,10 @@ class GameEventRow(NamedTuple):
     clock_moved_backwards: bool
     score_home: int
     score_away: int
-    home_lineup_id: None
-    away_lineup_id: None
-    stint_index: None
-    possession_index: None
+    home_lineup_id: str | None
+    away_lineup_id: str | None
+    stint_index: int | None
+    possession_index: int | None
     is_team_event: bool
     is_coach_event: bool
     free_throw_trip_id: None
@@ -299,6 +303,77 @@ class RemainingDerivedRows:
     possessions: tuple[PossessionRow, ...] = ()
 
 
+def attach_game_event_references(
+    events: Sequence[GameEventRow],
+    attachments: Sequence[GameEventAttachmentRow],
+) -> tuple[GameEventRow, ...]:
+    """Merge one exact attachment into each event without changing event order."""
+    event_keys = [(row.season_code, row.gamecode, row.ingest_index) for row in events]
+    if len(set(event_keys)) != len(event_keys):
+        raise EventAttachmentError("Event rows contain duplicate primary keys.")
+
+    by_key: dict[tuple[str, int, int], GameEventAttachmentRow] = {}
+    for attachment in attachments:
+        key = (attachment.season_code, attachment.gamecode, attachment.ingest_index)
+        if key in by_key:
+            raise EventAttachmentError(f"Attachment rows contain duplicate key {key}.")
+        by_key[key] = attachment
+
+    missing = sorted(set(event_keys) - set(by_key))
+    extra = sorted(set(by_key) - set(event_keys))
+    if missing or extra:
+        raise EventAttachmentError(
+            f"Event attachment identities differ: missing {len(missing)} {missing[:3]}; "
+            f"extra {len(extra)} {extra[:3]}."
+        )
+
+    return tuple(
+        event._replace(
+            home_lineup_id=by_key[key].home_lineup_id,
+            away_lineup_id=by_key[key].away_lineup_id,
+            stint_index=by_key[key].stint_index,
+            possession_index=by_key[key].possession_index,
+        )
+        for event, key in zip(events, event_keys, strict=True)
+    )
+
+
+def select_remaining_games(
+    rows: RemainingDerivedRows, gamecodes: Sequence[int]
+) -> RemainingDerivedRows:
+    """Select one append-only game batch without changing source row order."""
+    selected = {int(gamecode) for gamecode in gamecodes}
+    stints = tuple(row for row in rows.stints if row.gamecode in selected)
+    attachments = tuple(row for row in rows.event_attachments if row.gamecode in selected)
+    player_minutes = tuple(row for row in rows.player_minutes if row.gamecode in selected)
+    game_qualities = tuple(row for row in rows.game_qualities if row.gamecode in selected)
+    possessions = tuple(row for row in rows.possessions if row.gamecode in selected)
+
+    lineup_ids = {
+        lineup_id for stint in stints for lineup_id in (stint.home_lineup_id, stint.away_lineup_id)
+    }
+    lineup_ids.update(
+        lineup_id
+        for attachment in attachments
+        for lineup_id in (attachment.home_lineup_id, attachment.away_lineup_id)
+    )
+    lineup_ids.update(
+        lineup_id
+        for possession in possessions
+        for lineup_id in (possession.offense_lineup_id, possession.defense_lineup_id)
+    )
+    lineups = tuple(row for row in rows.lineups if row.lineup_id in lineup_ids)
+
+    return RemainingDerivedRows(
+        lineups=lineups,
+        stints=stints,
+        event_attachments=attachments,
+        player_minutes=player_minutes,
+        game_qualities=game_qualities,
+        possessions=possessions,
+    )
+
+
 def _trim(value: Any) -> str | None:
     if value is None:
         return None
@@ -306,16 +381,14 @@ def _trim(value: Any) -> str | None:
     return text or None
 
 
-def _assert_e2024(season_code: str) -> None:
-    if season_code != PHASE_5_SEASON:
-        raise E2024OnlyError(
-            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
-        )
+def _assert_season_code(season_code: str) -> None:
+    if not season_code or season_code != season_code.strip():
+        raise SeasonScopeError(f"Expected a non-blank trimmed season; received {season_code!r}.")
 
 
 def build_dimensions(cache: ResponseCache, season_code: str) -> DimensionRows:
     """Read cached Boxscores and schedule facts into the three dimension tables."""
-    _assert_e2024(season_code)
+    _assert_season_code(season_code)
     schedule = cache.read_schedule_json(season_code)
     players: dict[str, str | None] = {}
     teams: dict[str, tuple[str, str | None]] = {}
@@ -327,6 +400,21 @@ def build_dimensions(cache: ResponseCache, season_code: str) -> DimensionRows:
             team_code = _trim(club.get("code"))
             if team_code:
                 teams[team_code] = (competition_code, _trim(club.get("name")))
+
+        # ONLY A PLAYED GAME HAS A BOXSCORE, and from 2026-09-24 an E2026
+        # schedule lists 380 games of which most have not happened. Reading
+        # every scheduled game's Boxscore worked only because every season
+        # loaded so far was finished; against a live schedule it fails on the
+        # first unplayed fixture. The predicate is the one `played_games` and
+        # the fetcher share - being more generous here would hunt for responses
+        # that were never fetched.
+        #
+        # Teams are deliberately still taken from every scheduled game above:
+        # they come from the schedule itself, need no Boxscore, and a team is
+        # in the competition before it has played. For a finished season, where
+        # every game is played, this whole change is a no-op.
+        if game.get("played") is not True:
+            continue
 
         gamecode = int(game["gameCode"])
         boxscore = cache.read_json(season_code, "Boxscore", gamecode)
@@ -360,7 +448,7 @@ def _corrected_elapsed_seconds(event: EventRecord, correction_applied: bool) -> 
 
 def build_game_events(cache: ResponseCache, season_code: str) -> tuple[GameEventRow, ...]:
     """Persist Phase 3 event results one-for-one, without lineup or possession fields."""
-    _assert_e2024(season_code)
+    _assert_season_code(season_code)
     validation = validate_season(cache, season_code)
     schedule = cache.read_schedule_json(season_code)
     competition_by_game = {
@@ -525,7 +613,7 @@ def _usage_from_segments(segments: tuple[StableSegment, ...]) -> LineupUsage:
 
 def discover_lineup_usage(cache: ResponseCache, season_code: str) -> LineupUsage:
     """Count stable lineup values and references without creating lineup identifiers."""
-    _assert_e2024(season_code)
+    _assert_season_code(season_code)
     validation = validate_season(cache, season_code)
     schedule = cache.read_schedule_json(season_code)
     return _usage_from_segments(_stable_segments(validation, schedule))
@@ -722,7 +810,7 @@ def _game_quality_rows(
 
 def build_remaining_rows(cache: ResponseCache, season_code: str) -> RemainingDerivedRows:
     """Build all post-decision Phase 5 rows while leaving possessions empty."""
-    _assert_e2024(season_code)
+    _assert_season_code(season_code)
     validation = validate_season(cache, season_code)
     schedule = cache.read_schedule_json(season_code)
     segments = _stable_segments(validation, schedule)

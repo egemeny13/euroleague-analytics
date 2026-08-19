@@ -84,6 +84,52 @@ def test_subbing_in_a_player_already_on_court_trips_the_hard_invariant() -> None
         reconstruct_lineups(_boxscore(), events)
 
 
+def test_season_validation_can_quarantine_a_duplicate_noop_substitution_batch() -> None:
+    """Break caught: one source-state defect aborts validation of the whole season."""
+    events = flatten_play_by_play(
+        _payload(
+            {
+                "NUMBEROFPLAY": 2,
+                "PLAYTYPE": "OUT",
+                "PLAYER_ID": "AAA0",
+                "CODETEAM": "AAA",
+                "MARKERTIME": "09:00",
+            },
+            {
+                "NUMBEROFPLAY": 3,
+                "PLAYTYPE": "IN",
+                "PLAYER_ID": "AAA5",
+                "CODETEAM": "AAA",
+                "MARKERTIME": "09:00",
+            },
+            {
+                "NUMBEROFPLAY": 4,
+                "PLAYTYPE": "OUT",
+                "PLAYER_ID": "AAA0",
+                "CODETEAM": "AAA",
+                "MARKERTIME": "08:00",
+            },
+            {
+                "NUMBEROFPLAY": 5,
+                "PLAYTYPE": "IN",
+                "PLAYER_ID": "AAA1",
+                "CODETEAM": "AAA",
+                "MARKERTIME": "08:00",
+            },
+        )
+    )
+
+    result = reconstruct_lineups(_boxscore(), events, quarantine_state_errors=True)
+
+    assert [issue.playtype for issue in result.substitution_state_issues] == ["OUT", "IN"]
+    assert [issue.ingest_index for issue in result.substitution_state_issues] == [3, 4]
+    duplicate_batch_end = result.substitution_intervals[1][1]
+    assert len(result.lineup_timeline[duplicate_batch_end][0]) == 5
+
+    with pytest.raises(SubstitutionStateError):
+        reconstruct_lineups(_boxscore(), events)
+
+
 def test_an_unbalanced_substitution_batch_trips_the_pairing_invariant() -> None:
     events = flatten_play_by_play(
         _payload(

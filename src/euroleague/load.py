@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 
 import psycopg
@@ -44,24 +44,71 @@ _TABLES = (
 )
 
 
-def assert_phase4_safe(connection: Any, season_code: str) -> None:
-    """Refuse a raw-only replacement once downstream rows exist for the season."""
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            select
-                (select count(*) from game_event where season_code = %s)
-              + (select count(*) from lineup_stint where season_code = %s)
-              + (select count(*) from possession where season_code = %s)
-              + (select count(*) from player_game_minutes where season_code = %s)
-              + (select count(*) from game_quality where season_code = %s)
-            """,
-            (season_code,) * 5,
+def played_games(schedule_data: Iterable[dict]) -> list[dict]:
+    """Return the games the schedule marks played, in gamecode order.
+
+    **The one rule for what counts as a played game**, shared with the fetcher
+    rather than reinvented here. `fetch.py` uses `game.get("played") is True`,
+    and this must match it exactly: if the loader were the more generous of the
+    two it would go looking for responses the fetcher never fetched, and report
+    a missing file for a game that was never played.
+
+    Measured 2026-08-19 across all three cached schedules - 1,112 games - the
+    flag is a strict boolean: 330 of 330 true in E2024, 402 of 402 in E2025, 0
+    of 380 in E2026, with no other value and no game missing the key. **What is
+    not measured is a schedule mid-season**, where true and false appear
+    together, because no such schedule exists to read yet. That is the shape
+    every E2026 fetch will have from 2026-09-24, and the first one should be
+    checked rather than assumed.
+    """
+    played = [game for game in schedule_data if game.get("played") is True]
+    return sorted(played, key=lambda game: int(game["gameCode"]))
+
+
+def assert_phase4_safe(
+    connection: Any, season_code: str, gamecodes: Sequence[int] | None = None
+) -> None:
+    """Refuse a raw-only replacement while derived rows exist for what it replaces.
+
+    Replacing a game's raw rows leaves any derived rows built from them wrong,
+    with nothing to notice it, so the loader refuses to do it. That much is
+    unchanged.
+
+    What changed on 2026-08-19 is the *scope* of the question. It used to ask
+    whether the season held any derived rows at all, which is right for a
+    one-pass load of a finished season and impossible for a live one: after the
+    first week of E2026 the answer is always yes, and the loader would refuse
+    to add game 51 because games 1 to 50 had been derived. Passing `gamecodes`
+    narrows the question to the games actually being replaced. Passing nothing
+    keeps the original season-wide behaviour, because a full reload really does
+    put every derived row in the season at risk.
+    """
+    scoped = gamecodes is not None
+    tables = ("game_event", "lineup_stint", "possession", "player_game_minutes", "game_quality")
+    if scoped:
+        codes = [int(code) for code in gamecodes]
+        if not codes:
+            return
+        clauses = " + ".join(
+            f"(select count(*) from {table} where season_code = %s and gamecode = any(%s))"
+            for table in tables
         )
+        params: tuple = ()
+        for _ in tables:
+            params += (season_code, codes)
+    else:
+        clauses = " + ".join(
+            f"(select count(*) from {table} where season_code = %s)" for table in tables
+        )
+        params = (season_code,) * len(tables)
+
+    with connection.cursor() as cursor:
+        cursor.execute(f"select {clauses}", params)
         count = int(cursor.fetchone()[0])
     if count:
+        where = f"games {sorted(int(code) for code in gamecodes)}" if scoped else "this season"
         raise DerivedRowsExistError(
-            f"Season {season_code} already has {count} Phase 5 or later rows. "
+            f"Season {season_code} already has {count} Phase 5 or later rows for {where}. "
             "The Phase 4 loader cannot replace raw data without rebuilding those "
             "derived rows in the same transaction. Use the future re-ingest path."
         )
@@ -188,20 +235,37 @@ def load_cached_season(
     *,
     progress: Callable[[str], None] = print,
 ) -> dict[str, int]:
-    """Load every complete cached game, printing one credential-free progress line."""
-    assert_phase4_safe(connection, season_code)
+    """Load every played cached game, printing one credential-free progress line.
+
+    Only games the schedule marks played are considered. An unplayed game is
+    not a gap in the cache; it is a game that has not happened, and a season in
+    progress is made almost entirely of them. A game that *was* played but has
+    no cached responses is still a hard failure - that is missing data rather
+    than a future fixture, and the two must not be blurred.
+    """
     schedule = cache.read_schedule_json(season_code)
-    games = sorted(schedule.get("data") or [], key=lambda game: int(game["gameCode"]))
+    games = played_games(schedule.get("data") or [])
+    assert_phase4_safe(connection, season_code, [int(game["gameCode"]) for game in games])
+    # Checked for every game before any game is loaded. Discovering a missing
+    # response halfway through leaves the season part-loaded, which for a live
+    # season is a state somebody then has to reason about; discovering it first
+    # costs one pass over the cache and leaves the warehouse untouched.
+    missing = [
+        int(game["gameCode"])
+        for game in games
+        if not cache.exists(season_code, "Boxscore", int(game["gameCode"]))
+        or not cache.exists(season_code, "PlaybyPlay", int(game["gameCode"]))
+    ]
+    if missing:
+        raise FileNotFoundError(
+            f"{len(missing)} game(s) marked played in the {season_code} schedule are "
+            f"incomplete in the cache: {missing[:10]}. Restore both Boxscore and "
+            "PlaybyPlay files, or run the fetcher; the loader will not fetch them."
+        )
+
     totals = {target: 0 for target, *_ in _TABLES}
     for index, schedule_game in enumerate(games, start=1):
         gamecode = int(schedule_game["gameCode"])
-        if not cache.exists(season_code, "Boxscore", gamecode) or not cache.exists(
-            season_code, "PlaybyPlay", gamecode
-        ):
-            raise FileNotFoundError(
-                f"Game {gamecode} is incomplete in the {season_code} cache. "
-                "Restore both Boxscore and PlaybyPlay files; the loader will not fetch them."
-            )
         counts = load_game(connection, parse_cached_game(cache, season_code, schedule_game))
         for table, count in counts.items():
             totals[table] += count

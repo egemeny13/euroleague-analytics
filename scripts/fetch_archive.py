@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
 
+import psycopg
 import requests
 
+from euroleague.archive import (
+    SupabaseStorage,
+    archive_successful_observation,
+    restore_current_season_cache,
+)
+from euroleague.cache import ResponseCache
+from euroleague.config import live_runtime_settings
 from euroleague.fetch import (
     DEFAULT_CACHE_ROOT,
     ArchiveFetcher,
@@ -50,35 +59,83 @@ def _parser() -> argparse.ArgumentParser:
         default=30.0,
         help="timeout for one HTTP request (default: 30)",
     )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="restore and archive E2026 through the configured private Supabase project",
+    )
+    parser.add_argument(
+        "--require-fresh-schedule",
+        action="store_true",
+        help="fail rather than derive targets from a cached schedule after a refresh failure",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.live and args.seasons != ["E2026"]:
+        print("--live currently supports exactly one season: E2026.", file=sys.stderr)
+        return 2
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT})
 
-    def fetcher_factory(_season_code: str) -> ArchiveFetcher:
-        return ArchiveFetcher(
-            transport=session,
-            cache_root=args.cache_root,
-            fetch_log_path=args.fetch_log,
-            timeout_seconds=args.timeout_seconds,
-        )
-
     try:
-        summaries = fetch_seasons(
-            args.seasons,
-            fetcher_factory=fetcher_factory,
-            between_seasons=time.sleep,
-        )
-    except FetchError as error:
+        if args.live:
+            database_settings, storage_settings = live_runtime_settings(os.environ)
+            with psycopg.connect(database_settings.url(), autocommit=True) as connection:
+                storage = SupabaseStorage(storage_settings)
+                storage.ensure_private_bucket()
+                restore_current_season_cache(
+                    connection,
+                    ResponseCache(args.cache_root),
+                    storage,
+                    "E2026",
+                    allow_bootstrap=True,
+                )
+
+                def fetcher_factory(_season_code: str) -> ArchiveFetcher:
+                    return ArchiveFetcher(
+                        transport=session,
+                        cache_root=args.cache_root,
+                        fetch_log_path=args.fetch_log,
+                        timeout_seconds=args.timeout_seconds,
+                        successful_observation=lambda observation: archive_successful_observation(
+                            connection, storage, observation
+                        ),
+                        require_fresh_schedule=args.require_fresh_schedule,
+                    )
+
+                summaries = fetch_seasons(
+                    args.seasons,
+                    fetcher_factory=fetcher_factory,
+                    between_seasons=time.sleep,
+                )
+        else:
+
+            def fetcher_factory(_season_code: str) -> ArchiveFetcher:
+                return ArchiveFetcher(
+                    transport=session,
+                    cache_root=args.cache_root,
+                    fetch_log_path=args.fetch_log,
+                    timeout_seconds=args.timeout_seconds,
+                    require_fresh_schedule=args.require_fresh_schedule,
+                )
+
+            summaries = fetch_seasons(
+                args.seasons,
+                fetcher_factory=fetcher_factory,
+                between_seasons=time.sleep,
+            )
+    except (FetchError, ValueError) as error:
         print(error, file=sys.stderr)
         return 1
 
     for summary in summaries:
         print(
-            f"season {summary.season}: fetched={summary.fetched_files} "
+            f"season {summary.season}: scheduled={summary.scheduled_games} "
+            f"played={summary.played_games} game_responses={summary.fetched_game_responses} "
+            f"fetched={summary.fetched_files} "
             f"bytes={summary.fetched_bytes} skipped={summary.skipped_files} "
             f"permanent={summary.permanent_missing} failed={summary.failed_targets} "
             f"requests={summary.http_requests} elapsed={summary.elapsed_seconds:.1f}s",

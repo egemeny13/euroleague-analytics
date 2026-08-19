@@ -4,16 +4,21 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
+import shutil
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 import requests
 
-from euroleague.cache import CachedResponse, ResponseCache, sha256_of_bytes
+from euroleague.cache import ENDPOINTS, CachedResponse, ResponseCache, sha256_of_bytes
 from euroleague.config import StorageSettings
+from euroleague.fetch import FetchObservation
 
 
 class ArchiveStorageError(RuntimeError):
@@ -22,6 +27,14 @@ class ArchiveStorageError(RuntimeError):
 
 class PublicBucketError(ArchiveStorageError):
     """Raised when the archive bucket would allow unauthenticated downloads."""
+
+
+class ArchiveIndexError(RuntimeError):
+    """Raised when current archive metadata cannot reconstruct one cache."""
+
+
+class IncompleteSeasonCache(RuntimeError):
+    """Raised when cached game endpoint identities differ from the schedule."""
 
 
 @dataclass(frozen=True)
@@ -37,6 +50,65 @@ class ArchiveObject:
     storage_path: str
     fetched_at: datetime
     compressed_body: bytes
+
+
+@dataclass(frozen=True)
+class ArchiveIndexEntry:
+    """Current archive metadata needed to restore one exact response body."""
+
+    response_id: int
+    season_code: str
+    endpoint: str
+    gamecode: int | None
+    content_sha256: str
+    canonical_sha256: str
+    byte_size: int
+    storage_path: str
+    first_seen_at: datetime
+
+    def archive_object(self) -> ArchiveObject:
+        """Adapt index metadata to Storage's checksum-verifying download contract."""
+        return ArchiveObject(
+            season_code=self.season_code,
+            endpoint=self.endpoint,
+            gamecode=self.gamecode,
+            content_sha256=self.content_sha256,
+            canonical_sha256=self.canonical_sha256,
+            byte_size=self.byte_size,
+            storage_path=self.storage_path,
+            fetched_at=self.first_seen_at,
+            compressed_body=b"",
+        )
+
+
+@dataclass(frozen=True)
+class CacheCompleteness:
+    """The schedule and game-response counts observed in one cache."""
+
+    scheduled_games: int
+    played_games: int
+    response_files: int
+    played_gamecodes: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class RestoreSummary:
+    """The exact immutable archive data materialised for one pipeline run."""
+
+    restored_responses: int
+    exact_bytes: int
+    completeness: CacheCompleteness | None
+    bootstrap_required: bool
+
+
+@dataclass(frozen=True)
+class ArchivedObservation:
+    """Credential-free identifiers for one successfully archived API response."""
+
+    response_id: int
+    content_sha256: str
+    canonical_sha256: str
+    content_changed: bool
 
 
 def canonical_json_bytes(body: bytes) -> bytes:
@@ -180,7 +252,211 @@ class SupabaseStorage:
         return body
 
 
-def record_archive_observation(connection: Any, archived: ArchiveObject) -> int:
+def current_archive_entries(connection: Any, season_code: str) -> tuple[ArchiveIndexEntry, ...]:
+    """Return only the current metadata rows; historical bodies stay in Storage."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select response_id, season_code, endpoint, gamecode, content_sha256,
+                   canonical_sha256, byte_size, storage_path, first_seen_at
+            from raw_api_response
+            where season_code = %s and is_current
+            order by endpoint, gamecode nulls first, response_id
+            """,
+            (season_code,),
+        )
+        rows = cursor.fetchall()
+    return tuple(ArchiveIndexEntry(*row) for row in rows)
+
+
+def assert_complete_played_cache(cache: ResponseCache, season_code: str) -> CacheCompleteness:
+    """Require exactly the scheduled played identities for every source endpoint."""
+    games = list(cache.read_schedule_json(season_code).get("data") or [])
+    gamecodes = [int(game["gameCode"]) for game in games]
+    duplicate_gamecodes = sorted(
+        {gamecode for gamecode in gamecodes if gamecodes.count(gamecode) > 1}
+    )
+    if duplicate_gamecodes:
+        raise IncompleteSeasonCache(
+            f"Season {season_code} schedule has duplicate gamecodes: {duplicate_gamecodes}"
+        )
+
+    expected = {int(game["gameCode"]) for game in games if game.get("played") is True}
+    differences: list[str] = []
+    for endpoint in ENDPOINTS:
+        actual = set(cache.gamecodes(season_code, endpoint))
+        if actual != expected:
+            differences.append(
+                f"{endpoint}: missing={sorted(expected - actual)}, "
+                f"extra={sorted(actual - expected)}"
+            )
+    if differences:
+        raise IncompleteSeasonCache(
+            f"Season {season_code} cache is not complete for played games: "
+            + "; ".join(differences)
+        )
+    return CacheCompleteness(
+        scheduled_games=len(games),
+        played_games=len(expected),
+        response_files=len(expected) * len(ENDPOINTS),
+        played_gamecodes=tuple(sorted(expected)),
+    )
+
+
+def _write_bytes_atomically(path: Path, body: bytes) -> None:
+    """Materialise exact archive bytes without exposing a partly-written response."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    part_path = path.with_name(f"{path.name}.part")
+    part_path.write_bytes(body)
+    os.replace(part_path, path)
+
+
+def _cache_path(cache: ResponseCache, entry: ArchiveIndexEntry) -> Path:
+    """Return the canonical cache path for one season-level or game-level response."""
+    if entry.gamecode is None:
+        return cache.schedule_path(entry.season_code)
+    return cache.path_for(entry.season_code, entry.endpoint, entry.gamecode)
+
+
+def _replace_staged_season(
+    cache: ResponseCache, staged_cache: ResponseCache, season_code: str
+) -> None:
+    """Replace one verified season directory while retaining the prior cache on a failed swap."""
+    destination = cache.root / season_code
+    staged_season = staged_cache.root / season_code
+    backup = staged_cache.root.with_name(f"{staged_cache.root.name}-backup")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists():
+        os.replace(destination, backup)
+    try:
+        os.replace(staged_season, destination)
+    except OSError:
+        if backup.exists():
+            os.replace(backup, destination)
+        raise
+    if backup.exists():
+        shutil.rmtree(backup)
+
+
+def _identity_label(identity: tuple[str, int | None]) -> str:
+    endpoint, gamecode = identity
+    return endpoint if gamecode is None else f"{endpoint} game {gamecode}"
+
+
+def _required_archive_entries(
+    entries: tuple[ArchiveIndexEntry, ...], season_code: str, played_gamecodes: tuple[int, ...]
+) -> tuple[ArchiveIndexEntry, ...]:
+    expected_identities = {("Schedule", None)} | {
+        (endpoint, gamecode) for gamecode in played_gamecodes for endpoint in ENDPOINTS
+    }
+    entries_by_identity: dict[tuple[str, int | None], list[ArchiveIndexEntry]] = {}
+    for entry in entries:
+        entries_by_identity.setdefault((entry.endpoint, entry.gamecode), []).append(entry)
+
+    actual_identities = set(entries_by_identity)
+    missing = expected_identities - actual_identities
+    extra = actual_identities - expected_identities
+    duplicates = {
+        identity
+        for identity, matching_entries in entries_by_identity.items()
+        if len(matching_entries) != 1
+    }
+    if missing or extra or duplicates:
+        problems: list[str] = []
+        if missing:
+            problems.append(
+                "missing current " + ", ".join(_identity_label(key) for key in sorted(missing))
+            )
+        if extra:
+            problems.append(
+                "extra current " + ", ".join(_identity_label(key) for key in sorted(extra))
+            )
+        if duplicates:
+            problems.append(
+                "duplicate current " + ", ".join(_identity_label(key) for key in sorted(duplicates))
+            )
+        raise ArchiveIndexError(
+            f"Season {season_code} archive index cannot restore its played cache: "
+            + "; ".join(problems)
+        )
+    ordered_identities = [("Schedule", None)] + [
+        (endpoint, gamecode) for gamecode in played_gamecodes for endpoint in ENDPOINTS
+    ]
+    return tuple(entries_by_identity[identity][0] for identity in ordered_identities)
+
+
+def restore_current_season_cache(
+    connection: Any,
+    cache: ResponseCache,
+    storage: SupabaseStorage,
+    season_code: str,
+    *,
+    allow_bootstrap: bool = False,
+) -> RestoreSummary:
+    """Rebuild the canonical local cache from current, checksum-verified archive objects."""
+    entries = current_archive_entries(connection, season_code)
+    if not entries:
+        if allow_bootstrap:
+            return RestoreSummary(0, 0, None, True)
+        raise ArchiveIndexError(f"Season {season_code} archive has no current schedule entry.")
+
+    schedule_entries = [
+        entry for entry in entries if entry.endpoint == "Schedule" and entry.gamecode is None
+    ]
+    if not schedule_entries:
+        raise ArchiveIndexError(f"Season {season_code} archive has no current schedule entry.")
+    if len(schedule_entries) != 1:
+        raise ArchiveIndexError(
+            f"Season {season_code} archive has duplicate current Schedule entries."
+        )
+
+    schedule_entry = schedule_entries[0]
+    schedule_body = storage.download_verified(schedule_entry.archive_object())
+    games = list(json.loads(schedule_body).get("data") or [])
+    gamecodes = [int(game["gameCode"]) for game in games]
+    duplicate_gamecodes = sorted(
+        {gamecode for gamecode in gamecodes if gamecodes.count(gamecode) > 1}
+    )
+    if duplicate_gamecodes:
+        raise ArchiveIndexError(
+            f"Season {season_code} schedule has duplicate gamecodes: {duplicate_gamecodes}"
+        )
+    played_gamecodes = tuple(
+        sorted({int(game["gameCode"]) for game in games if game.get("played") is True})
+    )
+
+    required_entries = _required_archive_entries(entries, season_code, played_gamecodes)
+    downloaded = [(schedule_entry, schedule_body)]
+    for entry in required_entries:
+        if entry == schedule_entry:
+            continue
+        downloaded.append((entry, storage.download_verified(entry.archive_object())))
+
+    cache.root.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{season_code}-restore-", dir=cache.root.parent
+    ) as root:
+        staged_cache = ResponseCache(root)
+        for entry, body in downloaded:
+            _write_bytes_atomically(_cache_path(staged_cache, entry), body)
+        completeness = assert_complete_played_cache(staged_cache, season_code)
+        _replace_staged_season(cache, staged_cache, season_code)
+
+    return RestoreSummary(
+        restored_responses=len(downloaded),
+        exact_bytes=sum(len(body) for _, body in downloaded),
+        completeness=completeness,
+        bootstrap_required=False,
+    )
+
+
+def record_archive_observation(
+    connection: Any,
+    archived: ArchiveObject,
+    *,
+    duration_ms: int | None = None,
+    every_observation: bool = False,
+) -> int:
     """Record one disk-cache observation without ever sending its body to Postgres.
 
     The file modification time is used for both first sight and the fetch audit.
@@ -263,24 +539,80 @@ def record_archive_observation(connection: Any, archived: ArchiveObject) -> int:
                 ),
             )
 
-        cursor.execute(
-            """
-            insert into raw_api_fetch (response_id, fetched_at, http_status, duration_ms)
-            select %s, %s, 200, null
-            where not exists (
-                select 1
-                from raw_api_fetch
-                where response_id = %s and fetched_at = %s and http_status = 200
+        if every_observation:
+            cursor.execute(
+                """
+                insert into raw_api_fetch (response_id, fetched_at, http_status, duration_ms)
+                values (%s, %s, 200, %s)
+                """,
+                (response_id, archived.fetched_at, duration_ms),
             )
-            """,
-            (
-                response_id,
-                archived.fetched_at,
-                response_id,
-                archived.fetched_at,
-            ),
-        )
+        else:
+            cursor.execute(
+                """
+                insert into raw_api_fetch (response_id, fetched_at, http_status, duration_ms)
+                select %s, %s, 200, %s
+                where not exists (
+                    select 1
+                    from raw_api_fetch
+                    where response_id = %s and fetched_at = %s and http_status = 200
+                )
+                """,
+                (
+                    response_id,
+                    archived.fetched_at,
+                    duration_ms,
+                    response_id,
+                    archived.fetched_at,
+                ),
+            )
     return response_id
+
+
+def archive_successful_observation(
+    connection: Any, storage: SupabaseStorage, observation: FetchObservation
+) -> ArchivedObservation:
+    """Upload one successful response before making its metadata current."""
+    if observation.http_status != 200:
+        raise ValueError("Only HTTP 200 observations can be archived.")
+    archived = build_archive_object(
+        CachedResponse(
+            season_code=observation.season_code,
+            endpoint=observation.endpoint,
+            gamecode=observation.gamecode,
+            path=Path("<live-observation>"),
+            body=observation.body,
+            modified_at=observation.fetched_at,
+        )
+    )
+    storage.upload_immutable(archived)
+    identity = (archived.season_code, archived.endpoint, archived.gamecode)
+    with connection.transaction():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                select response_id, content_sha256
+                from raw_api_response
+                where season_code = %s
+                  and endpoint = %s
+                  and gamecode is not distinct from %s
+                  and is_current
+                """,
+                identity,
+            )
+            previous = cursor.fetchone()
+        response_id = record_archive_observation(
+            connection,
+            archived,
+            duration_ms=observation.duration_ms,
+            every_observation=True,
+        )
+    return ArchivedObservation(
+        response_id=response_id,
+        content_sha256=archived.content_sha256,
+        canonical_sha256=archived.canonical_sha256,
+        content_changed=previous is not None and previous[1] != archived.content_sha256,
+    )
 
 
 def archive_season(

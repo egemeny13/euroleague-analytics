@@ -57,6 +57,15 @@ class OnCourtViolation:
 
 
 @dataclass(frozen=True)
+class SubstitutionStateIssue:
+    ingest_index: int
+    team_code: str
+    player_id: str
+    playtype: str
+    reason: str
+
+
+@dataclass(frozen=True)
 class LineupGameResult:
     teams: tuple[str, str]
     initial_lineups: tuple[frozenset[str], frozenset[str]]
@@ -67,6 +76,7 @@ class LineupGameResult:
     raw_minute_mismatches: tuple[MinuteMismatch, ...]
     attribution_issues: tuple[AttributionIssue, ...]
     oncourt_violations: tuple[OnCourtViolation, ...]
+    substitution_state_issues: tuple[SubstitutionStateIssue, ...]
     lineup_timeline: tuple[tuple[frozenset[str], frozenset[str]], ...]
 
 
@@ -179,7 +189,12 @@ def _players_seen_in_window(
     return seen
 
 
-def reconstruct_lineups(boxscore: dict[str, Any], events: list[EventRecord]) -> LineupGameResult:
+def reconstruct_lineups(
+    boxscore: dict[str, Any],
+    events: list[EventRecord],
+    *,
+    quarantine_state_errors: bool = False,
+) -> LineupGameResult:
     """Replay substitutions, enforce tripwires, and record quarantine findings."""
     box_players = _boxscore_players(boxscore)
     teams = tuple(box_players)
@@ -216,29 +231,54 @@ def reconstruct_lineups(boxscore: dict[str, Any], events: list[EventRecord]) -> 
         {team: frozenset(on_court[team]) for team in teams}
     ]
     oncourt_violations: list[OnCourtViolation] = []
+    substitution_state_issues: list[SubstitutionStateIssue] = []
 
     for position, event in enumerate(events):
         team_code = event.team_code
         player_id = event.player_id
         if event.playtype == "IN" and team_code in on_court and player_id:
-            in_counts[(team_code, player_id)] += 1
             if player_id in on_court[team_code]:
-                raise SubstitutionStateError(
+                message = (
                     f"Player {player_id} was substituted IN for {team_code} at "
                     f"ingest_index {event.ingest_index} while already on court."
                 )
-            on_court[team_code].add(player_id)
-            came_on[team_code][player_id] = event.elapsed_seconds_raw
+                if not quarantine_state_errors:
+                    raise SubstitutionStateError(message)
+                substitution_state_issues.append(
+                    SubstitutionStateIssue(
+                        event.ingest_index,
+                        team_code,
+                        player_id,
+                        event.playtype,
+                        message,
+                    )
+                )
+            else:
+                in_counts[(team_code, player_id)] += 1
+                on_court[team_code].add(player_id)
+                came_on[team_code][player_id] = event.elapsed_seconds_raw
         elif event.playtype == "OUT" and team_code in on_court and player_id:
-            out_counts[(team_code, player_id)] += 1
             if player_id not in on_court[team_code]:
-                raise SubstitutionStateError(
+                message = (
                     f"Player {player_id} was substituted OUT for {team_code} at "
                     f"ingest_index {event.ingest_index} while off court."
                 )
-            entered = came_on[team_code].pop(player_id)
-            seconds_played[(team_code, player_id)] += event.elapsed_seconds_raw - entered
-            on_court[team_code].remove(player_id)
+                if not quarantine_state_errors:
+                    raise SubstitutionStateError(message)
+                substitution_state_issues.append(
+                    SubstitutionStateIssue(
+                        event.ingest_index,
+                        team_code,
+                        player_id,
+                        event.playtype,
+                        message,
+                    )
+                )
+            else:
+                out_counts[(team_code, player_id)] += 1
+                entered = came_on[team_code].pop(player_id)
+                seconds_played[(team_code, player_id)] += event.elapsed_seconds_raw - entered
+                on_court[team_code].remove(player_id)
 
         snapshots.append({team: frozenset(on_court[team]) for team in teams})
 
@@ -342,5 +382,6 @@ def reconstruct_lineups(boxscore: dict[str, Any], events: list[EventRecord]) -> 
         raw_minute_mismatches=tuple(minute_mismatches),
         attribution_issues=tuple(attribution_issues),
         oncourt_violations=tuple(oncourt_violations),
+        substitution_state_issues=tuple(substitution_state_issues),
         lineup_timeline=timeline,
     )

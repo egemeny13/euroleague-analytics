@@ -6,7 +6,7 @@ import json
 import os
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
@@ -39,6 +39,28 @@ class FetchLogError(RuntimeError):
     """Raised when a complete audit-log line is not valid JSON."""
 
 
+@dataclass(frozen=True, repr=False)
+class FetchObservation:
+    """One exact HTTP response, retained before any parsing or archiving."""
+
+    season_code: str
+    gamecode: int | None
+    endpoint: str
+    url: str
+    http_status: int
+    fetched_at: datetime
+    duration_ms: int
+    body: bytes = field(repr=False)
+
+    @property
+    def byte_length(self) -> int:
+        return len(self.body)
+
+    @property
+    def content_sha256(self) -> str:
+        return sha256(self.body).hexdigest()
+
+
 @dataclass(frozen=True)
 class FetchSummary:
     season: str
@@ -47,6 +69,7 @@ class FetchSummary:
     unplayed_games: int
     total_targets: int
     fetched_files: int
+    fetched_game_responses: int
     fetched_bytes: int
     skipped_files: int
     permanent_missing: int
@@ -59,6 +82,7 @@ class FetchSummary:
 @dataclass
 class _Counters:
     fetched_files: int = 0
+    fetched_game_responses: int = 0
     fetched_bytes: int = 0
     skipped_files: int = 0
     permanent_missing: int = 0
@@ -116,6 +140,8 @@ class ArchiveFetcher:
         request_interval_seconds: float = 9.0,
         timeout_seconds: float = 30.0,
         max_retries: int = 6,
+        successful_observation: Callable[[FetchObservation], None] | None = None,
+        require_fresh_schedule: bool = False,
     ) -> None:
         self.transport = transport
         self.cache = ResponseCache(cache_root)
@@ -127,6 +153,8 @@ class ArchiveFetcher:
         self.request_interval_seconds = request_interval_seconds
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
+        self.successful_observation = successful_observation
+        self.require_fresh_schedule = require_fresh_schedule
         self._counters = _Counters()
         self._next_request_at: float | None = None
         self._started_at = 0.0
@@ -159,25 +187,16 @@ class ArchiveFetcher:
             retry_at = retry_at.replace(tzinfo=UTC)
         return max(0.0, (retry_at - self.utc_now().astimezone(UTC)).total_seconds())
 
-    def _append_fetch_log(
-        self,
-        *,
-        season_code: str,
-        gamecode: int | None,
-        endpoint: str,
-        url: str,
-        response: ResponseLike,
-    ) -> None:
-        observed_at = self.utc_now().astimezone(UTC)
+    def _append_fetch_log(self, observation: FetchObservation) -> None:
         record = {
-            "season": season_code,
-            "gamecode": gamecode,
-            "endpoint": endpoint,
-            "url": url,
-            "http_status": response.status_code,
-            "fetched_at": observed_at.isoformat().replace("+00:00", "Z"),
-            "byte_length": len(response.content),
-            "sha256": sha256(response.content).hexdigest(),
+            "season": observation.season_code,
+            "gamecode": observation.gamecode,
+            "endpoint": observation.endpoint,
+            "url": observation.url,
+            "http_status": observation.http_status,
+            "fetched_at": observation.fetched_at.isoformat().replace("+00:00", "Z"),
+            "byte_length": observation.byte_length,
+            "sha256": observation.content_sha256,
         }
         encoded = (json.dumps(record, separators=(",", ":")) + "\n").encode()
         self.fetch_log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -191,10 +210,11 @@ class ArchiveFetcher:
         gamecode: int | None,
         endpoint: str,
         url: str,
-    ) -> ResponseLike | None:
+    ) -> FetchObservation | None:
         for attempt in range(1, self.max_retries + 1):
             self._wait_until_request_allowed()
             self._counters.http_requests += 1
+            request_started_at = self.monotonic()
             try:
                 response = self.transport.get(url, timeout=self.timeout_seconds)
             except requests.RequestException:
@@ -205,27 +225,54 @@ class ArchiveFetcher:
                     continue
                 return None
             self._next_request_at = self.monotonic() + self.request_interval_seconds
-            self._append_fetch_log(
+            observation = FetchObservation(
                 season_code=season_code,
                 gamecode=gamecode,
                 endpoint=endpoint,
                 url=url,
-                response=response,
+                http_status=response.status_code,
+                fetched_at=self.utc_now().astimezone(UTC),
+                duration_ms=round((self.monotonic() - request_started_at) * 1000),
+                body=response.content,
             )
-            if response.status_code == 200:
-                return response
-            if response.status_code == 429 and attempt < self.max_retries:
+            self._append_fetch_log(observation)
+            if observation.http_status == 200:
+                return observation
+            if observation.http_status == 429 and attempt < self.max_retries:
                 retry_after = response.headers.get("Retry-After", "")
                 self._defer_next_request(self._retry_after_seconds(retry_after))
                 continue
-            if 500 <= response.status_code < 600 and attempt < self.max_retries:
+            if 500 <= observation.http_status < 600 and attempt < self.max_retries:
                 backoff_seconds = min(5.0 * (2 ** (attempt - 1)), 60.0)
                 self._defer_next_request(backoff_seconds)
                 continue
-            return response
+            return observation
         return None
 
-    def _request_schedule(self, season_code: str) -> ResponseLike | None:
+    def fetch_game_response(
+        self, season_code: str, endpoint: str, gamecode: int
+    ) -> FetchObservation | None:
+        """Fetch exactly one game response, for an audit rather than an ingest.
+
+        Decision 7's settlement re-checks need a single response on demand, and
+        they must not write it into the cache: the cached body is the one this
+        game was parsed from, and an audit that overwrote it would destroy the
+        evidence it exists to collect. Versioning the new body is the archive's
+        job, which stores it beside its predecessor only when the checksum
+        differs.
+
+        The nine-second cadence, the Retry-After handling and the retry backoff
+        all come from `_request_with_retry`, so an audit and an ingest share one
+        rate budget rather than each keeping its own and jointly earning 429s.
+        """
+        return self._request_with_retry(
+            season_code=season_code,
+            gamecode=gamecode,
+            endpoint=endpoint,
+            url=_game_url(season_code, endpoint, gamecode),
+        )
+
+    def _request_schedule(self, season_code: str) -> FetchObservation | None:
         return self._request_with_retry(
             season_code=season_code,
             gamecode=None,
@@ -233,38 +280,58 @@ class ArchiveFetcher:
             url=_schedule_url(season_code),
         )
 
+    def _cache_successful_observation(
+        self, observation: FetchObservation, path: Path, *, game_response: bool
+    ) -> None:
+        _write_exact(path, observation.body)
+        self._counters.fetched_files += 1
+        self._counters.fetched_bytes += observation.byte_length
+        if game_response:
+            self._counters.fetched_game_responses += 1
+        if self.successful_observation is not None:
+            self.successful_observation(observation)
+
     def _read_or_fetch_schedule(self, season_code: str) -> dict[str, object]:
         path = self.cache.schedule_path(season_code)
         if not path.exists():
-            response = self._request_schedule(season_code)
-            if response is None or response.status_code != 200:
+            observation = self._request_schedule(season_code)
+            if observation is None or observation.http_status != 200:
                 raise FetchError(
                     f"Could not fetch the schedule for {season_code}; no game targets "
                     f"can be derived. Restore or fetch {path}."
                 )
-            _write_exact(path, response.content)
-            return json.loads(response.content)
+            self._cache_successful_observation(observation, path, game_response=False)
+            return json.loads(observation.body)
 
         body = path.read_bytes()
         schedule = json.loads(body)
-        if _schedule_is_complete(schedule):
+        if _schedule_is_complete(schedule) and not self.require_fresh_schedule:
             return schedule
 
         # An unfinished season keeps gaining played games after its schedule was
         # cached. Trusting the cached copy would skip every game played since,
         # with no error and no missing-file to notice. One request per run.
-        response = self._request_schedule(season_code)
-        if response is None or response.status_code != 200:
+        observation = self._request_schedule(season_code)
+        if observation is None or observation.http_status != 200:
+            if self.require_fresh_schedule:
+                raise FetchError(
+                    f"Could not fetch fresh {season_code} schedule; no game targets "
+                    "can be derived from a stale cache."
+                )
             self.progress(
                 f"schedule refresh failed for {season_code}; continuing from the cached "
                 f"copy at {path}, which may not list recently played games"
             )
             return schedule
-        if response.content == body:
+        if observation.body == body:
+            self._counters.fetched_files += 1
+            self._counters.fetched_bytes += observation.byte_length
+            if self.successful_observation is not None:
+                self.successful_observation(observation)
             return schedule
         _preserve_superseded(path, body)
-        _write_exact(path, response.content)
-        return json.loads(response.content)
+        self._cache_successful_observation(observation, path, game_response=False)
+        return json.loads(observation.body)
 
     def _permanent_404s(self) -> set[tuple[str, int, str]]:
         if not self.fetch_log_path.exists():
@@ -358,25 +425,23 @@ class ArchiveFetcher:
                     outcome = "permanent 404"
                 else:
                     url = _game_url(season_code, endpoint, gamecode)
-                    response = self._request_with_retry(
+                    observation = self._request_with_retry(
                         season_code=season_code,
                         gamecode=gamecode,
                         endpoint=endpoint,
                         url=url,
                     )
-                    if response is None:
+                    if observation is None:
                         self._counters.failed_targets += 1
                         outcome = "failed"
-                    elif response.status_code == 404:
+                    elif observation.http_status == 404:
                         self._counters.permanent_missing += 1
                         outcome = "permanent 404"
-                    elif response.status_code != 200:
+                    elif observation.http_status != 200:
                         self._counters.failed_targets += 1
-                        outcome = f"HTTP {response.status_code}"
+                        outcome = f"HTTP {observation.http_status}"
                     else:
-                        _write_exact(path, response.content)
-                        self._counters.fetched_files += 1
-                        self._counters.fetched_bytes += len(response.content)
+                        self._cache_successful_observation(observation, path, game_response=True)
                         outcome = "fetched"
                 completed_targets += 1
                 self._report_progress(
@@ -396,6 +461,7 @@ class ArchiveFetcher:
             unplayed_games=len(games) - len(played_games),
             total_targets=total_targets,
             fetched_files=self._counters.fetched_files,
+            fetched_game_responses=self._counters.fetched_game_responses,
             fetched_bytes=self._counters.fetched_bytes,
             skipped_files=self._counters.skipped_files,
             permanent_missing=self._counters.permanent_missing,
@@ -426,6 +492,7 @@ class ArchiveFetcher:
                 unplayed_games=self._unplayed_games,
                 total_targets=self._total_targets,
                 fetched_files=self._counters.fetched_files,
+                fetched_game_responses=self._counters.fetched_game_responses,
                 fetched_bytes=self._counters.fetched_bytes,
                 skipped_files=self._counters.skipped_files,
                 permanent_missing=self._counters.permanent_missing,

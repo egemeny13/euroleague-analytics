@@ -34,7 +34,7 @@ def build_tool_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool
 
 
 def main() -> int:
-    """Load settings, assemble the nine tools, and serve JSON-RPC until EOF."""
+    """Load settings, assemble the ten tools, and serve JSON-RPC until EOF."""
     try:
         settings = DatabaseSettings.from_env()
     except ValueError as failure:

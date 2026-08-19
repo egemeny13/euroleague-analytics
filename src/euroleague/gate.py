@@ -11,9 +11,9 @@ from psycopg import sql
 
 from euroleague.archive import build_archive_object
 from euroleague.cache import ResponseCache
-from euroleague.derived import PHASE_5_SEASON, E2024OnlyError, LineupUsage
+from euroleague.derived import LineupUsage
 from euroleague.lineups import COACH_IDS
-from euroleague.parse import parse_cached_game
+from euroleague.parse import parse_cached_game, parse_shots
 
 PHYSICAL_BUDGET_BYTES = 474_311_115
 EMPTY_PROJECT_DATABASE_BYTES = 25_688_885
@@ -45,6 +45,15 @@ DATABASE_OVERHEAD_ALLOWANCE_BYTES = 8_388_608
 # league expanded to 20 teams. Cost per game is the honest unit and the figure
 # below should be re-derived that way once E2025 is loaded and measured.
 BACKFILL_SEASONS = 23
+
+# The hot window, as amended by the owner on 2026-08-18: E2024, E2025, E2026.
+# E2024 and E2025 are loaded and weighable; E2026 has not been played, so it is
+# priced at its full scheduled count from the first day rather than at whatever
+# has been played when the gate runs. 380 was measured from the archived E2026
+# schedule on 2026-08-16 and is a *scheduled* count - Decision 20 Condition D
+# requires re-projecting if the competition changes it.
+LOADED_WINDOW_GAMES = 330 + 402
+UNLOADED_WINDOW_GAMES = 380
 # The endpoints Phase 4 turns into warehouse rows. See ingested_responses.
 INGESTED_ENDPOINTS: tuple[str, ...] = ("Schedule", "Boxscore", "PlaybyPlay")
 
@@ -158,6 +167,26 @@ def _counts_by_game(connection: Any, table: str, season_code: str) -> dict[int, 
         return {int(gamecode): int(count) for gamecode, count in cursor.fetchall()}
 
 
+def _expected_shot_counts(cache: ResponseCache, season_code: str) -> dict[int, int]:
+    """Count the shots each archived Points response holds, game by game.
+
+    Parsed with the production parser rather than by counting raw JSON entries,
+    so the gate compares the warehouse against what the loader would produce
+    from the same bytes, not against a second opinion about the payload.
+    """
+    schedule = cache.read_schedule_json(season_code).get("data") or []
+    counts: dict[int, int] = {}
+    for schedule_game in schedule:
+        gamecode = int(schedule_game["gameCode"])
+        season = schedule_game.get("season") or {}
+        competition_code = str(season.get("competitionCode") or "").strip()
+        payload = cache.read_json(season_code, "Points", gamecode)
+        shots = parse_shots(season_code, gamecode, competition_code, payload)
+        if shots:
+            counts[gamecode] = len(shots)
+    return counts
+
+
 def assert_warehouse_reconciles(
     connection: Any, cache: ResponseCache, season_code: str
 ) -> dict[str, int]:
@@ -258,11 +287,32 @@ def assert_warehouse_reconciles(
             f"match the {season_code} disk cache"
         )
 
+    # raw_shot used to be required to be *empty* here, because Points was
+    # archived and nothing parsed it. Decision 17 was implemented in commit
+    # 11b681b and that stopped being true, which left this gate failing for a
+    # reason that had nothing to do with what it exists to check. An emptiness
+    # rule is also the weaker check: it can only ever prove that nothing was
+    # loaded. Reconciling against the cache proves that what was loaded is what
+    # the archived responses actually contain, game by game.
+    #
+    # A season with no Points loaded still passes, deliberately: raw_shot is a
+    # coordinate source under Decision 17, no query may define a population
+    # from it, and loading it is a separate phase per season.
     if shot_count:
-        raise AssertionError(
-            f"raw_shot={shot_count} for {season_code}; Points is archived but nothing "
-            "parses it yet, so this table stays empty until the shot phase loads it"
-        )
+        expected_shots = _expected_shot_counts(cache, season_code)
+        actual_shots = _counts_by_game(connection, "raw_shot", season_code)
+        if actual_shots != expected_shots:
+            missing = sorted(set(expected_shots) - set(actual_shots))[:10]
+            extra = sorted(set(actual_shots) - set(expected_shots))[:10]
+            mismatched = [
+                gamecode
+                for gamecode in sorted(set(expected_shots) & set(actual_shots))
+                if expected_shots[gamecode] != actual_shots[gamecode]
+            ][:10]
+            raise AssertionError(
+                f"raw_shot does not reconcile against the {season_code} Points cache: "
+                f"missing={missing}, extra={extra}, count_mismatches={mismatched}"
+            )
 
     return {
         "raw_api_response": len(actual_archive),
@@ -333,24 +383,79 @@ def projected_database_growth_bytes(
     return seasons * growth
 
 
-def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str, int]:
-    """Prove E2024 dimensions and event rows still match the raw layer."""
-    if season_code != PHASE_5_SEASON:
-        raise E2024OnlyError(
-            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
-        )
+def games_within_budget(
+    bytes_per_game: float,
+    *,
+    budget: int = PHYSICAL_BUDGET_BYTES,
+    fixed_overhead: int = 0,
+) -> int:
+    """How many games of any season fit inside the usable budget.
 
+    The per-season equivalent, `seasons_within_budget`, answers a question the
+    project stopped being able to ask: it treats every season as the same size,
+    and they are not - E2024 is 330 games, E2025 is 402, E2026 is 380. Counting
+    in games is the unit that survives a league changing shape, which is the
+    same reason `DECISIONS.md` item 8 was amended to price in games.
+    """
+    if bytes_per_game <= 0:
+        raise ValueError("A game must cost at least one byte to be measured.")
+    return int((budget - fixed_overhead) // bytes_per_game)
+
+
+def projected_window_bytes(
+    connection: Any,
+    *,
+    loaded_games: int = LOADED_WINDOW_GAMES,
+    unloaded_games: int = UNLOADED_WINDOW_GAMES,
+    empty_project_bytes: int = EMPTY_PROJECT_DATABASE_BYTES,
+) -> int:
+    """Project the hot window at its full size, including the season still to come.
+
+    Decision 20's window is E2024, E2025 and E2026. Two of those are loaded and
+    can simply be weighed. E2026 has not been played, so its cost is the
+    measured per-game rate of what *is* loaded, multiplied by its full
+    scheduled game count.
+
+    Three deliberate choices, each of which makes the answer larger rather than
+    smaller:
+
+    - The rate comes from the whole database, not from the warehouse tables
+      alone, because the whole database is what Supabase bills.
+    - E2026 is priced at its **complete** 380 games from the first day, not at
+      however many have been played when the gate runs. A gate that grew its
+      own budget as the season went on would pass every week and fail only when
+      it was too late to matter.
+    - The per-game rate blends an 18-team season with a 20-team one, and the
+      20-team season is measured 3.5% more expensive per game. Where that
+      matters, it understates - so the caller gets a figure that is, if
+      anything, optimistic, and the budget below it carries the margin.
+    """
+    if loaded_games <= 0:
+        raise ValueError("The loaded window must contain at least one game.")
+    with connection.cursor() as cursor:
+        cursor.execute("select sum(pg_database_size(datname)) from pg_database")
+        current_bytes = int(cursor.fetchone()[0])
+    growth = current_bytes - empty_project_bytes
+    if growth < 0:
+        raise ValueError("Current database size cannot be below the measured empty baseline.")
+    bytes_per_game = growth / loaded_games
+    return int(current_bytes + unloaded_games * bytes_per_game)
+
+
+def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str, int]:
+    """Prove one season's dimensions and event rows still match the raw layer."""
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT
-                (SELECT count(*) FROM player),
-                (SELECT count(*) FROM team),
+                (SELECT count(DISTINCT player_id) FROM raw_boxscore_player
+                 WHERE season_code = %s),
+                (SELECT count(*) FROM team_season WHERE season_code = %s),
                 (SELECT count(*) FROM team_season WHERE season_code = %s),
                 (SELECT count(*) FROM game_event WHERE season_code = %s),
-                (SELECT count(*) FROM possession)
+                (SELECT count(*) FROM possession WHERE season_code = %s)
             """,
-            (season_code, season_code),
+            (season_code,) * 5,
         )
         player_count, team_count, team_season_count, event_count, possession_count = (
             int(value) for value in cursor.fetchone()
@@ -561,24 +666,25 @@ def measure_lineup_identifier_widths(
     return {width: _measure_lineup_width(connection, usage, width) for width in (64, 32, 12)}
 
 
-def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int]:
-    """Enforce every persisted E2024 lineup, minute, quality, and scope gate."""
-    if season_code != PHASE_5_SEASON:
-        raise E2024OnlyError(
-            f"E2024 is the only allowed season in Phase 5; received {season_code!r}."
-        )
+def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int | tuple[int, ...]]:
+    """Enforce every persisted lineup, minute, quality, and scope gate for one season."""
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT
-                (SELECT count(*) FROM lineup),
+                (SELECT count(*) FROM lineup stored
+                 WHERE EXISTS (
+                     SELECT 1 FROM game_event event
+                     WHERE event.season_code = %s
+                       AND stored.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+                 )),
                 (SELECT count(*) FROM lineup_stint WHERE season_code = %s),
                 (SELECT count(*) FROM game_event WHERE season_code = %s),
                 (SELECT count(*) FROM player_game_minutes WHERE season_code = %s),
                 (SELECT count(*) FROM game_quality WHERE season_code = %s),
-                (SELECT count(*) FROM possession)
+                (SELECT count(*) FROM possession WHERE season_code = %s)
             """,
-            (season_code,) * 4,
+            (season_code,) * 6,
         )
         lineup_count, stint_count, event_count, minute_count, quality_count, possession_count = (
             int(value) for value in cursor.fetchone()
@@ -719,6 +825,8 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
                 expected_reasons.append("off_court_attribution")
             if oncourt_violations:
                 expected_reasons.append("not_five_on_court")
+            if "substitution_state" in quarantine_reasons:
+                expected_reasons.append("substitution_state")
             # Phase 6 adds its own reason, and it is appended last.
             if "possession_gate" in quarantine_reasons:
                 expected_reasons.append("possession_gate")
@@ -727,18 +835,6 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
                 or list(quarantine_reasons) != expected_reasons
             ):
                 quarantine_control_failures.append(int(gamecode))
-        cursor.execute(
-            """
-            SELECT
-                (SELECT count(*) FROM game_event WHERE season_code <> %s)
-              + (SELECT count(*) FROM lineup_stint WHERE season_code <> %s)
-              + (SELECT count(*) FROM player_game_minutes WHERE season_code <> %s)
-              + (SELECT count(*) FROM game_quality WHERE season_code <> %s)
-            """,
-            (season_code,) * 4,
-        )
-        other_season_rows = int(cursor.fetchone()[0])
-
     failures = {
         "wrong_width": wrong_width,
         "unattached_events": unattached_events,
@@ -750,26 +846,10 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
         "pairing": pairing,
         "unhelpful_applied": int(unhelpful_applied),
         "quarantine_controls": len(quarantine_control_failures),
-        "other_season_rows": other_season_rows,
         "possession_missing": int(possession_count == 0),
     }
     if any(failures.values()):
         raise AssertionError(f"Phase 5 warehouse invariant failures: {failures}")
-    if (attribution, raw_minutes, corrected_minutes) != (7, 36, 4):
-        raise AssertionError(
-            "Quality totals differ from E2024: "
-            f"attribution={attribution}, raw_minutes={raw_minutes}, "
-            f"corrected_minutes={corrected_minutes}."
-        )
-    if tuple(minute_games or ()) != (43, 98):
-        raise AssertionError(f"Corrected-minute quarantine differs: {minute_games}.")
-    if tuple(attribution_games or ()) != (23, 63, 72, 131, 139, 242, 323):
-        raise AssertionError(f"Attribution quarantine differs: {attribution_games}.")
-    if (corrected_event_rows, suspect_event_rows) != (32, 7):
-        raise AssertionError(
-            f"Event diagnostics differ: corrected={corrected_event_rows}, "
-            f"suspect={suspect_event_rows}."
-        )
     return {
         "lineup": lineup_count,
         "lineup_stint": stint_count,
@@ -777,6 +857,13 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
         "player_game_minutes": minute_count,
         "game_quality": quality_count,
         "possession": possession_count,
+        "attribution_issues": attribution,
+        "raw_minute_mismatches": raw_minutes,
+        "corrected_minute_mismatches": corrected_minutes,
+        "corrected_event_rows": corrected_event_rows,
+        "suspect_event_rows": suspect_event_rows,
+        "minute_quarantine_games": tuple(minute_games or ()),
+        "attribution_quarantine_games": tuple(attribution_games or ()),
     }
 
 
@@ -788,8 +875,13 @@ def derived_snapshot(connection: Any, season_code: str) -> dict[str, TableFinger
             SELECT count(*), md5(coalesce(string_agg(
                 md5(to_jsonb(t)::text), '' ORDER BY lineup_id
             ), '')) FROM lineup t
+            WHERE EXISTS (
+                SELECT 1 FROM game_event event
+                WHERE event.season_code = %s
+                  AND t.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+            )
             """,
-            (),
+            (season_code,),
         ),
         "lineup_stint": (
             """
@@ -827,9 +919,9 @@ def derived_snapshot(connection: Any, season_code: str) -> dict[str, TableFinger
             """
             SELECT count(*), md5(coalesce(string_agg(
                 md5(to_jsonb(t)::text), '' ORDER BY season_code, gamecode, possession_index
-            ), '')) FROM possession t
+            ), '')) FROM possession t WHERE season_code = %s
             """,
-            (),
+            (season_code,),
         ),
     }
     result: dict[str, TableFingerprint] = {}
