@@ -13,6 +13,7 @@ from psycopg import sql
 
 from euroleague.cache import ResponseCache
 from euroleague.compaction import E2024_BASELINE, E2025_BASELINE, compare_fingerprints
+from euroleague.config import DatabaseSettings, load_env_file
 from euroleague.derived import (
     DimensionRows,
     GameEventRow,
@@ -27,6 +28,32 @@ from euroleague.load import load_cached_season, load_cached_shots
 
 LOCAL_CONFIRMATION_DATABASE = "euroleague_test"
 LOCAL_CONFIRMATION_PORT = 5433
+
+
+def load_test_database_settings(values: dict[str, str] | None = None) -> DatabaseSettings:
+    """Build settings only from the disposable-database variable.
+
+    LIVES IN THE PACKAGE, NOT IN `scripts/`. A test importing from `scripts.`
+    resolves only when the working directory happens to be on `sys.path`, which
+    is true under `python -m pytest` and false under the bare `pytest` that CI
+    runs. `tests/conftest.py` documents that exact trap; this module is
+    installed by `pip install -e .`, so both the CLI and the tests import it the
+    same way from any directory.
+
+    It refuses anything but the disposable database on its own port, so a
+    confirmation run cannot be pointed at production by a stray variable.
+    """
+    env_values = load_env_file() if values is None else values
+    settings = DatabaseSettings.from_url(env_values.get("EL_TEST_DATABASE_URL", ""))
+    if settings.database != LOCAL_CONFIRMATION_DATABASE or settings.port != LOCAL_CONFIRMATION_PORT:
+        raise ValueError(
+            f"EL_TEST_DATABASE_URL must name {LOCAL_CONFIRMATION_DATABASE!r} on port "
+            f"{LOCAL_CONFIRMATION_PORT}; received database {settings.database!r} on port "
+            f"{settings.port}."
+        )
+    return settings
+
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 MIGRATIONS_ROOT = REPO_ROOT / "migrations"
 

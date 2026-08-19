@@ -11,29 +11,14 @@ from pathlib import Path
 import psycopg
 
 from euroleague.cache import ResponseCache
-from euroleague.config import DatabaseSettings, load_env_file
 from euroleague.incremental_confirmation import (
-    LOCAL_CONFIRMATION_DATABASE,
-    LOCAL_CONFIRMATION_PORT,
     current_derived_writer,
+    load_test_database_settings,
     run_confirmation,
 )
 
 SEASONS = (("E2024", 137), ("E2025", 201))
 ARTIFACT_ROOT = Path(".tmp/incremental-derived-confirmation")
-
-
-def load_test_database_settings(values: dict[str, str] | None = None) -> DatabaseSettings:
-    """Build settings only from the disposable-database variable."""
-    env_values = load_env_file() if values is None else values
-    settings = DatabaseSettings.from_url(env_values.get("EL_TEST_DATABASE_URL", ""))
-    if settings.database != LOCAL_CONFIRMATION_DATABASE or settings.port != LOCAL_CONFIRMATION_PORT:
-        raise ValueError(
-            f"EL_TEST_DATABASE_URL must name {LOCAL_CONFIRMATION_DATABASE!r} on port "
-            f"{LOCAL_CONFIRMATION_PORT}; received database {settings.database!r} on port "
-            f"{settings.port}."
-        )
-    return settings
 
 
 def _label(value: str) -> str:

@@ -6,7 +6,6 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 
 import pytest
-from scripts.confirm_incremental_derived import load_test_database_settings
 
 import euroleague.incremental_confirmation as confirmation
 from euroleague.incremental_confirmation import (
@@ -22,6 +21,7 @@ from euroleague.incremental_confirmation import (
     current_derived_writer,
     fingerprint_relations,
     load_confirmation_raw_rows,
+    load_test_database_settings,
     managed_schema,
     measure_database_size,
     prepare_confirmation_session,
