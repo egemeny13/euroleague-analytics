@@ -2,9 +2,17 @@
 
 ## Status
 
-**NOT RUN.** This procedure writes a complete historical season twice. It must
-run only while the owner is awake, against a disposable PostgreSQL database or
-two explicitly temporary schemas. It must never run against the live `public`
+**ABORTED SAFELY ON 2026-08-19; GATE RED.** The E2024 single-pass temporary
+schema reached 486,427,795 bytes immediately after its derived load, above the
+mandatory 460,000,000-byte stop line. The runner dropped the schema, verified
+zero `confirm_%` schemas remained, and measured 276,999,315 bytes after cleanup
+against a 276,712,595-byte start. No fingerprint comparison ran, E2025 did not
+start, and this procedure is not complete. See
+`docs/INCREMENTAL_DERIVED_CONFIRMATION_RESULT.md`.
+
+This procedure writes a complete historical season twice. It must run only
+while the owner is awake, against a disposable PostgreSQL database or two
+explicitly temporary schemas. It must never run against the live `public`
 schema or the E2024/E2025 production rows.
 
 The automated gate in `tests/test_incremental_derived_equality.py` compares the
@@ -64,4 +72,3 @@ unchanged after the second batch.
   rebuild is a separate path.
 - A split-boundary defect that occurs only at a boundary other than the two
   measured here.
-
