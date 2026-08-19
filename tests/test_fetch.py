@@ -77,7 +77,12 @@ def _fetcher_with_progress(root, transport, fake_time: FakeTime, messages: list[
     )
 
 
-def make_fetcher(root, transport: RecordingTransport, fake_time: FakeTime | None = None):
+def make_fetcher(
+    root,
+    transport: RecordingTransport,
+    fake_time: FakeTime | None = None,
+    **kwargs,
+):
     from euroleague.fetch import ArchiveFetcher
 
     clock = fake_time or FakeTime()
@@ -88,6 +93,7 @@ def make_fetcher(root, transport: RecordingTransport, fake_time: FakeTime | None
         monotonic=clock.monotonic,
         utc_now=clock.utc_now,
         progress=lambda _message: None,
+        **kwargs,
     )
 
 
@@ -274,7 +280,8 @@ def test_an_incomplete_cached_schedule_is_refreshed_before_targets_are_derived(t
     summary = make_fetcher(tmp_path, transport).fetch_season("E2025")
 
     assert summary.played_games == 2
-    assert summary.fetched_files == len(ENDPOINTS)
+    assert summary.fetched_files == len(ENDPOINTS) + 1
+    assert summary.fetched_game_responses == len(ENDPOINTS)
     for endpoint in ENDPOINTS:
         assert (tmp_path / "E2025" / endpoint / "8.json").read_bytes() == b"new game"
 
@@ -429,6 +436,7 @@ def test_multiple_seasons_run_sequentially_in_one_process() -> None:
                 unplayed_games=0,
                 total_targets=0,
                 fetched_files=0,
+                fetched_game_responses=0,
                 fetched_bytes=0,
                 skipped_files=0,
                 permanent_missing=0,
@@ -464,3 +472,77 @@ def test_fetch_archive_help_is_offline_and_documents_the_command() -> None:
     assert "--cache-root" in completed.stdout
     assert "--fetch-log" in completed.stdout
     assert "--timeout-seconds" in completed.stdout
+    assert "--live" in completed.stdout
+    assert "--require-fresh-schedule" in completed.stdout
+
+
+SCHEDULE_BODY = b'{"data":[{"gameCode":1,"played":true}]}'
+BOX_BODY = b'{"boxscore":1}'
+PBP_BODY = b'{"playbyplay":1}'
+POINTS_BODY = b'{"points":1}'
+
+
+def transport_for_one_game() -> RecordingTransport:
+    return RecordingTransport(
+        [
+            StubResponse(200, {}, SCHEDULE_BODY),
+            StubResponse(200, {}, BOX_BODY),
+            StubResponse(200, {}, PBP_BODY),
+            StubResponse(200, {}, POINTS_BODY),
+        ]
+    )
+
+
+def test_success_callback_receives_the_exact_cached_body_and_timestamp(tmp_path) -> None:
+    """Break caught: archive metadata is reconstructed later from file mtime."""
+    from euroleague.cache import ResponseCache
+
+    observed = []
+    fake_time = FakeTime()
+    fake_time.utc_value = datetime(2026, 8, 19, tzinfo=UTC)
+    fetcher = make_fetcher(
+        tmp_path,
+        transport_for_one_game(),
+        fake_time,
+        successful_observation=observed.append,
+    )
+
+    fetcher.fetch_season("E2026")
+
+    assert [(row.endpoint, row.gamecode, row.body, row.fetched_at) for row in observed] == [
+        ("Schedule", None, SCHEDULE_BODY, datetime(2026, 8, 19, tzinfo=UTC)),
+        ("Boxscore", 1, BOX_BODY, datetime(2026, 8, 19, 0, 0, 9, tzinfo=UTC)),
+        ("PlaybyPlay", 1, PBP_BODY, datetime(2026, 8, 19, 0, 0, 18, tzinfo=UTC)),
+        ("Points", 1, POINTS_BODY, datetime(2026, 8, 19, 0, 0, 27, tzinfo=UTC)),
+    ]
+    assert ResponseCache(tmp_path).read_bytes("E2026", "PlaybyPlay", 1) == PBP_BODY
+
+
+def test_unattended_schedule_refresh_failure_is_fatal(tmp_path) -> None:
+    """Break caught: a green live run derives targets from a stale schedule."""
+    from euroleague.fetch import FetchError
+
+    write_schedule(tmp_path, [{"gameCode": 7, "played": False}], season="E2026")
+    fetcher = make_fetcher(
+        tmp_path,
+        RecordingTransport([requests.ConnectionError("offline")] * 6),
+        require_fresh_schedule=True,
+    )
+
+    with pytest.raises(FetchError, match="fresh E2026 schedule"):
+        fetcher.fetch_season("E2026")
+
+
+def test_zero_played_summary_names_380_scheduled_and_zero_game_responses(tmp_path) -> None:
+    """Break caught: a no-op run is silently reported as generic success."""
+    body = schedule_bytes([{"gameCode": gamecode, "played": False} for gamecode in range(1, 381)])
+
+    summary = make_fetcher(
+        tmp_path, RecordingTransport([StubResponse(200, {}, body)])
+    ).fetch_season("E2026")
+
+    assert (summary.scheduled_games, summary.played_games, summary.fetched_game_responses) == (
+        380,
+        0,
+        0,
+    )

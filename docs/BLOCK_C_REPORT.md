@@ -32,3 +32,39 @@ The completeness guard would fail to detect a complete, checksum-valid API
 body that is semantically wrong or truncated in a valid JSON shape. Presence
 and checksum integrity prove identity and byte preservation; they are not a
 content-validation gate.
+
+## Task 1: scheduled E2026 fetch and archive handoff
+
+The live fetcher now restores the current E2026 archive cache before it derives
+targets, refreshes the schedule when requested, and fails instead of using a
+stale schedule if that refresh cannot succeed. Every HTTP 200 result carries
+the exact response bytes, one UTC timestamp, request duration, and checksums
+from the fetcher to the archive callback. The body is atomically present in the
+canonical cache before the callback runs. A successful live observation uploads
+the checksum-addressed Storage object before one short database transaction
+updates the current response version and records its `raw_api_fetch` row.
+
+The scheduled workflow runs daily at 03:43 UTC with only read access to the
+repository and the three required Supabase secrets. Its live CLI path is
+restricted to E2026, builds settings from the supplied environment mapping
+without printing secret values, restores with explicit bootstrap permission,
+and reports scheduled games, played games, and fetched game responses
+separately.
+
+Offline tests prove callback ordering and exact timestamps, fatal fresh-schedule
+failure, the 380-scheduled/zero-played summary, immutable upload-before-pointer
+ordering, per-observation database recording, and missing-secret errors that
+name only the missing setting. They do not prove GitHub runner networking,
+real Storage permissions, the production pooler, or production credentials.
+
+The first deliberate non-live E2026 schedule check on 2026-08-19 timed out
+after 60 seconds in the sandbox before creating a cache file or fetch log. The
+controller then repeated the same ordinary CLI check in a network-approved
+environment and obtained exit code 0 with this exact output:
+
+```text
+season E2026: scheduled=380 played=0 game_responses=0 fetched=1 bytes=679544 skipped=0 permanent=0 failed=0 requests=1 elapsed=1.0s
+```
+
+The successful repeat wrote only `.tmp` and made no production database or
+Storage action.

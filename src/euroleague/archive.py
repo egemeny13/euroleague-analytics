@@ -18,6 +18,7 @@ import requests
 
 from euroleague.cache import ENDPOINTS, CachedResponse, ResponseCache, sha256_of_bytes
 from euroleague.config import StorageSettings
+from euroleague.fetch import FetchObservation
 
 
 class ArchiveStorageError(RuntimeError):
@@ -98,6 +99,16 @@ class RestoreSummary:
     exact_bytes: int
     completeness: CacheCompleteness | None
     bootstrap_required: bool
+
+
+@dataclass(frozen=True)
+class ArchivedObservation:
+    """Credential-free identifiers for one successfully archived API response."""
+
+    response_id: int
+    content_sha256: str
+    canonical_sha256: str
+    content_changed: bool
 
 
 def canonical_json_bytes(body: bytes) -> bytes:
@@ -439,7 +450,13 @@ def restore_current_season_cache(
     )
 
 
-def record_archive_observation(connection: Any, archived: ArchiveObject) -> int:
+def record_archive_observation(
+    connection: Any,
+    archived: ArchiveObject,
+    *,
+    duration_ms: int | None = None,
+    every_observation: bool = False,
+) -> int:
     """Record one disk-cache observation without ever sending its body to Postgres.
 
     The file modification time is used for both first sight and the fetch audit.
@@ -522,24 +539,80 @@ def record_archive_observation(connection: Any, archived: ArchiveObject) -> int:
                 ),
             )
 
-        cursor.execute(
-            """
-            insert into raw_api_fetch (response_id, fetched_at, http_status, duration_ms)
-            select %s, %s, 200, null
-            where not exists (
-                select 1
-                from raw_api_fetch
-                where response_id = %s and fetched_at = %s and http_status = 200
+        if every_observation:
+            cursor.execute(
+                """
+                insert into raw_api_fetch (response_id, fetched_at, http_status, duration_ms)
+                values (%s, %s, 200, %s)
+                """,
+                (response_id, archived.fetched_at, duration_ms),
             )
-            """,
-            (
-                response_id,
-                archived.fetched_at,
-                response_id,
-                archived.fetched_at,
-            ),
-        )
+        else:
+            cursor.execute(
+                """
+                insert into raw_api_fetch (response_id, fetched_at, http_status, duration_ms)
+                select %s, %s, 200, %s
+                where not exists (
+                    select 1
+                    from raw_api_fetch
+                    where response_id = %s and fetched_at = %s and http_status = 200
+                )
+                """,
+                (
+                    response_id,
+                    archived.fetched_at,
+                    duration_ms,
+                    response_id,
+                    archived.fetched_at,
+                ),
+            )
     return response_id
+
+
+def archive_successful_observation(
+    connection: Any, storage: SupabaseStorage, observation: FetchObservation
+) -> ArchivedObservation:
+    """Upload one successful response before making its metadata current."""
+    if observation.http_status != 200:
+        raise ValueError("Only HTTP 200 observations can be archived.")
+    archived = build_archive_object(
+        CachedResponse(
+            season_code=observation.season_code,
+            endpoint=observation.endpoint,
+            gamecode=observation.gamecode,
+            path=Path("<live-observation>"),
+            body=observation.body,
+            modified_at=observation.fetched_at,
+        )
+    )
+    storage.upload_immutable(archived)
+    identity = (archived.season_code, archived.endpoint, archived.gamecode)
+    with connection.transaction():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                select response_id, content_sha256
+                from raw_api_response
+                where season_code = %s
+                  and endpoint = %s
+                  and gamecode is not distinct from %s
+                  and is_current
+                """,
+                identity,
+            )
+            previous = cursor.fetchone()
+        response_id = record_archive_observation(
+            connection,
+            archived,
+            duration_ms=observation.duration_ms,
+            every_observation=True,
+        )
+    return ArchivedObservation(
+        response_id=response_id,
+        content_sha256=archived.content_sha256,
+        canonical_sha256=archived.canonical_sha256,
+        content_changed=previous is not None and previous[1] != archived.content_sha256,
+    )
 
 
 def archive_season(
