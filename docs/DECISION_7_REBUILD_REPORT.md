@@ -9,14 +9,18 @@ minutes, and quality result in one PostgreSQL transaction. Every other game's
 persisted content remains unchanged.
 
 The scheduled E2026 workflow still uses the manual policy. Its command does not
-include `--auto-rebuild`, so a changed checksum names the game and returns 1
-without changing warehouse rows. The owner can later approve that named game
-with `--rebuild-game GAMECODE`, which reads the already-current archive and does
-not re-fetch the API. Adding `--auto-rebuild` to the existing workflow command
-would be the one-line switch to automatic operation; that switch was not made.
+include `--auto-rebuild`, so a changed checksum records a durable pending game
+and returns 1 without changing warehouse rows. Every later run remains red
+until the owner approves that game with `--rebuild-game GAMECODE`, which reads
+the already-current archive and does not re-fetch the API. Adding
+`--auto-rebuild` to the existing workflow command would be the one-line switch
+to automatic operation; that switch was not made.
 
-No migration was added, the settlement cadence was not changed, and the known
-composite `game_event_possession_fkey` defect was not repaired.
+Migration `0008_game_source_state` was added after the owner approved the
+review-driven design tradeoff. It stores three checksums per loaded game, not
+response bodies or a competing current pointer. The settlement cadence was not
+changed, schedule integration was not enabled, and the known composite
+`game_event_possession_fkey` defect was not repaired.
 
 ## What was built, in plain language
 
@@ -58,17 +62,37 @@ composite `game_event_possession_fkey` defect was not repaired.
    rows are gone.
 6. It inserts lineup, stint, and possession parents before inserting the fully
    attached `game_event` rows.
-7. It executes no `UPDATE game_event` statement.
+7. It deletes only the target's old lineup identities that are unreferenced
+   after replacement, then deletes only candidate player identities that are
+   unreferenced anywhere in raw, event, minutes, or lineup rows. This makes a
+   corrected substitution or identity converge with a clean revised load while
+   preserving parents shared by other games.
+8. It executes no `UPDATE game_event` statement.
+
+### Durable applied-source state
+
+1. `raw_api_response.is_current` remains the sole authority for current archive
+   bytes.
+2. `game_source_state` records the exact Boxscore, PlaybyPlay, and Points
+   checksums successfully consumed by each loaded game.
+3. Every settlement run compares current archive checksums with those applied
+   checksums. A later identical observation therefore cannot hide an earlier
+   revision, and a failed rebuild remains pending.
+4. A rebuild advances one game's marker inside the same outer transaction as
+   its raw and derived replacement. A later game's failure does not roll back an
+   earlier game's committed replacement.
+5. A new live game now requires and loads Points rows before its initial marker
+   is written; the marker cannot claim bytes `raw_shot` did not consume.
 
 ### Settlement policy controls
 
-- Default scheduled command: records the immutable revision, names the game,
-  changes no warehouse content, and returns 1.
+- Default scheduled command: records the immutable revision, durably names the
+  pending game on every run, changes no warehouse content, and returns 1.
 - Approved manual recovery: `python scripts/settlement_recheck.py E2026 --live
   --rebuild-game GAMECODE` rebuilds the named archive-current game without
   another API request.
 - Possible automatic policy: adding `--auto-rebuild` to the scheduled command
-  rebuilds every game whose checksum changed during that settlement run.
+  retries every durably pending game, including failures from an earlier run.
 
 No connection string, credential, settings object, or key is printed by any of
 these paths.
@@ -108,6 +132,8 @@ Result:
 - every non-target-game fingerprint was identical before and after;
 - an injected failure during the new `game_event` insert restored the exact
   pre-rebuild fingerprints before the successful null rebuild ran;
+- the applied checksum marker stayed current after that failed rebuild and the
+  unchanged rebuild left no pending game;
 - recorded SQL contained zero `UPDATE game_event` statements.
 
 The 14 relations were `raw_game`, `raw_event`, `raw_boxscore_player`,
@@ -115,7 +141,9 @@ The 14 relations were `raw_game`, `raw_event`, `raw_boxscore_player`,
 `lineup_stint`, `possession`, `game_event`, `player_game_minutes`, and
 `game_quality`. `raw_api_response` and `raw_api_fetch` were deliberately not
 compared: they are the immutable audit history, and a revised run is supposed
-to contain an extra body version and fetch observation.
+to contain an extra body version and fetch observation. `game_source_state` is
+operational provenance rather than parsed or derived content; it was asserted
+separately against the archive-current checksums.
 
 ## PostgreSQL gate 2: realistic revision
 
@@ -124,10 +152,12 @@ minutes corrected from `16:18` to `16:17`. A one-second scorer's-table minutes
 correction is realistic for this project: Decision 3 exists because official
 minute corrections of exactly this kind have already been measured.
 
-The test archived that payload as a second immutable Boxscore version, made it
-current, left a superseded body at the cache path, and invoked the rebuild. It
-then created a separate clean schema and loaded the complete E2024 season from
-scratch using the restored revised cache.
+The offline orchestration test first left a superseded `16:16` body at the cache
+path and proved restoration replaced it with the archive-current `16:17` body
+before parsing. The database test separately archived `16:17` as a second
+immutable Boxscore version, made it current, and invoked the same rebuild. It
+then created a clean schema and loaded the complete E2024 season from scratch
+using that restored revised cache.
 
 Result:
 
@@ -135,9 +165,26 @@ Result:
   was not parsed;
 - game 1 was re-evaluated and landed in `game_quality` with
   `excluded_by_default = true` and `minutes_mismatch`;
+- an injected target-only obsolete lineup and player identity were pruned;
+- the game was durably pending before rebuild and not pending after commit;
 - every non-target game's fingerprint stayed unchanged;
 - rebuilt and clean revised loads matched across all 14 relations and 489,950
   rows.
+
+## PostgreSQL gate 3: durable multi-game retry
+
+A separate two-game disposable schema deliberately changed both applied
+Boxscore markers without changing archive bytes, then injected a failure while
+game 2 tried to advance its marker.
+
+Result:
+
+- game 1 committed independently;
+- game 2's complete raw, derived, and marker work rolled back;
+- the next durable query returned exactly game 2 as pending;
+- all parsed and derived fingerprints still matched the pre-run state;
+- removing the injected failure and retrying game 2 cleared the final pending
+  marker.
 
 ## What the gates would fail to detect
 
@@ -146,10 +193,11 @@ truth.
 
 - If the complete loader and rebuild share the same transformation bug, the
   real-revision equality test can reproduce the same wrong result twice.
-- Only one revision shape was exercised: a Boxscore minute correction. The
-  gates do not exercise a changed substitution event, reordered source array,
-  changed Points coordinate, new player identifier, several simultaneous
-  revised games, or a schedule revision.
+- Only one real response revision shape was exercised: a Boxscore minute
+  correction. Obsolete lineup/player pruning and several simultaneous pending
+  games were injected at the database layer; the gates still do not exercise a
+  real changed substitution body, reordered source array, changed Points
+  coordinate, or schedule revision.
 - Content fingerprints do not measure heap bloat, index bloat, lock duration,
   or concurrent-reader visibility. The separate SQL-recording test catches a
   reintroduced `UPDATE game_event`, but it does not price ordinary delete/insert
@@ -195,7 +243,8 @@ Development database run, with uncaptured gate numbers:
 .venv\Scripts\python.exe -m pytest -m local_database tests\test_rebuild_database.py -s --basetemp .tmp\d7-db-dev -p no:cacheprovider
 ```
 
-Result: `2 passed in 381.65s`; each gate printed 14 relations and 489,950 rows.
+Result before the durability review fix: `2 passed in 381.65s`; each gate
+printed 14 relations and 489,950 rows.
 
 Focused regression run:
 
@@ -217,10 +266,10 @@ Final required verification:
 
 Results:
 
-- database-free: `551 passed, 83 deselected in 9.32s`;
-- disposable database: `2 passed, 632 deselected in 378.98s`;
+- database-free: `561 passed, 84 deselected in 10.61s`;
+- disposable database: `3 passed, 642 deselected in 401.95s`;
 - lint: `All checks passed!`;
-- format: all 124 files formatted.
+- format: all 126 files formatted.
 
 ## Commits before this report
 
@@ -228,4 +277,5 @@ Results:
 - `e9a4cf0 feat: gate automatic settlement rebuilds`
 - `44c797e style: format decision 7 rebuild`
 - `d2f0a61 feat: allow approved manual rebuilds`
-
+- `4bb19f2 docs: report decision 7 rebuild gates`
+- `9d335ba fix: persist pending game revisions`

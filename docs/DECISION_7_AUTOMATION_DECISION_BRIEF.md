@@ -28,8 +28,10 @@ python scripts/settlement_recheck.py E2026 --live --auto-rebuild
 ### Manual
 
 Keep the current scheduled command unchanged. A changed checksum is archived,
-the game is named, warehouse rows remain untouched, and the step returns 1. If
-the owner approves the revision after reviewing it, run:
+the game is recorded as durably pending, warehouse rows remain untouched, and
+the step returns 1. Every later run stays red and names that game until its
+applied checksum marker advances. If the owner approves the revision after
+reviewing it, run:
 
 ```text
 python scripts/settlement_recheck.py E2026 --live --rebuild-game GAMECODE
@@ -38,8 +40,8 @@ python scripts/settlement_recheck.py E2026 --live --rebuild-game GAMECODE
 Benefit: no previously seen number changes behind the owner's back.
 
 Cost: from detection until that command runs, the warehouse knowingly describes
-the superseded body. The scheduled run is red at detection, and the owner must
-retain the named gamecode from that log and act on it.
+the superseded body. The scheduled run remains red and keeps naming the pending
+game until the owner acts on it.
 
 ## Recommendation
 
@@ -53,13 +55,14 @@ already quoted analysis. Reviewing the first real revisions buys that evidence.
 
 The cost of this recommendation is explicit: a red revision requires manual
 attention, and the warehouse stays stale until the named game is approved and
-rebuilt. If the first observations show routine harmless scorer's-table
-corrections and the interruption cost is higher than the editorial risk, adding
-`--auto-rebuild` is then a one-line owner-approved schedule change.
+rebuilt. The durable marker prevents a later identical observation or failed
+rebuild from hiding that stale state. If the first observations show routine
+harmless scorer's-table corrections and the interruption cost is higher than
+the editorial risk, adding `--auto-rebuild` is then a one-line owner-approved
+schedule change.
 
 ## Decision requested
 
 - Approve automatic rebuilding by adding `--auto-rebuild`; or
 - retain the implemented manual default and use `--rebuild-game GAMECODE` after
   review.
-
