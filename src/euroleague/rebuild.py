@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from dataclasses import dataclass
 from typing import Any
 
@@ -21,7 +22,7 @@ from euroleague.load import load_game, load_shots_for_game
 from euroleague.parse import ParsedGameRows, RawShotRow, parse_cached_game, parse_shots
 from euroleague.source_state import (
     GameSourceChecksums,
-    current_game_source_checksums,
+    cached_game_source_checksums,
     record_applied_game_sources,
 )
 
@@ -138,37 +139,48 @@ def rebuild_revised_games(
     if not selected:
         return ()
 
-    restore_current_season_cache(connection, cache, storage, season_code)
-    prepared = _prepare_season(cache, season_code)
-    missing = [gamecode for gamecode in selected if gamecode not in prepared.schedule_by_game]
-    if missing:
-        raise ValueError(
-            f"Season {season_code} does not mark requested rebuild game(s) {missing} as played."
-        )
-    source_by_game = current_game_source_checksums(connection, season_code, selected)
-
-    summaries: list[GameRebuildSummary] = []
-    for gamecode in selected:
-        schedule_game = prepared.schedule_by_game[gamecode]
-        parsed = parse_cached_game(cache, season_code, schedule_game)
-        shots = _parse_game_shots(
-            cache,
-            season_code,
-            gamecode,
-            parsed.game.competition_code,
-        )
-        events = tuple(row for row in prepared.events if row.gamecode == gamecode)
-        remaining = select_remaining_games(prepared.remaining, [gamecode])
-        counts = replace_game_rows(
+    cache.root.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{season_code}-rebuild-snapshot-", dir=cache.root.parent
+    ) as snapshot_root:
+        snapshot = ResponseCache(snapshot_root)
+        restore_current_season_cache(
             connection,
-            parsed,
-            shots,
-            prepared.dimensions,
-            events,
-            remaining,
+            cache,
+            storage,
             season_code,
-            gamecode,
-            source_by_game[gamecode],
+            snapshot_cache=snapshot,
         )
-        summaries.append(GameRebuildSummary(season_code, gamecode, counts))
-    return tuple(summaries)
+        prepared = _prepare_season(snapshot, season_code)
+        missing = [gamecode for gamecode in selected if gamecode not in prepared.schedule_by_game]
+        if missing:
+            raise ValueError(
+                f"Season {season_code} does not mark requested rebuild game(s) {missing} as played."
+            )
+        source_by_game = cached_game_source_checksums(snapshot, season_code, selected)
+
+        summaries: list[GameRebuildSummary] = []
+        for gamecode in selected:
+            schedule_game = prepared.schedule_by_game[gamecode]
+            parsed = parse_cached_game(snapshot, season_code, schedule_game)
+            shots = _parse_game_shots(
+                snapshot,
+                season_code,
+                gamecode,
+                parsed.game.competition_code,
+            )
+            events = tuple(row for row in prepared.events if row.gamecode == gamecode)
+            remaining = select_remaining_games(prepared.remaining, [gamecode])
+            counts = replace_game_rows(
+                connection,
+                parsed,
+                shots,
+                prepared.dimensions,
+                events,
+                remaining,
+                season_code,
+                gamecode,
+                source_by_game[gamecode],
+            )
+            summaries.append(GameRebuildSummary(season_code, gamecode, counts))
+        return tuple(summaries)

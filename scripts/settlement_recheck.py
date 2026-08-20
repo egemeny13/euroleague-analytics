@@ -158,6 +158,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"settlement dry run: {len(due)} game(s) owed a reading")
                 for owed in due[:20]:
                     print(f"  game {owed.gamecode} owes {','.join(owed.due_labels)}")
+                pending = pending_rebuild_games(connection, args.season)
+                if pending:
+                    print(
+                        "SOURCE REVISION PENDING in game(s) "
+                        f"{', '.join(str(code) for code in pending)}.",
+                        file=sys.stderr,
+                    )
+                    return 1
                 return 0
 
             session = requests.Session()

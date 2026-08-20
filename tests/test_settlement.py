@@ -357,6 +357,36 @@ def test_settlement_cli_stays_red_when_no_new_observation_repeats_the_change(
     assert cli.main(["E2026", "--live", "--cache-root", str(tmp_path)]) == 1
 
 
+def test_settlement_dry_run_reports_durable_pending_games(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Break caught: inspection exits green while the normal manual run is stale and red."""
+    cli = _load_settlement_script()
+
+    @contextmanager
+    def connect(*args, **kwargs):
+        yield object()
+
+    monkeypatch.setattr(
+        cli,
+        "live_runtime_settings",
+        lambda values: (SimpleNamespace(url=lambda: "postgresql://unused"), object()),
+    )
+    monkeypatch.setattr(cli.psycopg, "connect", connect)
+    monkeypatch.setattr(cli, "SupabaseStorage", lambda settings: object())
+    monkeypatch.setattr(cli, "games_due_for_recheck", lambda *args, **kwargs: [])
+    monkeypatch.setattr(cli, "pending_rebuild_games", lambda connection, season: (7,))
+
+    code = cli.main(["E2026", "--dry-run", "--cache-root", str(tmp_path)])
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "pending" in captured.err.lower()
+    assert "7" in captured.err
+
+
 def test_settlement_cli_can_rebuild_a_previously_named_game_without_refetching(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

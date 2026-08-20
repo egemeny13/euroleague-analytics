@@ -263,6 +263,24 @@ def test_restore_downloads_schedule_then_all_current_played_responses(tmp_path):
     assert cache.read_bytes(SEASON, "PlaybyPlay", 9) == b'{"game":9,"endpoint":"PlaybyPlay"}'
 
 
+def test_restore_can_materialise_an_immutable_consumer_snapshot(tmp_path):
+    """Break caught: a later canonical cache swap changes bytes under an active parser."""
+    connection, archive_storage = archived_season(played=(7,))
+    cache = ResponseCache(tmp_path / "canonical")
+    snapshot = ResponseCache(tmp_path / "snapshot")
+
+    restore_current_season_cache(
+        connection,
+        cache,
+        archive_storage,
+        SEASON,
+        snapshot_cache=snapshot,
+    )
+    cache.path_for(SEASON, "Boxscore", 7).write_bytes(b'{"advanced":true}')
+
+    assert snapshot.read_bytes(SEASON, "Boxscore", 7) == b'{"game":7,"endpoint":"Boxscore"}'
+
+
 def test_restore_creates_a_missing_cache_root_after_staging_succeeds(tmp_path):
     """Break caught: a fresh ephemeral runner cannot install its verified staging tree."""
     connection, archive_storage = archived_season(played=(7,))

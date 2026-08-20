@@ -35,7 +35,7 @@ from euroleague.derived import build_dimensions, build_game_events, build_remain
 from euroleague.derived_load import load_derived_rows
 from euroleague.load import assert_phase4_safe, load_game, load_shots_for_game, played_games
 from euroleague.parse import parse_cached_game, parse_shots
-from euroleague.source_state import record_current_game_sources
+from euroleague.source_state import record_cached_game_sources
 
 # The endpoints a played game must have on disk before it can be loaded. Points
 # is archived and parsed for coordinates, and is required for the same reason
@@ -229,6 +229,6 @@ def run_live_pipeline(
 
     load_new_raw_games(connection, cache, season_code, new_games, progress=progress)
     derive_new_games(connection, cache, season_code, gamecodes)
-    record_current_game_sources(connection, season_code, gamecodes)
+    record_cached_game_sources(connection, cache, season_code, gamecodes)
     progress(summary.as_log_line())
     return summary

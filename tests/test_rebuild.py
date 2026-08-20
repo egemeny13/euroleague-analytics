@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -59,9 +60,16 @@ def test_archive_restore_precedes_parsing_and_quality_is_re_evaluated(
     calls: list[str] = []
     captured: dict[str, object] = {}
 
-    def restore(connection, selected_cache, storage, season_code):
+    def restore(connection, selected_cache, storage, season_code, *, snapshot_cache):
         calls.append("restore")
-        selected_cache.path_for(season_code, "Boxscore", 1).write_bytes(revised)
+        shutil.copytree(
+            selected_cache.root / season_code,
+            snapshot_cache.root / season_code,
+        )
+        snapshot_cache.path_for(season_code, "Boxscore", 1).write_bytes(revised)
+        selected_cache.path_for(season_code, "Boxscore", 1).write_bytes(
+            _revised_minutes(original, "16:15")
+        )
         return RestoreSummary(
             restored_responses=4,
             exact_bytes=1,
@@ -85,20 +93,17 @@ def test_archive_restore_precedes_parsing_and_quality_is_re_evaluated(
             row.minutes for row in parsed.players if row.player_id == "P008173"
         )
         captured["quality"] = remaining.game_qualities[0]
+        captured["checksums"] = source_checksums
         return {"raw_game": 1, "game_event": len(events)}
 
     monkeypatch.setattr(rebuild, "restore_current_season_cache", restore)
-    monkeypatch.setattr(
-        rebuild,
-        "current_game_source_checksums",
-        lambda *args: {1: rebuild.GameSourceChecksums("box", "play", "points")},
-    )
     monkeypatch.setattr(rebuild, "replace_game_rows", replace)
 
     summaries = rebuild.rebuild_revised_games(object(), cache, object(), "E2024", gamecodes=(1,))
 
     assert calls == ["restore", "replace"]
     assert captured["minutes"] == "16:17"
+    assert captured["checksums"].boxscore_sha256 == sha256(revised).hexdigest()
     quality = captured["quality"]
     assert quality.excluded_by_default is True
     assert quality.quarantine_reasons == ["minutes_mismatch"]
@@ -113,11 +118,15 @@ def test_rebuild_refuses_a_game_not_marked_played_before_any_write(
     """Break caught: an arbitrary or future gamecode reaches the replacement writer."""
     cache = _one_game_cache(tmp_path, fixture_games_root)
     writes: list[int] = []
-    monkeypatch.setattr(
-        rebuild,
-        "restore_current_season_cache",
-        lambda *args: RestoreSummary(4, 1, CacheCompleteness(1, 1, 3, (1,)), False),
-    )
+
+    def restore(connection, selected_cache, storage, season_code, *, snapshot_cache):
+        shutil.copytree(
+            selected_cache.root / season_code,
+            snapshot_cache.root / season_code,
+        )
+        return RestoreSummary(4, 1, CacheCompleteness(1, 1, 3, (1,)), False)
+
+    monkeypatch.setattr(rebuild, "restore_current_season_cache", restore)
     monkeypatch.setattr(rebuild, "replace_game_rows", lambda *args: writes.append(1))
 
     with pytest.raises(ValueError, match="does not mark requested rebuild"):

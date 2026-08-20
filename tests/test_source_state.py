@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import hashlib
 from contextlib import contextmanager
 
 import pytest
 
+from euroleague.cache import ResponseCache
 from euroleague.source_state import (
     GameSourceChecksums,
+    cached_game_source_checksums,
     pending_rebuild_games,
     record_applied_game_sources,
-    record_current_game_sources,
+    record_cached_game_sources,
 )
 
 
@@ -88,19 +91,40 @@ def test_recording_applied_checksums_uses_one_transaction_and_all_three_endpoint
     assert params == ("E2026", 7, "box", "play", "points")
 
 
-def test_initial_load_records_each_selected_games_current_archive_versions() -> None:
+def test_initial_load_records_each_selected_games_consumed_cache_versions(tmp_path) -> None:
     """Break caught: every freshly loaded game starts life falsely pending."""
-    connection = Connection(
-        rows=[
-            (7, "b7", "p7", "s7", None, None, None),
-            (8, "b8", "p8", "s8", None, None, None),
-        ]
-    )
+    connection = Connection()
+    cache = ResponseCache(tmp_path)
+    for gamecode in (7, 8):
+        for endpoint in ("Boxscore", "PlaybyPlay", "Points"):
+            path = cache.path_for("E2026", endpoint, gamecode)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"{endpoint}-{gamecode}".encode())
 
-    record_current_game_sources(connection, "E2026", (7, 8))
+    record_cached_game_sources(connection, cache, "E2026", (7, 8))
 
     inserts = [params for query, params in connection.executions if query.startswith("insert into")]
-    assert inserts == [
-        ("E2026", 7, "b7", "p7", "s7"),
-        ("E2026", 8, "b8", "p8", "s8"),
-    ]
+    assert [row[:2] for row in inserts] == [("E2026", 7), ("E2026", 8)]
+    assert all(len(checksum) == 64 for row in inserts for checksum in row[2:])
+
+
+def test_applied_checksums_come_from_the_exact_cache_snapshot_consumed(tmp_path) -> None:
+    """Break caught: a later archive pointer is marked instead of the bytes parsed."""
+    cache = ResponseCache(tmp_path)
+    bodies = {
+        "Boxscore": b'{"version":"box-A"}',
+        "PlaybyPlay": b'{"version":"play-A"}',
+        "Points": b'{"version":"points-A"}',
+    }
+    for endpoint, body in bodies.items():
+        path = cache.path_for("E2026", endpoint, 7)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(body)
+
+    checksums = cached_game_source_checksums(cache, "E2026", (7,))
+
+    assert checksums[7] == GameSourceChecksums(
+        hashlib.sha256(bodies["Boxscore"]).hexdigest(),
+        hashlib.sha256(bodies["PlaybyPlay"]).hexdigest(),
+        hashlib.sha256(bodies["Points"]).hexdigest(),
+    )

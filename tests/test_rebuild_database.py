@@ -25,7 +25,7 @@ from euroleague.incremental_confirmation import (
     prepare_confirmation_session,
 )
 from euroleague.rebuild import rebuild_revised_games
-from euroleague.source_state import pending_rebuild_games, record_current_game_sources
+from euroleague.source_state import pending_rebuild_games, record_cached_game_sources
 
 SEASON = "E2024"
 TARGET_GAME = 1
@@ -170,7 +170,7 @@ def test_null_rebuild_is_identical_and_failure_restores_the_old_game(tmp_path: P
             apply_current_migrations(connection)
             _load_complete_season(connection, source)
             archive_season(connection, source, storage, SEASON, progress=lambda _: None)
-            record_current_game_sources(connection, SEASON, range(1, 331))
+            record_cached_game_sources(connection, source, SEASON, range(1, 331))
             assert pending_rebuild_games(connection, SEASON) == ()
             before = _fingerprints(connection)
             neighbours_before = _fingerprints(connection, exclude_game=TARGET_GAME)
@@ -235,7 +235,7 @@ def test_real_revision_rebuild_equals_a_complete_revised_load(tmp_path: Path) ->
             apply_current_migrations(connection)
             _load_complete_season(connection, source)
             archive_season(connection, source, storage, SEASON, progress=lambda _: None)
-            record_current_game_sources(connection, SEASON, range(1, 331))
+            record_cached_game_sources(connection, source, SEASON, range(1, 331))
             assert pending_rebuild_games(connection, SEASON) == ()
             neighbours_before = _fingerprints(connection, exclude_game=TARGET_GAME)
             with connection.cursor() as cursor:
@@ -347,7 +347,7 @@ def test_each_game_advances_state_independently_and_a_failed_game_stays_pending(
             apply_current_migrations(connection)
             _load_complete_season(connection, source)
             archive_season(connection, source, storage, SEASON, progress=lambda _: None)
-            record_current_game_sources(connection, SEASON, gamecodes)
+            record_cached_game_sources(connection, source, SEASON, gamecodes)
             before = _fingerprints(connection)
 
             with connection.cursor() as cursor:

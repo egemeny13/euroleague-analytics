@@ -83,21 +83,20 @@ def _current_checksums_from_row(season_code: str, row: tuple) -> GameSourceCheck
     return GameSourceChecksums(str(boxscore), str(playbyplay), str(points))
 
 
-def current_game_source_checksums(
-    connection: Any,
+def cached_game_source_checksums(
+    cache: Any,
     season_code: str,
     gamecodes: Iterable[int],
 ) -> dict[int, GameSourceChecksums]:
-    """Return complete current archive checksums for explicitly selected loaded games."""
-    selected = sorted({int(code) for code in gamecodes})
-    rows = _source_rows(connection, season_code, selected)
-    result = {int(row[0]): _current_checksums_from_row(season_code, row) for row in rows}
-    missing_games = [gamecode for gamecode in selected if gamecode not in result]
-    if missing_games:
-        raise RuntimeError(
-            f"Season {season_code} has no loaded archive-backed game(s) {missing_games}."
+    """Hash the exact private cache snapshot from which game rows are parsed."""
+    return {
+        gamecode: GameSourceChecksums(
+            cache.checksum(season_code, "Boxscore", gamecode),
+            cache.checksum(season_code, "PlaybyPlay", gamecode),
+            cache.checksum(season_code, "Points", gamecode),
         )
-    return result
+        for gamecode in sorted({int(code) for code in gamecodes})
+    }
 
 
 def pending_rebuild_games(connection: Any, season_code: str) -> tuple[int, ...]:
@@ -160,12 +159,13 @@ def record_applied_game_sources(
         )
 
 
-def record_current_game_sources(
+def record_cached_game_sources(
     connection: Any,
+    cache: Any,
     season_code: str,
     gamecodes: Iterable[int],
 ) -> None:
-    """Mark newly loaded games from the exact current archive rows they consumed."""
-    current = current_game_source_checksums(connection, season_code, gamecodes)
-    for gamecode, checksums in current.items():
+    """Mark newly loaded games from their exact immutable parsing snapshot."""
+    cached = cached_game_source_checksums(cache, season_code, gamecodes)
+    for gamecode, checksums in cached.items():
         record_applied_game_sources(connection, season_code, gamecode, checksums)
