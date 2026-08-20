@@ -21,7 +21,13 @@ pretending a +6h reading exists.
 
 from __future__ import annotations
 
+import importlib.util
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from euroleague.settlement import (
     CHECKPOINTS,
@@ -255,3 +261,70 @@ def test_the_summary_distinguishes_nothing_due_from_nothing_changed() -> None:
     line = summarise_settlement(observations)
     assert "2 reading(s)" in line
     assert "0 with a changed checksum" in line
+
+
+def _load_settlement_script():
+    path = Path(__file__).resolve().parent.parent / "scripts" / "settlement_recheck.py"
+    spec = importlib.util.spec_from_file_location("settlement_recheck_cli", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    ("automatic", "expected_code", "expected_rebuilds"),
+    ((False, 1, []), (True, 0, [(7,)])),
+)
+def test_settlement_cli_defaults_manual_and_rebuilds_only_with_the_explicit_flag(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+    automatic: bool,
+    expected_code: int,
+    expected_rebuilds: list[tuple[int, ...]],
+) -> None:
+    """Break caught: a scheduled run changes published numbers without explicit approval."""
+    cli = _load_settlement_script()
+    rebuilds: list[tuple[int, ...]] = []
+
+    class Connection:
+        pass
+
+    @contextmanager
+    def connect(*args, **kwargs):
+        yield Connection()
+
+    monkeypatch.setattr(
+        cli,
+        "live_runtime_settings",
+        lambda values: (SimpleNamespace(url=lambda: "postgresql://unused"), object()),
+    )
+    monkeypatch.setattr(cli.psycopg, "connect", connect)
+    monkeypatch.setattr(cli, "games_due_for_recheck", lambda *args, **kwargs: [object()])
+    monkeypatch.setattr(cli, "ArchiveFetcher", lambda *args, **kwargs: object())
+    monkeypatch.setattr(cli, "SupabaseStorage", lambda settings: object())
+    monkeypatch.setattr(
+        cli,
+        "run_settlement_rechecks",
+        lambda **kwargs: [SimpleNamespace(content_changed=True)],
+    )
+    monkeypatch.setattr(cli, "summarise_settlement", lambda observations: "one revision")
+    monkeypatch.setattr(cli, "changed_games", lambda observations: (7,))
+
+    def rebuild(connection, cache, storage, season, *, gamecodes):
+        rebuilds.append(gamecodes)
+        return (SimpleNamespace(gamecode=7),)
+
+    monkeypatch.setattr(
+        cli,
+        "rebuild_revised_games",
+        rebuild,
+        raising=False,
+    )
+
+    argv = ["E2026", "--live", "--cache-root", str(tmp_path)]
+    if automatic:
+        argv.append("--auto-rebuild")
+
+    assert cli.main(argv) == expected_code
+    assert rebuilds == expected_rebuilds

@@ -34,8 +34,10 @@ import requests
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from euroleague.archive import SupabaseStorage, archive_successful_observation
+from euroleague.cache import ResponseCache
 from euroleague.config import live_runtime_settings
-from euroleague.fetch import ArchiveFetcher
+from euroleague.fetch import DEFAULT_CACHE_ROOT, ArchiveFetcher
+from euroleague.rebuild import rebuild_revised_games
 from euroleague.settlement import (
     changed_games,
     games_due_for_recheck,
@@ -64,6 +66,20 @@ def _parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_MAX_GAMES,
         help=f"most games to re-check in one run (default: {DEFAULT_MAX_GAMES})",
+    )
+    parser.add_argument(
+        "--cache-root",
+        type=Path,
+        default=DEFAULT_CACHE_ROOT,
+        help=f"archive cache root used only by a rebuild (default: {DEFAULT_CACHE_ROOT})",
+    )
+    parser.add_argument(
+        "--auto-rebuild",
+        action="store_true",
+        help=(
+            "rebuild revised games automatically; intentionally absent from the "
+            "scheduled workflow until the owner approves that policy"
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -105,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
             session = requests.Session()
             session.headers.update({"User-Agent": USER_AGENT})
             fetcher = ArchiveFetcher(transport=session)
+            storage = SupabaseStorage(storage_settings)
 
             def fetch_one(season_code: str, endpoint: str, gamecode: int, _when):
                 observation = fetcher.fetch_game_response(season_code, endpoint, gamecode)
@@ -118,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
 
             observations = run_settlement_rechecks(
                 connection=connection,
-                storage=SupabaseStorage(storage_settings),
+                storage=storage,
                 due=due,
                 now=now,
                 fetch_one=fetch_one,
@@ -127,29 +144,39 @@ def main(argv: list[str] | None = None) -> int:
                 # the runner adds no second delay on top of it.
                 sleep=None,
             )
+
+            print(summarise_settlement(observations))
+
+            revised = changed_games(observations)
+            if revised and not args.auto_rebuild:
+                print(
+                    f"SOURCE REVISION DETECTED in game(s) "
+                    f"{', '.join(str(code) for code in revised)}. The observation is "
+                    f"archived and the previous body is preserved. Automatic rebuilding "
+                    f"is disabled, so no warehouse rows changed. Review the source revision "
+                    f"and rerun with --auto-rebuild only if that policy is approved.",
+                    file=sys.stderr,
+                )
+                return 1
+            if revised:
+                summaries = rebuild_revised_games(
+                    connection,
+                    ResponseCache(args.cache_root),
+                    storage,
+                    args.season,
+                    gamecodes=revised,
+                )
+                rebuilt = ", ".join(str(summary.gamecode) for summary in summaries)
+                print(
+                    f"SOURCE REVISION REBUILT for game(s) {rebuilt}. Parsed raw and "
+                    f"derived rows now describe the archive's current checksum versions."
+                )
     except Exception as failure:
         # The message, never the settings: a traceback carrying a connection
         # string would land in a public workflow log.
         print(f"Settlement re-check failed: {type(failure).__name__}: {failure}", file=sys.stderr)
         return 1
 
-    print(summarise_settlement(observations))
-
-    revised = changed_games(observations)
-    if revised:
-        # The audit trail is complete and the changed bodies are archived beside
-        # their predecessors. What is NOT built is Decision 7's per-game
-        # transactional rebuild, so the run goes red rather than leaving derived
-        # rows that describe superseded source bytes.
-        print(
-            f"SOURCE REVISION DETECTED in game(s) {', '.join(str(code) for code in revised)}. "
-            f"The observation is archived and the previous body is preserved. Derived rows "
-            f"for those games were built from the OLD bytes and have not been rebuilt: "
-            f"Decision 7's per-game rebuild is not implemented. Rebuild them before "
-            f"trusting those games.",
-            file=sys.stderr,
-        )
-        return 1
     return 0
 
 

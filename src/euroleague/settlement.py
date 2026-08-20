@@ -251,15 +251,9 @@ def run_settlement_rechecks(
 def changed_games(observations: Sequence[SettlementObservation]) -> tuple[int, ...]:
     """Games whose source bytes changed, in gamecode order.
 
-    THE REBUILD THIS RETURNS WORK FOR IS NOT BUILT. Decision 7 requires that a
-    changed checksum rebuilds that one game's parsed and derived rows in a
-    single transaction, and the loader currently refuses to replace a game that
-    has derived rows at all - correctly, because replacing raw rows underneath
-    derived ones is the silent corruption the guard exists to prevent.
-
-    So the honest behaviour today is: the audit trail is preserved in full, the
-    changed game is named, and the run goes red. It does not quietly proceed,
-    and it does not pretend to have rebuilt anything. Closing that gap is owner
-    work, recorded as such rather than improvised here at the moment it fires.
+    The settlement CLI keeps the owner-selected policy separate from this
+    measurement. Its safe default names these games and goes red. Supplying the
+    explicit automatic-rebuild flag sends the same tuple through Decision 7's
+    archive-backed, one-transaction-per-game rebuild.
     """
     return tuple(sorted({row.gamecode for row in observations if row.content_changed}))
