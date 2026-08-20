@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 
 from euroleague.derived import (
@@ -360,6 +360,7 @@ def _load_one_attached_game(
     gamecode: int,
     *,
     replace: bool,
+    replace_raw: Callable[[], dict[str, int]] | None = None,
 ) -> dict[str, int]:
     counts: dict[str, int] = {}
     with connection.transaction(), connection.cursor() as cursor:
@@ -414,6 +415,8 @@ def _load_one_attached_game(
                     f"DELETE FROM {target} WHERE season_code = %s AND gamecode = %s",
                     params,
                 )
+            if replace_raw is not None:
+                counts.update(replace_raw())
 
         lineup_columns = ", ".join(LINEUP_COLUMNS)
         cursor.execute(
@@ -427,6 +430,59 @@ def _load_one_attached_game(
         _insert_staged_rows(cursor, "player_game_minutes", PLAYER_GAME_MINUTES_COLUMNS)
         _insert_staged_rows(cursor, "game_quality", GAME_QUALITY_COLUMNS)
 
+    return counts
+
+
+def replace_derived_game(
+    connection: Any,
+    events: tuple[GameEventRow, ...],
+    remaining: RemainingDerivedRows,
+    season_code: str,
+    gamecode: int,
+    *,
+    replace_raw: Callable[[], dict[str, int]],
+) -> dict[str, int]:
+    """Replace one complete derived game around its raw-row replacement.
+
+    The old attached events are children of both the raw event rows and the
+    possession rows. They must therefore disappear first. ``replace_raw`` runs
+    only after every old game-scoped derived row is gone and before any new
+    parent or attached event is inserted. The caller owns the outer transaction
+    that makes the raw and derived work one atomic game replacement.
+    """
+    _assert_season_code(season_code)
+    _assert_remaining_scope(remaining, season_code)
+    selected_game = int(gamecode)
+    invalid_events = {
+        (row.season_code, row.gamecode)
+        for row in events
+        if row.season_code != season_code or row.gamecode != selected_game
+    }
+    if invalid_events:
+        raise SeasonScopeError(
+            f"Rebuild target {season_code} game {selected_game} received event rows for "
+            f"{sorted(invalid_events)}."
+        )
+    event_games = {row.gamecode for row in events}
+    remaining_games = _remaining_gamecodes(remaining)
+    if event_games != {selected_game} or remaining_games != {selected_game}:
+        raise SeasonScopeError(
+            f"Rebuild target {season_code} game {selected_game} requires complete event "
+            f"and derived rows; received events for {sorted(event_games)} and derived "
+            f"rows for {sorted(remaining_games)}."
+        )
+
+    attached_events = attach_game_event_references(events, remaining.event_attachments)
+    counts = _load_one_attached_game(
+        connection,
+        attached_events,
+        remaining,
+        season_code,
+        selected_game,
+        replace=True,
+        replace_raw=replace_raw,
+    )
+    counts["game_event_attached"] = len(attached_events)
     return counts
 
 

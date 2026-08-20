@@ -27,6 +27,7 @@ from euroleague.derived_load import (
     load_game_events,
     load_phase5_base_rows,
     load_remaining_rows,
+    replace_derived_game,
 )
 
 
@@ -741,3 +742,38 @@ def test_incremental_remaining_write_rejects_another_season_before_any_write() -
 
     assert connection.executions == []
     assert connection.transactions_started == 0
+
+
+def test_rebuild_swaps_raw_rows_after_child_delete_and_before_parent_insert() -> None:
+    """Break caught: raw replacement violates an FK or event attachments use UPDATE again."""
+    events, remaining = _complete_game(51)
+    connection = Connection()
+
+    def replace_raw() -> dict[str, int]:
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM raw_event WHERE season_code = %s AND gamecode = %s")
+            cursor.execute("INSERT INTO raw_event SELECT * FROM stage_raw_event")
+        return {"raw_event": 1}
+
+    counts = replace_derived_game(
+        connection,
+        events,
+        remaining,
+        "E2026",
+        51,
+        replace_raw=replace_raw,
+    )
+
+    queries = [query for query, _ in connection.executions]
+    assert not any(query.startswith("UPDATE game_event") for query in queries)
+    assert queries.index("DELETE FROM game_event WHERE season_code = %s AND gamecode = %s") < (
+        queries.index("DELETE FROM possession WHERE season_code = %s AND gamecode = %s")
+    )
+    assert queries.index("DELETE FROM possession WHERE season_code = %s AND gamecode = %s") < (
+        queries.index("DELETE FROM raw_event WHERE season_code = %s AND gamecode = %s")
+    )
+    possession_insert = next(
+        index for index, query in enumerate(queries) if query.startswith("INSERT INTO possession")
+    )
+    assert queries.index("INSERT INTO raw_event SELECT * FROM stage_raw_event") < possession_insert
+    assert counts["raw_event"] == 1
