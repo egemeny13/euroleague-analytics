@@ -82,6 +82,17 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--rebuild-game",
+        type=int,
+        action="append",
+        default=[],
+        metavar="GAMECODE",
+        help=(
+            "manually rebuild a game previously named by a red settlement run; "
+            "repeat for more than one game and perform no API re-fetch"
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="report what is owed and exit without making a request",
@@ -105,12 +116,43 @@ def main(argv: list[str] | None = None) -> int:
             "--live is required for a run that fetches. Use --dry-run to inspect.", file=sys.stderr
         )
         return 2
+    if args.rebuild_game and args.auto_rebuild:
+        print(
+            "--rebuild-game and --auto-rebuild are separate manual/automatic modes.",
+            file=sys.stderr,
+        )
+        return 2
+    if args.rebuild_game and args.dry_run:
+        print(
+            "--rebuild-game performs a write and cannot be combined with --dry-run.",
+            file=sys.stderr,
+        )
+        return 2
+    if any(gamecode <= 0 for gamecode in args.rebuild_game):
+        print("--rebuild-game requires a positive gamecode.", file=sys.stderr)
+        return 2
 
     now = datetime.now(UTC)
 
     try:
         database_settings, storage_settings = live_runtime_settings(os.environ)
         with psycopg.connect(database_settings.url(), autocommit=True) as connection:
+            storage = SupabaseStorage(storage_settings)
+            if args.rebuild_game:
+                summaries = rebuild_revised_games(
+                    connection,
+                    ResponseCache(args.cache_root),
+                    storage,
+                    args.season,
+                    gamecodes=tuple(args.rebuild_game),
+                )
+                rebuilt = ", ".join(str(summary.gamecode) for summary in summaries)
+                print(
+                    f"SOURCE REVISION REBUILT for game(s) {rebuilt}. Parsed raw and "
+                    f"derived rows now describe the archive's current checksum versions."
+                )
+                return 0
+
             due = games_due_for_recheck(connection, args.season, now, limit=max(0, args.max_games))
             if args.dry_run:
                 print(f"settlement dry run: {len(due)} game(s) owed a reading")
@@ -121,7 +163,6 @@ def main(argv: list[str] | None = None) -> int:
             session = requests.Session()
             session.headers.update({"User-Agent": USER_AGENT})
             fetcher = ArchiveFetcher(transport=session)
-            storage = SupabaseStorage(storage_settings)
 
             def fetch_one(season_code: str, endpoint: str, gamecode: int, _when):
                 observation = fetcher.fetch_game_response(season_code, endpoint, gamecode)

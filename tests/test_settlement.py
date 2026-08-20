@@ -328,3 +328,52 @@ def test_settlement_cli_defaults_manual_and_rebuilds_only_with_the_explicit_flag
 
     assert cli.main(argv) == expected_code
     assert rebuilds == expected_rebuilds
+
+
+def test_settlement_cli_can_rebuild_a_previously_named_game_without_refetching(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Break caught: the manual red path names a game but offers no later recovery command."""
+    cli = _load_settlement_script()
+    rebuilds: list[tuple[int, ...]] = []
+
+    class Connection:
+        pass
+
+    @contextmanager
+    def connect(*args, **kwargs):
+        yield Connection()
+
+    monkeypatch.setattr(
+        cli,
+        "live_runtime_settings",
+        lambda values: (SimpleNamespace(url=lambda: "postgresql://unused"), object()),
+    )
+    monkeypatch.setattr(cli.psycopg, "connect", connect)
+    monkeypatch.setattr(cli, "SupabaseStorage", lambda settings: object())
+    monkeypatch.setattr(
+        cli,
+        "games_due_for_recheck",
+        lambda *args, **kwargs: pytest.fail("manual recovery must not re-fetch the API"),
+    )
+
+    def rebuild(connection, cache, storage, season, *, gamecodes):
+        rebuilds.append(gamecodes)
+        return (SimpleNamespace(gamecode=7),)
+
+    monkeypatch.setattr(cli, "rebuild_revised_games", rebuild)
+
+    code = cli.main(
+        [
+            "E2026",
+            "--live",
+            "--cache-root",
+            str(tmp_path),
+            "--rebuild-game",
+            "7",
+        ]
+    )
+
+    assert code == 0
+    assert rebuilds == [(7,)]
