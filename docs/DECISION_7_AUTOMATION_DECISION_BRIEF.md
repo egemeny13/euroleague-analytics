@@ -56,10 +56,12 @@ already quoted analysis. Reviewing the first real revisions buys that evidence.
 The cost of this recommendation is explicit: a red revision requires manual
 attention, and the warehouse stays stale until the named game is approved and
 rebuilt. The durable marker prevents a later identical observation or failed
-rebuild from hiding that stale state. If the first observations show routine
-harmless scorer's-table corrections and the interruption cost is higher than
-the editorial risk, adding `--auto-rebuild` is then a one-line owner-approved
-schedule change.
+rebuild from hiding that stale state. Its checksum is calculated from the exact
+private cache snapshot consumed by the rebuild, so a concurrent archive advance
+also remains pending instead of being falsely acknowledged. If the first
+observations show routine harmless scorer's-table corrections and the
+interruption cost is higher than the editorial risk, adding `--auto-rebuild` is
+then a one-line owner-approved schedule change.
 
 ## Decision requested
 

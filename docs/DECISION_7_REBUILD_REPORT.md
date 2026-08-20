@@ -27,11 +27,14 @@ changed, schedule integration was not enabled, and the known composite
 ### `rebuild_revised_games`
 
 1. It returns immediately if no game was named.
-2. It asks `restore_current_season_cache` to download every current response
-   version for the season, verify each checksum, validate the complete played
-   cache, and atomically install it at the canonical cache path.
-3. Only after restoration does it parse anything. This is how revised bytes
-   reach the parser instead of leaving the superseded cache body in use.
+2. It creates a private cache snapshot, then asks
+   `restore_current_season_cache` to download every current response version
+   for the season, verify each checksum, validate the complete played cache,
+   copy the same verified bytes into that snapshot, and atomically install them
+   at the canonical cache path.
+3. Only after restoration does it parse the private snapshot. A concurrent
+   canonical-cache replacement therefore cannot mix response versions or make
+   the rebuild acknowledge bytes it did not parse.
 4. It builds dimensions, events, stints, possessions, minutes, and quality from
    the complete played-season cache. This preserves Decision 3's season-wide
    minutes-correction measurement.
@@ -74,7 +77,9 @@ changed, schedule integration was not enabled, and the known composite
 1. `raw_api_response.is_current` remains the sole authority for current archive
    bytes.
 2. `game_source_state` records the exact Boxscore, PlaybyPlay, and Points
-   checksums successfully consumed by each loaded game.
+   checksums successfully consumed by each loaded game. Those checksums are
+   calculated from the same private snapshot bytes passed to the parsers, not
+   from a later database query for whichever archive rows are then current.
 3. Every settlement run compares current archive checksums with those applied
    checksums. A later identical observation therefore cannot hide an earlier
    revision, and a failed rebuild remains pending.
@@ -83,11 +88,16 @@ changed, schedule integration was not enabled, and the known composite
    earlier game's committed replacement.
 5. A new live game now requires and loads Points rows before its initial marker
    is written; the marker cannot claim bytes `raw_shot` did not consume.
+6. Live ingestion also consumes a private snapshot. If a newer archive version
+   becomes current after that snapshot was made, the next settlement query sees
+   the checksum difference and keeps the game pending.
 
 ### Settlement policy controls
 
 - Default scheduled command: records the immutable revision, durably names the
   pending game on every run, changes no warehouse content, and returns 1.
+- Default dry run: queries the same durable applied-source state, names pending
+  games, and returns 1 without restoring or rebuilding anything.
 - Approved manual recovery: `python scripts/settlement_recheck.py E2026 --live
   --rebuild-game GAMECODE` rebuilds the named archive-current game without
   another API request.
@@ -114,6 +124,13 @@ ModuleNotFoundError: No module named 'euroleague.rebuild'
 The later manual-recovery test failed because `--rebuild-game 7` was not yet a
 recognized argument. After each missing behavior was implemented, its focused
 test was rerun green before proceeding.
+
+The concurrency review then produced another deliberate RED test: archive
+restoration could not materialise a private consumer snapshot, so the marker
+could theoretically acknowledge a newer current archive row than the cache
+body the parser had consumed. The new regression test advances the canonical
+cache during parsing and proves the marker remains bound to the earlier exact
+snapshot bytes.
 
 ## PostgreSQL gate 1: null rebuild
 
@@ -167,6 +184,8 @@ Result:
   `excluded_by_default = true` and `minutes_mismatch`;
 - an injected target-only obsolete lineup and player identity were pruned;
 - the game was durably pending before rebuild and not pending after commit;
+- parsing and marker checksums came from one immutable private snapshot, even
+  when the canonical cache was advanced concurrently in the regression test;
 - every non-target game's fingerprint stayed unchanged;
 - rebuilt and clean revised loads matched across all 14 relations and 489,950
   rows.
@@ -205,6 +224,8 @@ truth.
 - The tests do not simulate an operating-system or PostgreSQL process crash at
   each instruction boundary. They prove PostgreSQL rollback after an injected
   statement failure.
+- Snapshotting duplicates one season cache temporarily and the gates do not
+  measure that extra local disk I/O or peak space.
 - Local PostgreSQL does not prove Supabase Storage permissions, network
   availability, production pooler behavior, RLS roles, or production grants.
 - The tests prove checksum identity and byte selection, not that the API's
@@ -266,12 +287,12 @@ Final required verification:
 
 Results:
 
-- database-free: `561 passed, 84 deselected in 10.61s`;
-- disposable database: `3 passed, 642 deselected in 401.95s`;
+- database-free: `564 passed, 84 deselected in 10.48s`;
+- disposable database: `3 passed, 645 deselected in 415.84s`;
 - lint: `All checks passed!`;
 - format: all 126 files formatted.
 
-## Commits before this report
+## Implementation commits
 
 - `ff81087 feat: rebuild revised games transactionally`
 - `e9a4cf0 feat: gate automatic settlement rebuilds`
@@ -279,3 +300,5 @@ Results:
 - `d2f0a61 feat: allow approved manual rebuilds`
 - `4bb19f2 docs: report decision 7 rebuild gates`
 - `9d335ba fix: persist pending game revisions`
+- `8382717 docs: record durable rebuild gates`
+- `f6a44ec fix: bind rebuild state to parsed bytes`
