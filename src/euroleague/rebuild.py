@@ -93,9 +93,7 @@ def replace_game_rows(
 
     def replace_raw() -> dict[str, int]:
         raw_counts = load_game(connection, parsed)
-        raw_counts["raw_shot"] = load_shots_for_game(
-            connection, season_code, gamecode, shots
-        )
+        raw_counts["raw_shot"] = load_shots_for_game(connection, season_code, gamecode, shots)
         return raw_counts
 
     with connection.transaction():

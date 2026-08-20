@@ -225,9 +225,7 @@ def test_real_revision_rebuild_equals_a_complete_revised_load(tmp_path: Path) ->
                 ),
             )
             assert archived.content_changed is True
-            rebuild_revised_games(
-                connection, restored, storage, SEASON, gamecodes=(TARGET_GAME,)
-            )
+            rebuild_revised_games(connection, restored, storage, SEASON, gamecodes=(TARGET_GAME,))
             rebuilt = _fingerprints(connection)
             neighbours_after = _fingerprints(connection, exclude_game=TARGET_GAME)
             with connection.cursor() as cursor:

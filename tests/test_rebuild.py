@@ -89,9 +89,7 @@ def test_archive_restore_precedes_parsing_and_quality_is_re_evaluated(
     monkeypatch.setattr(rebuild, "restore_current_season_cache", restore)
     monkeypatch.setattr(rebuild, "replace_game_rows", replace)
 
-    summaries = rebuild.rebuild_revised_games(
-        object(), cache, object(), "E2024", gamecodes=(1,)
-    )
+    summaries = rebuild.rebuild_revised_games(object(), cache, object(), "E2024", gamecodes=(1,))
 
     assert calls == ["restore", "replace"]
     assert captured["minutes"] == "16:17"
