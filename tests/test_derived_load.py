@@ -776,4 +776,11 @@ def test_rebuild_swaps_raw_rows_after_child_delete_and_before_parent_insert() ->
         index for index, query in enumerate(queries) if query.startswith("INSERT INTO possession")
     )
     assert queries.index("INSERT INTO raw_event SELECT * FROM stage_raw_event") < possession_insert
+    lineup_prune = next(
+        index for index, query in enumerate(queries) if query.startswith("DELETE FROM lineup AS")
+    )
+    player_prune = next(
+        index for index, query in enumerate(queries) if query.startswith("DELETE FROM player AS")
+    )
+    assert possession_insert < lineup_prune < player_prune
     assert counts["raw_event"] == 1

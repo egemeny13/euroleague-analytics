@@ -78,6 +78,7 @@ def test_archive_restore_precedes_parsing_and_quality_is_re_evaluated(
         remaining,
         season_code,
         gamecode,
+        source_checksums,
     ):
         calls.append("replace")
         captured["minutes"] = next(
@@ -87,6 +88,11 @@ def test_archive_restore_precedes_parsing_and_quality_is_re_evaluated(
         return {"raw_game": 1, "game_event": len(events)}
 
     monkeypatch.setattr(rebuild, "restore_current_season_cache", restore)
+    monkeypatch.setattr(
+        rebuild,
+        "current_game_source_checksums",
+        lambda *args: {1: rebuild.GameSourceChecksums("box", "play", "points")},
+    )
     monkeypatch.setattr(rebuild, "replace_game_rows", replace)
 
     summaries = rebuild.rebuild_revised_games(object(), cache, object(), "E2024", gamecodes=(1,))

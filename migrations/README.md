@@ -12,8 +12,9 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0004a_query_views_join_safety` | Fix: `v_player_game` joins `player` with `left join` instead of `inner join`, so a missing dimension row nulls the name instead of deleting the row; documents unenforced join assumptions on `v_team_game` and `v_player_game`. No tables, `create or replace view` only. |
 | `0005_game_winner` | Fix: `v_game.winner_team_code` is derived from the official final score instead of passing through `raw_game`, where it is null for every game because the source schedule names the season champion in all 330 rows. See `DECISIONS.md` item 19. No tables, `create or replace view` only. |
 | `0006_shot_data_view` | `v_shot_data`, whose complete shot population starts from `game_event` and left-joins `raw_shot` only for real X, Y, and zone values. Free throws remain coordinate-null and `(-1,-1)` is never served. No tables. |
+| `0008_game_source_state` | `game_source_state`, the exact Boxscore, PlaybyPlay, and Points archive checksums successfully applied to each warehouse game. The archive current pointer remains the source of truth; a difference is durable pending-rebuild state. |
 
-Sixteen tables.
+Seventeen tables.
 
 ## The gate, and why it expires
 
@@ -25,7 +26,9 @@ schema already holds tables.
 **That gate can only be run honestly once.** After Phase 4 loads a season,
 "rolls back cleanly" would mean destroying real data, so the test can never be
 repeated as written. It was run on 2026-08-09 against the empty project and
-passed: 16 tables created, removed, and recreated identically.
+passed: 16 tables created, removed, and recreated identically. Migration 0008
+later added the seventeenth table and was applied repeatedly in fresh disposable
+PostgreSQL schemas by the Decision 7 database gates; production was not touched.
 
 If a future migration changes the schema, the honest version of this test is a
 fresh empty database — a Supabase branch or a local Postgres — not the

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,7 @@ from euroleague.incremental_confirmation import (
     prepare_confirmation_session,
 )
 from euroleague.rebuild import rebuild_revised_games
+from euroleague.source_state import pending_rebuild_games, record_current_game_sources
 
 SEASON = "E2024"
 TARGET_GAME = 1
@@ -102,6 +104,26 @@ def _load_complete_season(connection: Any, cache: ResponseCache) -> None:
     )
 
 
+def _subset_cache(
+    tmp_path: Path, source: ResponseCache, gamecodes: tuple[int, ...]
+) -> ResponseCache:
+    """Copy a complete small cache for transaction-failure integration tests."""
+    subset = ResponseCache(tmp_path)
+    schedule = source.read_schedule_json(SEASON)
+    wanted = {int(gamecode) for gamecode in gamecodes}
+    schedule["data"] = [game for game in schedule["data"] if int(game["gameCode"]) in wanted]
+    subset.schedule_path(SEASON).parent.mkdir(parents=True, exist_ok=True)
+    subset.schedule_path(SEASON).write_text(
+        json.dumps(schedule, separators=(",", ":")), encoding="utf-8"
+    )
+    for gamecode in gamecodes:
+        for endpoint in ("Boxscore", "PlaybyPlay", "Points"):
+            target = subset.path_for(SEASON, endpoint, gamecode)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source.path_for(SEASON, endpoint, gamecode), target)
+    return subset
+
+
 def _fingerprints(
     connection: Any,
     *,
@@ -148,6 +170,8 @@ def test_null_rebuild_is_identical_and_failure_restores_the_old_game(tmp_path: P
             apply_current_migrations(connection)
             _load_complete_season(connection, source)
             archive_season(connection, source, storage, SEASON, progress=lambda _: None)
+            record_current_game_sources(connection, SEASON, range(1, 331))
+            assert pending_rebuild_games(connection, SEASON) == ()
             before = _fingerprints(connection)
             neighbours_before = _fingerprints(connection, exclude_game=TARGET_GAME)
 
@@ -179,6 +203,7 @@ def test_null_rebuild_is_identical_and_failure_restores_the_old_game(tmp_path: P
                 cursor.execute("drop trigger fail_d7_event_insert on game_event")
                 cursor.execute("drop function fail_d7_event_insert()")
             assert _fingerprints(connection) == before
+            assert pending_rebuild_games(connection, SEASON) == ()
 
             summaries = rebuild_revised_games(
                 connection, restored, storage, SEASON, gamecodes=(TARGET_GAME,)
@@ -189,6 +214,7 @@ def test_null_rebuild_is_identical_and_failure_restores_the_old_game(tmp_path: P
             assert after == before
             assert neighbours_after == neighbours_before
             assert summaries[0].gamecode == TARGET_GAME
+            assert pending_rebuild_games(connection, SEASON) == ()
             print(
                 "Decision 7 null gate: "
                 f"{len(after)} relations, {sum(count for count, _ in after.values()):,} rows"
@@ -209,7 +235,41 @@ def test_real_revision_rebuild_equals_a_complete_revised_load(tmp_path: Path) ->
             apply_current_migrations(connection)
             _load_complete_season(connection, source)
             archive_season(connection, source, storage, SEASON, progress=lambda _: None)
+            record_current_game_sources(connection, SEASON, range(1, 331))
+            assert pending_rebuild_games(connection, SEASON) == ()
             neighbours_before = _fingerprints(connection, exclude_game=TARGET_GAME)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "insert into player (player_id, display_name) values (%s, %s)",
+                    ("ZZ_D7_OBSOLETE", "Obsolete revision identity"),
+                )
+                cursor.execute(
+                    """
+                    insert into lineup (
+                        lineup_id, team_code, player_id_1, player_id_2,
+                        player_id_3, player_id_4, player_id_5
+                    )
+                    select %s, team_code, player_id_1, player_id_2,
+                           player_id_3, player_id_4, %s
+                    from lineup_stint as stint
+                    join lineup on lineup.lineup_id = stint.home_lineup_id
+                    where stint.season_code = %s and stint.gamecode = %s
+                    order by stint.stint_index
+                    limit 1
+                    """,
+                    ("d7-obsolete-lineup", "ZZ_D7_OBSOLETE", SEASON, TARGET_GAME),
+                )
+                cursor.execute(
+                    """
+                    update game_event set home_lineup_id = %s
+                    where season_code = %s and gamecode = %s
+                      and ingest_index = (
+                          select min(ingest_index) from game_event
+                          where season_code = %s and gamecode = %s
+                      )
+                    """,
+                    ("d7-obsolete-lineup", SEASON, TARGET_GAME, SEASON, TARGET_GAME),
+                )
             archived = archive_successful_observation(
                 connection,
                 storage,
@@ -225,7 +285,9 @@ def test_real_revision_rebuild_equals_a_complete_revised_load(tmp_path: Path) ->
                 ),
             )
             assert archived.content_changed is True
+            assert pending_rebuild_games(connection, SEASON) == (TARGET_GAME,)
             rebuild_revised_games(connection, restored, storage, SEASON, gamecodes=(TARGET_GAME,))
+            assert pending_rebuild_games(connection, SEASON) == ()
             rebuilt = _fingerprints(connection)
             neighbours_after = _fingerprints(connection, exclude_game=TARGET_GAME)
             with connection.cursor() as cursor:
@@ -245,6 +307,14 @@ def test_real_revision_rebuild_equals_a_complete_revised_load(tmp_path: Path) ->
                     (SEASON, TARGET_GAME),
                 )
                 assert cursor.fetchone() == (True, ["minutes_mismatch"])
+                cursor.execute(
+                    """
+                    select (select count(*) from lineup where lineup_id = %s),
+                           (select count(*) from player where player_id = %s)
+                    """,
+                    ("d7-obsolete-lineup", "ZZ_D7_OBSOLETE"),
+                )
+                assert cursor.fetchone() == (0, 0)
             assert neighbours_after == neighbours_before
 
         with managed_schema(connection, "confirm_batched_d7fresh"):
@@ -258,3 +328,65 @@ def test_real_revision_rebuild_equals_a_complete_revised_load(tmp_path: Path) ->
         f"{len(fresh)} relations, {sum(count for count, _ in fresh.values()):,} rows, "
         "revision=P008173 official minutes 16:18->16:17"
     )
+
+
+@pytest.mark.local_database
+def test_each_game_advances_state_independently_and_a_failed_game_stays_pending(
+    tmp_path: Path,
+) -> None:
+    """A later game failure keeps its old marker without rolling back an earlier game."""
+    complete = ResponseCache("exploration/cache")
+    source = _subset_cache(tmp_path / "multi-source", complete, (1, 2))
+    storage = MemoryArchiveStorage()
+    restored = ResponseCache(tmp_path / "multi-restored")
+    gamecodes = (1, 2)
+
+    with _connection() as connection:
+        prepare_confirmation_session(connection)
+        with managed_schema(connection, "confirm_single_d7pending"):
+            apply_current_migrations(connection)
+            _load_complete_season(connection, source)
+            archive_season(connection, source, storage, SEASON, progress=lambda _: None)
+            record_current_game_sources(connection, SEASON, gamecodes)
+            before = _fingerprints(connection)
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    update game_source_state
+                    set boxscore_sha256 = repeat('0', 64)
+                    where season_code = %s and gamecode in (1, 2)
+                    """,
+                    (SEASON,),
+                )
+                cursor.execute(
+                    """
+                    create function fail_d7_second_marker() returns trigger language plpgsql as $$
+                    begin
+                        if new.gamecode = 2 then
+                            raise exception 'injected second-game marker failure';
+                        end if;
+                        return new;
+                    end
+                    $$
+                    """
+                )
+                cursor.execute(
+                    """
+                    create trigger fail_d7_second_marker
+                    before update on game_source_state
+                    for each row execute function fail_d7_second_marker()
+                    """
+                )
+
+            assert pending_rebuild_games(connection, SEASON) == (1, 2)
+            with pytest.raises(psycopg.errors.RaiseException, match="second-game marker"):
+                rebuild_revised_games(connection, restored, storage, SEASON, gamecodes=(1, 2))
+            assert pending_rebuild_games(connection, SEASON) == (2,)
+            assert _fingerprints(connection) == before
+
+            with connection.cursor() as cursor:
+                cursor.execute("drop trigger fail_d7_second_marker on game_source_state")
+                cursor.execute("drop function fail_d7_second_marker()")
+            rebuild_revised_games(connection, restored, storage, SEASON, gamecodes=(2,))
+            assert pending_rebuild_games(connection, SEASON) == ()

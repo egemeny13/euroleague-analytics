@@ -403,6 +403,51 @@ def _load_one_attached_game(
         if replace:
             params = (season_code, gamecode)
             cursor.execute(
+                """
+                CREATE TEMP TABLE candidate_old_lineup ON COMMIT DROP AS
+                SELECT home_lineup_id AS lineup_id
+                FROM game_event WHERE season_code = %s AND gamecode = %s
+                UNION SELECT away_lineup_id
+                FROM game_event WHERE season_code = %s AND gamecode = %s
+                UNION SELECT home_lineup_id
+                FROM lineup_stint WHERE season_code = %s AND gamecode = %s
+                UNION SELECT away_lineup_id
+                FROM lineup_stint WHERE season_code = %s AND gamecode = %s
+                UNION SELECT offense_lineup_id
+                FROM possession WHERE season_code = %s AND gamecode = %s
+                UNION SELECT defense_lineup_id
+                FROM possession WHERE season_code = %s AND gamecode = %s
+                """,
+                params * 6,
+            )
+            cursor.execute(
+                """
+                CREATE TEMP TABLE candidate_old_player ON COMMIT DROP AS
+                SELECT player_id
+                FROM raw_boxscore_player WHERE season_code = %s AND gamecode = %s
+                UNION SELECT player_id
+                FROM raw_event
+                WHERE season_code = %s AND gamecode = %s AND player_id IS NOT NULL
+                UNION SELECT player_id
+                FROM raw_shot
+                WHERE season_code = %s AND gamecode = %s AND player_id IS NOT NULL
+                UNION SELECT player_id
+                FROM game_event
+                WHERE season_code = %s AND gamecode = %s AND player_id IS NOT NULL
+                UNION SELECT player_id
+                FROM player_game_minutes WHERE season_code = %s AND gamecode = %s
+                UNION SELECT players.player_id
+                FROM candidate_old_lineup AS candidate
+                JOIN lineup AS stored USING (lineup_id)
+                CROSS JOIN LATERAL (
+                    VALUES (stored.player_id_1), (stored.player_id_2),
+                           (stored.player_id_3), (stored.player_id_4),
+                           (stored.player_id_5)
+                ) AS players (player_id)
+                """,
+                params * 5,
+            )
+            cursor.execute(
                 "DELETE FROM game_event WHERE season_code = %s AND gamecode = %s", params
             )
             for target in (
@@ -429,6 +474,62 @@ def _load_one_attached_game(
         _insert_staged_rows(cursor, "game_event", GAME_EVENT_COLUMNS)
         _insert_staged_rows(cursor, "player_game_minutes", PLAYER_GAME_MINUTES_COLUMNS)
         _insert_staged_rows(cursor, "game_quality", GAME_QUALITY_COLUMNS)
+
+        if replace:
+            cursor.execute(
+                """
+                DELETE FROM lineup AS obsolete
+                USING candidate_old_lineup AS candidate
+                WHERE obsolete.lineup_id = candidate.lineup_id
+                  AND NOT EXISTS (
+                      SELECT 1 FROM lineup_stint
+                      WHERE home_lineup_id = obsolete.lineup_id
+                         OR away_lineup_id = obsolete.lineup_id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM possession
+                      WHERE offense_lineup_id = obsolete.lineup_id
+                         OR defense_lineup_id = obsolete.lineup_id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM game_event
+                      WHERE home_lineup_id = obsolete.lineup_id
+                         OR away_lineup_id = obsolete.lineup_id
+                  )
+                """
+            )
+            cursor.execute(
+                """
+                DELETE FROM player AS obsolete
+                USING candidate_old_player AS candidate
+                WHERE obsolete.player_id = candidate.player_id
+                  AND NOT EXISTS (
+                      SELECT 1 FROM raw_boxscore_player
+                      WHERE player_id = obsolete.player_id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM raw_event WHERE player_id = obsolete.player_id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM raw_shot WHERE player_id = obsolete.player_id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM game_event WHERE player_id = obsolete.player_id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM player_game_minutes
+                      WHERE player_id = obsolete.player_id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM lineup
+                      WHERE player_id_1 = obsolete.player_id
+                         OR player_id_2 = obsolete.player_id
+                         OR player_id_3 = obsolete.player_id
+                         OR player_id_4 = obsolete.player_id
+                         OR player_id_5 = obsolete.player_id
+                  )
+                """
+            )
 
     return counts
 

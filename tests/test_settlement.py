@@ -309,7 +309,7 @@ def test_settlement_cli_defaults_manual_and_rebuilds_only_with_the_explicit_flag
         lambda **kwargs: [SimpleNamespace(content_changed=True)],
     )
     monkeypatch.setattr(cli, "summarise_settlement", lambda observations: "one revision")
-    monkeypatch.setattr(cli, "changed_games", lambda observations: (7,))
+    monkeypatch.setattr(cli, "pending_rebuild_games", lambda connection, season: (7,))
 
     def rebuild(connection, cache, storage, season, *, gamecodes):
         rebuilds.append(gamecodes)
@@ -328,6 +328,33 @@ def test_settlement_cli_defaults_manual_and_rebuilds_only_with_the_explicit_flag
 
     assert cli.main(argv) == expected_code
     assert rebuilds == expected_rebuilds
+
+
+def test_settlement_cli_stays_red_when_no_new_observation_repeats_the_change(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Break caught: the run after detection turns green while the warehouse is stale."""
+    cli = _load_settlement_script()
+
+    @contextmanager
+    def connect(*args, **kwargs):
+        yield object()
+
+    monkeypatch.setattr(
+        cli,
+        "live_runtime_settings",
+        lambda values: (SimpleNamespace(url=lambda: "postgresql://unused"), object()),
+    )
+    monkeypatch.setattr(cli.psycopg, "connect", connect)
+    monkeypatch.setattr(cli, "SupabaseStorage", lambda settings: object())
+    monkeypatch.setattr(cli, "games_due_for_recheck", lambda *args, **kwargs: [])
+    monkeypatch.setattr(cli, "ArchiveFetcher", lambda *args, **kwargs: object())
+    monkeypatch.setattr(cli, "run_settlement_rechecks", lambda **kwargs: [])
+    monkeypatch.setattr(cli, "summarise_settlement", lambda observations: "nothing due")
+    monkeypatch.setattr(cli, "pending_rebuild_games", lambda connection, season: (7,))
+
+    assert cli.main(["E2026", "--live", "--cache-root", str(tmp_path)]) == 1
 
 
 def test_settlement_cli_can_rebuild_a_previously_named_game_without_refetching(

@@ -16,13 +16,16 @@ These tests fix the selection rule before the pipeline that depends on it.
 from __future__ import annotations
 
 import json
+import shutil
 
 import pytest
 
+from euroleague.cache import ResponseCache
 from euroleague.live import (
     LiveRunSummary,
     assert_new_games_cached,
     assert_new_games_safe,
+    load_new_raw_games,
     select_new_games,
 )
 from euroleague.load import DerivedRowsExistError
@@ -114,9 +117,73 @@ def test_cache_completeness_is_checked_for_every_game_before_any_is_loaded(
     assert "999999" in str(failure.value)
 
 
-def test_a_fully_cached_selection_passes_the_check(fixture_cache, fixture_gamecodes) -> None:
+def test_a_fully_cached_selection_passes_the_check(
+    tmp_path, fixture_cache, fixture_gamecodes
+) -> None:
     """Break caught: the completeness check rejects a cache that is in fact complete."""
-    assert_new_games_cached(fixture_cache, "E2024", [_game(code) for code in fixture_gamecodes])
+    root = tmp_path / "complete-cache"
+    shutil.copytree(fixture_cache.root, root)
+    cache = ResponseCache(root)
+    for gamecode in fixture_gamecodes:
+        path = cache.path_for("E2024", "Points", gamecode)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('{"Rows":[]}', encoding="utf-8")
+    assert_new_games_cached(cache, "E2024", [_game(code) for code in fixture_gamecodes])
+
+
+def test_a_selected_game_missing_points_is_incomplete(fixture_cache, fixture_gamecodes) -> None:
+    """Break caught: applied state claims Points bytes that raw_shot never consumed."""
+    with pytest.raises(FileNotFoundError, match=str(fixture_gamecodes[0])):
+        assert_new_games_cached(fixture_cache, "E2024", [_game(fixture_gamecodes[0])])
+
+
+def test_new_raw_game_load_includes_its_points_rows(
+    tmp_path, fixture_cache, fixture_gamecodes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Break caught: a fresh game's applied Points checksum is marked without loading shots."""
+    gamecode = fixture_gamecodes[0]
+    root = tmp_path / "one-game-cache"
+    cache = ResponseCache(root)
+    for endpoint in ("Boxscore", "PlaybyPlay"):
+        target = cache.path_for("E2024", endpoint, gamecode)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(fixture_cache.path_for("E2024", endpoint, gamecode), target)
+    points = cache.path_for("E2024", "Points", gamecode)
+    points.parent.mkdir(parents=True, exist_ok=True)
+    points.write_text('{"Rows":[]}', encoding="utf-8")
+
+    import euroleague.live as live
+
+    monkeypatch.setattr(
+        live,
+        "load_game",
+        lambda connection, parsed: {
+            "raw_game": 1,
+            "raw_event": 1,
+            "raw_boxscore_player": 1,
+            "raw_boxscore_team": 2,
+        },
+    )
+    monkeypatch.setattr(live, "parse_cached_game", lambda *args: object())
+    monkeypatch.setattr(live, "assert_new_games_safe", lambda *args: None)
+    loaded_shots: list[tuple[int, tuple]] = []
+
+    def load_shots(connection, season_code, selected_gamecode, rows):
+        loaded_shots.append((selected_gamecode, tuple(rows)))
+        return 0
+
+    monkeypatch.setattr(live, "load_shots_for_game", load_shots, raising=False)
+
+    counts = load_new_raw_games(
+        object(),
+        cache,
+        "E2024",
+        [{"gameCode": gamecode, "played": True, "season": {"competitionCode": "E"}}],
+        progress=lambda _: None,
+    )
+
+    assert counts["raw_shot"] == 0
+    assert loaded_shots == [(gamecode, ())]
 
 
 # ---------------------------------------------------------------------------

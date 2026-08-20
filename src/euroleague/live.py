@@ -33,14 +33,15 @@ from euroleague.archive import assert_complete_played_cache
 from euroleague.cache import ResponseCache
 from euroleague.derived import build_dimensions, build_game_events, build_remaining_rows
 from euroleague.derived_load import load_derived_rows
-from euroleague.load import assert_phase4_safe, load_game, played_games
-from euroleague.parse import parse_cached_game
+from euroleague.load import assert_phase4_safe, load_game, load_shots_for_game, played_games
+from euroleague.parse import parse_cached_game, parse_shots
+from euroleague.source_state import record_current_game_sources
 
 # The endpoints a played game must have on disk before it can be loaded. Points
 # is archived and parsed for coordinates, and is required for the same reason
 # the other two are: discovering it missing halfway through leaves the season
 # part-loaded.
-REQUIRED_ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay")
+REQUIRED_ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay", "Points")
 
 
 @dataclass(frozen=True)
@@ -146,6 +147,16 @@ def load_new_raw_games(
     for index, schedule_game in enumerate(games, start=1):
         gamecode = int(schedule_game["gameCode"])
         counts = load_game(connection, parse_cached_game(cache, season_code, schedule_game))
+        competition_code = str(
+            (schedule_game.get("season") or {}).get("competitionCode") or ""
+        ).strip()
+        shots = parse_shots(
+            season_code,
+            gamecode,
+            competition_code,
+            cache.read_json(season_code, "Points", gamecode),
+        )
+        counts["raw_shot"] = load_shots_for_game(connection, season_code, gamecode, shots)
         for table, count in counts.items():
             totals[table] = totals.get(table, 0) + count
         progress(
@@ -218,5 +229,6 @@ def run_live_pipeline(
 
     load_new_raw_games(connection, cache, season_code, new_games, progress=progress)
     derive_new_games(connection, cache, season_code, gamecodes)
+    record_current_game_sources(connection, season_code, gamecodes)
     progress(summary.as_log_line())
     return summary

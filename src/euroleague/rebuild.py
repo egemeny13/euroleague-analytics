@@ -19,6 +19,11 @@ from euroleague.derived import (
 from euroleague.derived_load import load_dimensions, replace_derived_game
 from euroleague.load import load_game, load_shots_for_game
 from euroleague.parse import ParsedGameRows, RawShotRow, parse_cached_game, parse_shots
+from euroleague.source_state import (
+    GameSourceChecksums,
+    current_game_source_checksums,
+    record_applied_game_sources,
+)
 
 
 @dataclass(frozen=True)
@@ -81,6 +86,7 @@ def replace_game_rows(
     remaining: RemainingDerivedRows,
     season_code: str,
     gamecode: int,
+    source_checksums: GameSourceChecksums,
 ) -> dict[str, int]:
     """Replace one game's raw and derived rows inside one outer transaction."""
     if parsed.game.season_code != season_code or parsed.game.gamecode != gamecode:
@@ -108,6 +114,7 @@ def replace_game_rows(
                 replace_raw=replace_raw,
             )
         )
+        record_applied_game_sources(connection, season_code, gamecode, source_checksums)
     return counts
 
 
@@ -138,6 +145,7 @@ def rebuild_revised_games(
         raise ValueError(
             f"Season {season_code} does not mark requested rebuild game(s) {missing} as played."
         )
+    source_by_game = current_game_source_checksums(connection, season_code, selected)
 
     summaries: list[GameRebuildSummary] = []
     for gamecode in selected:
@@ -160,6 +168,7 @@ def rebuild_revised_games(
             remaining,
             season_code,
             gamecode,
+            source_by_game[gamecode],
         )
         summaries.append(GameRebuildSummary(season_code, gamecode, counts))
     return tuple(summaries)

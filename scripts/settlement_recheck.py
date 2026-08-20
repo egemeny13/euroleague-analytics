@@ -39,11 +39,11 @@ from euroleague.config import live_runtime_settings
 from euroleague.fetch import DEFAULT_CACHE_ROOT, ArchiveFetcher
 from euroleague.rebuild import rebuild_revised_games
 from euroleague.settlement import (
-    changed_games,
     games_due_for_recheck,
     run_settlement_rechecks,
     summarise_settlement,
 )
+from euroleague.source_state import pending_rebuild_games
 
 LIVE_SEASON = "E2026"
 USER_AGENT = "euroleague-analytics/0.1 (settlement re-check; contact via github)"
@@ -188,24 +188,25 @@ def main(argv: list[str] | None = None) -> int:
 
             print(summarise_settlement(observations))
 
-            revised = changed_games(observations)
-            if revised and not args.auto_rebuild:
+            pending = pending_rebuild_games(connection, args.season)
+            if pending and not args.auto_rebuild:
                 print(
-                    f"SOURCE REVISION DETECTED in game(s) "
-                    f"{', '.join(str(code) for code in revised)}. The observation is "
-                    f"archived and the previous body is preserved. Automatic rebuilding "
-                    f"is disabled, so no warehouse rows changed. Review the source revision "
-                    f"and rerun with --auto-rebuild only if that policy is approved.",
+                    f"SOURCE REVISION PENDING in game(s) "
+                    f"{', '.join(str(code) for code in pending)}. The current archive body "
+                    f"does not match the checksum version applied to the warehouse. "
+                    f"Automatic rebuilding is disabled, so no warehouse rows changed. "
+                    f"Review the source revision, then run --rebuild-game GAMECODE for each "
+                    f"approved game.",
                     file=sys.stderr,
                 )
                 return 1
-            if revised:
+            if pending:
                 summaries = rebuild_revised_games(
                     connection,
                     ResponseCache(args.cache_root),
                     storage,
                     args.season,
-                    gamecodes=revised,
+                    gamecodes=pending,
                 )
                 rebuilt = ", ".join(str(summary.gamecode) for summary in summaries)
                 print(
