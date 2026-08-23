@@ -47,6 +47,7 @@ from euroleague.derived_load import (
     stage_attached_game_rows,
     stage_dimension_rows,
 )
+from euroleague.gate import assert_phase5_reconciles
 from euroleague.load import (
     assert_phase4_safe,
     delete_raw_game_rows,
@@ -377,6 +378,27 @@ def record_season_progress(
         )
 
 
+def assert_live_games_gated(
+    connection: Any,
+    season_code: str,
+    gamecodes: Sequence[int],
+) -> dict[str, Any]:
+    """Enforce Phase 5 mechanical invariants on warehouse data after deriving new games.
+
+    Runs assert_phase5_reconciles scoped to the newly loaded games to ensure that
+    every newly loaded game satisfies exact lineup constraints (5 on court at all
+    times, no unpaired substitutions, 200 team minutes per regulation game, and lineup
+    possessions within POSSESSION_GATE_TOLERANCE).
+
+    Blind spot / Failure modes not detected:
+        This gate verifies database relations and mechanical invariants within the warehouse.
+        It does NOT detect subtle scoring-table attribution errors where an on-court player is
+        credited with an action performed by a teammate, nor does it detect unplayed games that
+        the source API never marked as played in the schedule.
+    """
+    return assert_phase5_reconciles(connection, season_code, gamecodes=gamecodes)
+
+
 def run_live_pipeline(
     connection: Any,
     cache: ResponseCache,
@@ -413,5 +435,6 @@ def run_live_pipeline(
 
     load_new_raw_games(connection, cache, season_code, new_games, progress=progress)
     derive_new_games(connection, cache, season_code, gamecodes)
+    assert_live_games_gated(connection, season_code, gamecodes)
     progress(summary.as_log_line())
     return summary
