@@ -15,7 +15,7 @@ config:
     - ruff format --check .
     - pytest
 goals:
-  001-rebuild-revised-game: {status: not_started, priority: high}
+  001-rebuild-revised-game: {status: in_progress, priority: high}
   002-wire-rebuild-into-settlement: {status: not_started, priority: high, depends_on: [001-rebuild-revised-game]}
   003-gate-newly-loaded-games: {status: not_started, priority: high}
   004-live-season-progress: {status: not_started, priority: high}
