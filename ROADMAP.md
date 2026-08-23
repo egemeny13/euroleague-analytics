@@ -264,12 +264,12 @@ later migration should scope the action to `possession_index`.
 
 ### Phase 7 — the MCP server. Complete.
 
-Nine read-only `el_` tools now expose warehouse coverage, games, team and player
-statistics, lineups, on/off splits, possessions, and source-ordered play by play.
-They aggregate through six versioned views; no table or dependency was added.
-Counting statistics come from the official box score, while possessions, pace,
-lineups, on/off, clutch filters, and per-100 rates remain the validated derived
-layer. The stdio entry point answers real MCP requests and keeps diagnostics off
+Ten read-only `el_` tools now expose warehouse coverage, games, team and player
+statistics, lineups, on/off splits, possessions, source-ordered play by play, and shot data
+with coordinates (`el_get_shot_data`). They aggregate through seven versioned views; no table
+or external dependency was added. Counting statistics come from the official box score, while
+possessions, pace, lineups, on/off, clutch filters, per-100 rates, and shot coordinates remain
+the validated derived layer. The stdio entry point answers real MCP requests and keeps diagnostics off
 protocol stdout.
 
 **Gate: passed 2026-08-13.** All 18 live checks pass. The tools reconcile to
@@ -282,8 +282,11 @@ seconds. The normal database-free suite remains green. See
 
 Every response reports coverage and exclusions. The shared envelope refuses to
 build a response containing a minute- or second-derived value without declaring
-whether its basis is corrected, raw, or official. Shot coordinates remain out of
-scope because `raw_shot` is empty; EuroCup and E2025 were not loaded.
+whether its basis is corrected, raw, or official. `raw_shot` is populated (holding
+51,193 E2024 rows and 64,137 E2025 rows, measured 2026-08-22 against production via
+`select season_code, count(*) from raw_shot group by 1 order by 1`), and E2025 is loaded
+(402 games, measured 2026-08-22 against production via `select season_code, count(*) from raw_game group by 1 order by 1`).
+`el_get_shot_data` serves shot coordinates across both loaded seasons.
 
 Three earlier issues remain open and visible: the storage hot-window decision,
 the named Phase 6 possession-gate residual, and the composite
@@ -367,11 +370,12 @@ open conditions and defects; Block B introduced no unresolved owner decision:
    across a composite key. Option A avoids the broken action in the normal
    writer, but a later owner-approved migration should still scope it to
    `possession_index`.
-4. **Decision 17's unexercised condition** — approved in `DECISIONS.md` and
-   commit `11e3080`: any shot query including free throws must start from
+4. **Decision 17's condition exercised** — approved in `DECISIONS.md` and
+   commit `11e3080`: any shot query including free throws starts from
    `game_event`, with `raw_shot` left-joined only to attach coordinates.
-   `raw_shot` is still empty, so no shot query has exercised that condition and
-   no shot-location tool exists.
+   `raw_shot` is populated with 51,193 E2024 and 64,137 E2025 rows (measured
+   2026-08-22 against production) and served via `el_get_shot_data`, with free-throw
+   labelling gated by migration 0007 (`docs/SHOT_DATA_TOOL_REPORT.md`).
 
 **Published 2026-08-13.** `origin/master` and the local branch are the same
 commit, so Phases 5 through 8 are on GitHub and the repository exists somewhere
@@ -459,10 +463,23 @@ knowing before the first long run:
   The cost is one request per run per unfinished season. When the refreshed body
   differs, the superseded body is kept beside it under its checksum, because a
   re-fetch is an audit and never an overwrite.
-- **`Points` is archived but not ingested.** The Phase 4 gate reconciles the
-  cache against the warehouse for `Schedule`, `Boxscore` and `PlaybyPlay` only,
-  and `raw_shot` stays empty until a later phase parses coordinates. Decision 17
-  is approved in `DECISIONS.md` and commit `11e3080`, but its condition remains
-  unexercised: a shot query including free throws must start from `game_event`,
-  and `raw_shot` may be left-joined only to attach coordinates. Because
-  `raw_shot` is still empty, approved is not the same as satisfied.
+- **`Points` parsed and ingested into `raw_shot`.** `raw_shot` is populated
+  (51,193 E2024 rows and 64,137 E2025 rows, measured 2026-08-22 against production).
+  Decision 17 was implemented and verified in `docs/SHOT_DATA_TOOL_REPORT.md`:
+  `el_get_shot_data` queries `game_event` and left-joins `raw_shot` for coordinates
+  (`v_shot_data`), satisfying the condition.
+
+---
+
+## Live Season Plan: Blocks C, D, and E (2026-08-23)
+
+Following the compaction and incremental loader work in Blocks A and B (`docs/STORAGE_COMPACTION_REPORT.md`, `docs/E2026_LIVE_SEASON_PLAN.md`):
+
+- **Block C — Automated Scheduled Pipeline**: Complete and verified (`docs/BLOCK_C_REPORT.md`). Scheduled fetch, incremental load, derived rebuild, and validation gates run on GitHub Actions (`.github/workflows/e2026-live.yml`).
+- **Block D — Pre-season Rosters**: NOT run. Reconnaissance confirmed pre-season roster availability (`exploration/ROSTER_ENDPOINT_FINDINGS.md`), with parser and ingestion scheduled under subsequent goals.
+- **Block E — Multi-season Serving & Maintenance**: NOT run. Freshness disclosures, season progress reporting, and timing re-measurements are staged.
+
+### Open Items Carried into Live Season
+1. **The 16-game E2024 possession residual**: Quarantined under `possession_gate` and disclosed on every tool response.
+2. **The composite `game_event_possession_fkey` constraint**: Migration 0008 scoped (`migrations/0008_possession_fkey_scope.up.sql`), awaiting owner apply (`docs/MIGRATION_0008_HANDOVER.md`).
+3. **Storage headroom monitoring**: Verified 3-season window (E2024, E2025, E2026) within the 500 MB ceiling.

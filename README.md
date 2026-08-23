@@ -140,7 +140,7 @@ To use it from Claude Desktop, add to `claude_desktop_config.json`:
   "mcpServers": {
     "euroleague": {
       "command": "python",
-      "args": ["C:/Users/PC/Desktop/euroleague-analytics/scripts/mcp_server.py"]
+      "args": ["E:/dev/euroleague-analytics/scripts/mcp_server.py"]
     }
   }
 }
