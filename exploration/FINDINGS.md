@@ -388,3 +388,13 @@ reliable enough to build possession metrics on.
 Finally, a note for planning: **`ShootingGraphic` is not what its name suggests.** If shot charts
 are a goal, `Points` is the endpoint that matters, and `ShootingGraphic` and `Comparison` are both
 small derived summaries that can be recomputed from the event stream rather than stored.
+
+---
+
+## Pre-Season Roster Endpoint Discovery (2026-08-23)
+
+Reconnaissance confirmed that team rosters before season tip-off are accessible via:
+- `https://api-live.euroleague.net/v2/competitions/E/seasons/{season_code}/people`
+- `https://api-live.euroleague.net/v2/competitions/E/seasons/{season_code}/clubs/{club_code}/people`
+
+See `exploration/ROSTER_ENDPOINT_FINDINGS.md` for the full probe log, payload schema, and pre-season E2026 findings.
