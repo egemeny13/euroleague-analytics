@@ -12,8 +12,12 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0004a_query_views_join_safety` | Fix: `v_player_game` joins `player` with `left join` instead of `inner join`, so a missing dimension row nulls the name instead of deleting the row; documents unenforced join assumptions on `v_team_game` and `v_player_game`. No tables, `create or replace view` only. |
 | `0005_game_winner` | Fix: `v_game.winner_team_code` is derived from the official final score instead of passing through `raw_game`, where it is null for every game because the source schedule names the season champion in all 330 rows. See `DECISIONS.md` item 19. No tables, `create or replace view` only. |
 | `0006_shot_data_view` | `v_shot_data`, whose complete shot population starts from `game_event` and left-joins `raw_shot` only for real X, Y, and zone values. Free throws remain coordinate-null and `(-1,-1)` is never served. No tables. |
+| `0007_shot_data_ft_gate` | Replaces `v_shot_data` so free-throw labelling is derived from event semantics and remains independent of coordinate availability. No tables. |
+| `0008_possession_fkey_scope` | Repairs `game_event_possession_fkey` so `ON DELETE SET NULL` targets only nullable `possession_index`, not the non-null season and game key columns. Prepared and locally gated; production apply is pending owner approval. |
+| `0009_season_progress` | Adds `season_progress`, the scheduled-game count and last-load timestamp used to disclose whether a season is complete, in progress, or unknown. Prepared and locally gated; production apply and historical backfill are pending owner approval. |
 
-Sixteen tables.
+The complete migration set defines seventeen tables. Production still has
+sixteen until migration 0009 is applied.
 
 ## The gate, and why it expires
 

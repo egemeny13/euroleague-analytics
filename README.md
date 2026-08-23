@@ -8,7 +8,9 @@ derived layer: possessions reconstructed from the event stream, four factors,
 and lineup-level on/off metrics reconstructed play by play.
 
 **Status: pre-release, with two complete historical seasons loaded and the
-E2026 live-season pipeline in progress.** E2024 holds 330 games, 176,483 events,
+E2026 live-season pipeline implemented but not yet activated in production.**
+Core phases 0-8 and live-season Blocks A-C are complete in the repository.
+E2024 holds 330 games, 176,483 events,
 51,193 `raw_shot` coordinate rows and 47,831 derived possessions. E2025 holds
 402 games, 222,976 events, 64,137 `raw_shot` coordinate rows and 59,483 derived
 possessions. Ten read-only MCP tools run over seven versioned views, and ten
@@ -23,15 +25,17 @@ before every backfill and again when its real game count is known. If the window
 stops fitting, dropping E2024 is a fresh owner decision, never an automatic
 fallback.
 
-Three limitations remain explicit. Twenty-four of 330 E2024 games are
+Four operational limitations remain explicit. Twenty-four of 330 E2024 games are
 quarantined by validation invariants and excluded from every default answer; 16
 carry the named possession residual that is measured but not yet explained.
-The composite `game_event_possession_fkey` still tries to null non-null key
-columns when a referenced possession is deleted; the loader works around it,
-but a later migration must repair it. And the scheduled live-season
-fetch/load/derive pipeline is still being built. The server discloses data
-exclusions rather than smoothing them over. The sequence and remaining
-conditions are in [`ROADMAP.md`](ROADMAP.md) and
+Migration 0008 repairs the composite `game_event_possession_fkey`, and migration
+0009 adds season progress, but neither has been applied to production. E2024's
+330 `Points` responses exist in the local cache but are missing from the
+immutable production archive. Pre-season roster ingestion, a real GitHub
+Actions summary run, and current Decision 18 timings still need attended
+sessions. The server discloses data exclusions rather than smoothing them over.
+The ordered session sequence and remaining conditions are in
+[`ROADMAP.md`](ROADMAP.md) and
 [`DECISIONS.md`](DECISIONS.md).
 
 Possession counts have no external ground truth: nobody publishes a comparable
@@ -54,7 +58,7 @@ source data lie, and proving it rather than assuming it.
 | Document | What it holds |
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | The rules. Event ordering, data handling, correctness requirements. |
-| [`DECISIONS.md`](DECISIONS.md) | Twenty-one recorded decisions, with their conditions and provenance. |
+| [`DECISIONS.md`](DECISIONS.md) | Twenty-two recorded decisions, with their conditions and provenance. |
 | [`ROADMAP.md`](ROADMAP.md) | Phase sequence and the gate that opens each phase. |
 | [`evaluation.xml`](evaluation.xml) | Ten questions the server must answer, with ground truth and required disclosures. |
 | [`docs/`](docs/) | One report per phase, each recording what its gate proved. |
@@ -109,16 +113,17 @@ python -m venv .venv
 ```
 
 The response cache is not committed — one season is 53 MB. The default run needs
-no network and no database: 380 tests against the committed fixtures. The gates
+no network and no database. On 2026-08-23 the current working tree passed 634
+tests and deselected 83 live, network, full-season, and local-database checks.
+The gates
 that read the live warehouse are excluded from it and opted into explicitly:
 
 ```sh
 .venv/Scripts/pytest -m warehouse
 ```
 
-Read the green CI badge on the commit for exactly what it says and no more. The
-current database-free command passes 380 tests and deselects 81; CI cannot reach
-the full response cache or the warehouse. `test_live_phase_4_gate` is among the
+Read the green CI badge on the commit for exactly what it says and no more. CI
+cannot reach the full response cache or the warehouse. `test_live_phase_4_gate` is among the
 deselected live gates, but it is no longer deliberately red: Decision 20
 Condition B re-scoped it to the chosen window without weakening its fixed budget,
 and a read-only live run is green. A passing CI run is still not a claim that

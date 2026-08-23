@@ -35,6 +35,7 @@ import re
 
 import pytest
 
+import euroleague.live as live_module
 from euroleague.archive import IncompleteSeasonCache
 from euroleague.derived import (
     GAME_EVENT_COLUMNS,
@@ -43,8 +44,14 @@ from euroleague.derived import (
     LINEUP_STINT_COLUMNS,
     PLAYER_GAME_MINUTES_COLUMNS,
     POSSESSION_COLUMNS,
+    DimensionRows,
+    RemainingDerivedRows,
+    SeasonScopeError,
     build_dimensions,
+    build_remaining_rows,
+    select_remaining_games,
 )
+from euroleague.derived_load import select_dimensions_for_game
 from euroleague.live import GameNotRebuildableError, RebuildSummary, rebuild_revised_game
 from euroleague.parse import (
     RAW_BOXSCORE_PLAYER_COLUMNS,
@@ -446,6 +453,131 @@ def test_a_game_the_schedule_does_not_mark_played_is_refused(
 
     assert "played" in str(failure.value)
     assert connection.executions == []
+
+
+# ---------------------------------------------------------------------------
+# Loader guards - the rebuild must refuse unsafe builder output before DELETE
+# ---------------------------------------------------------------------------
+
+
+def test_an_untrimmed_season_is_refused_by_the_loader_guard(
+    loader_connection, live_cache, fixture_games_root
+) -> None:
+    """Break caught: the rebuild bypasses the season guard every other writer uses."""
+    connection = loader_connection()
+    cache = _season_cache(live_cache, fixture_games_root)
+
+    with pytest.raises(SeasonScopeError, match="trimmed season"):
+        rebuild_revised_game(connection, cache, f" {SEASON}", REBUILT_GAME)
+
+    assert connection.executions == []
+    assert connection.transactions_started == 0
+
+
+def test_cross_season_dimensions_are_refused_before_the_transaction(
+    monkeypatch, loader_connection, live_cache, fixture_games_root
+) -> None:
+    """Break caught: season-wide dimension output crosses the rebuild boundary."""
+    connection = loader_connection()
+    cache = _season_cache(live_cache, fixture_games_root)
+    original = live_module.build_dimensions
+
+    def contaminated_dimensions(cache, season_code):
+        rows = original(cache, season_code)
+        foreign_row = ("E2023", rows.teams[0][0], "E", "Foreign season")
+        return DimensionRows(
+            players=rows.players,
+            teams=rows.teams,
+            team_seasons=(*rows.team_seasons, foreign_row),
+        )
+
+    monkeypatch.setattr(live_module, "build_dimensions", contaminated_dimensions)
+
+    with pytest.raises(SeasonScopeError, match=r"expected E2024.*E2023"):
+        rebuild_revised_game(connection, cache, SEASON, REBUILT_GAME)
+
+    assert connection.executions == []
+    assert connection.transactions_started == 0
+
+
+def test_cross_season_derived_rows_are_refused_before_the_transaction(
+    monkeypatch, loader_connection, live_cache, fixture_games_root
+) -> None:
+    """Break caught: a neighbour's foreign-season row is hidden by game selection."""
+    connection = loader_connection()
+    cache = _season_cache(live_cache, fixture_games_root)
+    original = live_module.build_remaining_rows
+
+    def contaminated_remaining(cache, season_code):
+        rows = original(cache, season_code)
+        foreign_quality = rows.game_qualities[0]._replace(season_code="E2023")
+        return RemainingDerivedRows(
+            lineups=rows.lineups,
+            stints=rows.stints,
+            event_attachments=rows.event_attachments,
+            player_minutes=rows.player_minutes,
+            game_qualities=(foreign_quality, *rows.game_qualities[1:]),
+            possessions=rows.possessions,
+        )
+
+    monkeypatch.setattr(live_module, "build_remaining_rows", contaminated_remaining)
+
+    with pytest.raises(SeasonScopeError, match=r"expected E2024.*E2023"):
+        rebuild_revised_game(connection, cache, SEASON, REBUILT_GAME)
+
+    assert connection.executions == []
+    assert connection.transactions_started == 0
+
+
+def test_an_empty_derived_table_is_refused_before_the_transaction(
+    monkeypatch, loader_connection, live_cache, fixture_games_root
+) -> None:
+    """Break caught: the rebuild deletes stored possessions and inserts none."""
+    connection = loader_connection()
+    cache = _season_cache(live_cache, fixture_games_root)
+    original = live_module.build_remaining_rows
+
+    def remaining_without_possessions(cache, season_code):
+        rows = original(cache, season_code)
+        return RemainingDerivedRows(
+            lineups=rows.lineups,
+            stints=rows.stints,
+            event_attachments=rows.event_attachments,
+            player_minutes=rows.player_minutes,
+            game_qualities=rows.game_qualities,
+            possessions=(),
+        )
+
+    monkeypatch.setattr(live_module, "build_remaining_rows", remaining_without_possessions)
+
+    with pytest.raises(GameNotRebuildableError, match="possessions"):
+        rebuild_revised_game(connection, cache, SEASON, REBUILT_GAME)
+
+    assert connection.executions == []
+    assert connection.transactions_started == 0
+
+
+def test_game_dimensions_filter_team_seasons_by_season_and_team(
+    live_cache, fixture_games_root
+) -> None:
+    """Break caught: a same-code team row from another season is staged too."""
+    cache = _season_cache(live_cache, fixture_games_root)
+    dimensions = build_dimensions(cache, SEASON)
+    game_rows = select_remaining_games(build_remaining_rows(cache, SEASON), [REBUILT_GAME])
+    referenced_team = game_rows.lineups[0].team_code
+    contaminated = DimensionRows(
+        players=dimensions.players,
+        teams=dimensions.teams,
+        team_seasons=(
+            *dimensions.team_seasons,
+            ("E2023", referenced_team, "E", "Foreign season"),
+        ),
+    )
+
+    selected = select_dimensions_for_game(contaminated, game_rows, SEASON)
+
+    assert selected.team_seasons
+    assert all(row[0] == SEASON for row in selected.team_seasons)
 
 
 # ---------------------------------------------------------------------------

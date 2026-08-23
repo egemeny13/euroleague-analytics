@@ -1,8 +1,8 @@
 # Decision 18 View Timing Re-Measurement Report
 
-**Measurement Date:** 2026-08-23
+**Preparation Date:** 2026-08-23
 **Context:** Decision 18 re-measurement for multi-season live serving (E2024 + E2025 loaded).
-**Status:** Timing harness committed; baseline thresholds and promotion criteria established.
+**Status:** Harness and pass criteria complete; the live warehouse timing run is pending.
 
 ---
 
@@ -11,7 +11,9 @@
 Decision 18 approved aggregating statistics in versioned database views rather than pre-computed tables under a binding performance condition:
 > *"If any view is measured materially above the 403 ms recorded here, promote that one view to a table rather than widening this decision."*
 
-This document records the re-measurement criteria across the three canonical query shapes as the warehouse holds both E2024 and E2025.
+This document records the re-measurement criteria across the three canonical query shapes.
+The numbers below are Decision 18 baselines, not new results. No current live timing may be
+claimed until the attended run records its output here.
 
 ---
 
@@ -25,11 +27,20 @@ This document records the re-measurement criteria across the three canonical que
 
 ---
 
-## Warehouse State at Measurement
+## Warehouse State to Measure
 
 - **E2024**: 330 games, 47,831 possessions, 51,193 shots (`raw_game`, `possession`, `raw_shot`).
 - **E2025**: 402 games, 59,483 possessions, 64,137 shots.
 - **E2026**: 380 scheduled games (pre-season).
+
+---
+
+## Live Results — Pending
+
+The live read-only run has not been executed. The dedicated session is specified in
+`docs/superpowers/plans/2026-08-23-06-decision-18-live-remeasurement.md`. That session must
+record elapsed time, repetitions, pass/fail, query-plan evidence for any failure, and the
+database state actually observed; it must not copy the baseline into the result column.
 
 ---
 

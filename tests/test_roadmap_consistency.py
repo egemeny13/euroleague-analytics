@@ -53,3 +53,33 @@ def test_roadmap_contains_live_season_blocks_and_production_measurements() -> No
     assert "Block D" in roadmap_content
     assert "Block E" in roadmap_content
     assert "measured 2026-08-22 against production" in roadmap_content
+
+
+def test_handover_docs_name_current_state_and_real_draft_plans() -> None:
+    """The handover must not point at stale status text or missing session plans."""
+    roadmap_content = Path("ROADMAP.md").read_text(encoding="utf-8")
+    readme_content = Path("README.md").read_text(encoding="utf-8")
+    migrations_content = Path("migrations/README.md").read_text(encoding="utf-8")
+
+    for stale_claim in (
+        "E2026 live-season pipeline in progress",
+        "scheduled live-season fetch/load/derive pipeline is still being built",
+        "Twenty-one recorded decisions",
+        "380 tests",
+    ):
+        assert stale_claim not in readme_content
+
+    for migration in (
+        "0007_shot_data_ft_gate",
+        "0008_possession_fkey_scope",
+        "0009_season_progress",
+    ):
+        assert migration in migrations_content
+
+    plan_links = re.findall(
+        r"\[`([^`]+\.md)`\]\((docs/superpowers/plans/2026-08-23-[^)]+\.md)\)",
+        roadmap_content,
+    )
+    assert len(plan_links) == 10
+    for _label, relative_path in plan_links:
+        assert Path(relative_path).is_file(), f"ROADMAP.md points at missing plan: {relative_path}"

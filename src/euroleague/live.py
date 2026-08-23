@@ -39,6 +39,9 @@ from euroleague.derived import (
     select_remaining_games,
 )
 from euroleague.derived_load import (
+    _assert_dimension_scope,
+    _assert_remaining_scope,
+    _assert_season_code,
     delete_derived_game_rows,
     insert_staged_derived_game_rows,
     insert_staged_dimension_rows,
@@ -187,6 +190,7 @@ def rebuild_revised_game(
     give one game shot coordinates that none of its neighbours have. A revision
     to a `Points` response therefore still needs its own path.
     """
+    _assert_season_code(season_code)
     gamecode = int(gamecode)
     schedule_game = _schedule_entry(cache, season_code, gamecode)
 
@@ -198,9 +202,29 @@ def rebuild_revised_game(
     dimensions = build_dimensions(cache, season_code)
     events = build_game_events(cache, season_code)
     remaining = build_remaining_rows(cache, season_code)
+    _assert_dimension_scope(dimensions, season_code)
+    _assert_remaining_scope(remaining, season_code)
     season_games_built = len({row.gamecode for row in events})
 
     game_rows = select_remaining_games(remaining, [gamecode])
+    empty_derived_tables = [
+        name
+        for name, rows in (
+            ("lineups", game_rows.lineups),
+            ("stints", game_rows.stints),
+            ("event attachments", game_rows.event_attachments),
+            ("player minutes", game_rows.player_minutes),
+            ("game quality", game_rows.game_qualities),
+            ("possessions", game_rows.possessions),
+        )
+        if not rows
+    ]
+    if empty_derived_tables:
+        raise GameNotRebuildableError(
+            f"The derived build produced no {', '.join(empty_derived_tables)} rows for "
+            f"{season_code} game {gamecode}. Rebuilding would delete the stored rows "
+            "and replace them with nothing."
+        )
     game_events = attach_game_event_references(
         tuple(row for row in events if row.gamecode == gamecode),
         game_rows.event_attachments,
@@ -210,7 +234,7 @@ def rebuild_revised_game(
             f"The derived build produced no rows for {season_code} game {gamecode}. "
             "Rebuilding would delete the stored rows and replace them with nothing."
         )
-    game_dimensions = select_dimensions_for_game(dimensions, game_rows)
+    game_dimensions = select_dimensions_for_game(dimensions, game_rows, season_code)
 
     counts: dict[str, int] = {}
     with connection.transaction(), connection.cursor() as cursor:

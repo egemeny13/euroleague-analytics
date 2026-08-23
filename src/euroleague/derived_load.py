@@ -159,7 +159,9 @@ def _copy_rows(cursor: Any, table: str, columns: tuple[str, ...], rows: Iterable
 
 
 def select_dimensions_for_game(
-    dimensions: DimensionRows, rows: RemainingDerivedRows
+    dimensions: DimensionRows,
+    rows: RemainingDerivedRows,
+    expected_season: str,
 ) -> DimensionRows:
     """Narrow season-wide dimension rows to the ones one game's facts point at.
 
@@ -205,17 +207,21 @@ def select_dimensions_for_game(
 
     players = tuple(row for row in dimensions.players if row[0] in player_ids)
     teams = tuple(row for row in dimensions.teams if row[0] in team_codes)
-    team_seasons = tuple(row for row in dimensions.team_seasons if row[1] in team_codes)
+    team_seasons = tuple(
+        row for row in dimensions.team_seasons if row[0] == expected_season and row[1] in team_codes
+    )
 
     # A referenced identity the season build never produced would fail on the
     # foreign key several statements later, with a message naming the
     # constraint rather than the cause. Say it here instead.
     missing_players = sorted(player_ids - {row[0] for row in players})
     missing_teams = sorted(team_codes - {row[0] for row in teams})
-    if missing_players or missing_teams:
+    missing_team_seasons = sorted(team_codes - {row[1] for row in team_seasons})
+    if missing_players or missing_teams or missing_team_seasons:
         raise SeasonScopeError(
             f"The selected game references dimension rows the season build did not "
-            f"produce: players {missing_players[:5]}, teams {missing_teams[:5]}."
+            f"produce: players {missing_players[:5]}, teams {missing_teams[:5]}, "
+            f"team seasons {missing_team_seasons[:5]}."
         )
     return DimensionRows(players=players, teams=teams, team_seasons=team_seasons)
 

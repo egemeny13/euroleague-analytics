@@ -3,8 +3,8 @@
 Where the project is, what comes next, and what must be true before each phase
 starts. Read this with `DECISIONS.md` and `AGENTS.md`.
 
-**Deadline that matters:** the EuroLeague season starts in early October.
-Phases 1–7 should be complete before the first round.
+**Deadline that matters:** the first E2026 game is scheduled for 2026-09-24.
+The authoritative remaining-session sequence is at the end of this file.
 
 ---
 
@@ -353,7 +353,11 @@ writers, crash recovery, or real E2026 payloads.
 
 ---
 
-## After the phases
+## Historical closeout snapshot — 2026-08-13
+
+This section records what was true at the Phase 8 closeout. It is retained as
+evidence, not as the current work queue; use the final section of this file for
+current status and ordering.
 
 The phase sequence and Block B are complete. What remains is a set of named,
 open conditions and defects; Block B introduced no unresolved owner decision:
@@ -424,7 +428,11 @@ Then begin the next unfinished phase as described in ROADMAP.md.
 
 ---
 
-## Long-lead item — start it early, it blocks nothing
+## Historical long-lead snapshot — 2026-08-10
+
+This is the fetch estimate as it was recorded on 2026-08-10. E2025 has since
+been fetched, loaded, and verified; the estimate remains useful for future
+archive expansion but is not an active instruction.
 
 **The season count is now measured.** On 2026-08-10 one schedule request per
 candidate season code established that the API serves **E2003 through E2026**:
@@ -476,10 +484,64 @@ knowing before the first long run:
 Following the compaction and incremental loader work in Blocks A and B (`docs/STORAGE_COMPACTION_REPORT.md`, `docs/E2026_LIVE_SEASON_PLAN.md`):
 
 - **Block C — Automated Scheduled Pipeline**: Complete and verified (`docs/BLOCK_C_REPORT.md`). Scheduled fetch, incremental load, derived rebuild, and validation gates run on GitHub Actions (`.github/workflows/e2026-live.yml`).
-- **Block D — Pre-season Rosters**: NOT run. Reconnaissance confirmed pre-season roster availability (`exploration/ROSTER_ENDPOINT_FINDINGS.md`), with parser and ingestion scheduled under subsequent goals.
-- **Block E — Multi-season Serving & Maintenance**: NOT run. Freshness disclosures, season progress reporting, and timing re-measurements are staged.
+- **Block D — Pre-season Rosters**: Reconnaissance is complete and proves roster availability (`exploration/ROSTER_ENDPOINT_FINDINGS.md`); parser and ingestion have not run.
+- **Block E — Multi-season Serving & Maintenance**: Freshness disclosures, season progress code, and the timing harness are implemented. Production migration/backfill, live timing, and release verification have not run.
 
 ### Open Items Carried into Live Season
 1. **The 16-game E2024 possession residual**: Quarantined under `possession_gate` and disclosed on every tool response.
 2. **The composite `game_event_possession_fkey` constraint**: Migration 0008 scoped (`migrations/0008_possession_fkey_scope.up.sql`), awaiting owner apply (`docs/MIGRATION_0008_HANDOVER.md`).
 3. **Storage headroom monitoring**: Verified 3-season window (E2024, E2025, E2026) within the 500 MB ceiling.
+4. **Season progress activation**: Migration 0009 and its query/write paths are implemented; production apply and E2024/E2025 backfill remain.
+5. **E2024 archive recoverability**: 330 parsed `Points` games have no production archive entries; detection is implemented and repair remains owner-attended.
+
+---
+
+## Current verified state and ordered remaining work — 2026-08-23
+
+Core phases 0-8 and live-season Blocks A-C are complete. Block D has completed
+reconnaissance but no roster parser or ingest. Most Block E code exists, but its
+production activation and external evidence are still pending. The working tree
+passes 634 offline tests with 83 environment-dependent checks deselected; lint
+and format are clean. Local `master` is 41 commits ahead of `origin/master`, and
+`origin/codex/decision-7-rebuild` still carries ten unique commits that must be
+reconciled rather than deleted.
+
+**Release-readiness estimate: approximately 85%.** This is a transparent
+planning estimate, not a code-line metric: 80 percentage points are assigned to
+the completed core phases and Blocks A-C; 20 points cover activation and Blocks
+D/E, of which roughly five are already earned by roster reconnaissance,
+freshness/progress implementation, and the timing harness. Historical archive
+expansion and EuroCup are deliberately deferred product expansion and are not
+included in that percentage.
+
+### Small closeout completed in this session
+
+- `rebuild_revised_game` now runs the same season/scope guards as the other
+  derived writers, refuses any empty per-game derived table before deletion,
+  and filters `team_season` rows by season as well as team.
+- The follow-up inbox is empty, stale README/migration/timing status is corrected,
+  and every remaining large item has a one-session draft below.
+- No production write, branch integration, push, workflow dispatch, or live API
+  sweep is part of this closeout.
+
+### Ordered one-session roadmap
+
+Each row is intentionally a separate session. Do not combine adjacent rows just
+because a previous one finishes early; its gate is the next row's precondition.
+
+| Order | Session plan | Why this order | Done when |
+|---:|---|---|---|
+| 1 | [`01-decision-7-branch-reconciliation.md`](docs/superpowers/plans/2026-08-23-01-decision-7-branch-reconciliation.md) | Establish one canonical rebuild implementation before publishing or deleting a branch. | Every unique commit is integrated or documented as superseded; branch deletion remains an explicit owner action. |
+| 2 | [`02-production-migrations-and-progress-backfill.md`](docs/superpowers/plans/2026-08-23-02-production-migrations-and-progress-backfill.md) | The live workflow and MCP disclosure need schema 0008/0009 before activation. | Both migrations are verified and progress is initialized only where a truthful load timestamp exists. |
+| 3 | [`03-release-and-actions-verification.md`](docs/superpowers/plans/2026-08-23-03-release-and-actions-verification.md) | Publish the 41 local commits through a review branch, never by pushing protected `master`. | PR/merge policy is satisfied and one real workflow summary is inspected. |
+| 4 | [`04-e2024-points-archive-repair.md`](docs/superpowers/plans/2026-08-23-04-e2024-points-archive-repair.md) | Close the known recoverability hole without re-fetching source data. | All 330 objects and index rows verify and reconciliation is clean. |
+| 5 | [`05-preseason-roster-ingestion.md`](docs/superpowers/plans/2026-08-23-05-preseason-roster-ingestion.md) | Complete Block D using the endpoint already proved by reconnaissance. | Parser, archive path, ingest, idempotency, and zero-game E2026 gate pass. |
+| 6 | [`06-decision-18-live-remeasurement.md`](docs/superpowers/plans/2026-08-23-06-decision-18-live-remeasurement.md) | Re-earn the view-performance licence against the activated multi-season schema. | Real timings are recorded; every failure is named for a separate optimisation decision. |
+| 7 | [`07-e2026-opening-week-validation.md`](docs/superpowers/plans/2026-08-23-07-e2026-opening-week-validation.md) | This evidence cannot exist before games are played. Earliest start is 2026-09-24. | Initial load plus +6h/+24h/+72h/+7d settlement evidence and per-season correction safety are recorded. |
+| 8 | [`08-possession-residual-investigation.md`](docs/superpowers/plans/2026-08-23-08-possession-residual-investigation.md) | Important quality research, but quarantine makes it non-blocking for launch. | The residual is explained or narrowed by a new falsifiable diagnostic without weakening the gate. |
+| 9 | [`09-historical-archive-expansion.md`](docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md) | Long-running backfill belongs after live operations are stable. | A bounded season batch is archived with checksums, cadence, and storage projection evidence. |
+| 10 | [`10-eurocup-onboarding.md`](docs/superpowers/plans/2026-08-23-10-eurocup-onboarding.md) | Decision 11 keeps EuroCup schema-ready but deferred until EuroLeague is operationally proven. | A measured pilot passes competition isolation and storage gates before any full load. |
+
+Orders 1-6 are the pre-release path. Order 7 is date-gated operational proof.
+Order 8 is a disclosed quality improvement. Orders 9-10 are post-release
+expansion and may be postponed without weakening the E2026 launch claim.
