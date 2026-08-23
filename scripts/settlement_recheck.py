@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -57,12 +58,12 @@ from euroleague.config import live_runtime_settings
 from euroleague.fetch import DEFAULT_CACHE_ROOT, ArchiveFetcher
 from euroleague.live import rebuild_revised_game
 from euroleague.settlement import (
-    changed_games,
     games_due_for_recheck,
     repair_revised_games,
     run_settlement_rechecks,
     summarise_settlement,
 )
+from euroleague.source_state import pending_rebuild_games
 from euroleague.step_summary import append_step_summary, format_settlement_summary
 
 LIVE_SEASON = "E2026"
@@ -133,6 +134,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"settlement dry run: {len(due)} game(s) owed a reading")
                 for owed in due[:20]:
                     print(f"  game {owed.gamecode} owes {','.join(owed.due_labels)}")
+                pending = pending_rebuild_games(connection, args.season)
+                if pending:
+                    print(
+                        "SOURCE REVISION PENDING in game(s) "
+                        f"{', '.join(str(code) for code in pending)}.",
+                        file=sys.stderr,
+                    )
+                    return 1
                 return 0
 
             session = requests.Session()
@@ -171,13 +180,14 @@ def main(argv: list[str] | None = None) -> int:
             obs_summary = summarise_settlement(observations)
             print(obs_summary)
 
-            revised = changed_games(observations)
-            if revised:
+            pending = pending_rebuild_games(connection, args.season)
+            if pending:
                 print(
-                    f"SOURCE REVISION DETECTED in game(s) "
-                    f"{', '.join(str(code) for code in revised)}. The observation is "
-                    f"archived and the previous body is preserved. Rebuilding those "
-                    f"games from the revised bytes, one transaction each."
+                    f"SOURCE REVISION PENDING in game(s) "
+                    f"{', '.join(str(code) for code in pending)}. The current archive "
+                    f"checksums differ from the versions applied to the warehouse. "
+                    f"Rebuilding those games from a private archive snapshot, one "
+                    f"transaction each."
                 )
                 # A cache READ, not a re-fetch. The rebuild's derived build has
                 # to see every played game, because Decision 3's minutes
@@ -185,11 +195,24 @@ def main(argv: list[str] | None = None) -> int:
                 # from a partial cache would succeed and silently disagree with
                 # every game already loaded. This restores the *current* archive
                 # bodies, which is what puts the just-archived revision on disk.
-                restore_current_season_cache(connection, cache, storage, args.season)
-                repair = repair_revised_games(
-                    revised,
-                    lambda gamecode: rebuild_revised_game(connection, cache, args.season, gamecode),
-                )
+                cache.root.parent.mkdir(parents=True, exist_ok=True)
+                with tempfile.TemporaryDirectory(
+                    prefix=f".{args.season}-rebuild-snapshot-", dir=cache.root.parent
+                ) as snapshot_root:
+                    snapshot = ResponseCache(snapshot_root)
+                    restore_current_season_cache(
+                        connection,
+                        cache,
+                        storage,
+                        args.season,
+                        snapshot_cache=snapshot,
+                    )
+                    repair = repair_revised_games(
+                        pending,
+                        lambda gamecode: rebuild_revised_game(
+                            connection, snapshot, args.season, gamecode
+                        ),
+                    )
     except Exception as failure:
         # The message, never the settings: a traceback carrying a connection
         # string would land in a public workflow log.

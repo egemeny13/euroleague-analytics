@@ -46,26 +46,37 @@ from euroleague.derived_load import (
     insert_staged_derived_game_rows,
     insert_staged_dimension_rows,
     load_derived_rows,
+    prune_obsolete_dimensions,
     select_dimensions_for_game,
     stage_attached_game_rows,
     stage_dimension_rows,
+    stage_obsolete_dimension_candidates,
 )
 from euroleague.gate import assert_phase5_reconciles
 from euroleague.load import (
     assert_phase4_safe,
     delete_raw_game_rows,
+    delete_raw_shot_rows,
     insert_staged_raw_game_rows,
+    insert_staged_raw_shot_rows,
     load_game,
+    load_shots_for_game,
     played_games,
     stage_raw_game_rows,
+    stage_raw_shot_rows,
 )
-from euroleague.parse import parse_cached_game
+from euroleague.parse import parse_cached_game, parse_shots
+from euroleague.source_state import (
+    cached_game_source_checksums,
+    record_cached_game_sources,
+    upsert_applied_game_sources,
+)
 
 # The endpoints a played game must have on disk before it can be loaded. Points
 # is archived and parsed for coordinates, and is required for the same reason
 # the other two are: discovering it missing halfway through leaves the season
 # part-loaded.
-REQUIRED_ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay")
+REQUIRED_ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay", "Points")
 
 
 @dataclass(frozen=True)
@@ -185,10 +196,10 @@ def rebuild_revised_game(
     on failure, a permanent state - where the game's derived rows describe
     source bytes that are no longer stored.
 
-    WHAT IT DOES NOT REBUILD. `raw_shot` is left alone, because the live
-    pipeline that loads this season never writes it: rebuilding it here would
-    give one game shot coordinates that none of its neighbours have. A revision
-    to a `Points` response therefore still needs its own path.
+    POINTS MOVES WITH THE GAME. The live writer now loads `raw_shot`, so a
+    revised Points body is staged and replaced inside the same transaction as
+    the other raw and derived rows. Its checksum is not marked applied until
+    every replacement write succeeds.
     """
     _assert_season_code(season_code)
     gamecode = int(gamecode)
@@ -199,6 +210,15 @@ def rebuild_revised_game(
     assert_complete_played_cache(cache, season_code)
 
     parsed = parse_cached_game(cache, season_code, schedule_game)
+    shots = tuple(
+        parse_shots(
+            season_code,
+            gamecode,
+            parsed.game.competition_code,
+            cache.read_json(season_code, "Points", gamecode),
+        )
+    )
+    source_checksums = cached_game_source_checksums(cache, season_code, (gamecode,))[gamecode]
     dimensions = build_dimensions(cache, season_code)
     events = build_game_events(cache, season_code)
     remaining = build_remaining_rows(cache, season_code)
@@ -242,18 +262,24 @@ def rebuild_revised_game(
         # longer parses into loadable rows - then fails before anything stored
         # has been deleted.
         counts.update(stage_raw_game_rows(cursor, parsed))
+        counts["raw_shot"] = stage_raw_shot_rows(cursor, season_code, gamecode, shots)
         counts.update(stage_dimension_rows(cursor, game_dimensions))
         counts.update(stage_attached_game_rows(cursor, game_events, game_rows))
+        stage_obsolete_dimension_candidates(cursor, season_code, gamecode)
 
         # Derived rows go before raw rows: `game_event` references `raw_event`
         # with `on delete cascade`, and deleting the parent first would remove
         # rows this transaction is accounting for explicitly.
         delete_derived_game_rows(cursor, season_code, gamecode)
+        delete_raw_shot_rows(cursor, season_code, gamecode)
         delete_raw_game_rows(cursor, season_code, gamecode)
 
         insert_staged_raw_game_rows(cursor)
+        insert_staged_raw_shot_rows(cursor)
         insert_staged_dimension_rows(cursor)
         insert_staged_derived_game_rows(cursor)
+        prune_obsolete_dimensions(cursor)
+        upsert_applied_game_sources(cursor, season_code, gamecode, source_checksums)
 
     # No VACUUM. One game's dead tuples are not worth a statement that is the
     # only thing in this function not scoped to the game being rebuilt.
@@ -339,7 +365,15 @@ def load_new_raw_games(
     totals: dict[str, int] = {}
     for index, schedule_game in enumerate(games, start=1):
         gamecode = int(schedule_game["gameCode"])
-        counts = load_game(connection, parse_cached_game(cache, season_code, schedule_game))
+        parsed = parse_cached_game(cache, season_code, schedule_game)
+        counts = load_game(connection, parsed)
+        shots = parse_shots(
+            season_code,
+            gamecode,
+            parsed.game.competition_code,
+            cache.read_json(season_code, "Points", gamecode),
+        )
+        counts["raw_shot"] = load_shots_for_game(connection, season_code, gamecode, shots)
         for table, count in counts.items():
             totals[table] = totals.get(table, 0) + count
         progress(
@@ -460,5 +494,6 @@ def run_live_pipeline(
     load_new_raw_games(connection, cache, season_code, new_games, progress=progress)
     derive_new_games(connection, cache, season_code, gamecodes)
     assert_live_games_gated(connection, season_code, gamecodes)
+    record_cached_game_sources(connection, cache, season_code, gamecodes)
     progress(summary.as_log_line())
     return summary

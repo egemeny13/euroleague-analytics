@@ -182,6 +182,34 @@ def load_shots_for_game(
     shots: Iterable[RawShotRow],
 ) -> int:
     """Replace one game's raw_shot rows without touching any dependent layer."""
+    shot_rows = _validated_shot_rows(season_code, gamecode, shots)
+    with connection.transaction(), connection.cursor() as cursor:
+        count = stage_raw_shot_rows(cursor, season_code, gamecode, shot_rows)
+        delete_raw_shot_rows(cursor, season_code, gamecode)
+        insert_staged_raw_shot_rows(cursor)
+    return count
+
+
+def stage_raw_shot_rows(
+    cursor: Any,
+    season_code: str,
+    gamecode: int,
+    shots: Iterable[RawShotRow],
+) -> int:
+    """Validate and stage one game's coordinate rows without changing stored rows."""
+    shot_rows = _validated_shot_rows(season_code, gamecode, shots)
+    cursor.execute(
+        "CREATE TEMP TABLE stage_raw_shot (LIKE raw_shot INCLUDING DEFAULTS) ON COMMIT DROP"
+    )
+    return _copy_rows(cursor, "stage_raw_shot", RAW_SHOT_COLUMNS, shot_rows)
+
+
+def _validated_shot_rows(
+    season_code: str,
+    gamecode: int,
+    shots: Iterable[RawShotRow],
+) -> tuple[RawShotRow, ...]:
+    """Materialise shot rows and refuse an identity mismatch before any write."""
     shot_rows = tuple(shots)
     mismatched = next(
         (
@@ -196,20 +224,21 @@ def load_shots_for_game(
             f"raw_shot target {season_code} game {gamecode} received a row for "
             f"{mismatched.season_code} game {mismatched.gamecode}."
         )
-    with connection.transaction(), connection.cursor() as cursor:
-        cursor.execute(
-            "CREATE TEMP TABLE stage_raw_shot (LIKE raw_shot INCLUDING DEFAULTS) ON COMMIT DROP"
-        )
-        count = _copy_rows(cursor, "stage_raw_shot", RAW_SHOT_COLUMNS, shot_rows)
-        cursor.execute(
-            "DELETE FROM raw_shot WHERE season_code = %s AND gamecode = %s",
-            (season_code, gamecode),
-        )
-        column_sql = ", ".join(RAW_SHOT_COLUMNS)
-        cursor.execute(
-            f"INSERT INTO raw_shot ({column_sql}) SELECT {column_sql} FROM stage_raw_shot"
-        )
-    return count
+    return shot_rows
+
+
+def delete_raw_shot_rows(cursor: Any, season_code: str, gamecode: int) -> None:
+    """Delete only the target game's stored coordinate rows."""
+    cursor.execute(
+        "DELETE FROM raw_shot WHERE season_code = %s AND gamecode = %s",
+        (season_code, gamecode),
+    )
+
+
+def insert_staged_raw_shot_rows(cursor: Any) -> None:
+    """Insert the already-validated coordinate staging table."""
+    column_sql = ", ".join(RAW_SHOT_COLUMNS)
+    cursor.execute(f"INSERT INTO raw_shot ({column_sql}) SELECT {column_sql} FROM stage_raw_shot")
 
 
 def load_cached_shots(

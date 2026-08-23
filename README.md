@@ -28,8 +28,9 @@ fallback.
 Four operational limitations remain explicit. Twenty-four of 330 E2024 games are
 quarantined by validation invariants and excluded from every default answer; 16
 carry the named possession residual that is measured but not yet explained.
-Migration 0008 repairs the composite `game_event_possession_fkey`, and migration
-0009 adds season progress, but neither has been applied to production. E2024's
+Migration 0008 repairs the composite `game_event_possession_fkey`, migration
+0009 adds season progress, and migration 0010 adds durable applied-source
+checksums, but none has been applied to production. E2024's
 330 `Points` responses exist in the local cache but are missing from the
 immutable production archive. Pre-season roster ingestion, a real GitHub
 Actions summary run, and current Decision 18 timings still need attended
@@ -113,8 +114,9 @@ python -m venv .venv
 ```
 
 The response cache is not committed — one season is 53 MB. The default run needs
-no network and no database. On 2026-08-23 the current working tree passed 634
-tests and deselected 83 live, network, full-season, and local-database checks.
+no network and no database. On 2026-08-23 the reconciled working tree passed
+648 offline tests; live, network, full-season, and local-database checks remain
+excluded from that claim.
 The gates
 that read the live warehouse are excluded from it and opted into explicitly:
 

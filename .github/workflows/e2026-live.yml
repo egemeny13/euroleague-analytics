@@ -54,8 +54,9 @@ jobs:
       #
       # A re-fetch is an audit: the observation is always recorded, a second
       # body is stored only when the checksum differs, and no history is ever
-      # overwritten. A changed checksum turns this step red on purpose - the
-      # per-game rebuild Decision 7 requires is not built yet.
+      # overwritten. Current archive checksums are compared with durable
+      # applied checksums on every run, so a failed repair remains pending and
+      # is retried from a private archive snapshot rather than forgotten.
       - name: Take Decision 7 settlement readings
         if: always()
         run: python scripts/settlement_recheck.py E2026 --live

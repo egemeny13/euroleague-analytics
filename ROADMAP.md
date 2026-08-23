@@ -493,6 +493,9 @@ Following the compaction and incremental loader work in Blocks A and B (`docs/ST
 3. **Storage headroom monitoring**: Verified 3-season window (E2024, E2025, E2026) within the 500 MB ceiling.
 4. **Season progress activation**: Migration 0009 and its query/write paths are implemented; production apply and E2024/E2025 backfill remain.
 5. **E2024 archive recoverability**: 330 parsed `Points` games have no production archive entries; detection is implemented and repair remains owner-attended.
+6. **Applied-source activation**: Migration 0010 and durable pending-revision
+   logic are implemented; production apply and evidence-backed checksum
+   initialization remain owner-attended.
 
 ---
 
@@ -501,10 +504,12 @@ Following the compaction and incremental loader work in Blocks A and B (`docs/ST
 Core phases 0-8 and live-season Blocks A-C are complete. Block D has completed
 reconnaissance but no roster parser or ingest. Most Block E code exists, but its
 production activation and external evidence are still pending. The working tree
-passes 634 offline tests with 83 environment-dependent checks deselected; lint
-and format are clean. Local `master` is 41 commits ahead of `origin/master`, and
-`origin/codex/decision-7-rebuild` still carries ten unique commits that must be
-reconciled rather than deleted.
+passes 648 offline tests with environment-dependent checks excluded; lint and
+format are clean. Local `master` will be 43 commits ahead of `origin/master`
+after this reconciliation commit. The ten unique commits on
+`origin/codex/decision-7-rebuild` are fully explained in
+`docs/DECISION_7_BRANCH_RECONCILIATION.md`; remote branch deletion remains an
+explicit owner action.
 
 **Release-readiness estimate: approximately 85%.** This is a transparent
 planning estimate, not a code-line metric: 80 percentage points are assigned to
@@ -524,6 +529,17 @@ included in that percentage.
 - No production write, branch integration, push, workflow dispatch, or live API
   sweep is part of this closeout.
 
+### Decision 7 branch reconciliation completed
+
+- Private cache snapshots now bind parsing and applied checksums to the same
+  immutable bytes.
+- `Points` is required and loaded for new E2026 games; per-game rebuilds replace
+  `raw_shot` and prune only unreferenced obsolete identities.
+- Migration 0010 makes failed source revisions durably pending across runs.
+- All ten remote-only commits are classified in
+  `docs/DECISION_7_BRANCH_RECONCILIATION.md`. No merge, push, production write,
+  or branch deletion occurred.
+
 ### Ordered one-session roadmap
 
 Each row is intentionally a separate session. Do not combine adjacent rows just
@@ -531,9 +547,9 @@ because a previous one finishes early; its gate is the next row's precondition.
 
 | Order | Session plan | Why this order | Done when |
 |---:|---|---|---|
-| 1 | [`01-decision-7-branch-reconciliation.md`](docs/superpowers/plans/2026-08-23-01-decision-7-branch-reconciliation.md) | Establish one canonical rebuild implementation before publishing or deleting a branch. | Every unique commit is integrated or documented as superseded; branch deletion remains an explicit owner action. |
-| 2 | [`02-production-migrations-and-progress-backfill.md`](docs/superpowers/plans/2026-08-23-02-production-migrations-and-progress-backfill.md) | The live workflow and MCP disclosure need schema 0008/0009 before activation. | Both migrations are verified and progress is initialized only where a truthful load timestamp exists. |
-| 3 | [`03-release-and-actions-verification.md`](docs/superpowers/plans/2026-08-23-03-release-and-actions-verification.md) | Publish the 41 local commits through a review branch, never by pushing protected `master`. | PR/merge policy is satisfied and one real workflow summary is inspected. |
+| 1 | **Complete:** [`01-decision-7-branch-reconciliation.md`](docs/superpowers/plans/2026-08-23-01-decision-7-branch-reconciliation.md) | Establish one canonical rebuild implementation before publishing or deleting a branch. | All ten commits are explained; deletion remains an explicit owner action. |
+| 2 | [`02-production-migrations-and-progress-backfill.md`](docs/superpowers/plans/2026-08-23-02-production-migrations-and-progress-backfill.md) | The live workflow and MCP disclosure need schema 0008/0009/0010 before activation. | All three migrations are verified; progress and applied checksums are initialized only where truthful evidence exists. |
+| 3 | [`03-release-and-actions-verification.md`](docs/superpowers/plans/2026-08-23-03-release-and-actions-verification.md) | Publish the local commits through a review branch, never by pushing protected `master`. | PR/merge policy is satisfied and one real workflow summary is inspected. |
 | 4 | [`04-e2024-points-archive-repair.md`](docs/superpowers/plans/2026-08-23-04-e2024-points-archive-repair.md) | Close the known recoverability hole without re-fetching source data. | All 330 objects and index rows verify and reconciliation is clean. |
 | 5 | [`05-preseason-roster-ingestion.md`](docs/superpowers/plans/2026-08-23-05-preseason-roster-ingestion.md) | Complete Block D using the endpoint already proved by reconnaissance. | Parser, archive path, ingest, idempotency, and zero-game E2026 gate pass. |
 | 6 | [`06-decision-18-live-remeasurement.md`](docs/superpowers/plans/2026-08-23-06-decision-18-live-remeasurement.md) | Re-earn the view-performance licence against the activated multi-season schema. | Real timings are recorded; every failure is named for a separate optimisation decision. |
@@ -542,6 +558,7 @@ because a previous one finishes early; its gate is the next row's precondition.
 | 9 | [`09-historical-archive-expansion.md`](docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md) | Long-running backfill belongs after live operations are stable. | A bounded season batch is archived with checksums, cadence, and storage projection evidence. |
 | 10 | [`10-eurocup-onboarding.md`](docs/superpowers/plans/2026-08-23-10-eurocup-onboarding.md) | Decision 11 keeps EuroCup schema-ready but deferred until EuroLeague is operationally proven. | A measured pilot passes competition isolation and storage gates before any full load. |
 
-Orders 1-6 are the pre-release path. Order 7 is date-gated operational proof.
-Order 8 is a disclosed quality improvement. Orders 9-10 are post-release
-expansion and may be postponed without weakening the E2026 launch claim.
+Order 1 is complete; Order 2 is next. Orders 2-6 are the remaining pre-release
+path. Order 7 is date-gated operational proof. Order 8 is a disclosed quality
+improvement. Orders 9-10 are post-release expansion and may be postponed
+without weakening the E2026 launch claim.

@@ -38,5 +38,5 @@ Actions run.
 ## Stop conditions
 
 Stop if a required secret is absent, CI and local results disagree, the PR
-contains unrelated changes, or production schema 0009 is not active. Do not
+contains unrelated changes, or production schemas 0009 and 0010 are not active. Do not
 change schedules or notification policy to make the run convenient.

@@ -157,9 +157,9 @@ def live_cache(tmp_path):
     because the fetcher fetches no others. The factory mirrors that: it stages
     the responses you name, and marks played only the ones you name played.
 
-    No `Points` fixture is committed, so a valid placeholder is written. The
-    completeness guard checks that the file exists and the derived build reads
-    only Boxscore and PlaybyPlay, so nothing here rests on its contents.
+    No `Points` fixture is committed, so one valid synthetic coordinate row is
+    written. It carries no player or team identity and affects no derived row;
+    it only lets the live writer prove that Points was consumed.
     """
     import json
     import shutil
@@ -176,7 +176,7 @@ def live_cache(tmp_path):
                 shutil.copyfile(source.path_for(season_code, endpoint, gamecode), target)
             points = root / season_code / "Points" / f"{gamecode}.json"
             points.parent.mkdir(parents=True, exist_ok=True)
-            points.write_text(json.dumps({"data": []}), encoding="utf-8")
+            points.write_text(json.dumps({"Rows": [{"NUM_ANOT": 1}]}), encoding="utf-8")
 
         schedule_games = [
             {"gameCode": gamecode, "played": gamecode in set(played)}

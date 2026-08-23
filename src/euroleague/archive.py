@@ -392,8 +392,14 @@ def restore_current_season_cache(
     season_code: str,
     *,
     allow_bootstrap: bool = False,
+    snapshot_cache: ResponseCache | None = None,
 ) -> RestoreSummary:
-    """Rebuild the canonical local cache from current, checksum-verified archive objects."""
+    """Rebuild the canonical cache and optionally an immutable consumer snapshot.
+
+    The optional snapshot receives the same verified bodies before the canonical
+    directory is swapped. A parser can consume that private directory even if a
+    later process advances the canonical cache while the run is still working.
+    """
     entries = current_archive_entries(connection, season_code)
     if not entries:
         if allow_bootstrap:
@@ -440,6 +446,16 @@ def restore_current_season_cache(
         for entry, body in downloaded:
             _write_bytes_atomically(_cache_path(staged_cache, entry), body)
         completeness = assert_complete_played_cache(staged_cache, season_code)
+        if snapshot_cache is not None:
+            snapshot_season = snapshot_cache.root / season_code
+            if snapshot_season.exists():
+                raise FileExistsError(
+                    f"Consumer snapshot already contains {snapshot_season}; "
+                    "use a new empty snapshot directory for each restore."
+                )
+            for entry, body in downloaded:
+                _write_bytes_atomically(_cache_path(snapshot_cache, entry), body)
+            assert_complete_played_cache(snapshot_cache, season_code)
         _replace_staged_season(cache, staged_cache, season_code)
 
     return RestoreSummary(

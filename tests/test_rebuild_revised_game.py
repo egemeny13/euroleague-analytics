@@ -58,6 +58,7 @@ from euroleague.parse import (
     RAW_BOXSCORE_TEAM_COLUMNS,
     RAW_EVENT_COLUMNS,
     RAW_GAME_COLUMNS,
+    RAW_SHOT_COLUMNS,
 )
 
 SEASON = "E2024"
@@ -75,6 +76,7 @@ STAGED_COLUMNS: dict[str, tuple[str, ...]] = {
     "stage_raw_boxscore_player": RAW_BOXSCORE_PLAYER_COLUMNS,
     "stage_raw_boxscore_team": RAW_BOXSCORE_TEAM_COLUMNS,
     "stage_raw_event": RAW_EVENT_COLUMNS,
+    "stage_raw_shot": RAW_SHOT_COLUMNS,
     "stage_player": ("player_id", "display_name"),
     "stage_team": ("team_code",),
     "stage_team_season": ("season_code", "team_code", "competition_code", "display_name"),
@@ -97,6 +99,9 @@ DELETED_TABLES = {
     "raw_boxscore_player",
     "raw_boxscore_team",
     "raw_game",
+    "raw_shot",
+    "lineup",
+    "player",
 }
 
 
@@ -174,7 +179,12 @@ def test_every_delete_names_the_rebuilt_season_and_gamecode_only(
     assert deletes, "a rebuild that deletes nothing is not replacing anything"
     assert set(_deleted_tables_in_order(connection)) == DELETED_TABLES
     for query, params in deletes:
-        assert params == (SEASON, REBUILT_GAME), f"unscoped delete: {query!r} {params!r}"
+        table = re.match(r"\s*DELETE FROM (\w+)", query, flags=re.IGNORECASE).group(1)
+        if table in {"lineup", "player"}:
+            assert params is None
+            assert "candidate_old_" in query
+        else:
+            assert params == (SEASON, REBUILT_GAME), f"unscoped delete: {query!r} {params!r}"
 
 
 def test_no_statement_the_rebuild_runs_carries_another_identity(
@@ -188,7 +198,16 @@ def test_no_statement_the_rebuild_runs_carries_another_identity(
 
     assert connection.executions, "the rebuild must actually talk to the database"
     for query, params in connection.executions:
-        assert params in (None, (SEASON, REBUILT_GAME)), f"unscoped statement: {query!r}"
+        if params is None:
+            continue
+        assert params[:2] == (SEASON, REBUILT_GAME), f"unscoped statement: {query!r}"
+        if len(params) == 5:
+            assert all(len(checksum) == 64 for checksum in params[2:])
+        else:
+            assert all(
+                params[index : index + 2] == (SEASON, REBUILT_GAME)
+                for index in range(0, len(params), 2)
+            ), f"unscoped statement: {query!r}"
 
 
 def test_every_copied_row_belongs_to_the_rebuilt_game(
@@ -319,6 +338,9 @@ def test_a_failure_part_way_through_rolls_back_once_and_commits_nothing(
     assert connection.transactions_started == 1
     assert connection.transactions_committed == 0
     assert connection.transactions_rolled_back == 1
+    assert not any(
+        "insert into game_source_state" in query.lower() for query, _ in connection.executions
+    )
 
 
 def test_a_successful_rebuild_commits_exactly_once(
@@ -333,6 +355,15 @@ def test_a_successful_rebuild_commits_exactly_once(
     assert connection.transactions_started == 1
     assert connection.transactions_committed == 1
     assert connection.transactions_rolled_back == 0
+    marker_query, marker_params = connection.executions[-1]
+    assert "insert into game_source_state" in marker_query.lower()
+    assert marker_params == (
+        SEASON,
+        REBUILT_GAME,
+        cache.checksum(SEASON, "Boxscore", REBUILT_GAME),
+        cache.checksum(SEASON, "PlaybyPlay", REBUILT_GAME),
+        cache.checksum(SEASON, "Points", REBUILT_GAME),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -364,6 +395,24 @@ def test_the_game_event_delete_precedes_every_delete_it_points_at(
     # raw_event cascades into game_event; the derived layer is already gone.
     assert order.index("game_event") < order.index("raw_event")
     assert order.index("raw_event") < order.index("raw_game")
+
+
+def test_a_rebuild_prunes_only_old_dimensions_that_became_unreferenced(
+    loader_connection, live_cache, fixture_games_root
+) -> None:
+    """Break caught: removed source identities survive forever as stale dimensions."""
+    connection = loader_connection()
+    cache = _season_cache(live_cache, fixture_games_root)
+
+    rebuild_revised_game(connection, cache, SEASON, REBUILT_GAME)
+
+    statements = [" ".join(query.lower().split()) for query, _ in connection.executions]
+    assert any("create temp table candidate_old_lineup" in query for query in statements)
+    assert any("create temp table candidate_old_player" in query for query in statements)
+    lineup_prune = next(query for query in statements if "delete from lineup as obsolete" in query)
+    player_prune = next(query for query in statements if "delete from player as obsolete" in query)
+    assert "not exists" in lineup_prune
+    assert "not exists" in player_prune
 
 
 # ---------------------------------------------------------------------------

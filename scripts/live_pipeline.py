@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 import psycopg
@@ -92,10 +93,23 @@ def main(argv: list[str] | None = None) -> int:
                 # A cache read, never a re-fetch. The derived build needs the
                 # whole season present or Decision 3's correction flag would be
                 # recomputed from a subset - see src/euroleague/live.py.
-                restore_current_season_cache(
-                    connection, cache, storage, args.season, allow_bootstrap=True
-                )
-            summary = run_live_pipeline(connection, cache, args.season)
+                cache.root.parent.mkdir(parents=True, exist_ok=True)
+                with tempfile.TemporaryDirectory(
+                    prefix=f".{args.season}-live-snapshot-", dir=cache.root.parent
+                ) as snapshot_root:
+                    snapshot = ResponseCache(snapshot_root)
+                    restored = restore_current_season_cache(
+                        connection,
+                        cache,
+                        storage,
+                        args.season,
+                        allow_bootstrap=True,
+                        snapshot_cache=snapshot,
+                    )
+                    consumer_cache = cache if restored.bootstrap_required else snapshot
+                    summary = run_live_pipeline(connection, consumer_cache, args.season)
+            else:
+                summary = run_live_pipeline(connection, cache, args.season)
     except Exception as failure:
         # The message, never the settings object: a traceback carrying a
         # connection string would land in a public log.

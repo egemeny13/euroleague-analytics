@@ -196,15 +196,14 @@ def _observation(gamecode: int, endpoint: str, *, changed: bool) -> SettlementOb
     )
 
 
-def _wire(monkeypatch, tmp_path, observations, rebuild):
+def _wire(monkeypatch, tmp_path, observations, rebuild, *, pending=None):
     """Point the script at fakes and hand back what the run recorded.
 
     Everything the script reaches for outside the process is replaced: the
     settings, the connection, the HTTP session, the fetcher, the re-check
-    runner, the archive restore and the rebuild. `changed_games` and
-    `summarise_settlement` are deliberately left REAL, because "the rebuild
-    fires when a checksum changed" is the behaviour under test and faking the
-    function that decides it would prove nothing.
+    runner, the archive restore and the rebuild. `summarise_settlement` is left
+    real. Durable pending state is stubbed at the database boundary here;
+    `tests/test_source_state.py` proves the checksum comparison itself.
     """
     module = _load_script()
     recorded: dict[str, list] = {"rebuilt": [], "restored": []}
@@ -228,6 +227,16 @@ def _wire(monkeypatch, tmp_path, observations, rebuild):
         ],
     )
     monkeypatch.setattr(module, "run_settlement_rechecks", lambda **kwargs: list(observations))
+    pending_games = (
+        tuple(sorted({row.gamecode for row in observations if row.content_changed}))
+        if pending is None
+        else tuple(pending)
+    )
+    monkeypatch.setattr(
+        module,
+        "pending_rebuild_games",
+        lambda connection, season_code: pending_games,
+    )
 
     def fake_restore(connection, cache, storage, season_code, **kwargs):
         recorded["restored"].append(season_code)
@@ -329,6 +338,29 @@ def test_an_unchanged_season_rebuilds_nothing_and_exits_zero(monkeypatch, tmp_pa
     assert "SOURCE REVISION" not in capsys.readouterr().out
 
 
+def test_a_previous_failed_revision_is_retried_when_tonights_body_is_unchanged(
+    monkeypatch, tmp_path
+) -> None:
+    """Break caught: the transient changed flag forgets yesterday's failed repair."""
+    observations = [
+        _observation(7, "Boxscore", changed=False),
+        _observation(7, "PlaybyPlay", changed=False),
+    ]
+    module, recorded = _wire(
+        monkeypatch,
+        tmp_path,
+        observations,
+        _summary,
+        pending=(7,),
+    )
+
+    exit_code = module.main(["E2026", "--live", "--cache-root", str(tmp_path)])
+
+    assert exit_code == 0
+    assert recorded["restored"] == ["E2026"]
+    assert recorded["rebuilt"] == [("E2026", 7)]
+
+
 def test_a_failed_cache_restore_still_prints_the_settlement_readings(
     monkeypatch, tmp_path, capsys
 ) -> None:
@@ -366,9 +398,9 @@ def test_a_failed_cache_restore_still_prints_the_settlement_readings(
 def test_the_rebuild_is_refused_for_any_season_but_the_live_one(monkeypatch, tmp_path) -> None:
     """Break caught: a historical season is rebuilt by a path justified only for E2026.
 
-    `rebuild_revised_game` skips `raw_shot` because the live pipeline never
-    writes it. That is true for E2026 and false for the seasons loaded in full,
-    so the caller is where the season scope has to hold.
+    The settlement cadence and production workflow are approved only for the
+    live season, so the caller keeps that scope even though raw_shot now moves
+    with the other source rows.
     """
     module, recorded = _wire(
         monkeypatch, tmp_path, [_observation(7, "Boxscore", changed=True)], _summary

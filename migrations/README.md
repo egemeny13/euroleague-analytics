@@ -15,9 +15,10 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0007_shot_data_ft_gate` | Replaces `v_shot_data` so free-throw labelling is derived from event semantics and remains independent of coordinate availability. No tables. |
 | `0008_possession_fkey_scope` | Repairs `game_event_possession_fkey` so `ON DELETE SET NULL` targets only nullable `possession_index`, not the non-null season and game key columns. Prepared and locally gated; production apply is pending owner approval. |
 | `0009_season_progress` | Adds `season_progress`, the scheduled-game count and last-load timestamp used to disclose whether a season is complete, in progress, or unknown. Prepared and locally gated; production apply and historical backfill are pending owner approval. |
+| `0010_game_source_state` | Adds private per-game provenance for the exact Boxscore, PlaybyPlay, and Points checksums successfully applied to warehouse rows. Prepared and offline-gated; production apply and evidence-backed initialization are pending owner approval. |
 
-The complete migration set defines seventeen tables. Production still has
-sixteen until migration 0009 is applied.
+The complete migration set defines eighteen tables. Production still has
+sixteen until migrations 0009 and 0010 are applied.
 
 ## The gate, and why it expires
 
