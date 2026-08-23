@@ -70,7 +70,17 @@ def _shot_answers(
             ],
             returned_rows,
         ),
-        (["games", "first_game", "last_game"], [(306, None, None)]),
+        (
+            [
+                "games_included",
+                "total_games",
+                "first_game",
+                "last_game",
+                "scheduled_games",
+                "last_loaded_at",
+            ],
+            [(306, 306, None, None, 306, None)],
+        ),
         (["reason", "games"], [("possession_gate", 16)]),
         (["games"], [(24,)]),
     ]
@@ -240,8 +250,19 @@ def test_describe_warehouse_lists_coordinate_coverage_by_season() -> None:
     cursor = RecordingCursor(
         [
             (
-                ["season_code", "games", "excluded_games", "first_game", "last_game"],
-                [("E2024", 330, 24, None, None), ("E2025", 402, 0, None, None)],
+                [
+                    "season_code",
+                    "games",
+                    "excluded_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [
+                    ("E2024", 330, 24, None, None, 330, None),
+                    ("E2025", 402, 0, None, None, 402, None),
+                ],
             ),
             (["season_code", "reason", "games"], [("E2024", "possession_gate", 16)]),
             (["season_code", "team_code", "display_name"], []),

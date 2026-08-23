@@ -31,16 +31,52 @@ from typing import Any
 
 from euroleague.archive import assert_complete_played_cache
 from euroleague.cache import ResponseCache
-from euroleague.derived import build_dimensions, build_game_events, build_remaining_rows
-from euroleague.derived_load import load_derived_rows
-from euroleague.load import assert_phase4_safe, load_game, played_games
-from euroleague.parse import parse_cached_game
+from euroleague.derived import (
+    attach_game_event_references,
+    build_dimensions,
+    build_game_events,
+    build_remaining_rows,
+    select_remaining_games,
+)
+from euroleague.derived_load import (
+    _assert_dimension_scope,
+    _assert_remaining_scope,
+    _assert_season_code,
+    delete_derived_game_rows,
+    insert_staged_derived_game_rows,
+    insert_staged_dimension_rows,
+    load_derived_rows,
+    prune_obsolete_dimensions,
+    select_dimensions_for_game,
+    stage_attached_game_rows,
+    stage_dimension_rows,
+    stage_obsolete_dimension_candidates,
+)
+from euroleague.gate import assert_phase5_reconciles
+from euroleague.load import (
+    assert_phase4_safe,
+    delete_raw_game_rows,
+    delete_raw_shot_rows,
+    insert_staged_raw_game_rows,
+    insert_staged_raw_shot_rows,
+    load_game,
+    load_shots_for_game,
+    played_games,
+    stage_raw_game_rows,
+    stage_raw_shot_rows,
+)
+from euroleague.parse import parse_cached_game, parse_shots
+from euroleague.source_state import (
+    cached_game_source_checksums,
+    record_cached_game_sources,
+    upsert_applied_game_sources,
+)
 
 # The endpoints a played game must have on disk before it can be loaded. Points
 # is archived and parsed for coordinates, and is required for the same reason
 # the other two are: discovering it missing halfway through leaves the season
 # part-loaded.
-REQUIRED_ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay")
+REQUIRED_ENDPOINTS: tuple[str, ...] = ("Boxscore", "PlaybyPlay", "Points")
 
 
 @dataclass(frozen=True)
@@ -69,6 +105,190 @@ class LiveRunSummary:
             f"season {self.season_code}: scheduled={self.scheduled} played={self.played} "
             f"already_loaded={self.already_loaded} new={len(self.newly_loaded)} games={games}"
         )
+
+
+class GameNotRebuildableError(RuntimeError):
+    """Raised when the named game cannot be rebuilt from the cache as it stands."""
+
+
+@dataclass(frozen=True)
+class RebuildSummary:
+    """What one Decision 7 rebuild replaced, in a form safe to print publicly.
+
+    `season_games_built` is the number of distinct games the derived build
+    produced event rows for - the population the season-wide minutes-correction
+    flag was decided from. It is here rather than in a comment because a
+    rebuild that quietly narrowed its build to one game would still succeed,
+    and this is the number that shows it did.
+
+    `counts` holds every table the rebuild staged, dimension tables included.
+    They are the rebuilt game's own players and teams rather than the season's,
+    so the number means what the rest of the dict means.
+    """
+
+    season_code: str
+    gamecode: int
+    season_games_built: int
+    counts: dict[str, int]
+
+    def as_log_line(self) -> str:
+        """One line naming the game, the population it was built from, and the rows."""
+        written = ", ".join(f"{table}={count:,}" for table, count in sorted(self.counts.items()))
+        return (
+            f"rebuilt {self.season_code} game {self.gamecode} from "
+            f"{self.season_games_built} cached game(s): {written}"
+        )
+
+
+def _schedule_entry(cache: ResponseCache, season_code: str, gamecode: int) -> dict:
+    """Find one game in the cached schedule and refuse anything that is not one.
+
+    Both refusals are cheap and both happen before a single statement is run.
+    A gamecode the schedule does not list is a typo or a season mix-up, and
+    "rebuilding" it would delete a real game's rows and replace them with
+    nothing. A game the schedule does not mark played has no Boxscore to
+    rebuild from at all.
+    """
+    schedule = cache.read_schedule_json(season_code)
+    for game in schedule.get("data") or []:
+        if int(game["gameCode"]) != int(gamecode):
+            continue
+        if game.get("played") is not True:
+            raise GameNotRebuildableError(
+                f"{season_code} game {gamecode} is not marked played in the cached "
+                "schedule, so there are no source bytes to rebuild it from. Refresh "
+                "the schedule if the game has since been played."
+            )
+        return game
+    raise GameNotRebuildableError(
+        f"{season_code} game {gamecode} is not in the cached schedule. Check the "
+        "gamecode and the season, and restore the archive if the schedule is stale."
+    )
+
+
+def rebuild_revised_game(
+    connection: Any,
+    cache: ResponseCache,
+    season_code: str,
+    gamecode: int,
+) -> RebuildSummary:
+    """Rebuild one game's parsed and derived rows from revised source bytes.
+
+    This is the half of Decision 7 that had never been built. A settlement
+    re-check archives a changed response body beside its predecessor; this
+    replaces the rows that were built from the superseded bytes, for that one
+    game, in one transaction.
+
+    THE BUILD READS THE WHOLE SEASON AND THE WRITE NAMES ONE GAME. That split
+    is not an optimisation, it is the correctness condition. `validate_season`
+    decides whether the minutes correction is enabled by comparing aggregates
+    across every game in the cache, and that flag feeds
+    `elapsed_seconds_corrected`, which feeds stints, lineups and possessions.
+    Building from the revised game alone would decide the flag from a
+    population of one; the rebuild would succeed, and the rebuilt game would
+    silently disagree with every other game in the warehouse. So the completest
+    cache the season has is what the build consumes, and only the write is
+    narrowed. `assert_complete_played_cache` is what makes "the whole season"
+    a checked precondition rather than a hope.
+
+    ONE TRANSACTION, NOT SEVERAL. Raw rows and derived rows are replaced
+    together. Committing the raw half separately would leave a window - and,
+    on failure, a permanent state - where the game's derived rows describe
+    source bytes that are no longer stored.
+
+    POINTS MOVES WITH THE GAME. The live writer now loads `raw_shot`, so a
+    revised Points body is staged and replaced inside the same transaction as
+    the other raw and derived rows. Its checksum is not marked applied until
+    every replacement write succeeds.
+    """
+    _assert_season_code(season_code)
+    gamecode = int(gamecode)
+    schedule_game = _schedule_entry(cache, season_code, gamecode)
+
+    # Ordered deliberately: everything that can refuse does so before the
+    # transaction opens, so a refusal leaves the warehouse untouched.
+    assert_complete_played_cache(cache, season_code)
+
+    parsed = parse_cached_game(cache, season_code, schedule_game)
+    shots = tuple(
+        parse_shots(
+            season_code,
+            gamecode,
+            parsed.game.competition_code,
+            cache.read_json(season_code, "Points", gamecode),
+        )
+    )
+    source_checksums = cached_game_source_checksums(cache, season_code, (gamecode,))[gamecode]
+    dimensions = build_dimensions(cache, season_code)
+    events = build_game_events(cache, season_code)
+    remaining = build_remaining_rows(cache, season_code)
+    _assert_dimension_scope(dimensions, season_code)
+    _assert_remaining_scope(remaining, season_code)
+    season_games_built = len({row.gamecode for row in events})
+
+    game_rows = select_remaining_games(remaining, [gamecode])
+    empty_derived_tables = [
+        name
+        for name, rows in (
+            ("lineups", game_rows.lineups),
+            ("stints", game_rows.stints),
+            ("event attachments", game_rows.event_attachments),
+            ("player minutes", game_rows.player_minutes),
+            ("game quality", game_rows.game_qualities),
+            ("possessions", game_rows.possessions),
+        )
+        if not rows
+    ]
+    if empty_derived_tables:
+        raise GameNotRebuildableError(
+            f"The derived build produced no {', '.join(empty_derived_tables)} rows for "
+            f"{season_code} game {gamecode}. Rebuilding would delete the stored rows "
+            "and replace them with nothing."
+        )
+    game_events = attach_game_event_references(
+        tuple(row for row in events if row.gamecode == gamecode),
+        game_rows.event_attachments,
+    )
+    if not game_events:
+        raise GameNotRebuildableError(
+            f"The derived build produced no rows for {season_code} game {gamecode}. "
+            "Rebuilding would delete the stored rows and replace them with nothing."
+        )
+    game_dimensions = select_dimensions_for_game(dimensions, game_rows, season_code)
+
+    counts: dict[str, int] = {}
+    with connection.transaction(), connection.cursor() as cursor:
+        # Stage everything first. A COPY that fails - a revised body that no
+        # longer parses into loadable rows - then fails before anything stored
+        # has been deleted.
+        counts.update(stage_raw_game_rows(cursor, parsed))
+        counts["raw_shot"] = stage_raw_shot_rows(cursor, season_code, gamecode, shots)
+        counts.update(stage_dimension_rows(cursor, game_dimensions))
+        counts.update(stage_attached_game_rows(cursor, game_events, game_rows))
+        stage_obsolete_dimension_candidates(cursor, season_code, gamecode)
+
+        # Derived rows go before raw rows: `game_event` references `raw_event`
+        # with `on delete cascade`, and deleting the parent first would remove
+        # rows this transaction is accounting for explicitly.
+        delete_derived_game_rows(cursor, season_code, gamecode)
+        delete_raw_shot_rows(cursor, season_code, gamecode)
+        delete_raw_game_rows(cursor, season_code, gamecode)
+
+        insert_staged_raw_game_rows(cursor)
+        insert_staged_raw_shot_rows(cursor)
+        insert_staged_dimension_rows(cursor)
+        insert_staged_derived_game_rows(cursor)
+        prune_obsolete_dimensions(cursor)
+        upsert_applied_game_sources(cursor, season_code, gamecode, source_checksums)
+
+    # No VACUUM. One game's dead tuples are not worth a statement that is the
+    # only thing in this function not scoped to the game being rebuilt.
+    return RebuildSummary(
+        season_code=season_code,
+        gamecode=gamecode,
+        season_games_built=season_games_built,
+        counts=counts,
+    )
 
 
 def select_new_games(schedule_data: Iterable[dict], loaded_gamecodes: Iterable[int]) -> list[dict]:
@@ -145,7 +365,15 @@ def load_new_raw_games(
     totals: dict[str, int] = {}
     for index, schedule_game in enumerate(games, start=1):
         gamecode = int(schedule_game["gameCode"])
-        counts = load_game(connection, parse_cached_game(cache, season_code, schedule_game))
+        parsed = parse_cached_game(cache, season_code, schedule_game)
+        counts = load_game(connection, parsed)
+        shots = parse_shots(
+            season_code,
+            gamecode,
+            parsed.game.competition_code,
+            cache.read_json(season_code, "Points", gamecode),
+        )
+        counts["raw_shot"] = load_shots_for_game(connection, season_code, gamecode, shots)
         for table, count in counts.items():
             totals[table] = totals.get(table, 0) + count
         progress(
@@ -185,6 +413,50 @@ def derive_new_games(
     )
 
 
+def record_season_progress(
+    connection: Any,
+    season_code: str,
+    scheduled_games: int,
+) -> None:
+    """Record or update the season's scheduled game count and load timestamp."""
+    competition_code = season_code[0]
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            insert into season_progress (
+                season_code, competition_code, scheduled_games, last_loaded_at
+            )
+            values (%s, %s, %s, now())
+            on conflict (season_code) do update set
+                competition_code = excluded.competition_code,
+                scheduled_games = excluded.scheduled_games,
+                last_loaded_at = excluded.last_loaded_at
+            """,
+            (season_code, competition_code, scheduled_games),
+        )
+
+
+def assert_live_games_gated(
+    connection: Any,
+    season_code: str,
+    gamecodes: Sequence[int],
+) -> dict[str, Any]:
+    """Enforce Phase 5 mechanical invariants on warehouse data after deriving new games.
+
+    Runs assert_phase5_reconciles scoped to the newly loaded games to ensure that
+    every newly loaded game satisfies exact lineup constraints (5 on court at all
+    times, no unpaired substitutions, 200 team minutes per regulation game, and lineup
+    possessions within POSSESSION_GATE_TOLERANCE).
+
+    Blind spot / Failure modes not detected:
+        This gate verifies database relations and mechanical invariants within the warehouse.
+        It does NOT detect subtle scoring-table attribution errors where an on-court player is
+        credited with an action performed by a teammate, nor does it detect unplayed games that
+        the source API never marked as played in the schedule.
+    """
+    return assert_phase5_reconciles(connection, season_code, gamecodes=gamecodes)
+
+
 def run_live_pipeline(
     connection: Any,
     cache: ResponseCache,
@@ -212,11 +484,16 @@ def run_live_pipeline(
         newly_loaded=gamecodes,
     )
 
+    if schedule_games:
+        record_season_progress(connection, season_code, len(schedule_games))
+
     if not gamecodes:
         progress(summary.as_log_line())
         return summary
 
     load_new_raw_games(connection, cache, season_code, new_games, progress=progress)
     derive_new_games(connection, cache, season_code, gamecodes)
+    assert_live_games_gated(connection, season_code, gamecodes)
+    record_cached_game_sources(connection, cache, season_code, gamecodes)
     progress(summary.as_log_line())
     return summary

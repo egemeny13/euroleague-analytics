@@ -59,7 +59,17 @@ def test_find_games_applies_date_bounds_to_calendar_dates():
             (["season_code"], [("E2024",)]),
             (["total"], [(1,)]),
             (["gamecode", "game_date"], [(1, "2024-10-03")]),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -86,7 +96,17 @@ def test_team_stats_exclude_quarantined_games_by_default():
             (["season_code"], [("E2024",)]),
             (["team_code"], [("PAN",)]),
             (["team_code", "possessions"], [("PAN", 2686)]),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -104,7 +124,17 @@ def test_team_stats_include_quarantined_when_asked():
             (["season_code"], [("E2024",)]),
             (["team_code"], [("PAN",)]),
             (["team_code", "possessions"], [("PAN", 2686)]),
-            (["games", "first_game", "last_game"], [(330, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(330, 330, None, None, 330, None)],
+            ),
         ]
     )
 
@@ -122,7 +152,17 @@ def test_player_stats_declare_their_minutes_basis():
             (["season_code"], [("E2024",)]),
             (["player_id"], [("P012774",)]),
             (["player_id", "minutes"], [("P012774", 28.4)]),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -139,7 +179,17 @@ def test_player_stats_identify_participants_by_official_seconds_not_the_api_flag
         [
             (["season_code"], [("E2024",)]),
             (["player_id"], []),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -157,7 +207,17 @@ def test_player_stats_can_serve_raw_minutes_and_say_so():
             (["season_code"], [("E2024",)]),
             (["player_id"], [("P012774",)]),
             (["player_id", "minutes"], [("P012774", 28.4)]),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -180,7 +240,17 @@ def test_lineup_stats_carry_the_straddle_caveat_without_being_asked():
                 ["lineup_id", "team_code", "possessions", "points_for"],
                 [("5cb938769be71ec8eb6565979d6667ae", "PRS", 346, 394)],
             ),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -197,7 +267,17 @@ def test_lineup_stats_filter_by_a_player_through_the_unpivoted_view():
             (["season_code"], [("E2024",)]),
             (["player_id"], [("P012774",)]),
             (["lineup_id", "team_code", "possessions"], []),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -218,7 +298,17 @@ def test_on_off_returns_one_on_row_and_one_off_row():
                 ["split", "possessions", "points_for", "offensive_rating"],
                 [("on", 1200, 1450, 120.8), ("off", 1486, 1600, 107.7)],
             ),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -242,7 +332,17 @@ def test_possessions_declare_a_minutes_basis_because_they_report_a_clock_value()
                 ["gamecode", "possession_index", "seconds_remaining_at_start"],
                 [(1, 0, 118)],
             ),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -259,7 +359,17 @@ def test_the_clutch_filter_binds_both_thresholds_as_parameters():
             (["season_code"], [("E2024",)]),
             (["total"], [(2493,)]),
             (["gamecode", "seconds_remaining_at_start"], []),
-            (["games", "first_game", "last_game"], [(306, None, None)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]
@@ -282,6 +392,7 @@ def test_play_by_play_orders_by_ingest_index_and_nothing_else():
             (["season_code"], [("E2024",)]),
             (["total"], [(458,)]),
             (["ingest_index", "playtype"], [(0, "BP")]),
+            (["scheduled_games", "last_loaded_at", "games"], [(306, None, 306)]),
             (["reason", "games"], [("possession_gate", 16)]),
             (["games"], [(24,)]),
         ]

@@ -32,6 +32,7 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install -e .
       - name: Fetch and archive newly played E2026 games
+        if: always()
         run: python scripts/fetch_archive.py E2026 --live --require-fresh-schedule --cache-root .live-cache
 
       # Loads and derives only the games the warehouse is missing, then leaves
@@ -43,6 +44,7 @@ jobs:
       # present or Decision 3's minutes correction would be recomputed from
       # whatever subset this run happened to fetch. See src/euroleague/live.py.
       - name: Load and derive newly played E2026 games
+        if: always()
         run: python scripts/live_pipeline.py E2026 --live --cache-root .live-cache
 
       # Decision 7's condition, open since 2026-08-09 and impossible to satisfy
@@ -52,8 +54,9 @@ jobs:
       #
       # A re-fetch is an audit: the observation is always recorded, a second
       # body is stored only when the checksum differs, and no history is ever
-      # overwritten. A changed checksum turns this step red on purpose - the
-      # per-game rebuild Decision 7 requires is not built yet.
+      # overwritten. Current archive checksums are compared with durable
+      # applied checksums on every run, so a failed repair remains pending and
+      # is retried from a private archive snapshot rather than forgotten.
       - name: Take Decision 7 settlement readings
         if: always()
         run: python scripts/settlement_recheck.py E2026 --live

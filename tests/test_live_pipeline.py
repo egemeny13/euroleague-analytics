@@ -19,10 +19,12 @@ import json
 
 import pytest
 
+import euroleague.live as live_module
 from euroleague.live import (
     LiveRunSummary,
     assert_new_games_cached,
     assert_new_games_safe,
+    run_live_pipeline,
     select_new_games,
 )
 from euroleague.load import DerivedRowsExistError
@@ -114,9 +116,11 @@ def test_cache_completeness_is_checked_for_every_game_before_any_is_loaded(
     assert "999999" in str(failure.value)
 
 
-def test_a_fully_cached_selection_passes_the_check(fixture_cache, fixture_gamecodes) -> None:
+def test_a_fully_cached_selection_passes_the_check(live_cache, fixture_gamecodes) -> None:
     """Break caught: the completeness check rejects a cache that is in fact complete."""
-    assert_new_games_cached(fixture_cache, "E2024", [_game(code) for code in fixture_gamecodes])
+    cache = live_cache("E2024", staged=fixture_gamecodes, played=fixture_gamecodes)
+
+    assert_new_games_cached(cache, "E2024", [_game(code) for code in fixture_gamecodes])
 
 
 # ---------------------------------------------------------------------------
@@ -222,3 +226,81 @@ def test_dimensions_build_from_a_schedule_holding_unplayed_games(
     dimensions = build_dimensions(cache, "E2024")
 
     assert dimensions.players, "the build produced no players at all"
+
+
+def test_a_successful_live_load_records_the_exact_consumed_source_versions(monkeypatch) -> None:
+    """Break caught: a newly loaded game has no durable applied-source marker."""
+    cache = type(
+        "Cache",
+        (),
+        {"read_schedule_json": lambda self, season: {"data": [{"gameCode": 7, "played": True}]}},
+    )()
+    recorded: list[tuple[object, object, str, tuple[int, ...]]] = []
+    connection = object()
+
+    monkeypatch.setattr(live_module, "loaded_gamecodes", lambda connection, season: set())
+    monkeypatch.setattr(live_module, "record_season_progress", lambda *args: None)
+    monkeypatch.setattr(live_module, "load_new_raw_games", lambda *args, **kwargs: {})
+    monkeypatch.setattr(live_module, "derive_new_games", lambda *args, **kwargs: {})
+    monkeypatch.setattr(live_module, "assert_live_games_gated", lambda *args, **kwargs: {})
+    monkeypatch.setattr(
+        live_module,
+        "record_cached_game_sources",
+        lambda conn, consumed_cache, season, gamecodes: recorded.append(
+            (conn, consumed_cache, season, tuple(gamecodes))
+        ),
+    )
+
+    run_live_pipeline(connection, cache, "E2026", progress=lambda line: None)
+
+    assert recorded == [(connection, cache, "E2026", (7,))]
+
+
+def test_a_new_live_game_consumes_points_before_its_source_marker_can_advance(
+    monkeypatch,
+) -> None:
+    """Break caught: Points is marked applied even though raw_shot stayed empty."""
+    calls: list[tuple] = []
+    schedule_game = {
+        "gameCode": 7,
+        "played": True,
+        "season": {"competitionCode": "E"},
+    }
+    cache = type(
+        "Cache",
+        (),
+        {"read_json": lambda self, season, endpoint, gamecode: {"points": "body"}},
+    )()
+
+    monkeypatch.setattr(live_module, "assert_new_games_cached", lambda *args: None)
+    monkeypatch.setattr(live_module, "assert_new_games_safe", lambda *args: None)
+    parsed = type(
+        "Parsed",
+        (),
+        {"game": type("Game", (), {"competition_code": "E"})()},
+    )()
+    monkeypatch.setattr(live_module, "parse_cached_game", lambda *args: parsed)
+    monkeypatch.setattr(
+        live_module,
+        "load_game",
+        lambda *args: {"raw_event": 4, "raw_boxscore_player": 10},
+    )
+    monkeypatch.setattr(
+        live_module,
+        "parse_shots",
+        lambda season, gamecode, competition, payload: (
+            calls.append((season, gamecode, competition, payload)) or ("shot",)
+        ),
+    )
+    monkeypatch.setattr(
+        live_module,
+        "load_shots_for_game",
+        lambda connection, season, gamecode, shots: len(shots),
+    )
+
+    counts = live_module.load_new_raw_games(
+        object(), cache, "E2026", [schedule_game], progress=lambda line: None
+    )
+
+    assert counts["raw_shot"] == 1
+    assert calls == [("E2026", 7, "E", {"points": "body"})]

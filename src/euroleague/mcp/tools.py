@@ -83,7 +83,8 @@ def build_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool]:
             title="Warehouse coverage and quality",
             description=(
                 "Call this FIRST. Reports which seasons are loaded, how many games each "
-                "holds, the date range covered, which games are excluded by default and "
+                "holds, whether each is complete, in progress, or of unknown completeness, "
+                "the date range covered, which games are excluded by default and "
                 "why, and the teams in each season. Counting statistics served by the "
                 "other tools are the official euroleague.net box score; possessions, "
                 "pace, lineups, on/off and every per-100 rate are this project's own "

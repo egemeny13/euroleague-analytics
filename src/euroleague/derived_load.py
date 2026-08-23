@@ -158,49 +158,127 @@ def _copy_rows(cursor: Any, table: str, columns: tuple[str, ...], rows: Iterable
     return count
 
 
-def load_dimensions(connection: Any, rows: DimensionRows, season_code: str) -> dict[str, int]:
-    """Upsert all three dimension tables before any Phase 5 fact table."""
-    _assert_season_code(season_code)
-    _assert_dimension_scope(rows, season_code)
+def select_dimensions_for_game(
+    dimensions: DimensionRows,
+    rows: RemainingDerivedRows,
+    expected_season: str,
+) -> DimensionRows:
+    """Narrow season-wide dimension rows to the ones one game's facts point at.
+
+    WHY THIS EXISTS. `player`, `team` and `team_season` are season-wide tables
+    with no gamecode, and the season-wide upsert is right for a season-wide
+    load. A per-game rebuild is a different promise: it must be provable that
+    it touched one game and nothing else, and an upsert carrying every player
+    in the season is not that. So the rebuild writes only the dimension rows
+    its own game references - which is still every row it needs, because those
+    are exactly the ones its foreign keys point at.
+
+    It is still a real write, not a no-op: revised source bytes may name a
+    player the warehouse has never seen, and skipping dimensions entirely would
+    turn that into a foreign-key failure.
+
+    The referenced sets are read off the rows about to be written rather than
+    off the boxscore, so they cannot drift from what the foreign keys check:
+    `lineup.player_id_1..5`, `lineup.team_code`,
+    `player_game_minutes.player_id`, `player_game_minutes.team_code` and
+    `possession.offense_team_code` / `defense_team_code` are the complete list
+    of derived columns referencing these two tables.
+    """
+    player_ids = {
+        player_id
+        for lineup in rows.lineups
+        for player_id in (
+            lineup.player_id_1,
+            lineup.player_id_2,
+            lineup.player_id_3,
+            lineup.player_id_4,
+            lineup.player_id_5,
+        )
+    }
+    player_ids.update(row.player_id for row in rows.player_minutes)
+
+    team_codes = {lineup.team_code for lineup in rows.lineups}
+    team_codes.update(row.team_code for row in rows.player_minutes)
+    team_codes.update(
+        team_code
+        for possession in rows.possessions
+        for team_code in (possession.offense_team_code, possession.defense_team_code)
+    )
+
+    players = tuple(row for row in dimensions.players if row[0] in player_ids)
+    teams = tuple(row for row in dimensions.teams if row[0] in team_codes)
+    team_seasons = tuple(
+        row for row in dimensions.team_seasons if row[0] == expected_season and row[1] in team_codes
+    )
+
+    # A referenced identity the season build never produced would fail on the
+    # foreign key several statements later, with a message naming the
+    # constraint rather than the cause. Say it here instead.
+    missing_players = sorted(player_ids - {row[0] for row in players})
+    missing_teams = sorted(team_codes - {row[0] for row in teams})
+    missing_team_seasons = sorted(team_codes - {row[1] for row in team_seasons})
+    if missing_players or missing_teams or missing_team_seasons:
+        raise SeasonScopeError(
+            f"The selected game references dimension rows the season build did not "
+            f"produce: players {missing_players[:5]}, teams {missing_teams[:5]}, "
+            f"team seasons {missing_team_seasons[:5]}."
+        )
+    return DimensionRows(players=players, teams=teams, team_seasons=team_seasons)
+
+
+def stage_dimension_rows(cursor: Any, rows: DimensionRows) -> dict[str, int]:
+    """Create the three dimension staging tables and stream the rows into them."""
     source_rows = {
         "player": rows.players,
         "team": rows.teams,
         "team_season": rows.team_seasons,
     }
     counts: dict[str, int] = {}
-    with connection.transaction(), connection.cursor() as cursor:
-        for target, stage, columns in _DIMENSION_TABLES:
-            cursor.execute(
-                f"CREATE TEMP TABLE {stage} (LIKE {target} INCLUDING DEFAULTS) ON COMMIT DROP"
-            )
-            counts[target] = _copy_rows(cursor, stage, columns, source_rows[target])
+    for target, stage, columns in _DIMENSION_TABLES:
+        cursor.execute(
+            f"CREATE TEMP TABLE {stage} (LIKE {target} INCLUDING DEFAULTS) ON COMMIT DROP"
+        )
+        counts[target] = _copy_rows(cursor, stage, columns, source_rows[target])
+    return counts
 
-        cursor.execute(
-            """
-            INSERT INTO player (player_id, display_name)
-            SELECT player_id, display_name FROM stage_player
-            ON CONFLICT (player_id) DO UPDATE
-            SET display_name = EXCLUDED.display_name
-            """
-        )
-        cursor.execute(
-            """
-            INSERT INTO team (team_code)
-            SELECT team_code FROM stage_team
-            ON CONFLICT (team_code) DO NOTHING
-            """
-        )
-        cursor.execute(
-            """
-            INSERT INTO team_season
-                (season_code, team_code, competition_code, display_name)
-            SELECT season_code, team_code, competition_code, display_name
-            FROM stage_team_season
-            ON CONFLICT (season_code, team_code) DO UPDATE
-            SET competition_code = EXCLUDED.competition_code,
-                display_name = EXCLUDED.display_name
-            """
-        )
+
+def insert_staged_dimension_rows(cursor: Any) -> None:
+    """Upsert the staged dimension rows. Nothing here ever deletes a row."""
+    cursor.execute(
+        """
+        INSERT INTO player (player_id, display_name)
+        SELECT player_id, display_name FROM stage_player
+        ON CONFLICT (player_id) DO UPDATE
+        SET display_name = EXCLUDED.display_name
+        """
+    )
+    cursor.execute(
+        """
+        INSERT INTO team (team_code)
+        SELECT team_code FROM stage_team
+        ON CONFLICT (team_code) DO NOTHING
+        """
+    )
+    cursor.execute(
+        """
+        INSERT INTO team_season
+            (season_code, team_code, competition_code, display_name)
+        SELECT season_code, team_code, competition_code, display_name
+        FROM stage_team_season
+        ON CONFLICT (season_code, team_code) DO UPDATE
+        SET competition_code = EXCLUDED.competition_code,
+            display_name = EXCLUDED.display_name
+        """
+    )
+
+
+def load_dimensions(connection: Any, rows: DimensionRows, season_code: str) -> dict[str, int]:
+    """Upsert all three dimension tables before any Phase 5 fact table."""
+    _assert_season_code(season_code)
+    _assert_dimension_scope(rows, season_code)
+    with connection.transaction(), connection.cursor() as cursor:
+        counts = stage_dimension_rows(cursor, rows)
+        insert_staged_dimension_rows(cursor)
     return counts
 
 
@@ -352,6 +430,198 @@ def _insert_staged_rows(cursor: Any, target: str, columns: tuple[str, ...]) -> N
     cursor.execute(f"INSERT INTO {target} ({column_sql}) SELECT {column_sql} FROM stage_{target}")
 
 
+def stage_attached_game_rows(
+    cursor: Any,
+    events: tuple[GameEventRow, ...],
+    rows: RemainingDerivedRows,
+) -> dict[str, int]:
+    """Stage one game's derived rows and refuse a lineup identifier collision.
+
+    The collision check runs while the rows are staged and before anything is
+    deleted, so a caller whose transaction is wider than one game still finds
+    out before it has destroyed anything.
+    """
+    counts: dict[str, int] = {}
+    counts["lineup"] = _stage_rows(cursor, "lineup", LINEUP_COLUMNS, rows.lineups)
+    counts["lineup_stint"] = _stage_rows(cursor, "lineup_stint", LINEUP_STINT_COLUMNS, rows.stints)
+    counts["possession"] = _stage_rows(cursor, "possession", POSSESSION_COLUMNS, rows.possessions)
+    counts["game_event"] = _stage_rows(cursor, "game_event", GAME_EVENT_COLUMNS, events)
+    counts["player_game_minutes"] = _stage_rows(
+        cursor,
+        "player_game_minutes",
+        PLAYER_GAME_MINUTES_COLUMNS,
+        rows.player_minutes,
+    )
+    counts["game_quality"] = _stage_rows(
+        cursor, "game_quality", GAME_QUALITY_COLUMNS, rows.game_qualities
+    )
+
+    cursor.execute(
+        """
+        SELECT count(*)
+        FROM lineup stored
+        JOIN stage_lineup staged USING (lineup_id)
+        WHERE ROW(stored.team_code, stored.player_id_1, stored.player_id_2,
+                  stored.player_id_3, stored.player_id_4, stored.player_id_5)
+              IS DISTINCT FROM
+              ROW(staged.team_code, staged.player_id_1, staged.player_id_2,
+                  staged.player_id_3, staged.player_id_4, staged.player_id_5)
+        """
+    )
+    collisions = int(cursor.fetchone()[0])
+    if collisions:
+        raise LineupCollisionError(
+            f"The selected identifier conflicts with {collisions} stored lineup rows."
+        )
+    return counts
+
+
+def stage_obsolete_dimension_candidates(cursor: Any, season_code: str, gamecode: int) -> None:
+    """Remember the target game's old lineup and player identities before deletion."""
+    params = (season_code, gamecode)
+    cursor.execute(
+        """
+        CREATE TEMP TABLE candidate_old_lineup ON COMMIT DROP AS
+        SELECT home_lineup_id AS lineup_id
+        FROM game_event WHERE season_code = %s AND gamecode = %s
+        UNION SELECT away_lineup_id
+        FROM game_event WHERE season_code = %s AND gamecode = %s
+        UNION SELECT home_lineup_id
+        FROM lineup_stint WHERE season_code = %s AND gamecode = %s
+        UNION SELECT away_lineup_id
+        FROM lineup_stint WHERE season_code = %s AND gamecode = %s
+        UNION SELECT offense_lineup_id
+        FROM possession WHERE season_code = %s AND gamecode = %s
+        UNION SELECT defense_lineup_id
+        FROM possession WHERE season_code = %s AND gamecode = %s
+        """,
+        params * 6,
+    )
+    cursor.execute(
+        """
+        CREATE TEMP TABLE candidate_old_player ON COMMIT DROP AS
+        SELECT player_id
+        FROM raw_boxscore_player WHERE season_code = %s AND gamecode = %s
+        UNION SELECT player_id
+        FROM raw_event
+        WHERE season_code = %s AND gamecode = %s AND player_id IS NOT NULL
+        UNION SELECT player_id
+        FROM raw_shot
+        WHERE season_code = %s AND gamecode = %s AND player_id IS NOT NULL
+        UNION SELECT player_id
+        FROM game_event
+        WHERE season_code = %s AND gamecode = %s AND player_id IS NOT NULL
+        UNION SELECT player_id
+        FROM player_game_minutes WHERE season_code = %s AND gamecode = %s
+        UNION SELECT players.player_id
+        FROM candidate_old_lineup AS candidate
+        JOIN lineup AS stored USING (lineup_id)
+        CROSS JOIN LATERAL (
+            VALUES (stored.player_id_1), (stored.player_id_2),
+                   (stored.player_id_3), (stored.player_id_4),
+                   (stored.player_id_5)
+        ) AS players (player_id)
+        """,
+        params * 5,
+    )
+
+
+def prune_obsolete_dimensions(cursor: Any) -> None:
+    """Delete remembered identities only when no stored row still references them."""
+    cursor.execute(
+        """
+        DELETE FROM lineup AS obsolete
+        USING candidate_old_lineup AS candidate
+        WHERE obsolete.lineup_id = candidate.lineup_id
+          AND NOT EXISTS (
+              SELECT 1 FROM lineup_stint
+              WHERE home_lineup_id = obsolete.lineup_id
+                 OR away_lineup_id = obsolete.lineup_id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM possession
+              WHERE offense_lineup_id = obsolete.lineup_id
+                 OR defense_lineup_id = obsolete.lineup_id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM game_event
+              WHERE home_lineup_id = obsolete.lineup_id
+                 OR away_lineup_id = obsolete.lineup_id
+          )
+        """
+    )
+    cursor.execute(
+        """
+        DELETE FROM player AS obsolete
+        USING candidate_old_player AS candidate
+        WHERE obsolete.player_id = candidate.player_id
+          AND NOT EXISTS (
+              SELECT 1 FROM raw_boxscore_player
+              WHERE player_id = obsolete.player_id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM raw_event WHERE player_id = obsolete.player_id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM raw_shot WHERE player_id = obsolete.player_id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM game_event WHERE player_id = obsolete.player_id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM player_game_minutes
+              WHERE player_id = obsolete.player_id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM lineup
+              WHERE player_id_1 = obsolete.player_id
+                 OR player_id_2 = obsolete.player_id
+                 OR player_id_3 = obsolete.player_id
+                 OR player_id_4 = obsolete.player_id
+                 OR player_id_5 = obsolete.player_id
+          )
+        """
+    )
+
+
+def delete_derived_game_rows(cursor: Any, season_code: str, gamecode: int) -> None:
+    """Remove one game's derived rows, and `game_event` before anything it references.
+
+    THE DELETE ORDER IS LOAD-BEARING. `game_event_possession_fkey` and
+    `game_event_stint_fkey` are composite foreign keys declared
+    `on delete set null`. Deleting a `possession` or `lineup_stint` row while a
+    `game_event` row still points at it makes PostgreSQL try to null the whole
+    referencing key - `season_code` included - and `game_event.season_code` is
+    `not null`. Removing the referencing rows first is what keeps that action
+    unreachable. Every writer before Decision 7's rebuild only ever inserted,
+    so nothing had ever reached it.
+
+    `possession` then goes before `lineup_stint`, which it references.
+    """
+    params = (season_code, gamecode)
+    cursor.execute("DELETE FROM game_event WHERE season_code = %s AND gamecode = %s", params)
+    for target in ("possession", "player_game_minutes", "game_quality", "lineup_stint"):
+        cursor.execute(
+            f"DELETE FROM {target} WHERE season_code = %s AND gamecode = %s",
+            params,
+        )
+
+
+def insert_staged_derived_game_rows(cursor: Any) -> None:
+    """Move the staged derived rows into their real tables, parents before children."""
+    lineup_columns = ", ".join(LINEUP_COLUMNS)
+    cursor.execute(
+        f"INSERT INTO lineup ({lineup_columns}) "
+        f"SELECT {lineup_columns} FROM stage_lineup "
+        "ON CONFLICT (lineup_id) DO NOTHING"
+    )
+    _insert_staged_rows(cursor, "lineup_stint", LINEUP_STINT_COLUMNS)
+    _insert_staged_rows(cursor, "possession", POSSESSION_COLUMNS)
+    _insert_staged_rows(cursor, "game_event", GAME_EVENT_COLUMNS)
+    _insert_staged_rows(cursor, "player_game_minutes", PLAYER_GAME_MINUTES_COLUMNS)
+    _insert_staged_rows(cursor, "game_quality", GAME_QUALITY_COLUMNS)
+
+
 def _load_one_attached_game(
     connection: Any,
     events: tuple[GameEventRow, ...],
@@ -361,72 +631,11 @@ def _load_one_attached_game(
     *,
     replace: bool,
 ) -> dict[str, int]:
-    counts: dict[str, int] = {}
     with connection.transaction(), connection.cursor() as cursor:
-        counts["lineup"] = _stage_rows(cursor, "lineup", LINEUP_COLUMNS, rows.lineups)
-        counts["lineup_stint"] = _stage_rows(
-            cursor, "lineup_stint", LINEUP_STINT_COLUMNS, rows.stints
-        )
-        counts["possession"] = _stage_rows(
-            cursor, "possession", POSSESSION_COLUMNS, rows.possessions
-        )
-        counts["game_event"] = _stage_rows(cursor, "game_event", GAME_EVENT_COLUMNS, events)
-        counts["player_game_minutes"] = _stage_rows(
-            cursor,
-            "player_game_minutes",
-            PLAYER_GAME_MINUTES_COLUMNS,
-            rows.player_minutes,
-        )
-        counts["game_quality"] = _stage_rows(
-            cursor, "game_quality", GAME_QUALITY_COLUMNS, rows.game_qualities
-        )
-
-        cursor.execute(
-            """
-            SELECT count(*)
-            FROM lineup stored
-            JOIN stage_lineup staged USING (lineup_id)
-            WHERE ROW(stored.team_code, stored.player_id_1, stored.player_id_2,
-                      stored.player_id_3, stored.player_id_4, stored.player_id_5)
-                  IS DISTINCT FROM
-                  ROW(staged.team_code, staged.player_id_1, staged.player_id_2,
-                      staged.player_id_3, staged.player_id_4, staged.player_id_5)
-            """
-        )
-        collisions = int(cursor.fetchone()[0])
-        if collisions:
-            raise LineupCollisionError(
-                f"The selected identifier conflicts with {collisions} stored lineup rows."
-            )
-
+        counts = stage_attached_game_rows(cursor, events, rows)
         if replace:
-            params = (season_code, gamecode)
-            cursor.execute(
-                "DELETE FROM game_event WHERE season_code = %s AND gamecode = %s", params
-            )
-            for target in (
-                "possession",
-                "player_game_minutes",
-                "game_quality",
-                "lineup_stint",
-            ):
-                cursor.execute(
-                    f"DELETE FROM {target} WHERE season_code = %s AND gamecode = %s",
-                    params,
-                )
-
-        lineup_columns = ", ".join(LINEUP_COLUMNS)
-        cursor.execute(
-            f"INSERT INTO lineup ({lineup_columns}) "
-            f"SELECT {lineup_columns} FROM stage_lineup "
-            "ON CONFLICT (lineup_id) DO NOTHING"
-        )
-        _insert_staged_rows(cursor, "lineup_stint", LINEUP_STINT_COLUMNS)
-        _insert_staged_rows(cursor, "possession", POSSESSION_COLUMNS)
-        _insert_staged_rows(cursor, "game_event", GAME_EVENT_COLUMNS)
-        _insert_staged_rows(cursor, "player_game_minutes", PLAYER_GAME_MINUTES_COLUMNS)
-        _insert_staged_rows(cursor, "game_quality", GAME_QUALITY_COLUMNS)
-
+            delete_derived_game_rows(cursor, season_code, gamecode)
+        insert_staged_derived_game_rows(cursor)
     return counts
 
 

@@ -26,7 +26,7 @@ transaction - never the season.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -251,15 +251,93 @@ def run_settlement_rechecks(
 def changed_games(observations: Sequence[SettlementObservation]) -> tuple[int, ...]:
     """Games whose source bytes changed, in gamecode order.
 
-    THE REBUILD THIS RETURNS WORK FOR IS NOT BUILT. Decision 7 requires that a
-    changed checksum rebuilds that one game's parsed and derived rows in a
-    single transaction, and the loader currently refuses to replace a game that
-    has derived rows at all - correctly, because replacing raw rows underneath
-    derived ones is the silent corruption the guard exists to prevent.
+    This is the list Decision 7's per-game rebuild works from. One game can
+    appear in several readings - three endpoints are re-checked - and it is
+    rebuilt once however many of them were revised, because the rebuild reads
+    the whole restored cache for that game rather than one endpoint's body.
 
-    So the honest behaviour today is: the audit trail is preserved in full, the
-    changed game is named, and the run goes red. It does not quietly proceed,
-    and it does not pretend to have rebuilt anything. Closing that gap is owner
-    work, recorded as such rather than improvised here at the moment it fires.
+    Sorted, and de-duplicated, so a run that repairs several games repairs them
+    in an order a human can follow in the log rather than in whatever order the
+    endpoints happened to come back.
     """
     return tuple(sorted({row.gamecode for row in observations if row.content_changed}))
+
+
+@dataclass(frozen=True)
+class RevisionRepair:
+    """What one settlement run's repair of revised games did, safe to print publicly.
+
+    Counts, gamecodes and an exception *message* only. A settings object or a
+    raw traceback here would carry a connection string into a public workflow
+    log, which is why the failure is reduced to `TypeName: message` at the
+    moment it is caught rather than re-raised for somebody else to format.
+    """
+
+    rebuilt: tuple[int, ...]
+    log_lines: tuple[str, ...]
+    failed_gamecode: int | None = None
+    failure_message: str | None = None
+
+    @property
+    def succeeded(self) -> bool:
+        """True when every revised game named was rebuilt."""
+        return self.failed_gamecode is None
+
+    def as_report(self) -> str:
+        """The lines the run prints: what was repaired, and what still is not.
+
+        A red run has to separate two sets that need different follow-up. The
+        games before the failure hold rows built from the current bytes and
+        need nothing. The failed game, and every game after it, still hold rows
+        built from superseded bytes. Saying only "a rebuild failed" leaves a
+        human to work out which is which from the exception text.
+        """
+        lines = [f"settlement repair: {len(self.rebuilt)} revised game(s) rebuilt"]
+        lines.extend(f"  {line}" for line in self.log_lines)
+        if self.failed_gamecode is not None:
+            repaired = ", ".join(str(code) for code in self.rebuilt) if self.rebuilt else "none"
+            lines.append(
+                f"REBUILD FAILED for game {self.failed_gamecode}: {self.failure_message}. "
+                f"Games rebuilt successfully before it: {repaired}. That game, and any "
+                f"revised game after it, were not rebuilt: their derived rows still "
+                f"describe superseded source bytes."
+            )
+        return "\n".join(lines)
+
+
+def repair_revised_games(
+    gamecodes: Sequence[int],
+    rebuild: Callable[[int], Any],
+) -> RevisionRepair:
+    """Rebuild each revised game in turn, and stop at the first one that fails.
+
+    ONE GAME AT A TIME, NEVER THE SEASON. `rebuild` is Decision 7's per-game
+    transactional rebuild with its connection and cache already bound, so this
+    function decides only the order, the stopping rule and what the run reports.
+
+    WHY IT STOPS RATHER THAN CARRYING ON. A rebuild fails because something is
+    wrong with the cache, the archive or the database, and none of those get
+    better by attempting the next game. Continuing would turn one failure into
+    a list of identical ones and bury the first - the only one whose message
+    describes the actual cause.
+
+    The exception is caught here rather than propagating because the run has
+    something to say that the exception does not: which games were repaired
+    before it. Those are sound and need no follow-up, and a bare traceback
+    would leave that unsaid.
+    """
+    rebuilt: list[int] = []
+    log_lines: list[str] = []
+    for gamecode in gamecodes:
+        try:
+            summary = rebuild(gamecode)
+        except Exception as failure:
+            return RevisionRepair(
+                rebuilt=tuple(rebuilt),
+                log_lines=tuple(log_lines),
+                failed_gamecode=int(gamecode),
+                failure_message=f"{type(failure).__name__}: {failure}",
+            )
+        rebuilt.append(int(gamecode))
+        log_lines.append(summary.as_log_line())
+    return RevisionRepair(rebuilt=tuple(rebuilt), log_lines=tuple(log_lines))

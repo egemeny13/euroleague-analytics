@@ -3,8 +3,8 @@
 Where the project is, what comes next, and what must be true before each phase
 starts. Read this with `DECISIONS.md` and `AGENTS.md`.
 
-**Deadline that matters:** the EuroLeague season starts in early October.
-Phases 1–7 should be complete before the first round.
+**Deadline that matters:** the first E2026 game is scheduled for 2026-09-24.
+The authoritative remaining-session sequence is at the end of this file.
 
 ---
 
@@ -264,12 +264,12 @@ later migration should scope the action to `possession_index`.
 
 ### Phase 7 — the MCP server. Complete.
 
-Nine read-only `el_` tools now expose warehouse coverage, games, team and player
-statistics, lineups, on/off splits, possessions, and source-ordered play by play.
-They aggregate through six versioned views; no table or dependency was added.
-Counting statistics come from the official box score, while possessions, pace,
-lineups, on/off, clutch filters, and per-100 rates remain the validated derived
-layer. The stdio entry point answers real MCP requests and keeps diagnostics off
+Ten read-only `el_` tools now expose warehouse coverage, games, team and player
+statistics, lineups, on/off splits, possessions, source-ordered play by play, and shot data
+with coordinates (`el_get_shot_data`). They aggregate through seven versioned views; no table
+or external dependency was added. Counting statistics come from the official box score, while
+possessions, pace, lineups, on/off, clutch filters, per-100 rates, and shot coordinates remain
+the validated derived layer. The stdio entry point answers real MCP requests and keeps diagnostics off
 protocol stdout.
 
 **Gate: passed 2026-08-13.** All 18 live checks pass. The tools reconcile to
@@ -282,8 +282,11 @@ seconds. The normal database-free suite remains green. See
 
 Every response reports coverage and exclusions. The shared envelope refuses to
 build a response containing a minute- or second-derived value without declaring
-whether its basis is corrected, raw, or official. Shot coordinates remain out of
-scope because `raw_shot` is empty; EuroCup and E2025 were not loaded.
+whether its basis is corrected, raw, or official. `raw_shot` is populated (holding
+51,193 E2024 rows and 64,137 E2025 rows, measured 2026-08-22 against production via
+`select season_code, count(*) from raw_shot group by 1 order by 1`), and E2025 is loaded
+(402 games, measured 2026-08-22 against production via `select season_code, count(*) from raw_game group by 1 order by 1`).
+`el_get_shot_data` serves shot coordinates across both loaded seasons.
 
 Three earlier issues remain open and visible: the storage hot-window decision,
 the named Phase 6 possession-gate residual, and the composite
@@ -350,7 +353,11 @@ writers, crash recovery, or real E2026 payloads.
 
 ---
 
-## After the phases
+## Historical closeout snapshot — 2026-08-13
+
+This section records what was true at the Phase 8 closeout. It is retained as
+evidence, not as the current work queue; use the final section of this file for
+current status and ordering.
 
 The phase sequence and Block B are complete. What remains is a set of named,
 open conditions and defects; Block B introduced no unresolved owner decision:
@@ -367,11 +374,12 @@ open conditions and defects; Block B introduced no unresolved owner decision:
    across a composite key. Option A avoids the broken action in the normal
    writer, but a later owner-approved migration should still scope it to
    `possession_index`.
-4. **Decision 17's unexercised condition** — approved in `DECISIONS.md` and
-   commit `11e3080`: any shot query including free throws must start from
+4. **Decision 17's condition exercised** — approved in `DECISIONS.md` and
+   commit `11e3080`: any shot query including free throws starts from
    `game_event`, with `raw_shot` left-joined only to attach coordinates.
-   `raw_shot` is still empty, so no shot query has exercised that condition and
-   no shot-location tool exists.
+   `raw_shot` is populated with 51,193 E2024 and 64,137 E2025 rows (measured
+   2026-08-22 against production) and served via `el_get_shot_data`, with free-throw
+   labelling gated by migration 0007 (`docs/SHOT_DATA_TOOL_REPORT.md`).
 
 **Published 2026-08-13.** `origin/master` and the local branch are the same
 commit, so Phases 5 through 8 are on GitHub and the repository exists somewhere
@@ -420,7 +428,11 @@ Then begin the next unfinished phase as described in ROADMAP.md.
 
 ---
 
-## Long-lead item — start it early, it blocks nothing
+## Historical long-lead snapshot — 2026-08-10
+
+This is the fetch estimate as it was recorded on 2026-08-10. E2025 has since
+been fetched, loaded, and verified; the estimate remains useful for future
+archive expansion but is not an active instruction.
 
 **The season count is now measured.** On 2026-08-10 one schedule request per
 candidate season code established that the API serves **E2003 through E2026**:
@@ -459,10 +471,123 @@ knowing before the first long run:
   The cost is one request per run per unfinished season. When the refreshed body
   differs, the superseded body is kept beside it under its checksum, because a
   re-fetch is an audit and never an overwrite.
-- **`Points` is archived but not ingested.** The Phase 4 gate reconciles the
-  cache against the warehouse for `Schedule`, `Boxscore` and `PlaybyPlay` only,
-  and `raw_shot` stays empty until a later phase parses coordinates. Decision 17
-  is approved in `DECISIONS.md` and commit `11e3080`, but its condition remains
-  unexercised: a shot query including free throws must start from `game_event`,
-  and `raw_shot` may be left-joined only to attach coordinates. Because
-  `raw_shot` is still empty, approved is not the same as satisfied.
+- **`Points` parsed and ingested into `raw_shot`.** `raw_shot` is populated
+  (51,193 E2024 rows and 64,137 E2025 rows, measured 2026-08-22 against production).
+  Decision 17 was implemented and verified in `docs/SHOT_DATA_TOOL_REPORT.md`:
+  `el_get_shot_data` queries `game_event` and left-joins `raw_shot` for coordinates
+  (`v_shot_data`), satisfying the condition.
+
+---
+
+## Live Season Plan: Blocks C, D, and E (2026-08-23)
+
+Following the compaction and incremental loader work in Blocks A and B (`docs/STORAGE_COMPACTION_REPORT.md`, `docs/E2026_LIVE_SEASON_PLAN.md`):
+
+- **Block C — Automated Scheduled Pipeline**: Complete and verified (`docs/BLOCK_C_REPORT.md`). Scheduled fetch, incremental load, derived rebuild, and validation gates run on GitHub Actions (`.github/workflows/e2026-live.yml`).
+- **Block D — Pre-season Rosters**: Reconnaissance is complete and proves roster availability (`exploration/ROSTER_ENDPOINT_FINDINGS.md`); parser and ingestion have not run.
+- **Block E — Multi-season Serving & Maintenance**: Migrations 0008-0010 and truthful zero-game E2026 progress are active. Public-view security hardening, live timing, and release verification have not run.
+
+### Open Items Carried into Live Season
+1. **The 16-game E2024 possession residual**: Quarantined under `possession_gate` and disclosed on every tool response.
+2. **The composite `game_event_possession_fkey` constraint**: Migration 0008 is applied and rollback-probed; only nullable `possession_index` is now cleared.
+3. **Storage headroom monitoring**: Verified 3-season window (E2024, E2025, E2026) within the 500 MB ceiling.
+4. **Season progress activation**: Migration 0009 is applied; E2026 truthfully records 380 scheduled and 0 loaded games. E2024/E2025 remain unknown because no truthful historical load timestamp exists.
+5. **E2024 archive recoverability**: 330 parsed `Points` games have no production archive entries; detection is implemented and repair remains owner-attended.
+6. **Applied-source activation**: Migration 0010 is reconciled with the
+   equivalent production table. It has zero rows because no historical applied
+   checksum version was provable; future successful E2026 writes will create
+   their own markers.
+7. **Public-view security**: Six legacy views have inherited public grants and
+   Supabase `security_definer_view` ERROR findings. Harden them in a separate
+   attended session before release.
+
+---
+
+## Current verified state and ordered remaining work — 2026-08-23
+
+Core phases 0-8 and live-season Blocks A-C are complete. Block D has completed
+reconnaissance but no roster parser or ingest. Most Block E code exists, but its
+public-view hardening and external release evidence are still pending. The working tree
+passes 648 offline tests with environment-dependent checks excluded; lint and
+format are clean. Local `master` will be 44 commits ahead of `origin/master`
+after the production-session commit. The ten unique commits on
+`origin/codex/decision-7-rebuild` are fully explained in
+`docs/DECISION_7_BRANCH_RECONCILIATION.md`; remote branch deletion remains an
+explicit owner action.
+
+**Release-readiness estimate: approximately 85%.** This is a transparent
+planning estimate, not a code-line metric: 80 percentage points are assigned to
+the completed core phases and Blocks A-C; 20 points cover activation and Blocks
+D/E, of which roughly five are already earned by roster reconnaissance,
+freshness/progress implementation, and the timing harness. Historical archive
+expansion and EuroCup are deliberately deferred product expansion and are not
+included in that percentage.
+
+### Small closeout completed in this session
+
+- `rebuild_revised_game` now runs the same season/scope guards as the other
+  derived writers, refuses any empty per-game derived table before deletion,
+  and filters `team_season` rows by season as well as team.
+- The follow-up inbox is empty, stale README/migration/timing status is corrected,
+  and every remaining large item has a one-session draft below.
+- No production write, branch integration, push, workflow dispatch, or live API
+  sweep is part of this closeout.
+
+### Decision 7 branch reconciliation completed
+
+- Private cache snapshots now bind parsing and applied checksums to the same
+  immutable bytes.
+- `Points` is required and loaded for new E2026 games; per-game rebuilds replace
+  `raw_shot` and prune only unreferenced obsolete identities.
+- Migration 0010 makes failed source revisions durably pending across runs.
+- All ten remote-only commits are classified in
+  `docs/DECISION_7_BRANCH_RECONCILIATION.md`. No merge, push, production write,
+  or branch deletion occurred.
+
+### Production migrations and progress activation completed
+
+- Migrations 0008-0010 are recorded in production; the pre-existing Decision 7
+  table was reconciled without dropping it or inventing marker rows.
+- A rollback-only live delete proved 0008 clears only `possession_index`.
+- E2026 Schedule bytes matched the current archive SHA-256 exactly and produced
+  the only progress row: 380 scheduled, 0 loaded. Historical seasons remain
+  unknown.
+- All twenty E2024/E2025 content fingerprints remained unchanged. Full evidence
+  is in `docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md`.
+- The advisor exposed a separate six-view security blocker; it was not folded
+  silently into this migration session and was closed in the next attended
+  session.
+
+### Public view security hardening completed
+
+- Migration 0011 makes all seven warehouse views `security_invoker` and removes
+  every `anon` and `authenticated` view privilege.
+- Direct production role tests deny both public roles with PostgreSQL `42501`;
+  `service_role` and the owning MCP role retain unchanged full result sets.
+- All seven pre/post row counts, whole-result fingerprints, and the structural
+  signature match. The six security advisor ERROR findings are gone.
+- Full evidence is in `docs/PUBLIC_VIEW_SECURITY_HARDENING_REPORT.md`.
+
+### Ordered one-session roadmap
+
+Each row is intentionally a separate session. Do not combine adjacent rows just
+because a previous one finishes early; its gate is the next row's precondition.
+
+| Order | Session plan | Why this order | Done when |
+|---:|---|---|---|
+| 1 | **Complete:** [`01-decision-7-branch-reconciliation.md`](docs/superpowers/plans/2026-08-23-01-decision-7-branch-reconciliation.md) | Establish one canonical rebuild implementation before publishing or deleting a branch. | All ten commits are explained; deletion remains an explicit owner action. |
+| 2 | **Complete:** [`02-production-migrations-and-progress-backfill.md`](docs/superpowers/plans/2026-08-23-02-production-migrations-and-progress-backfill.md) | The live workflow and MCP disclosure need schema 0008/0009/0010 before activation. | All three migrations are verified; progress and applied checksums are initialized only where truthful evidence exists. |
+| 3 | **Complete:** [`03a-public-view-security-hardening.md`](docs/superpowers/plans/2026-08-23-03a-public-view-security-hardening.md) | The production advisor found six security-definer views with inherited public grants; release must not preserve an unexamined Data API path. | Advisor errors are gone, public-role behavior is explicit, and MCP view results remain unchanged. |
+| 4 | [`03-release-and-actions-verification.md`](docs/superpowers/plans/2026-08-23-03-release-and-actions-verification.md) | Publish the local commits through a review branch, never by pushing protected `master`. | PR/merge policy is satisfied and one real workflow summary is inspected. |
+| 5 | [`04-e2024-points-archive-repair.md`](docs/superpowers/plans/2026-08-23-04-e2024-points-archive-repair.md) | Close the known recoverability hole without re-fetching source data. | All 330 objects and index rows verify and reconciliation is clean. |
+| 6 | [`05-preseason-roster-ingestion.md`](docs/superpowers/plans/2026-08-23-05-preseason-roster-ingestion.md) | Complete Block D using the endpoint already proved by reconnaissance. | Parser, archive path, ingest, idempotency, and zero-game E2026 gate pass. |
+| 7 | [`06-decision-18-live-remeasurement.md`](docs/superpowers/plans/2026-08-23-06-decision-18-live-remeasurement.md) | Re-earn the view-performance licence against the activated multi-season schema. | Real timings are recorded; every failure is named for a separate optimisation decision. |
+| 8 | [`07-e2026-opening-week-validation.md`](docs/superpowers/plans/2026-08-23-07-e2026-opening-week-validation.md) | This evidence cannot exist before games are played. Earliest start is 2026-09-24. | Initial load plus +6h/+24h/+72h/+7d settlement evidence and per-season correction safety are recorded. |
+| 9 | [`08-possession-residual-investigation.md`](docs/superpowers/plans/2026-08-23-08-possession-residual-investigation.md) | Important quality research, but quarantine makes it non-blocking for launch. | The residual is explained or narrowed by a new falsifiable diagnostic without weakening the gate. |
+| 10 | [`09-historical-archive-expansion.md`](docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md) | Long-running backfill belongs after live operations are stable. | A bounded season batch is archived with checksums, cadence, and storage projection evidence. |
+| 11 | [`10-eurocup-onboarding.md`](docs/superpowers/plans/2026-08-23-10-eurocup-onboarding.md) | Decision 11 keeps EuroCup schema-ready but deferred until EuroLeague is operationally proven. | A measured pilot passes competition isolation and storage gates before any full load. |
+
+Orders 1-3 are complete; Order 4 is next. Orders 4-7 are the remaining pre-release
+path. Order 8 is date-gated operational proof. Order 9 is a disclosed quality
+improvement. Orders 10-11 are post-release expansion and may be postponed
+without weakening the E2026 launch claim.

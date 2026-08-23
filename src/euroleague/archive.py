@@ -392,8 +392,14 @@ def restore_current_season_cache(
     season_code: str,
     *,
     allow_bootstrap: bool = False,
+    snapshot_cache: ResponseCache | None = None,
 ) -> RestoreSummary:
-    """Rebuild the canonical local cache from current, checksum-verified archive objects."""
+    """Rebuild the canonical cache and optionally an immutable consumer snapshot.
+
+    The optional snapshot receives the same verified bodies before the canonical
+    directory is swapped. A parser can consume that private directory even if a
+    later process advances the canonical cache while the run is still working.
+    """
     entries = current_archive_entries(connection, season_code)
     if not entries:
         if allow_bootstrap:
@@ -440,6 +446,16 @@ def restore_current_season_cache(
         for entry, body in downloaded:
             _write_bytes_atomically(_cache_path(staged_cache, entry), body)
         completeness = assert_complete_played_cache(staged_cache, season_code)
+        if snapshot_cache is not None:
+            snapshot_season = snapshot_cache.root / season_code
+            if snapshot_season.exists():
+                raise FileExistsError(
+                    f"Consumer snapshot already contains {snapshot_season}; "
+                    "use a new empty snapshot directory for each restore."
+                )
+            for entry, body in downloaded:
+                _write_bytes_atomically(_cache_path(snapshot_cache, entry), body)
+            assert_complete_played_cache(snapshot_cache, season_code)
         _replace_staged_season(cache, staged_cache, season_code)
 
     return RestoreSummary(
@@ -659,3 +675,90 @@ def archive_season(
         "exact_bytes": exact_bytes,
         "verified_samples": verified_samples,
     }
+
+
+@dataclass(frozen=True)
+class EndpointArchiveGap:
+    """Discrepancy between warehouse parsed rows and raw_api_response archive entries."""
+
+    season_code: str
+    endpoint: str
+    warehouse_games: int
+    archive_responses: int
+    warehouse_rows: int
+    is_gap: bool
+
+
+def reconcile_warehouse_archive_gap(
+    connection: Any,
+    season_code: str | None = None,
+) -> tuple[EndpointArchiveGap, ...]:
+    """Reconcile warehouse parsed data tables against raw_api_response archive index entries.
+
+    For each season and endpoint (Points -> raw_shot, Boxscore -> raw_game,
+    PlaybyPlay -> raw_event), evaluates whether parsed rows exist in warehouse
+    tables while corresponding archive index records in raw_api_response are missing or short.
+
+    Blind spot / Failure modes not detected:
+        This check verifies database index rows (raw_api_response metadata) against warehouse
+        tables. It does NOT verify object existence, integrity, or corruption in the underlying
+        Storage bucket (e.g., an archive entry pointing to a missing or corrupted Storage object
+        will not be flagged).
+    """
+    cur = connection.cursor()
+    safe_season = f"season_code = '{season_code.replace("'", '')}'" if season_code else None
+
+    def _query(base_select: str, from_table: str, extra_group: str = "") -> list[tuple[Any, ...]]:
+        sql_query = f"SELECT {base_select} FROM {from_table}"
+        if safe_season:
+            sql_query += f" WHERE {safe_season}"
+        sql_query += f" GROUP BY season_code{extra_group}"
+        cur.execute(sql_query)
+        return list(cur.fetchall())
+
+    game_counts = {
+        row[0]: (row[1], row[2])
+        for row in _query("season_code, COUNT(DISTINCT gamecode), COUNT(*)", "raw_game")
+    }
+    event_counts = {
+        row[0]: (row[1], row[2])
+        for row in _query("season_code, COUNT(DISTINCT gamecode), COUNT(*)", "raw_event")
+    }
+    shot_counts = {
+        row[0]: (row[1], row[2])
+        for row in _query("season_code, COUNT(DISTINCT gamecode), COUNT(*)", "raw_shot")
+    }
+
+    archive_rows = _query(
+        "season_code, endpoint, COUNT(DISTINCT gamecode)",
+        "raw_api_response",
+        extra_group=", endpoint",
+    )
+    archive_counts = {(row[0], row[1]): row[2] for row in archive_rows}
+
+    all_seasons = set(game_counts.keys()) | set(event_counts.keys()) | set(shot_counts.keys())
+    if season_code is not None:
+        all_seasons.add(season_code)
+
+    gaps: list[EndpointArchiveGap] = []
+    for s in sorted(all_seasons):
+        endpoints_data = [
+            ("Boxscore", game_counts.get(s, (0, 0))),
+            ("PlaybyPlay", event_counts.get(s, (0, 0))),
+            ("Points", shot_counts.get(s, (0, 0))),
+        ]
+        for ep, (wh_games, wh_rows) in endpoints_data:
+            arch_resp = archive_counts.get((s, ep), 0)
+            is_gap = wh_games > 0 and arch_resp < wh_games
+            gaps.append(
+                EndpointArchiveGap(
+                    season_code=s,
+                    endpoint=ep,
+                    warehouse_games=wh_games,
+                    archive_responses=arch_resp,
+                    warehouse_rows=wh_rows,
+                    is_gap=is_gap,
+                )
+            )
+
+    return tuple(gaps)

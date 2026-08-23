@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -666,26 +667,62 @@ def measure_lineup_identifier_widths(
     return {width: _measure_lineup_width(connection, usage, width) for width in (64, 32, 12)}
 
 
-def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int | tuple[int, ...]]:
-    """Enforce every persisted lineup, minute, quality, and scope gate for one season."""
+def assert_phase5_reconciles(
+    connection: Any,
+    season_code: str,
+    gamecodes: Sequence[int] | None = None,
+) -> dict[str, int | tuple[int, ...]]:
+    """Enforce every persisted lineup, minute, quality, and scope gate for one season (or games)."""
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT
-                (SELECT count(*) FROM lineup stored
-                 WHERE EXISTS (
-                     SELECT 1 FROM game_event event
-                     WHERE event.season_code = %s
-                       AND stored.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
-                 )),
-                (SELECT count(*) FROM lineup_stint WHERE season_code = %s),
-                (SELECT count(*) FROM game_event WHERE season_code = %s),
-                (SELECT count(*) FROM player_game_minutes WHERE season_code = %s),
-                (SELECT count(*) FROM game_quality WHERE season_code = %s),
-                (SELECT count(*) FROM possession WHERE season_code = %s)
-            """,
-            (season_code,) * 6,
-        )
+        game_filter = ""
+        event_filter = ""
+        stint_filter = ""
+        minutes_filter = ""
+        params_suffix: tuple[Any, ...] = ()
+        if gamecodes is not None:
+            codes_list = [int(c) for c in gamecodes]
+            game_filter = " AND gamecode = ANY(%s)"
+            event_filter = " AND event.gamecode = ANY(%s)"
+            stint_filter = " AND stint.gamecode = ANY(%s)"
+            minutes_filter = " AND minutes.gamecode = ANY(%s)"
+            params_suffix = (codes_list,)
+
+        if gamecodes is not None:
+            cursor.execute(
+                f"""
+                SELECT
+                    (SELECT count(*) FROM lineup stored
+                     WHERE EXISTS (
+                         SELECT 1 FROM game_event event
+                         WHERE event.season_code = %s {event_filter}
+                           AND stored.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+                     )),
+                    (SELECT count(*) FROM lineup_stint WHERE season_code = %s {game_filter}),
+                    (SELECT count(*) FROM game_event WHERE season_code = %s {game_filter}),
+                    (SELECT count(*) FROM player_game_minutes WHERE season_code = %s {game_filter}),
+                    (SELECT count(*) FROM game_quality WHERE season_code = %s {game_filter}),
+                    (SELECT count(*) FROM possession WHERE season_code = %s {game_filter})
+                """,
+                (season_code, *params_suffix) * 6,
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT
+                    (SELECT count(*) FROM lineup stored
+                     WHERE EXISTS (
+                         SELECT 1 FROM game_event event
+                         WHERE event.season_code = %s
+                           AND stored.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+                     )),
+                    (SELECT count(*) FROM lineup_stint WHERE season_code = %s),
+                    (SELECT count(*) FROM game_event WHERE season_code = %s),
+                    (SELECT count(*) FROM player_game_minutes WHERE season_code = %s),
+                    (SELECT count(*) FROM game_quality WHERE season_code = %s),
+                    (SELECT count(*) FROM possession WHERE season_code = %s)
+                """,
+                (season_code,) * 6,
+            )
         lineup_count, stint_count, event_count, minute_count, quality_count, possession_count = (
             int(value) for value in cursor.fetchone()
         )
@@ -693,121 +730,121 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
         cursor.execute("SELECT count(*) FROM lineup WHERE length(lineup_id) <> 32")
         wrong_width = int(cursor.fetchone()[0])
         cursor.execute(
-            """
+            f"""
             SELECT count(*) FROM game_event
-            WHERE season_code = %s
+            WHERE season_code = %s {game_filter}
               AND (home_lineup_id IS NULL OR away_lineup_id IS NULL OR stint_index IS NULL
                    OR free_throw_trip_id IS NOT NULL)
             """,
-            (season_code,),
+            (season_code, *params_suffix),
         )
         unattached_events = int(cursor.fetchone()[0])
         cursor.execute(
-            """
+            f"""
             SELECT count(*)
             FROM game_event event
             JOIN lineup_stint stint
               USING (season_code, gamecode, stint_index)
-            WHERE event.season_code = %s
+            WHERE event.season_code = %s {event_filter}
               AND (event.home_lineup_id IS DISTINCT FROM stint.home_lineup_id
                    OR event.away_lineup_id IS DISTINCT FROM stint.away_lineup_id)
             """,
-            (season_code,),
+            (season_code, *params_suffix),
         )
         event_stint_mismatches = int(cursor.fetchone()[0])
         cursor.execute(
-            """
+            f"""
             SELECT count(*)
             FROM lineup_stint stint
             JOIN raw_game game USING (season_code, gamecode)
             JOIN lineup home ON home.lineup_id = stint.home_lineup_id
             JOIN lineup away ON away.lineup_id = stint.away_lineup_id
-            WHERE stint.season_code = %s
+            WHERE stint.season_code = %s {stint_filter}
               AND (home.team_code IS DISTINCT FROM game.local_team_code
                    OR away.team_code IS DISTINCT FROM game.road_team_code)
             """,
-            (season_code,),
+            (season_code, *params_suffix),
         )
         wrong_sides = int(cursor.fetchone()[0])
         cursor.execute(
-            """
+            f"""
             SELECT count(*) FROM (
                 SELECT gamecode, period, codeteam, markertime
                 FROM game_event
-                WHERE season_code = %s AND playtype IN ('IN', 'OUT')
+                WHERE season_code = %s {game_filter} AND playtype IN ('IN', 'OUT')
                 GROUP BY gamecode, period, codeteam, markertime
                 HAVING count(*) FILTER (WHERE playtype = 'IN')
                     <> count(*) FILTER (WHERE playtype = 'OUT')
             ) unpaired
             """,
-            (season_code,),
+            (season_code, *params_suffix),
         )
         unpaired_batches = int(cursor.fetchone()[0])
         cursor.execute(
-            """
+            f"""
             SELECT count(*) FROM (
                 SELECT minutes.gamecode, minutes.team_code
                 FROM player_game_minutes minutes
                 JOIN (
                     SELECT gamecode, 2400 + greatest(max(period) - 4, 0) * 300 AS game_seconds
-                    FROM game_event WHERE season_code = %s GROUP BY gamecode
+                    FROM game_event WHERE season_code = %s {game_filter} GROUP BY gamecode
                 ) length USING (gamecode)
-                WHERE minutes.season_code = %s
+                WHERE minutes.season_code = %s {minutes_filter}
                 GROUP BY minutes.gamecode, minutes.team_code, length.game_seconds
                 HAVING sum(seconds_raw) <> 5 * length.game_seconds
                     OR sum(seconds_corrected) <> 5 * length.game_seconds
             ) bad_team_minutes
             """,
-            (season_code, season_code),
+            (season_code, *params_suffix, season_code, *params_suffix),
         )
         bad_team_minutes = int(cursor.fetchone()[0])
         cursor.execute(
-            """
+            f"""
             SELECT
                 coalesce(sum(oncourt_violations), 0),
                 coalesce(sum(pairing_errors), 0),
                 coalesce(sum(phantom_events), 0),
                 coalesce(sum(minute_mismatches_raw), 0),
                 coalesce(sum(minute_mismatches_corrected), 0)
-            FROM game_quality WHERE season_code = %s
+            FROM game_quality WHERE season_code = %s {game_filter}
             """,
-            (season_code,),
+            (season_code, *params_suffix),
         )
         oncourt, pairing, attribution, raw_minutes, corrected_minutes = (
             int(value) for value in cursor.fetchone()
         )
         cursor.execute(
-            """
+            f"""
             SELECT
                 array_agg(gamecode ORDER BY gamecode)
                     FILTER (WHERE minute_mismatches_corrected > 0),
                 array_agg(gamecode ORDER BY gamecode)
                     FILTER (WHERE phantom_events > 0),
                 count(*) FILTER (WHERE correction_applied AND correction_helped IS NOT TRUE)
-            FROM game_quality WHERE season_code = %s
+            FROM game_quality WHERE season_code = %s {game_filter}
             """,
-            (season_code,),
+            (season_code, *params_suffix),
         )
         minute_games, attribution_games, unhelpful_applied = cursor.fetchone()
         cursor.execute(
-            """
+            f"""
             SELECT
                 count(*) FILTER (WHERE elapsed_seconds_corrected <> elapsed_seconds_raw),
                 count(*) FILTER (WHERE attribution_suspect)
-            FROM game_event WHERE season_code = %s
+            FROM game_event WHERE season_code = %s {game_filter}
             """,
-            (season_code,),
+            (season_code, *params_suffix),
         )
         corrected_event_rows, suspect_event_rows = (int(value) for value in cursor.fetchone())
         cursor.execute(
-            """
+            f"""
             SELECT gamecode, excluded_by_default, quarantine_reasons,
                    minute_mismatches_corrected, phantom_events, oncourt_violations
             FROM game_quality
-            WHERE season_code = %s
+            WHERE season_code = %s {game_filter}
             ORDER BY gamecode
             """,
-            (season_code,),
+            (season_code, *params_suffix),
         )
         quarantine_control_failures: list[int] = []
         for (
@@ -849,7 +886,14 @@ def assert_phase5_reconciles(connection: Any, season_code: str) -> dict[str, int
         "possession_missing": int(possession_count == 0),
     }
     if any(failures.values()):
-        raise AssertionError(f"Phase 5 warehouse invariant failures: {failures}")
+        failing_reasons = [k for k, v in failures.items() if v]
+        games_info = (
+            f" for {season_code} games {list(gamecodes)}" if gamecodes else f" for {season_code}"
+        )
+        raise AssertionError(
+            f"Phase 5 warehouse invariant failures{games_info}: {failing_reasons} "
+            f"(details: {failures})"
+        )
     return {
         "lineup": lineup_count,
         "lineup_stint": stint_count,

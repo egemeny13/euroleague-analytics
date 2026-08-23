@@ -96,6 +96,24 @@ def storage() -> StorageDouble:
     return StorageDouble()
 
 
+def test_restore_can_materialise_an_immutable_consumer_snapshot(tmp_path):
+    """Break caught: a later canonical cache swap changes bytes under a parser."""
+    connection, archive_storage = archived_season(played=(7,))
+    cache = ResponseCache(tmp_path / "canonical")
+    snapshot = ResponseCache(tmp_path / "snapshot")
+
+    restore_current_season_cache(
+        connection,
+        cache,
+        archive_storage,
+        SEASON,
+        snapshot_cache=snapshot,
+    )
+    cache.path_for(SEASON, "Boxscore", 7).write_bytes(b'{"advanced":true}')
+
+    assert snapshot.read_bytes(SEASON, "Boxscore", 7) == b'{"game":7,"endpoint":"Boxscore"}'
+
+
 def test_complete_cache_requires_the_exact_played_game_identities(tmp_path):
     """Break caught: equal endpoint counts hide the wrong played gamecode."""
     cache = cache_with_schedule(tmp_path, played=(11, 12))

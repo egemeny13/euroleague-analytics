@@ -12,8 +12,15 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0004a_query_views_join_safety` | Fix: `v_player_game` joins `player` with `left join` instead of `inner join`, so a missing dimension row nulls the name instead of deleting the row; documents unenforced join assumptions on `v_team_game` and `v_player_game`. No tables, `create or replace view` only. |
 | `0005_game_winner` | Fix: `v_game.winner_team_code` is derived from the official final score instead of passing through `raw_game`, where it is null for every game because the source schedule names the season champion in all 330 rows. See `DECISIONS.md` item 19. No tables, `create or replace view` only. |
 | `0006_shot_data_view` | `v_shot_data`, whose complete shot population starts from `game_event` and left-joins `raw_shot` only for real X, Y, and zone values. Free throws remain coordinate-null and `(-1,-1)` is never served. No tables. |
+| `0007_shot_data_ft_gate` | Replaces `v_shot_data` so free-throw labelling is derived from event semantics and remains independent of coordinate availability. No tables. |
+| `0008_possession_fkey_scope` | Repairs `game_event_possession_fkey` so `ON DELETE SET NULL` targets only nullable `possession_index`, not the non-null season and game key columns. Applied and rollback-probed in production on 2026-08-23. |
+| `0009_season_progress` | Adds private `season_progress`, the scheduled-game count and last-load timestamp used to disclose whether a season is complete, in progress, or unknown. Applied on 2026-08-23; E2026 is initialized and historical seasons deliberately remain unknown. |
+| `0010_game_source_state` | Adds private per-game provenance for the exact Boxscore, PlaybyPlay, and Points checksums successfully applied to warehouse rows. Reconciled with the equivalent pre-existing production table on 2026-08-23; no unprovable historical marker was inserted. |
+| `0011_public_view_security` | Makes all seven warehouse views `security_invoker` and revokes every `anon` and `authenticated` view privilege. Applied on 2026-08-23 UTC after a PostgreSQL 17.11 up/down/up rehearsal and full-result fingerprint comparison. |
 
-Sixteen tables.
+The complete migration set and production both define eighteen tables. See
+`docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md` for the rehearsal, drift
+reconciliation, and production evidence.
 
 ## The gate, and why it expires
 
@@ -84,5 +91,12 @@ and the owner bypasses RLS. Enabling it with no policies denies the `anon` and
 exposes nothing. Verified on 2026-08-09: with one row present, the owner saw 1
 and `anon` saw 0.
 
-The warehouse is served through the MCP layer, not through PostgREST. If that
-ever changes, read policies get added deliberately at that point.
+The warehouse is served through the MCP layer, not through PostgREST. The table
+statement above remains true, but it was not sufficient for views: the
+2026-08-23 advisor run found six legacy security-definer views with inherited
+public grants. Migration 0011 closed that path on 2026-08-23 UTC by applying
+both controls independently: every warehouse view is now `security_invoker`,
+and neither public API role has a privilege on any of them. Direct role tests
+return PostgreSQL `42501` for both `anon` and `authenticated`; the owning MCP
+role and `service_role` retain the complete, unchanged result sets. See
+`docs/PUBLIC_VIEW_SECURITY_HARDENING_REPORT.md`.

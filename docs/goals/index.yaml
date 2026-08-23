@@ -11,18 +11,18 @@ config:
   # .github/workflows/ci.yml currently re-enables the network mark by accident.
   # Goal 008 fixes CI; this file must not repeat the mistake meanwhile.
   verify:
-    - ruff check .
-    - ruff format --check .
-    - pytest
+    - uv run ruff check .
+    - uv run ruff format --check .
+    - uv run pytest
 goals:
-  001-rebuild-revised-game: {status: not_started, priority: high}
-  002-wire-rebuild-into-settlement: {status: not_started, priority: high, depends_on: [001-rebuild-revised-game]}
-  003-gate-newly-loaded-games: {status: not_started, priority: high}
-  004-live-season-progress: {status: not_started, priority: high}
-  005-nightly-run-summary: {status: not_started, depends_on: [002-wire-rebuild-into-settlement, 003-gate-newly-loaded-games]}
-  006-possession-fkey-scope: {status: not_started}
-  007-points-archive-gap: {status: not_started}
-  008-ci-marker-filter: {status: not_started, priority: high}
-  009-roster-endpoint-recon: {status: not_started, depends_on: [008-ci-marker-filter]}
-  010-requery-view-timings: {status: not_started}
-  011-roadmap-matches-reality: {status: not_started}
+  001-rebuild-revised-game: {status: completed, priority: high}
+  002-wire-rebuild-into-settlement: {status: completed, priority: high, depends_on: [001-rebuild-revised-game]}
+  003-gate-newly-loaded-games: {status: completed, priority: high}
+  004-live-season-progress: {status: completed, priority: high}
+  005-nightly-run-summary: {status: completed, depends_on: [002-wire-rebuild-into-settlement, 003-gate-newly-loaded-games]}
+  006-possession-fkey-scope: {status: completed}
+  007-points-archive-gap: {status: completed}
+  008-ci-marker-filter: {status: completed, priority: high}
+  009-roster-endpoint-recon: {status: completed, depends_on: [008-ci-marker-filter]}
+  010-requery-view-timings: {status: completed}
+  011-roadmap-matches-reality: {status: completed}
