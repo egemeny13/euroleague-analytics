@@ -1,6 +1,7 @@
-# Public View Security Hardening — Draft Session Plan
+# Public View Security Hardening — Completed Session Plan
 
-**Status:** Draft. Separate attended production-write session; release blocker.
+**Status:** Complete. Production migration `20260823212718` applied in an
+attended session after explicit owner approval.
 
 ## Purpose
 
@@ -44,3 +45,20 @@ boundary true in both grants and execution semantics.
 Stop if changing invoker semantics changes an MCP result, if REST behavior
 cannot be tested under both public roles, or if a view column signature moves.
 Do not combine this with release publication or unrelated advisor cleanup.
+
+## Result
+
+- The owner chose both controls: no public Data API access, plus
+  `security_invoker=true` as defense in depth.
+- Migration `0011_public_view_security` changed view metadata only. It did not
+  replace a view, move a column, or write a row.
+- PostgreSQL 17.11 passed the complete migration up/down/up/down gate and the
+  focused security up/down/up gate. The seven-view structural signature stayed
+  `57d63d38b7bfbd60355a4110c0f67bf0` throughout.
+- Production pre/post fingerprints matched for every row in all seven views.
+- Direct role tests returned `42501 permission denied` for both public API
+  roles. The owner and `service_role` retained the unchanged result sets.
+- The six `security_definer_view` ERROR findings are gone. The expected 18
+  no-policy RLS INFO notices remain; unrelated performance INFO notices were
+  measured but not changed.
+- Full evidence is in `docs/PUBLIC_VIEW_SECURITY_HARDENING_REPORT.md`.

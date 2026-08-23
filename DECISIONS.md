@@ -1128,6 +1128,49 @@ down **120,168,448 bytes (54.72%)** from the same local current-writer gate.
 
 ---
 
+## 23. The public Data API exposes no warehouse view
+
+All seven warehouse views use `security_invoker=true`, and the `anon` and
+`authenticated` roles have no privilege on any of them. The warehouse remains
+available through the owning MCP connection and `service_role`; neither public
+role is an alternate query interface.
+
+**Why.** Production measurement on 2026-08-23 found that six legacy views ran
+with their `postgres` owner's RLS bypass and retained broad public-role grants.
+An actual `anon` query returned every row: 732 games, 1,464 team-game rows,
+17,403 player-game rows, 65,910 lineup-player rows, 107,314 possessions, and
+399,459 play-by-play events. `v_shot_data`, already security-invoker, returned
+zero rows under the same role. Table RLS therefore did not support the old
+blanket claim that the whole public REST surface exposed nothing.
+
+**Conditions.**
+
+- Both controls remain explicit. Invoker semantics prevent a view from
+  bypassing underlying RLS if a grant is added later; privilege revocation
+  removes the Data API object path now.
+- The owner and `service_role` must retain every pre-change view result. A
+  security migration that changes a definition, column signature, or served
+  row is not this decision and must stop for separate review.
+- Any future public Data API feature is a product and security decision. It
+  requires explicit grants, RLS policies, role tests, and owner approval; it is
+  not enabled as a convenience for a client library.
+
+**Provenance.**
+
+- Basis: MIXED. Exposure counts, role behavior, grants, view options, advisor
+  output, and pre/post result fingerprints are measured. Choosing to close the
+  Data API rather than design public policies is an owner product decision.
+- Evidence: migration `0011_public_view_security`; production record
+  `20260823212718`; `docs/PUBLIC_VIEW_SECURITY_HARDENING_REPORT.md`.
+- Alternatives considered: invoker semantics alone, which currently returns
+  zero rows because the base tables have no policies but could expose data if a
+  policy appears later; revocation alone, which leaves owner-executed semantics
+  and the advisor ERROR in place; or both independent controls.
+- Approved: the owner, 2026-08-24 Europe/Istanbul, choosing both controls in the
+  attended security session.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

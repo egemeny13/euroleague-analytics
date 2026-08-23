@@ -149,3 +149,16 @@ hardening session; this migration session did not silently widen its scope.
 
 Advisor remediation reference:
 https://supabase.com/docs/guides/database/database-linter?lint=0010_security_definer_view
+
+## Follow-up: release blocker closed
+
+The separate attended security session applied migration
+`20260823212718 / 0011_public_view_security` on 2026-08-23 UTC. All seven
+warehouse views now use `security_invoker=true`, and `anon` plus
+`authenticated` have no privileges on any of them. The six advisor ERROR
+findings are gone. Every view definition, column signature, row count, and
+whole-result fingerprint remained unchanged for the owning MCP role.
+
+The dedicated evidence, including direct public-role denials and the disposable
+PostgreSQL 17.11 rehearsal, is in
+`docs/PUBLIC_VIEW_SECURITY_HARDENING_REPORT.md`.

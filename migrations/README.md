@@ -16,6 +16,7 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0008_possession_fkey_scope` | Repairs `game_event_possession_fkey` so `ON DELETE SET NULL` targets only nullable `possession_index`, not the non-null season and game key columns. Applied and rollback-probed in production on 2026-08-23. |
 | `0009_season_progress` | Adds private `season_progress`, the scheduled-game count and last-load timestamp used to disclose whether a season is complete, in progress, or unknown. Applied on 2026-08-23; E2026 is initialized and historical seasons deliberately remain unknown. |
 | `0010_game_source_state` | Adds private per-game provenance for the exact Boxscore, PlaybyPlay, and Points checksums successfully applied to warehouse rows. Reconciled with the equivalent pre-existing production table on 2026-08-23; no unprovable historical marker was inserted. |
+| `0011_public_view_security` | Makes all seven warehouse views `security_invoker` and revokes every `anon` and `authenticated` view privilege. Applied on 2026-08-23 UTC after a PostgreSQL 17.11 up/down/up rehearsal and full-result fingerprint comparison. |
 
 The complete migration set and production both define eighteen tables. See
 `docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md` for the rehearsal, drift
@@ -91,8 +92,11 @@ exposes nothing. Verified on 2026-08-09: with one row present, the owner saw 1
 and `anon` saw 0.
 
 The warehouse is served through the MCP layer, not through PostgREST. The table
-statement above remains true, but it is not sufficient for views: the
+statement above remains true, but it was not sufficient for views: the
 2026-08-23 advisor run found six legacy security-definer views with inherited
-public grants. They are a release blocker tracked in
-`docs/superpowers/plans/2026-08-23-03a-public-view-security-hardening.md`; do not
-repeat the old blanket claim that the entire REST surface exposes nothing.
+public grants. Migration 0011 closed that path on 2026-08-23 UTC by applying
+both controls independently: every warehouse view is now `security_invoker`,
+and neither public API role has a privilege on any of them. Direct role tests
+return PostgreSQL `42501` for both `anon` and `authenticated`; the owning MCP
+role and `service_role` retain the complete, unchanged result sets. See
+`docs/PUBLIC_VIEW_SECURITY_HARDENING_REPORT.md`.
