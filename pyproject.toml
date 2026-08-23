@@ -51,7 +51,7 @@ src = ["src", "tests"]
 # markdown, which would silently edit the record. Found on 2026-08-13, when
 # `ruff format --check .` failed on a committed Phase 7 plan document and would
 # have turned CI red on the next push.
-extend-exclude = ["exploration", "docs"]
+extend-exclude = ["exploration", "docs", ".agents"]
 
 [tool.ruff.lint]
 select = [

@@ -11,9 +11,9 @@ config:
   # .github/workflows/ci.yml currently re-enables the network mark by accident.
   # Goal 008 fixes CI; this file must not repeat the mistake meanwhile.
   verify:
-    - ruff check .
-    - ruff format --check .
-    - pytest
+    - uv run ruff check .
+    - uv run ruff format --check .
+    - uv run pytest
 goals:
   001-rebuild-revised-game: {status: completed, priority: high}
   002-wire-rebuild-into-settlement: {status: completed, priority: high, depends_on: [001-rebuild-revised-game]}
