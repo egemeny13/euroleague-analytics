@@ -19,7 +19,7 @@ goals:
   002-wire-rebuild-into-settlement: {status: completed, priority: high, depends_on: [001-rebuild-revised-game]}
   003-gate-newly-loaded-games: {status: completed, priority: high}
   004-live-season-progress: {status: completed, priority: high}
-  005-nightly-run-summary: {status: in_progress, depends_on: [002-wire-rebuild-into-settlement, 003-gate-newly-loaded-games]}
+  005-nightly-run-summary: {status: completed, depends_on: [002-wire-rebuild-into-settlement, 003-gate-newly-loaded-games]}
   006-possession-fkey-scope: {status: completed}
   007-points-archive-gap: {status: completed}
   008-ci-marker-filter: {status: completed, priority: high}
