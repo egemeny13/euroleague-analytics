@@ -125,31 +125,53 @@ def _copy_rows(cursor: Any, table: str, columns: tuple[str, ...], rows: Iterable
     return count
 
 
+def stage_raw_game_rows(cursor: Any, parsed: ParsedGameRows) -> dict[str, int]:
+    """Create the four raw staging tables and stream one game's rows into them.
+
+    Split out of `load_game` so a caller that owns a wider transaction - the
+    Decision 7 rebuild, which has to replace raw and derived rows together -
+    can stage the same rows without opening a second transaction of its own.
+    Everything here is temporary: `ON COMMIT DROP` means the staging tables
+    disappear with the transaction whether it commits or rolls back.
+    """
+    counts: dict[str, int] = {}
+    for target, stage, columns, rows_for_game in _TABLES:
+        cursor.execute(
+            f"CREATE TEMP TABLE {stage} (LIKE {target} INCLUDING DEFAULTS) ON COMMIT DROP"
+        )
+        counts[target] = _copy_rows(cursor, stage, columns, rows_for_game(parsed))
+    return counts
+
+
+def delete_raw_game_rows(cursor: Any, season_code: str, gamecode: int) -> None:
+    """Remove one game's raw rows, children before the `raw_game` row they hang off.
+
+    Every parameter is the season and the gamecode being replaced, so no
+    statement here can reach a second game. `raw_game` goes last because the
+    other three reference it.
+    """
+    params = (season_code, gamecode)
+    for target in ("raw_event", "raw_boxscore_player", "raw_boxscore_team"):
+        cursor.execute(
+            f"DELETE FROM {target} WHERE season_code = %s AND gamecode = %s",
+            params,
+        )
+    cursor.execute("DELETE FROM raw_game WHERE season_code = %s AND gamecode = %s", params)
+
+
+def insert_staged_raw_game_rows(cursor: Any) -> None:
+    """Move the staged raw rows into their real tables, `raw_game` first."""
+    for target, stage, columns, _ in _TABLES:
+        column_sql = ", ".join(columns)
+        cursor.execute(f"INSERT INTO {target} ({column_sql}) SELECT {column_sql} FROM {stage}")
+
+
 def load_game(connection: Any, parsed: ParsedGameRows) -> dict[str, int]:
     """Replace one complete game's four parsed raw row sets in one transaction."""
-    season_code = parsed.game.season_code
-    gamecode = parsed.game.gamecode
-    counts: dict[str, int] = {}
     with connection.transaction(), connection.cursor() as cursor:
-        for target, stage, columns, rows_for_game in _TABLES:
-            cursor.execute(
-                f"CREATE TEMP TABLE {stage} (LIKE {target} INCLUDING DEFAULTS) ON COMMIT DROP"
-            )
-            counts[target] = _copy_rows(cursor, stage, columns, rows_for_game(parsed))
-
-        for target in ("raw_event", "raw_boxscore_player", "raw_boxscore_team"):
-            cursor.execute(
-                f"DELETE FROM {target} WHERE season_code = %s AND gamecode = %s",
-                (season_code, gamecode),
-            )
-        cursor.execute(
-            "DELETE FROM raw_game WHERE season_code = %s AND gamecode = %s",
-            (season_code, gamecode),
-        )
-
-        for target, stage, columns, _ in _TABLES:
-            column_sql = ", ".join(columns)
-            cursor.execute(f"INSERT INTO {target} ({column_sql}) SELECT {column_sql} FROM {stage}")
+        counts = stage_raw_game_rows(cursor, parsed)
+        delete_raw_game_rows(cursor, parsed.game.season_code, parsed.game.gamecode)
+        insert_staged_raw_game_rows(cursor)
     return counts
 
 
