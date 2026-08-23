@@ -38,4 +38,4 @@ jobs:
         run: ruff format --check .
 
       - name: Test
-        run: pytest -m "not full_season and not warehouse"
+        run: pytest
