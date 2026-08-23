@@ -256,6 +256,26 @@ def test_a_revised_game_is_rebuilt_and_the_run_exits_zero(monkeypatch, tmp_path,
     assert "rebuilt E2026 game 9" in output.out
 
 
+def test_a_game_revised_on_two_endpoints_is_rebuilt_exactly_once(monkeypatch, tmp_path) -> None:
+    """Break caught: three endpoints are re-checked, so one game is rebuilt three times.
+
+    The rebuild reads the whole restored cache for the game rather than one
+    endpoint's body, so a second revised endpoint is the same repair. Rebuilding
+    again would delete and re-insert rows that were correct a moment earlier.
+    """
+    observations = [
+        _observation(7, "Boxscore", changed=True),
+        _observation(7, "PlaybyPlay", changed=True),
+        _observation(7, "Points", changed=True),
+    ]
+    module, recorded = _wire(monkeypatch, tmp_path, observations, _summary)
+
+    exit_code = module.main(["E2026", "--live", "--cache-root", str(tmp_path)])
+
+    assert exit_code == 0
+    assert recorded["rebuilt"] == [("E2026", 7)]
+
+
 def test_a_failed_rebuild_exits_non_zero_and_names_what_is_sound(
     monkeypatch, tmp_path, capsys
 ) -> None:
