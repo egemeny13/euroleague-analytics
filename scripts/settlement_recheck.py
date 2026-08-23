@@ -161,6 +161,14 @@ def main(argv: list[str] | None = None) -> int:
                 sleep=None,
             )
 
+            # Printed here, not after the block, and that placement is the
+            # point. The readings ARE Decision 7's measurement and they are
+            # already archived by the time this line runs; anything that fails
+            # afterwards - a cache restore, a rebuild - must not take them out
+            # of the log with it, or a restore failure and a fetch failure
+            # become the same two lines to whoever reads the run.
+            print(summarise_settlement(observations))
+
             revised = changed_games(observations)
             if revised:
                 print(
@@ -185,8 +193,6 @@ def main(argv: list[str] | None = None) -> int:
         # string would land in a public workflow log.
         print(f"Settlement re-check failed: {type(failure).__name__}: {failure}", file=sys.stderr)
         return 1
-
-    print(summarise_settlement(observations))
 
     if repair is not None and not repair.succeeded:
         # The audit trail is complete either way - the observation is recorded

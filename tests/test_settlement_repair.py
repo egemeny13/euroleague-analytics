@@ -86,9 +86,11 @@ def test_a_failed_rebuild_names_the_game_and_the_games_repaired_before_it() -> N
     assert repair.failed_gamecode == 9
     assert repair.rebuilt == (7,)
 
+    # The roles, not the digits. `assert "9" in report` would still pass if the
+    # renderer swapped the two halves and announced game 7 as the failure.
     report = repair.as_report()
-    assert "9" in report
-    assert "7" in report
+    assert "REBUILD FAILED for game 9" in report
+    assert "Games rebuilt successfully before it: 7" in report
     assert "RuntimeError: the derived build produced no rows" in report
 
 
@@ -101,7 +103,11 @@ def test_a_failure_report_says_plainly_that_nothing_was_repaired_first() -> None
     repair = repair_revised_games((7,), rebuild)
 
     assert repair.rebuilt == ()
-    assert "none" in repair.as_report()
+    # Not `"none" in report`: that is the same weak shape as asserting a bare
+    # digit, and would pass on any message that happened to contain the word.
+    report = repair.as_report()
+    assert "REBUILD FAILED for game 7" in report
+    assert "Games rebuilt successfully before it: none" in report
 
 
 def test_no_revised_game_means_no_rebuild_and_no_report() -> None:
@@ -297,8 +303,11 @@ def test_a_failed_rebuild_exits_non_zero_and_names_what_is_sound(
     assert exit_code != 0
     assert recorded["rebuilt"] == [("E2026", 7), ("E2026", 9)]
     error = capsys.readouterr().err
-    assert "9" in error
-    assert "7" in error
+    # Criterion 2 is about the rendered message, and which gamecode plays which
+    # role in it. Asserting the bare digits would pass a renderer that swapped
+    # them and told the operator game 7 was broken and game 9 was sound.
+    assert "REBUILD FAILED for game 9" in error
+    assert "Games rebuilt successfully before it: 7" in error
     assert "the derived build produced no rows" in error
     # The message, never the settings object: this log is public.
     assert "secret" not in error
@@ -318,6 +327,40 @@ def test_an_unchanged_season_rebuilds_nothing_and_exits_zero(monkeypatch, tmp_pa
     assert recorded["rebuilt"] == []
     assert recorded["restored"] == []
     assert "SOURCE REVISION" not in capsys.readouterr().out
+
+
+def test_a_failed_cache_restore_still_prints_the_settlement_readings(
+    monkeypatch, tmp_path, capsys
+) -> None:
+    """Break caught: a restore failure hides the readings the run exists to collect.
+
+    The readings ARE the measurement Decision 7 is open for, and they are already
+    archived by the time the repair is attempted. A run that swallows them
+    because a later step failed makes a restore failure look identical to a
+    fetch failure in the log, and loses the observation record from that log.
+    """
+    observations = [
+        _observation(7, "Boxscore", changed=True),
+        _observation(9, "PlaybyPlay", changed=False),
+    ]
+    module, recorded = _wire(monkeypatch, tmp_path, observations, _summary)
+
+    def exploding_restore(connection, cache, storage, season_code, **kwargs):
+        raise RuntimeError("archive object checksum mismatch")
+
+    monkeypatch.setattr(module, "restore_current_season_cache", exploding_restore)
+
+    exit_code = module.main(["E2026", "--live", "--cache-root", str(tmp_path)])
+
+    assert exit_code == 1
+    assert recorded["rebuilt"] == []
+    captured = capsys.readouterr()
+    # The readings, still on stdout.
+    assert "settlement: 2 reading(s), 1 with a changed checksum" in captured.out
+    assert "game 7 Boxscore +6h" in captured.out
+    # And the failure named on stderr, message only.
+    assert "RuntimeError: archive object checksum mismatch" in captured.err
+    assert "secret" not in captured.err
 
 
 def test_the_rebuild_is_refused_for_any_season_but_the_live_one(monkeypatch, tmp_path) -> None:
