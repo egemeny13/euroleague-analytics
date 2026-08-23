@@ -52,8 +52,15 @@ jobs:
       #
       # A re-fetch is an audit: the observation is always recorded, a second
       # body is stored only when the checksum differs, and no history is ever
-      # overwritten. A changed checksum turns this step red on purpose - the
-      # per-game rebuild Decision 7 requires is not built yet.
+      # overwritten. A changed checksum then rebuilds that ONE game's parsed and
+      # derived rows from the new bytes, in a single transaction, and the step
+      # stays green. It goes red only when a rebuild fails, and says which games
+      # were repaired before it.
+      #
+      # The cache root is shared with the steps above because the rebuild reads
+      # the whole season cache - Decision 3's minutes correction is decided from
+      # season-wide aggregates, so a rebuild from a partial cache would succeed
+      # and silently disagree with every game already loaded.
       - name: Take Decision 7 settlement readings
         if: always()
-        run: python scripts/settlement_recheck.py E2026 --live
+        run: python scripts/settlement_recheck.py E2026 --live --cache-root .live-cache
