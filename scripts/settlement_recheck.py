@@ -18,6 +18,20 @@ answer. Decision 7 says one future season, and this refuses anything else.
 
 CAPPED PER RUN. A backlog after an outage must not produce an unbounded run
 that trips the workflow timeout and leaves the archive half-audited.
+
+A REVISION IS REPAIRED, NOT REPORTED. When a checksum changes, Decision 7 says
+that one game's parsed and derived rows are rebuilt from the new bytes in a
+single transaction - never the season. This restores the current archive bodies
+into the cache and calls that rebuild once per revised game, and the run stays
+green when it works. It goes red only when a rebuild fails, and then it names
+the game that failed and the games repaired before it, because those two sets
+need different follow-up.
+
+WHY ONLY THE LIVE SEASON IS EVER REBUILT. The rebuild deliberately leaves
+`raw_shot` alone, because the live pipeline that loads E2026 never writes it.
+That is true for this season and false for the seasons loaded in full, so the
+season refusal a few lines into `main` is not only about request budget - it is
+what keeps the rebuild pointed at the data it is correct for.
 """
 
 from __future__ import annotations
@@ -33,12 +47,19 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from euroleague.archive import SupabaseStorage, archive_successful_observation
+from euroleague.archive import (
+    SupabaseStorage,
+    archive_successful_observation,
+    restore_current_season_cache,
+)
+from euroleague.cache import ResponseCache
 from euroleague.config import live_runtime_settings
-from euroleague.fetch import ArchiveFetcher
+from euroleague.fetch import DEFAULT_CACHE_ROOT, ArchiveFetcher
+from euroleague.live import rebuild_revised_game
 from euroleague.settlement import (
     changed_games,
     games_due_for_recheck,
+    repair_revised_games,
     run_settlement_rechecks,
     summarise_settlement,
 )
@@ -66,6 +87,15 @@ def _parser() -> argparse.ArgumentParser:
         help=f"most games to re-check in one run (default: {DEFAULT_MAX_GAMES})",
     )
     parser.add_argument(
+        "--cache-root",
+        type=Path,
+        default=DEFAULT_CACHE_ROOT,
+        help=(
+            f"archive cache root, used only when a revision has to be rebuilt "
+            f"(default: {DEFAULT_CACHE_ROOT})"
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="report what is owed and exit without making a request",
@@ -91,6 +121,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     now = datetime.now(UTC)
+    cache = ResponseCache(args.cache_root)
+    repair = None
 
     try:
         database_settings, storage_settings = live_runtime_settings(os.environ)
@@ -104,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
 
             session = requests.Session()
             session.headers.update({"User-Agent": USER_AGENT})
-            fetcher = ArchiveFetcher(transport=session)
+            fetcher = ArchiveFetcher(transport=session, cache_root=args.cache_root)
 
             def fetch_one(season_code: str, endpoint: str, gamecode: int, _when):
                 observation = fetcher.fetch_game_response(season_code, endpoint, gamecode)
@@ -116,9 +148,10 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 return observation
 
+            storage = SupabaseStorage(storage_settings)
             observations = run_settlement_rechecks(
                 connection=connection,
-                storage=SupabaseStorage(storage_settings),
+                storage=storage,
                 due=due,
                 now=now,
                 fetch_one=fetch_one,
@@ -127,6 +160,26 @@ def main(argv: list[str] | None = None) -> int:
                 # the runner adds no second delay on top of it.
                 sleep=None,
             )
+
+            revised = changed_games(observations)
+            if revised:
+                print(
+                    f"SOURCE REVISION DETECTED in game(s) "
+                    f"{', '.join(str(code) for code in revised)}. The observation is "
+                    f"archived and the previous body is preserved. Rebuilding those "
+                    f"games from the revised bytes, one transaction each."
+                )
+                # A cache READ, not a re-fetch. The rebuild's derived build has
+                # to see every played game, because Decision 3's minutes
+                # correction is decided from season-wide aggregates - a rebuild
+                # from a partial cache would succeed and silently disagree with
+                # every game already loaded. This restores the *current* archive
+                # bodies, which is what puts the just-archived revision on disk.
+                restore_current_season_cache(connection, cache, storage, args.season)
+                repair = repair_revised_games(
+                    revised,
+                    lambda gamecode: rebuild_revised_game(connection, cache, args.season, gamecode),
+                )
     except Exception as failure:
         # The message, never the settings: a traceback carrying a connection
         # string would land in a public workflow log.
@@ -135,21 +188,15 @@ def main(argv: list[str] | None = None) -> int:
 
     print(summarise_settlement(observations))
 
-    revised = changed_games(observations)
-    if revised:
-        # The audit trail is complete and the changed bodies are archived beside
-        # their predecessors. What is NOT built is Decision 7's per-game
-        # transactional rebuild, so the run goes red rather than leaving derived
-        # rows that describe superseded source bytes.
-        print(
-            f"SOURCE REVISION DETECTED in game(s) {', '.join(str(code) for code in revised)}. "
-            f"The observation is archived and the previous body is preserved. Derived rows "
-            f"for those games were built from the OLD bytes and have not been rebuilt: "
-            f"Decision 7's per-game rebuild is not implemented. Rebuild them before "
-            f"trusting those games.",
-            file=sys.stderr,
-        )
+    if repair is not None and not repair.succeeded:
+        # The audit trail is complete either way - the observation is recorded
+        # and the previous body preserved whether or not the rebuild worked.
+        # What is not complete is the repair, so the run goes red and names the
+        # games whose derived rows still describe superseded source bytes.
+        print(repair.as_report(), file=sys.stderr)
         return 1
+    if repair is not None:
+        print(repair.as_report())
     return 0
 
 
