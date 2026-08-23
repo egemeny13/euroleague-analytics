@@ -1,6 +1,7 @@
-# Release and GitHub Actions Verification — Draft Session Plan
+# Release and GitHub Actions Verification — Completed Session Plan
 
-**Status:** Draft. Attended external-state session; feature-branch push only.
+**Status:** Complete on 2026-08-24. Published and verified through pull request
+and GitHub Actions; no direct `master` push.
 
 ## Purpose
 
@@ -29,6 +30,22 @@ Actions run.
    inspect all three rendered summary blocks, failure semantics, and credential
    redaction.
 6. Record the PR, commit, workflow run, and any external blind spots in a release report.
+
+## Completion evidence
+
+- PR [#2](https://github.com/egemeny13/euroleague-analytics/pull/2)
+  merged the 45 reviewed commits as `133389a49fa2df4ce4627fbda082d5ca39c46cf8`.
+- Pull-request CI run
+  [32668212623](https://github.com/egemeny13/euroleague-analytics/actions/runs/32668212623)
+  and post-merge CI run
+  [32668283623](https://github.com/egemeny13/euroleague-analytics/actions/runs/32668283623)
+  succeeded.
+- Real E2026 run
+  [32668299705](https://github.com/egemeny13/euroleague-analytics/actions/runs/32668299705)
+  completed fetch, load, and settlement successfully with credential masking.
+- The exact audit, live outcomes, redaction scan, and GitHub summary-visibility
+  limit are recorded in
+  [`docs/RELEASE_AND_ACTIONS_VERIFICATION_REPORT.md`](../../RELEASE_AND_ACTIONS_VERIFICATION_REPORT.md).
 
 ## Gate
 

@@ -568,6 +568,17 @@ included in that percentage.
   signature match. The six security advisor ERROR findings are gone.
 - Full evidence is in `docs/PUBLIC_VIEW_SECURITY_HARDENING_REPORT.md`.
 
+### Release and GitHub Actions verification completed
+
+- The 45-commit release range was audited, published through PR #2, and merged
+  as `133389a`; no direct `master` push occurred.
+- Pull-request and post-merge CI succeeded. The offline gate reported 653 passed
+  and 83 separately gated tests deselected.
+- A real E2026 workflow-dispatch run completed fetch, load, and Decision 7
+  settlement with all configured credentials masked.
+- Full evidence and the GitHub rendered-summary visibility limit are in
+  `docs/RELEASE_AND_ACTIONS_VERIFICATION_REPORT.md`.
+
 ### Ordered one-session roadmap
 
 Each row is intentionally a separate session. Do not combine adjacent rows just
@@ -578,7 +589,7 @@ because a previous one finishes early; its gate is the next row's precondition.
 | 1 | **Complete:** [`01-decision-7-branch-reconciliation.md`](docs/superpowers/plans/2026-08-23-01-decision-7-branch-reconciliation.md) | Establish one canonical rebuild implementation before publishing or deleting a branch. | All ten commits are explained; deletion remains an explicit owner action. |
 | 2 | **Complete:** [`02-production-migrations-and-progress-backfill.md`](docs/superpowers/plans/2026-08-23-02-production-migrations-and-progress-backfill.md) | The live workflow and MCP disclosure need schema 0008/0009/0010 before activation. | All three migrations are verified; progress and applied checksums are initialized only where truthful evidence exists. |
 | 3 | **Complete:** [`03a-public-view-security-hardening.md`](docs/superpowers/plans/2026-08-23-03a-public-view-security-hardening.md) | The production advisor found six security-definer views with inherited public grants; release must not preserve an unexamined Data API path. | Advisor errors are gone, public-role behavior is explicit, and MCP view results remain unchanged. |
-| 4 | [`03-release-and-actions-verification.md`](docs/superpowers/plans/2026-08-23-03-release-and-actions-verification.md) | Publish the local commits through a review branch, never by pushing protected `master`. | PR/merge policy is satisfied and one real workflow summary is inspected. |
+| 4 | **Complete:** [`03-release-and-actions-verification.md`](docs/superpowers/plans/2026-08-23-03-release-and-actions-verification.md) | Publish the local commits through a review branch, never by pushing protected `master`. | PR/merge policy is satisfied and one real workflow summary is inspected. |
 | 5 | [`04-e2024-points-archive-repair.md`](docs/superpowers/plans/2026-08-23-04-e2024-points-archive-repair.md) | Close the known recoverability hole without re-fetching source data. | All 330 objects and index rows verify and reconciliation is clean. |
 | 6 | [`05-preseason-roster-ingestion.md`](docs/superpowers/plans/2026-08-23-05-preseason-roster-ingestion.md) | Complete Block D using the endpoint already proved by reconnaissance. | Parser, archive path, ingest, idempotency, and zero-game E2026 gate pass. |
 | 7 | [`06-decision-18-live-remeasurement.md`](docs/superpowers/plans/2026-08-23-06-decision-18-live-remeasurement.md) | Re-earn the view-performance licence against the activated multi-season schema. | Real timings are recorded; every failure is named for a separate optimisation decision. |
@@ -587,7 +598,7 @@ because a previous one finishes early; its gate is the next row's precondition.
 | 10 | [`09-historical-archive-expansion.md`](docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md) | Long-running backfill belongs after live operations are stable. | A bounded season batch is archived with checksums, cadence, and storage projection evidence. |
 | 11 | [`10-eurocup-onboarding.md`](docs/superpowers/plans/2026-08-23-10-eurocup-onboarding.md) | Decision 11 keeps EuroCup schema-ready but deferred until EuroLeague is operationally proven. | A measured pilot passes competition isolation and storage gates before any full load. |
 
-Orders 1-3 are complete; Order 4 is next. Orders 4-7 are the remaining pre-release
+Orders 1-4 are complete; Order 5 is next. Orders 5-7 are the remaining pre-release
 path. Order 8 is date-gated operational proof. Order 9 is a disclosed quality
 improvement. Orders 10-11 are post-release expansion and may be postponed
 without weakening the E2026 launch claim.
