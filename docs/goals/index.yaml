@@ -16,7 +16,7 @@ config:
     - pytest
 goals:
   001-rebuild-revised-game: {status: completed, priority: high}
-  002-wire-rebuild-into-settlement: {status: not_started, priority: high, depends_on: [001-rebuild-revised-game]}
+  002-wire-rebuild-into-settlement: {status: in_progress, priority: high, depends_on: [001-rebuild-revised-game]}
   003-gate-newly-loaded-games: {status: not_started, priority: high}
   004-live-season-progress: {status: not_started, priority: high}
   005-nightly-run-summary: {status: not_started, depends_on: [002-wire-rebuild-into-settlement, 003-gate-newly-loaded-games]}
