@@ -354,6 +354,29 @@ def derive_new_games(
     )
 
 
+def record_season_progress(
+    connection: Any,
+    season_code: str,
+    scheduled_games: int,
+) -> None:
+    """Record or update the season's scheduled game count and load timestamp."""
+    competition_code = season_code[0]
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            insert into season_progress (
+                season_code, competition_code, scheduled_games, last_loaded_at
+            )
+            values (%s, %s, %s, now())
+            on conflict (season_code) do update set
+                competition_code = excluded.competition_code,
+                scheduled_games = excluded.scheduled_games,
+                last_loaded_at = excluded.last_loaded_at
+            """,
+            (season_code, competition_code, scheduled_games),
+        )
+
+
 def run_live_pipeline(
     connection: Any,
     cache: ResponseCache,
@@ -380,6 +403,9 @@ def run_live_pipeline(
         already_loaded=len(already),
         newly_loaded=gamecodes,
     )
+
+    if schedule_games:
+        record_season_progress(connection, season_code, len(schedule_games))
 
     if not gamecodes:
         progress(summary.as_log_line())

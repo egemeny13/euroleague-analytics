@@ -68,8 +68,15 @@ _LINEUP_KEYS = (
 _POSSESSION_SUBSTRINGS = ("possession", "per_100", "rating", "pace")
 
 
+VALID_COMPLETENESS_VALUES: tuple[str, ...] = ("complete", "in_progress", "unknown")
+
+
 class MinutesProvenanceError(ValueError):
     """Raised when a response would publish a clock value without saying which kind."""
+
+
+class SeasonCompletenessError(ValueError):
+    """Raised when a response would publish a season without declaring completeness."""
 
 
 def _needs_minutes_basis(rows: Sequence[Mapping[str, Any]]) -> list[str]:
@@ -127,6 +134,17 @@ def build_response(
         raise MinutesProvenanceError(
             f"Unknown minutes_basis {minutes_basis!r}. Use one of: "
             f"{', '.join(sorted(MINUTES_EXPLANATION))}."
+        )
+
+    completeness = coverage.get("completeness")
+    if completeness is None:
+        raise SeasonCompletenessError(
+            "Coverage must declare completeness ('complete', 'in_progress', or 'unknown')."
+        )
+    if completeness not in VALID_COMPLETENESS_VALUES:
+        raise SeasonCompletenessError(
+            f"Unknown completeness {completeness!r}. Use one of: "
+            f"{', '.join(sorted(VALID_COMPLETENESS_VALUES))}."
         )
 
     attached = list(caveats)

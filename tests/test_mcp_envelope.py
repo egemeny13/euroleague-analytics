@@ -10,7 +10,7 @@ from euroleague.mcp.envelope import (
     build_response,
 )
 
-COVERAGE = {"seasons": ["E2024"], "games_included": 306}
+COVERAGE = {"seasons": ["E2024"], "games_included": 306, "completeness": "complete"}
 EXCLUDED = {"games": 24, "reasons": {"possession_gate": 16, "off_court_attribution": 7}}
 
 

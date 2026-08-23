@@ -56,19 +56,99 @@ def _quarantine_clause(include_quarantined: bool) -> str:
 
 def coverage_for(cursor: Cursor, season_code: str, include_quarantined: bool) -> dict[str, Any]:
     """What the numbers in this response are actually built from."""
+    filter_clause = " and not g.excluded_by_default" if not include_quarantined else ""
     cursor.execute(
-        "select count(*) as games, min(utc_date)::date as first_game, "
-        "max(utc_date)::date as last_game from v_game "
-        "where season_code = %s" + _quarantine_clause(include_quarantined),
+        "select count(*) filter (where true" + filter_clause + ") as games_included, "
+        "count(*) as total_games, "
+        "min(g.utc_date) filter (where true" + filter_clause + ")::date as first_game, "
+        "max(g.utc_date) filter (where true" + filter_clause + ")::date as last_game, "
+        "p.scheduled_games, p.last_loaded_at "
+        "from v_game g "
+        "left join season_progress p on p.season_code = g.season_code "
+        "where g.season_code = %s "
+        "group by p.scheduled_games, p.last_loaded_at",
         (season_code,),
     )
-    row = _rows(cursor)[0]
+    rows = _rows(cursor)
+    if not rows:
+        return {
+            "seasons": [season_code],
+            "games_included": 0,
+            "first_game": None,
+            "last_game": None,
+            "include_quarantined": include_quarantined,
+            "completeness": "unknown",
+            "games_scheduled": None,
+            "last_loaded_at": None,
+        }
+    row = rows[0]
+    games_included = row["games_included"] or 0
+    total_games = row["total_games"] or 0
+    scheduled = row.get("scheduled_games")
+    if scheduled is None:
+        completeness = "unknown"
+    elif total_games >= scheduled:
+        completeness = "complete"
+    else:
+        completeness = "in_progress"
+
+    last_loaded = row.get("last_loaded_at")
+    last_loaded_str = (
+        last_loaded.isoformat()
+        if hasattr(last_loaded, "isoformat")
+        else (str(last_loaded) if last_loaded else None)
+    )
+
     return {
         "seasons": [season_code],
-        "games_included": row["games"],
+        "games_included": games_included,
         "first_game": row["first_game"],
         "last_game": row["last_game"],
         "include_quarantined": include_quarantined,
+        "completeness": completeness,
+        "games_scheduled": scheduled,
+        "last_loaded_at": last_loaded_str,
+    }
+
+
+def game_coverage(cursor: Cursor, season_code: str) -> dict[str, Any]:
+    """Single-game coverage block with season completeness."""
+    cursor.execute(
+        "select p.scheduled_games, p.last_loaded_at, "
+        "(select count(*) from v_game where season_code = %s) as games "
+        "from season_progress p where p.season_code = %s",
+        (season_code, season_code),
+    )
+    rows = _rows(cursor)
+    if not rows:
+        return {
+            "seasons": [season_code],
+            "games_included": 1,
+            "completeness": "unknown",
+            "games_scheduled": None,
+            "last_loaded_at": None,
+        }
+    row = rows[0]
+    scheduled = row.get("scheduled_games")
+    games = row.get("games", 0)
+    last_loaded = row.get("last_loaded_at")
+    last_loaded_str = (
+        last_loaded.isoformat()
+        if hasattr(last_loaded, "isoformat")
+        else (str(last_loaded) if last_loaded else None)
+    )
+    if scheduled is None:
+        completeness = "unknown"
+    elif games >= scheduled:
+        completeness = "complete"
+    else:
+        completeness = "in_progress"
+    return {
+        "seasons": [season_code],
+        "games_included": 1,
+        "completeness": completeness,
+        "games_scheduled": scheduled,
+        "last_loaded_at": last_loaded_str,
     }
 
 
@@ -131,12 +211,46 @@ def _shot_boolean(arguments: dict[str, Any], name: str, default: bool | None) ->
 def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """Coverage, quality and vocabulary - what a model should read first."""
     cursor.execute(
-        "select season_code, count(*) as games, "
-        "count(*) filter (where excluded_by_default) as excluded_games, "
-        "min(utc_date)::date as first_game, max(utc_date)::date as last_game "
-        "from v_game group by season_code order by season_code"
+        "select g.season_code, count(*) as games, "
+        "count(*) filter (where g.excluded_by_default) as excluded_games, "
+        "min(g.utc_date)::date as first_game, max(g.utc_date)::date as last_game, "
+        "p.scheduled_games, p.last_loaded_at "
+        "from v_game g "
+        "left join season_progress p on p.season_code = g.season_code "
+        "group by g.season_code, p.scheduled_games, p.last_loaded_at "
+        "order by g.season_code"
     )
-    seasons = _rows(cursor)
+    seasons_raw = _rows(cursor)
+    seasons: list[dict[str, Any]] = []
+    for row in seasons_raw:
+        games = row["games"]
+        scheduled = row.get("scheduled_games")
+        if scheduled is None:
+            completeness = "unknown"
+        elif games >= scheduled:
+            completeness = "complete"
+        else:
+            completeness = "in_progress"
+
+        last_loaded = row.get("last_loaded_at")
+        last_loaded_str = (
+            last_loaded.isoformat()
+            if hasattr(last_loaded, "isoformat")
+            else (str(last_loaded) if last_loaded else None)
+        )
+
+        seasons.append(
+            {
+                "season_code": row["season_code"],
+                "games": games,
+                "excluded_games": row["excluded_games"],
+                "first_game": row["first_game"],
+                "last_game": row["last_game"],
+                "completeness": completeness,
+                "games_scheduled": scheduled,
+                "last_loaded_at": last_loaded_str,
+            }
+        )
 
     cursor.execute(
         "select season_code, unnest(quarantine_reasons) as reason, count(*) as games "
@@ -171,11 +285,20 @@ def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, A
             },
         )
 
+    overall_completeness = (
+        "complete"
+        if seasons and all(s["completeness"] == "complete" for s in seasons)
+        else (
+            "in_progress" if any(s["completeness"] == "in_progress" for s in seasons) else "unknown"
+        )
+    )
+
     return build_response(
         rows=seasons,
         coverage={
             "seasons": [row["season_code"] for row in seasons],
             "games_included": sum(row["games"] for row in seasons),
+            "completeness": overall_completeness,
             "teams": teams,
             "shot_coordinates": coordinates_by_season,
         },
@@ -406,7 +529,7 @@ def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
 
     return build_response(
         rows=rows,
-        coverage={"seasons": [season_code], "games_included": 1},
+        coverage=game_coverage(cursor, season_code),
         excluded=exclusions_for(cursor, season_code, include_quarantined),
         caveats=[
             "Defensive rating uses the OPPONENT's possessions as its denominator, not "
@@ -879,7 +1002,7 @@ def get_play_by_play(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
 
     return build_response(
         rows=rows,
-        coverage={"seasons": [season_code], "games_included": 1},
+        coverage=game_coverage(cursor, season_code),
         excluded=exclusions_for(cursor, season_code, include_quarantined),
         minutes_basis="corrected",
         limit=limit,
