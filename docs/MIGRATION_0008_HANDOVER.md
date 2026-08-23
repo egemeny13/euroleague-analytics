@@ -1,6 +1,12 @@
 # Migration 0008 Handover — Possession Foreign Key Scope
 
-**Status: NOT applied to production.**
+**Status: APPLIED to production on 2026-08-23.**
+
+Supabase migration version `20260823204740` records the apply. A real referenced
+possession was deleted inside a rollback-only transaction: the event remained,
+only `possession_index` became null, and rollback restored the original 107,314
+possession / 399,459 event counts. Full evidence is in
+`docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md`.
 
 Per the project's hard rules and `DECISIONS.md` item 10, migrations are applied to production only by explicit owner action through the Supabase MCP / CLI.
 

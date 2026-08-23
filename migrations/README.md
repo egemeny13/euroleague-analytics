@@ -13,12 +13,13 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0005_game_winner` | Fix: `v_game.winner_team_code` is derived from the official final score instead of passing through `raw_game`, where it is null for every game because the source schedule names the season champion in all 330 rows. See `DECISIONS.md` item 19. No tables, `create or replace view` only. |
 | `0006_shot_data_view` | `v_shot_data`, whose complete shot population starts from `game_event` and left-joins `raw_shot` only for real X, Y, and zone values. Free throws remain coordinate-null and `(-1,-1)` is never served. No tables. |
 | `0007_shot_data_ft_gate` | Replaces `v_shot_data` so free-throw labelling is derived from event semantics and remains independent of coordinate availability. No tables. |
-| `0008_possession_fkey_scope` | Repairs `game_event_possession_fkey` so `ON DELETE SET NULL` targets only nullable `possession_index`, not the non-null season and game key columns. Prepared and locally gated; production apply is pending owner approval. |
-| `0009_season_progress` | Adds `season_progress`, the scheduled-game count and last-load timestamp used to disclose whether a season is complete, in progress, or unknown. Prepared and locally gated; production apply and historical backfill are pending owner approval. |
-| `0010_game_source_state` | Adds private per-game provenance for the exact Boxscore, PlaybyPlay, and Points checksums successfully applied to warehouse rows. Prepared and offline-gated; production apply and evidence-backed initialization are pending owner approval. |
+| `0008_possession_fkey_scope` | Repairs `game_event_possession_fkey` so `ON DELETE SET NULL` targets only nullable `possession_index`, not the non-null season and game key columns. Applied and rollback-probed in production on 2026-08-23. |
+| `0009_season_progress` | Adds private `season_progress`, the scheduled-game count and last-load timestamp used to disclose whether a season is complete, in progress, or unknown. Applied on 2026-08-23; E2026 is initialized and historical seasons deliberately remain unknown. |
+| `0010_game_source_state` | Adds private per-game provenance for the exact Boxscore, PlaybyPlay, and Points checksums successfully applied to warehouse rows. Reconciled with the equivalent pre-existing production table on 2026-08-23; no unprovable historical marker was inserted. |
 
-The complete migration set defines eighteen tables. Production still has
-sixteen until migrations 0009 and 0010 are applied.
+The complete migration set and production both define eighteen tables. See
+`docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md` for the rehearsal, drift
+reconciliation, and production evidence.
 
 ## The gate, and why it expires
 
@@ -89,5 +90,9 @@ and the owner bypasses RLS. Enabling it with no policies denies the `anon` and
 exposes nothing. Verified on 2026-08-09: with one row present, the owner saw 1
 and `anon` saw 0.
 
-The warehouse is served through the MCP layer, not through PostgREST. If that
-ever changes, read policies get added deliberately at that point.
+The warehouse is served through the MCP layer, not through PostgREST. The table
+statement above remains true, but it is not sufficient for views: the
+2026-08-23 advisor run found six legacy security-definer views with inherited
+public grants. They are a release blocker tracked in
+`docs/superpowers/plans/2026-08-23-03a-public-view-security-hardening.md`; do not
+repeat the old blanket claim that the entire REST surface exposes nothing.

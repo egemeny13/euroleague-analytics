@@ -11,6 +11,8 @@ Actions run.
 ## Preconditions
 
 - Sessions 01 and 02 are complete.
+- The separate public-view security hardening session is complete and the
+  Supabase advisor reports no `security_definer_view` ERROR.
 - Working tree is clean and the full offline gate is green.
 - Confirm repository branch protection, workflow triggers, secrets, and the
   exact ahead/behind counts without printing secret values.

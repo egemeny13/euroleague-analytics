@@ -20,3 +20,9 @@ create table season_progress (
 
 comment on table season_progress is
     'Scheduled game count and last load timestamp per season. Written when a live season is loaded.';
+
+-- Progress is served through the MCP, not the public Data API. Grants and RLS
+-- are separate controls, so deny both public API roles explicitly and keep the
+-- table policy-free. The owning pipeline role continues to write directly.
+revoke all on table season_progress from anon, authenticated;
+alter table season_progress enable row level security;

@@ -138,7 +138,7 @@ def test_migration_0010_defines_private_checksum_state_with_rls() -> None:
     assert up_path.is_file()
     assert down_path.is_file()
     sql = " ".join(up_path.read_text(encoding="utf-8").lower().split())
-    assert "create table game_source_state" in sql
+    assert "create table if not exists game_source_state" in sql
     assert "primary key (season_code, gamecode)" in sql
     assert "references raw_game (season_code, gamecode)" in sql
     assert sql.count("^[0-9a-f]{64}$") == 3

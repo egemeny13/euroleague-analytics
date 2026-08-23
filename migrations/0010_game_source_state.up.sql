@@ -3,8 +3,13 @@
 -- raw_api_response.is_current remains the only current-version pointer. This
 -- table records only the three exact response bodies consumed successfully by
 -- the parsed and derived writers, so a failed repair remains durably pending.
+--
+-- Production briefly received this exact table from the pre-reconciliation
+-- Decision 7 branch. The attended production preflight must prove that existing
+-- shape before this migration runs. IF NOT EXISTS then preserves that table
+-- while still applying the canonical comment, privilege revocation, and RLS.
 
-create table game_source_state (
+create table if not exists game_source_state (
     season_code       text        not null,
     gamecode          integer     not null,
     boxscore_sha256   text        not null,

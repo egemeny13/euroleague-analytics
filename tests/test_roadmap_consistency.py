@@ -80,6 +80,7 @@ def test_handover_docs_name_current_state_and_real_draft_plans() -> None:
         r"\[`([^`]+\.md)`\]\((docs/superpowers/plans/2026-08-23-[^)]+\.md)\)",
         roadmap_content,
     )
-    assert len(plan_links) == 10
+    assert len(plan_links) == 11
+    assert any(label == "03a-public-view-security-hardening.md" for label, _ in plan_links)
     for _label, relative_path in plan_links:
         assert Path(relative_path).is_file(), f"ROADMAP.md points at missing plan: {relative_path}"

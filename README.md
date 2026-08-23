@@ -8,7 +8,8 @@ derived layer: possessions reconstructed from the event stream, four factors,
 and lineup-level on/off metrics reconstructed play by play.
 
 **Status: pre-release, with two complete historical seasons loaded and the
-E2026 live-season pipeline implemented but not yet activated in production.**
+E2026 live-season schema activated; the workflow is not yet released or proven
+by a real GitHub Actions run.**
 Core phases 0-8 and live-season Blocks A-C are complete in the repository.
 E2024 holds 330 games, 176,483 events,
 51,193 `raw_shot` coordinate rows and 47,831 derived possessions. E2025 holds
@@ -28,13 +29,15 @@ fallback.
 Four operational limitations remain explicit. Twenty-four of 330 E2024 games are
 quarantined by validation invariants and excluded from every default answer; 16
 carry the named possession residual that is measured but not yet explained.
-Migration 0008 repairs the composite `game_event_possession_fkey`, migration
-0009 adds season progress, and migration 0010 adds durable applied-source
-checksums, but none has been applied to production. E2024's
-330 `Points` responses exist in the local cache but are missing from the
-immutable production archive. Pre-season roster ingestion, a real GitHub
-Actions summary run, and current Decision 18 timings still need attended
-sessions. The server discloses data exclusions rather than smoothing them over.
+Migrations 0008-0010 are applied and E2026 truthfully reports 380 scheduled and
+0 loaded games, while E2024/E2025 completeness remains unknown rather than
+receiving invented migration-time timestamps. Six legacy views still carry
+Supabase `security_definer_view` ERROR findings and inherited public grants;
+they must be hardened before release. E2024's 330 `Points` responses exist in
+the local cache but are missing from the immutable production archive.
+Pre-season roster ingestion, a real GitHub Actions summary run, and current
+Decision 18 timings still need attended sessions. The server discloses data
+exclusions rather than smoothing them over.
 The ordered session sequence and remaining conditions are in
 [`ROADMAP.md`](ROADMAP.md) and
 [`DECISIONS.md`](DECISIONS.md).

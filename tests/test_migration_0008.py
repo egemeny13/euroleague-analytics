@@ -44,11 +44,13 @@ def test_migration_0008_down_restores_0003_definition() -> None:
     assert "on delete set null (possession_index)" not in sql
 
 
-def test_handover_document_exists_and_states_unapplied_status() -> None:
-    """Handover document gives exact apply instructions and states it is not yet applied."""
+def test_handover_document_records_the_verified_production_apply() -> None:
+    """Handover names the real migration record and links its production evidence."""
     handover_path = Path("docs") / "MIGRATION_0008_HANDOVER.md"
     assert handover_path.exists(), "docs/MIGRATION_0008_HANDOVER.md is missing."
 
     content = handover_path.read_text(encoding="utf-8")
-    assert "NOT applied" in content or "not been applied" in content
+    assert "APPLIED to production on 2026-08-23" in content
+    assert "20260823204740" in content
+    assert "PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md" in content
     assert "0008_possession_fkey_scope.up.sql" in content

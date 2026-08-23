@@ -19,10 +19,12 @@ def test_migration_0009_files_exist() -> None:
     assert os.path.exists(up_path)
     assert os.path.exists(down_path)
     with open(up_path, encoding="utf-8") as f:
-        up_sql = f.read()
+        up_sql = " ".join(f.read().lower().split())
     with open(down_path, encoding="utf-8") as f:
         down_sql = f.read()
     assert "create table season_progress" in up_sql
+    assert "revoke all on table season_progress from anon, authenticated" in up_sql
+    assert "alter table season_progress enable row level security" in up_sql
     assert "drop table if exists season_progress" in down_sql
 
 

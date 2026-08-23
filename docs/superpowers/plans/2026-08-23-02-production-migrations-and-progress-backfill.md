@@ -1,6 +1,13 @@
 # Production Migrations and Progress Activation — Draft Session Plan
 
-**Status:** Draft. Attended production-write session; explicit owner approval is required.
+**Status:** Complete on 2026-08-23. Owner approval and production evidence are
+recorded in `docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md`.
+
+The planned stop condition fired because production already contained an
+equivalent zero-row `game_source_state` from the pre-reconciliation branch. The
+owner approved the explained reconciliation: 0010 preserved that verified
+table and corrected only its canonical comment, grants, and RLS posture. No
+historical checksum marker or load timestamp was fabricated.
 
 ## Purpose
 
