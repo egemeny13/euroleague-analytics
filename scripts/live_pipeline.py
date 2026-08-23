@@ -30,6 +30,7 @@ from euroleague.cache import ResponseCache
 from euroleague.config import DatabaseSettings, live_runtime_settings
 from euroleague.fetch import DEFAULT_CACHE_ROOT
 from euroleague.live import run_live_pipeline
+from euroleague.step_summary import append_step_summary, format_live_pipeline_summary
 
 LIVE_SEASON = "E2026"
 
@@ -98,9 +99,11 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as failure:
         # The message, never the settings object: a traceback carrying a
         # connection string would land in a public log.
+        append_step_summary(format_live_pipeline_summary(args.season, None, failure=failure))
         print(f"Live pipeline failed: {type(failure).__name__}: {failure}", file=sys.stderr)
         return 1
 
+    append_step_summary(format_live_pipeline_summary(args.season, summary))
     print(summary.as_log_line())
     return 0
 

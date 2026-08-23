@@ -32,6 +32,7 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install -e .
       - name: Fetch and archive newly played E2026 games
+        if: always()
         run: python scripts/fetch_archive.py E2026 --live --require-fresh-schedule --cache-root .live-cache
 
       # Loads and derives only the games the warehouse is missing, then leaves
@@ -43,6 +44,7 @@ jobs:
       # present or Decision 3's minutes correction would be recomputed from
       # whatever subset this run happened to fetch. See src/euroleague/live.py.
       - name: Load and derive newly played E2026 games
+        if: always()
         run: python scripts/live_pipeline.py E2026 --live --cache-root .live-cache
 
       # Decision 7's condition, open since 2026-08-09 and impossible to satisfy

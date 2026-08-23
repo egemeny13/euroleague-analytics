@@ -21,9 +21,9 @@ from euroleague.config import live_runtime_settings
 from euroleague.fetch import (
     DEFAULT_CACHE_ROOT,
     ArchiveFetcher,
-    FetchError,
     fetch_seasons,
 )
+from euroleague.step_summary import append_step_summary, format_fetch_summary
 
 USER_AGENT = "euroleague-analytics/0.1 (archive fetcher; contact via github)"
 
@@ -127,9 +127,14 @@ def main(argv: list[str] | None = None) -> int:
                 fetcher_factory=fetcher_factory,
                 between_seasons=time.sleep,
             )
-    except (FetchError, ValueError) as error:
+    except Exception as error:
+        season_str = ", ".join(args.seasons)
+        append_step_summary(format_fetch_summary(season_str, [], failure=error))
         print(error, file=sys.stderr)
         return 1
+
+    season_str = ", ".join(args.seasons)
+    append_step_summary(format_fetch_summary(season_str, summaries))
 
     for summary in summaries:
         print(

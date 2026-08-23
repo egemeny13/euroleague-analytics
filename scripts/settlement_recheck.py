@@ -63,6 +63,7 @@ from euroleague.settlement import (
     run_settlement_rechecks,
     summarise_settlement,
 )
+from euroleague.step_summary import append_step_summary, format_settlement_summary
 
 LIVE_SEASON = "E2026"
 USER_AGENT = "euroleague-analytics/0.1 (settlement re-check; contact via github)"
@@ -167,7 +168,8 @@ def main(argv: list[str] | None = None) -> int:
             # afterwards - a cache restore, a rebuild - must not take them out
             # of the log with it, or a restore failure and a fetch failure
             # become the same two lines to whoever reads the run.
-            print(summarise_settlement(observations))
+            obs_summary = summarise_settlement(observations)
+            print(obs_summary)
 
             revised = changed_games(observations)
             if revised:
@@ -191,8 +193,14 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as failure:
         # The message, never the settings: a traceback carrying a connection
         # string would land in a public workflow log.
+        append_step_summary(format_settlement_summary(args.season, None, failure=failure))
         print(f"Settlement re-check failed: {type(failure).__name__}: {failure}", file=sys.stderr)
         return 1
+
+    repair_text = repair.as_report() if repair is not None else None
+    append_step_summary(
+        format_settlement_summary(args.season, obs_summary, repair_report=repair_text)
+    )
 
     if repair is not None and not repair.succeeded:
         # The audit trail is complete either way - the observation is recorded
