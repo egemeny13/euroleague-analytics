@@ -22,7 +22,7 @@ goals:
   005-nightly-run-summary: {status: not_started, depends_on: [002-wire-rebuild-into-settlement, 003-gate-newly-loaded-games]}
   006-possession-fkey-scope: {status: not_started}
   007-points-archive-gap: {status: not_started}
-  008-ci-marker-filter: {status: not_started, priority: high}
+  008-ci-marker-filter: {status: in_progress, priority: high}
   009-roster-endpoint-recon: {status: not_started, depends_on: [008-ci-marker-filter]}
   010-requery-view-timings: {status: not_started}
   011-roadmap-matches-reality: {status: not_started}
