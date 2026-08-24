@@ -1,7 +1,7 @@
 # Points Archive Gap Report
 
 **Measurement Date:** 2026-08-23
-**Status:** Finding documented with automated reconciliation; repair recommended for owner execution.
+**Status:** **Closed 2026-08-25.** The repair ran with owner approval: 330 `Points` objects uploaded, verified and indexed, reconciliation clean for E2024 and E2025, and a 991/991 byte-identical restore. See `docs/E2024_POINTS_ARCHIVE_REPAIR_REPORT.md`. The measurements below are the pre-repair record and are kept as written.
 
 ---
 

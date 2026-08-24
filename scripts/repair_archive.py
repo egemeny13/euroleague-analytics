@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 import psycopg
@@ -34,6 +35,7 @@ from euroleague.archive import (
     inventory_cached_endpoint,
     reconcile_warehouse_archive_gap,
     repair_endpoint_archive,
+    restore_and_compare,
 )
 from euroleague.cache import ENDPOINTS, ResponseCache
 from euroleague.config import DatabaseSettings, StorageSettings
@@ -79,6 +81,14 @@ def _parser() -> argparse.ArgumentParser:
         "--live",
         action="store_true",
         help="required for a run that uploads objects and records metadata",
+    )
+    parser.add_argument(
+        "--verify-restore",
+        action="store_true",
+        help=(
+            "restore the whole season out of the archive into a scratch directory and "
+            "compare it byte for byte with the local cache; writes nothing"
+        ),
     )
     return parser
 
@@ -134,10 +144,11 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    if not (args.live or args.dry_run or args.inventory_only):
+    if not (args.live or args.dry_run or args.inventory_only or args.verify_restore):
         print(
             "--live is required for a run that writes. Use --dry-run to inspect the "
-            "archive, or --inventory-only to inspect the disk alone.",
+            "archive, --verify-restore to rebuild the season from it, or "
+            "--inventory-only to inspect the disk alone.",
             file=sys.stderr,
         )
         return 2
@@ -207,36 +218,60 @@ def main(argv: list[str] | None = None) -> int:
             print("  reconciliation before:")
             _report_reconciliation(connection, args.season)
 
+            storage = SupabaseStorage(storage_settings)
+
             if args.dry_run:
                 print(
                     f"dry run: {len(cached - {entry.gamecode for entry in before})} "
                     f"game(s) would be recorded. Nothing was written."
                 )
-                return 0
+                if not args.verify_restore:
+                    return 0
 
-            storage = SupabaseStorage(storage_settings)
-            summary = repair_endpoint_archive(
-                connection,
-                cache,
-                storage,
-                args.season,
-                args.endpoint,
-                expected_gamecodes=played if played is not None else None,
-            )
-            after = [
-                entry
-                for entry in current_archive_entries(connection, args.season)
-                if entry.endpoint == args.endpoint
-            ]
-            print(
-                f"repaired {summary.season_code} {summary.endpoint}: "
-                f"cached={summary.cached_responses} newly_recorded={summary.newly_recorded} "
-                f"already_current={summary.already_current} "
-                f"verified={summary.verified_objects} exact_bytes={summary.exact_bytes:,}"
-            )
-            print(f"  archive index holds {len(after)} current {args.endpoint} row(s) after")
-            print("  reconciliation after:")
-            _report_reconciliation(connection, args.season)
+            if args.live:
+                summary = repair_endpoint_archive(
+                    connection,
+                    cache,
+                    storage,
+                    args.season,
+                    args.endpoint,
+                    expected_gamecodes=played if played is not None else None,
+                    progress=lambda message: print(message, flush=True),
+                )
+                after = [
+                    entry
+                    for entry in current_archive_entries(connection, args.season)
+                    if entry.endpoint == args.endpoint
+                ]
+                print(
+                    f"repaired {summary.season_code} {summary.endpoint}: "
+                    f"cached={summary.cached_responses} newly_recorded={summary.newly_recorded} "
+                    f"already_current={summary.already_current} "
+                    f"verified={summary.verified_objects} exact_bytes={summary.exact_bytes:,}"
+                )
+                print(f"  archive index holds {len(after)} current {args.endpoint} row(s) after")
+                print("  reconciliation after:")
+                _report_reconciliation(connection, args.season)
+
+            if args.verify_restore:
+                print(f"  restoring {args.season} out of the archive into a scratch directory")
+                with tempfile.TemporaryDirectory(prefix="restore-check-") as workspace:
+                    comparison = restore_and_compare(
+                        connection, storage, args.season, cache, Path(workspace) / "cache"
+                    )
+                print(
+                    f"  restore: {comparison.restored_responses} response(s) rebuilt, "
+                    f"{comparison.identical}/{comparison.compared_files} byte-identical "
+                    f"with the local cache"
+                )
+                if not comparison.matches:
+                    for label in comparison.differing[:20]:
+                        print(f"    differs: {label}", file=sys.stderr)
+                    for label in comparison.only_in_restore[:20]:
+                        print(f"    only in the archive: {label}", file=sys.stderr)
+                    for label in comparison.only_in_reference[:20]:
+                        print(f"    only on local disk: {label}", file=sys.stderr)
+                    return 1
     except Exception as error:
         print(error, file=sys.stderr)
         return 1

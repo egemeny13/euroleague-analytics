@@ -1,10 +1,9 @@
 # E2024 `Points` Archive Repair — Order 5 Report
 
 **Session date:** 2026-08-25
-**Status:** Repair path built and verified offline. **The production write has
-not run**, and Order 5's gate is therefore not met. It needs two things this
-session did not have: the live credentials (`.env` is absent on this machine)
-and the owner's explicit approval immediately before the first write.
+**Status:** Complete. The owner approved the write on 2026-08-25 after reading
+the read-only dry run; 330 objects were uploaded, verified and indexed, and
+every clause of Order 5's gate is met and recorded below.
 
 ---
 
@@ -107,15 +106,35 @@ to ask for one.
 
 ### `scripts/repair_archive.py`
 
-Three modes, and the one that writes has to be named:
+Four modes, and the one that writes has to be named:
 
 - `--inventory-only` — reads the disk, opens no database connection at all.
 - `--dry-run` — also reads the archive index and the reconciliation, writes
   nothing.
 - `--live` — uploads, verifies, records, then prints before/after index counts
   and reconciliation.
+- `--verify-restore` — rebuilds the whole season out of the archive into a
+  scratch directory and compares it with the local cache byte for byte. It
+  restores into a temporary directory, never over the cache it is checking
+  against, so a bad archive cannot damage the copy that proves it wrong.
 
-A run with none of the three exits 2 rather than guessing.
+A run with none of the four exits 2 rather than guessing.
+
+### `restore_and_compare` (`src/euroleague/archive.py`)
+
+`restore_current_season_cache` already existed but was wired only to the E2026
+live pipeline, and it *replaces* the season directory it restores into — useful
+for a pipeline, dangerous as a verification tool. `restore_and_compare` wraps it
+so the restore lands in a scratch workspace and the result is diffed against the
+reference cache, reporting differing files, files only in the archive, and files
+only on disk.
+
+It compares response identities only: `schedule.json`, `roster.json` and
+`<endpoint>/<gamecode>.json`. The cache also holds bookkeeping such as E2024's
+`fetch_failures.json`, which is not an archived response and is deliberately not
+compared. **What it cannot detect:** both copies being wrong in the same way. It
+compares the archive against local disk, and local disk is where the archive
+came from.
 
 ---
 
@@ -156,7 +175,7 @@ checksums stay one per response, and this report and `ROADMAP.md` may not
 disagree about whether the production write has happened. Order 5 cannot be
 marked complete while this report says it has not.
 
-**Offline suite: 753 passed, 85 deselected.** `ruff check` and `ruff format`
+**Offline suite: 757 passed, 85 deselected.** `ruff check` and `ruff format`
 are clean.
 
 **What these tests cannot prove:** that the real Supabase Storage bucket
@@ -225,25 +244,79 @@ never override a CI secret.
 
 ---
 
-## The remaining work, which needs the owner
+## The live run, 2026-08-25
 
-The repair has not touched production. To finish Order 5:
+Approved by the owner immediately after the dry run above, then run as
+`python scripts/repair_archive.py E2024 --endpoint Points --live`. It uploaded,
+verified and indexed all 330 responses in one uninterrupted pass:
 
-1. Recreate `.env` from `.env.example` (this machine has none).
-2. `python scripts/repair_archive.py E2024 --endpoint Points --dry-run`
-   — reads the index and reconciliation, writes nothing. Expected: 0 current
-   `Points` rows before, 330 games to be recorded.
-3. **Owner approval, immediately before the write, in the same sitting.**
-4. `python scripts/repair_archive.py E2024 --endpoint Points --live
-   --inventory-json docs/evidence/E2024_Points_inventory.json`
-5. Post-write verification, which is Order 5's actual gate:
-   - E2024 has 330 current `Points` index rows and 330 verified objects;
-   - `reconcile_warehouse_archive_gap` is clean for E2024 **and** E2025;
-   - a fresh restore of E2024 into an empty cache reproduces the cached bytes
-     exactly;
-   - no `raw_shot` or other warehouse fact row changed.
+```
+[330/330] archived Points game 330: 50,883 exact bytes, verified 4edc2bfa...
+repaired E2024 Points: cached=330 newly_recorded=330 already_current=0 verified=330 exact_bytes=16,713,709
+  archive index holds 330 current Points row(s) after
+  reconciliation after:
+  E2024 Boxscore     warehouse_games= 330 archive_responses= 330 rows=    330 clean
+  E2024 PlaybyPlay   warehouse_games= 330 archive_responses= 330 rows= 176483 clean
+  E2024 Points       warehouse_games= 330 archive_responses= 330 rows=  51193 clean
+```
 
-Step 5's restore check has one wrinkle worth naming now:
-`restore_current_season_cache` is wired to a CLI for E2026 only, so the E2024
-restore is a scripted call rather than an existing command. That is verification
-work, not repair work, and it does not change what gets uploaded.
+## The gate, clause by clause
+
+**1. E2024 has 330 current `Points` index rows and 330 verified objects.**
+330 current rows, and **330 total rows** — no superseded version exists, so
+nothing was overwritten. Each object was downloaded and checksum-compared
+during the run, and 330 fetch observations were recorded, one per response.
+
+Stronger than a count: every stored row's `content_sha256`, `canonical_sha256`,
+`byte_size` and `storage_path` is **exactly equal** to the inventory recorded in
+`docs/evidence/E2024_Points_inventory.json` before the first upload. The index
+describes precisely the bytes that were inventoried, not merely the right number
+of them.
+
+**2. `reconcile_warehouse_archive_gap` is clean for E2024 and E2025.**
+
+| Season | Boxscore | PlaybyPlay | Points |
+|---|---|---|---|
+| E2024 | 330 / 330 clean | 330 / 330 clean | **330 / 330 clean** |
+| E2025 | 402 / 402 clean | 402 / 402 clean | 402 / 402 clean |
+
+E2026 remains at zero played games and is clean by that fact, not by evidence.
+
+**3. A fresh archive restore reproduces the cached bytes exactly.**
+`python scripts/repair_archive.py E2024 --endpoint Points --verify-restore`
+rebuilt the season out of Supabase Storage into a scratch directory:
+
+```
+restore: 991 response(s) rebuilt, 991/991 byte-identical with the local cache
+```
+
+991 is the whole season — one schedule plus 330 games × 3 endpoints. Before this
+repair that restore was impossible: it demands a current index row for every
+played identity, and `Points` had none.
+
+**4. No `raw_shot` or other warehouse fact row changed.**
+
+| Table | E2024 | E2025 |
+|---|---:|---:|
+| `raw_game` | 330 | 402 |
+| `raw_event` | 176,483 | 222,976 |
+| `raw_shot` | **51,193** | 64,137 |
+| `raw_boxscore_player` | 7,863 | 9,540 |
+
+Every figure matches the documented pre-repair baseline; the repair writes only
+to `raw_api_response` and `raw_api_fetch`. **What this does not prove:** it is a
+row-count comparison against previously published totals, not a snapshot diff
+taken minutes before the run. A change that preserved every count would not show
+here. The checksum equality in clause 1 is the load-bearing evidence, not this.
+
+## What this closes, and what it does not
+
+E2024 is now restorable from the archive alone. The 330 `Points` bodies are no
+longer single-copy on one laptop.
+
+It does **not** establish that the EuroLeague API would return these bytes
+today — that is the Decision 7 settlement question, and it is deliberately not
+asked of a finished season. And per-game equality of `raw_shot` against the
+newly archived responses is now *possible* to check for E2024, where before it
+was not; that check exists (`assert_warehouse_reconciles`) and is a separate
+run, not part of this order.

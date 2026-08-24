@@ -30,10 +30,10 @@ def test_the_repair_report_records_the_measured_premise() -> None:
     assert "does not prove" in report
 
 
-def test_the_report_names_the_gate_and_who_must_approve_the_write() -> None:
+def test_the_report_names_the_gate_and_the_owner_decision_behind_the_write() -> None:
     report = _normalized(REPORT)
 
-    assert "owner" in report and "approval" in report
+    assert "owner" in report and "approv" in report
     assert "reconcile_warehouse_archive_gap" in report
 
 

@@ -29,8 +29,10 @@ from euroleague.archive import (
     CachedResponseMissing,
     MalformedCachedResponse,
     build_archive_object,
+    canonical_json_bytes,
     inventory_cached_endpoint,
     repair_endpoint_archive,
+    restore_and_compare,
 )
 from euroleague.cache import ResponseCache, sha256_of_bytes
 
@@ -498,3 +500,132 @@ def test_the_cached_points_bodies_carry_the_row_count_the_warehouse_holds() -> N
     )
 
     assert rows == E2024_POINTS_ROWS
+
+
+# ---------------------------------------------------------------------------
+# Restoring the season back out of the archive and diffing it against disk.
+#
+# This is the check that closes the loop: the repair is only worth anything if
+# a season can be rebuilt from the archive byte for byte.
+# ---------------------------------------------------------------------------
+
+
+class RestoreIndexCursor:
+    def __init__(self, rows: list[tuple]) -> None:
+        self.rows = rows
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args) -> None:
+        return None
+
+    def execute(self, query, params=None) -> None:
+        assert "insert" not in str(query).lower(), "a restore must not write"
+
+    def fetchall(self) -> list[tuple]:
+        return self.rows
+
+
+class RestoreIndexConnection:
+    def __init__(self, rows: list[tuple]) -> None:
+        self.rows = rows
+
+    def cursor(self) -> RestoreIndexCursor:
+        return RestoreIndexCursor(self.rows)
+
+
+class RestoreStorage:
+    def __init__(self, objects: dict[str, bytes]) -> None:
+        self.objects = objects
+
+    def download_verified(self, archived) -> bytes:
+        body = gzip.decompress(self.objects[archived.storage_path])
+        assert sha256_of_bytes(body) == archived.content_sha256
+        return body
+
+
+def archived_from_cache(cache: ResponseCache, gamecodes: tuple[int, ...]):
+    """Build an index and a Storage double from a cache, as a good archive would hold."""
+    rows: list[tuple] = []
+    objects: dict[str, bytes] = {}
+    response_id = 1
+
+    def add(endpoint: str, gamecode: int | None, body: bytes) -> None:
+        nonlocal response_id
+        content = sha256_of_bytes(body)
+        path = f"{SEASON}/{endpoint}/{content}.json.gz"
+        rows.append(
+            (
+                response_id,
+                SEASON,
+                endpoint,
+                gamecode,
+                content,
+                sha256_of_bytes(canonical_json_bytes(body)),
+                len(body),
+                path,
+                datetime(2026, 8, 25, tzinfo=UTC),
+            )
+        )
+        objects[path] = gzip.compress(body, mtime=0)
+        response_id += 1
+
+    add("Schedule", None, cache.schedule_path(SEASON).read_bytes())
+    for gamecode in gamecodes:
+        for endpoint in ("Boxscore", "PlaybyPlay", "Points"):
+            add(endpoint, gamecode, cache.read_bytes(SEASON, endpoint, gamecode))
+    return RestoreIndexConnection(rows), RestoreStorage(objects)
+
+
+def test_a_restored_season_matching_disk_reports_no_difference(tmp_path) -> None:
+    cache = three_endpoint_cache(tmp_path, (1, 2))
+    connection, storage = archived_from_cache(cache, (1, 2))
+
+    comparison = restore_and_compare(connection, storage, SEASON, cache, tmp_path / "restored")
+
+    assert comparison.matches
+    assert comparison.restored_responses == 7
+    assert comparison.compared_files == 7
+    assert comparison.identical == 7
+    assert comparison.differing == ()
+
+
+def test_one_differing_byte_is_named_and_fails_the_comparison(tmp_path) -> None:
+    """Break caught: a comparison that counts files instead of comparing bytes."""
+    cache = three_endpoint_cache(tmp_path, (1, 2))
+    connection, storage = archived_from_cache(cache, (1, 2))
+    body = cache.read_bytes(SEASON, "Points", 2)
+    cache.path_for(SEASON, "Points", 2).write_bytes(
+        body.replace(b'"NUM_ANOT": 2', b'"NUM_ANOT": 3')
+    )
+
+    comparison = restore_and_compare(connection, storage, SEASON, cache, tmp_path / "restored")
+
+    assert not comparison.matches
+    assert comparison.differing == ("Points/2.json",)
+    assert comparison.identical == 6
+
+
+def test_a_response_on_disk_that_the_archive_does_not_hold_is_named(tmp_path) -> None:
+    cache = three_endpoint_cache(tmp_path, (1, 2))
+    connection, storage = archived_from_cache(cache, (1, 2))
+    extra = cache.path_for(SEASON, "Points", 99)
+    extra.write_bytes(b'{"Rows": []}')
+
+    comparison = restore_and_compare(connection, storage, SEASON, cache, tmp_path / "restored")
+
+    assert not comparison.matches
+    assert comparison.only_in_reference == ("Points/99.json",)
+
+
+def test_bookkeeping_files_beside_the_responses_are_not_compared(tmp_path) -> None:
+    """The cache also holds a fetch-failure log; it is not an archived response."""
+    cache = three_endpoint_cache(tmp_path, (1, 2))
+    connection, storage = archived_from_cache(cache, (1, 2))
+    (cache.root / SEASON / "fetch_failures.json").write_bytes(b"[]")
+
+    comparison = restore_and_compare(connection, storage, SEASON, cache, tmp_path / "restored")
+
+    assert comparison.matches
+    assert comparison.compared_files == 7

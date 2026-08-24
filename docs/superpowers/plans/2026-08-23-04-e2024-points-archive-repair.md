@@ -1,13 +1,13 @@
 # E2024 Points Archive Repair — Draft Session Plan
 
-**Status:** Partly complete 2026-08-25. The cache blocker is gone: the 330
-E2024 `Points` bodies were carried to this machine and verified against the
-transport manifest. Work items 1-3 are done and item 6's before-side is
-recorded; items 4-5 — the Storage and database writes and the post-write
-verification — have **not** run, because this machine has no `.env` and the
-plan requires explicit owner approval immediately before the first write.
-Source re-fetch remains not an approved substitute for the exact bytes already
-parsed. Evidence: `docs/E2024_POINTS_ARCHIVE_REPAIR_REPORT.md`.
+**Status:** Complete 2026-08-25. The cache blocker was resolved by carrying the
+330 E2024 `Points` bodies to this machine and verifying them against the
+transport manifest. All six work items ran, the owner approved the write
+immediately before it, and every gate clause is met: 330 current index rows and
+330 verified objects, clean reconciliation for E2024 and E2025, a 991/991
+byte-identical restore, and unchanged warehouse fact rows. Source re-fetch was
+never used and remains not an approved substitute for the exact bytes that
+were parsed. Evidence: `docs/E2024_POINTS_ARCHIVE_REPAIR_REPORT.md`.
 
 ## Purpose
 

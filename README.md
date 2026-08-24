@@ -96,7 +96,7 @@ src/euroleague/     the package, including the MCP server under mcp/
 migrations/         numbered SQL, each with a matching down
 tests/              tests, and the committed fixture games
 tests/fixtures/     nine games, each carrying one known defect
-scripts/            fixture builder, archive fetcher, migration gate, MCP entry point
+scripts/            fixture builder, archive fetcher and repair, migration gate, MCP entry point
 docs/               one report per phase
 exploration/        reconnaissance, kept as the record of how the findings were produced
 ```

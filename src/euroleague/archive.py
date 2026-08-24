@@ -872,6 +872,88 @@ def repair_endpoint_archive(
 
 
 @dataclass(frozen=True)
+class RestoreComparison:
+    """A season restored out of the archive, diffed against the cache on disk."""
+
+    season_code: str
+    restored_responses: int
+    compared_files: int
+    identical: int
+    differing: tuple[str, ...]
+    only_in_restore: tuple[str, ...]
+    only_in_reference: tuple[str, ...]
+
+    @property
+    def matches(self) -> bool:
+        return not (self.differing or self.only_in_restore or self.only_in_reference)
+
+
+def _archived_response_paths(cache: ResponseCache, season_code: str) -> dict[str, Path]:
+    """Map `Points/7.json`-style labels to files, ignoring anything not a response.
+
+    A cache directory also holds bookkeeping a response archive never contains -
+    E2024 keeps a `fetch_failures.json` beside its responses. Comparing those
+    would report a difference that is not one.
+
+    **This ignores files outside that shape entirely.** A stray response written
+    under an unknown endpoint name is not compared and not reported.
+    """
+    season_root = cache.root / season_code
+    paths: dict[str, Path] = {}
+    for name in ("schedule.json", "roster.json"):
+        path = season_root / name
+        if path.is_file():
+            paths[name] = path
+    for endpoint in ENDPOINTS:
+        directory = season_root / endpoint
+        if not directory.is_dir():
+            continue
+        for path in directory.glob("*.json"):
+            if path.stem.isdigit():
+                paths[f"{endpoint}/{path.name}"] = path
+    return paths
+
+
+def restore_and_compare(
+    connection: Any,
+    storage: SupabaseStorage,
+    season_code: str,
+    reference_cache: ResponseCache,
+    workspace_root: Path,
+) -> RestoreComparison:
+    """Rebuild a season from the archive into a scratch directory and diff it against disk.
+
+    This is what makes an archive repair worth anything: not that rows were
+    written, but that the season can be reconstructed from them byte for byte.
+    The restore goes into `workspace_root`, never into the cache being compared
+    against, so a bad archive cannot damage the copy it is being checked against.
+
+    What it cannot detect: whether both copies are wrong in the same way. It
+    compares the archive with local disk, and local disk is where the archive
+    came from.
+    """
+    workspace_root.mkdir(parents=True, exist_ok=True)
+    restored_cache = ResponseCache(workspace_root)
+    summary = restore_current_season_cache(connection, restored_cache, storage, season_code)
+
+    restored = _archived_response_paths(restored_cache, season_code)
+    reference = _archived_response_paths(reference_cache, season_code)
+    shared = sorted(restored.keys() & reference.keys())
+    differing = tuple(
+        label for label in shared if restored[label].read_bytes() != reference[label].read_bytes()
+    )
+    return RestoreComparison(
+        season_code=season_code,
+        restored_responses=summary.restored_responses,
+        compared_files=len(shared),
+        identical=len(shared) - len(differing),
+        differing=differing,
+        only_in_restore=tuple(sorted(restored.keys() - reference.keys())),
+        only_in_reference=tuple(sorted(reference.keys() - restored.keys())),
+    )
+
+
+@dataclass(frozen=True)
 class EndpointArchiveGap:
     """Discrepancy between warehouse parsed rows and raw_api_response archive entries."""
 
