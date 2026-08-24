@@ -24,6 +24,9 @@ def _parser() -> argparse.ArgumentParser:
 
 def _assert_read_only(connection: Any) -> str:
     with connection.cursor() as cursor:
+        # Supabase's transaction pooler may ignore startup `options`. Make the
+        # active transaction read-only before its first query, then prove it.
+        cursor.execute("SET TRANSACTION READ ONLY")
         cursor.execute("SHOW transaction_read_only")
         value = str(cursor.fetchone()[0]).lower()
     if value != "on":

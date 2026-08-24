@@ -141,7 +141,9 @@ def test_production_timing_entrypoint_is_manual_and_forces_read_only_connections
     workflow = Path(".github/workflows/decision-18-remeasurement.yml").read_text(encoding="utf-8")
 
     assert "default_transaction_read_only=on" in script
+    assert "SET TRANSACTION READ ONLY" in script
     assert "SHOW transaction_read_only" in script
+    assert script.index("SET TRANSACTION READ ONLY") < script.index("SHOW transaction_read_only")
     assert "workflow_dispatch:" in workflow
     assert "schedule:" not in workflow
     assert "DATABASE_URL: ${{ secrets.DATABASE_URL }}" in workflow
