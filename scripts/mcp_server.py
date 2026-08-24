@@ -22,15 +22,19 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from euroleague.config import DatabaseSettings
-from euroleague.mcp.db import connect
+from euroleague.mcp.db import ReadOnlyConnectionManager, connect
 from euroleague.mcp.identity import IDENTITY
 from euroleague.mcp.protocol import Tool, serve
 from euroleague.mcp.tools import build_registry
 
 
-def build_tool_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool]:
+def build_tool_registry(
+    runner: Callable[
+        [Callable[[Any, dict[str, Any]], dict[str, Any]], dict[str, Any]], dict[str, Any]
+    ],
+) -> dict[str, Tool]:
     """Expose the registry for tests, which must not open a connection."""
-    return build_registry(connection_factory)
+    return build_registry(runner)
 
 
 def main() -> int:
@@ -41,13 +45,17 @@ def main() -> int:
         print(f"Cannot start: {failure}", file=sys.stderr)
         return 1
 
-    registry = build_tool_registry(lambda: connect(settings))
+    manager = ReadOnlyConnectionManager(lambda: connect(settings))
+    registry = build_tool_registry(manager.run)
     print(
         f"euroleague-analytics MCP server ready with {len(registry)} tools "
         f"on {settings.host}:{settings.port}",
         file=sys.stderr,
     )
-    serve(sys.stdin, sys.stdout, registry, IDENTITY)
+    try:
+        serve(sys.stdin, sys.stdout, registry, IDENTITY)
+    finally:
+        manager.close()
     return 0
 
 

@@ -67,13 +67,16 @@ def _schema(properties: dict[str, Any], required: list[str] | None = None) -> di
     }
 
 
-def build_registry(connection_factory: Callable[[], Any]) -> dict[str, Tool]:
-    """Bind each query function to a fresh connection per call."""
+def build_registry(
+    runner: Callable[
+        [Callable[[Any, dict[str, Any]], dict[str, Any]], dict[str, Any]], dict[str, Any]
+    ],
+) -> dict[str, Tool]:
+    """Bind each query function to the supplied query runner."""
 
     def bind(query: Callable[[Any, dict], dict]) -> Callable[[dict], dict]:
         def handler(arguments: dict[str, Any]) -> dict[str, Any]:
-            with connection_factory() as connection, connection.cursor() as cursor:
-                return query(cursor, arguments)
+            return runner(query, arguments)
 
         return handler
 

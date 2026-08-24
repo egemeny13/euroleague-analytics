@@ -88,7 +88,7 @@ def _shot_answers(
 
 def test_shot_tool_schema_exposes_every_filter_and_the_hard_cap() -> None:
     """Break caught: a required shot filter or bounded-output promise disappears."""
-    tool = build_registry(lambda: NullConnection())["el_get_shot_data"]
+    tool = build_registry(lambda query, args: {})["el_get_shot_data"]
     properties = tool.input_schema["properties"]
 
     assert tool.annotations["readOnlyHint"] is True
@@ -112,7 +112,7 @@ def test_shot_tool_schema_exposes_every_filter_and_the_hard_cap() -> None:
 
 def test_shot_tool_description_warns_about_the_population_and_coordinate_gap() -> None:
     """Break caught: a model is invited to count free throws from raw_shot."""
-    description = build_registry(lambda: NullConnection())["el_get_shot_data"].description
+    description = build_registry(lambda query, args: {})["el_get_shot_data"].description
 
     assert "game_event" in description
     assert "left-join" in description.lower()
@@ -122,7 +122,7 @@ def test_shot_tool_description_warns_about_the_population_and_coordinate_gap() -
 
 def test_describe_tool_prompt_directs_models_to_season_coordinate_coverage() -> None:
     """Break caught: the discovery tool falsely says no coordinates are loaded."""
-    description = build_registry(lambda: NullConnection())["el_describe_warehouse"].description
+    description = build_registry(lambda query, args: {})["el_describe_warehouse"].description
 
     assert "coordinates are not loaded" not in description.lower()
     assert "by season" in description.lower()

@@ -97,7 +97,13 @@ def test_connect_returns_an_open_autocommit_connection_after_read_only_is_verifi
 
     assert returned is connection
     assert connection.closed is False
-    assert calls == [{"url": "postgresql://test.invalid/warehouse", "autocommit": True}]
+    assert calls == [
+        {
+            "url": "postgresql://test.invalid/warehouse",
+            "autocommit": True,
+            "prepare_threshold": None,
+        }
+    ]
     assert connection.read_only_cursor.statements == [
         READ_ONLY_STATEMENT,
         "show transaction_read_only",
