@@ -11,6 +11,8 @@ fixtures and exercise exactly the code path production uses.
 Layout on disk, and the fixture tree mirrors it exactly:
 
     <root>/<season_code>/<endpoint>/<gamecode>.json
+    <root>/<season_code>/schedule.json
+    <root>/<season_code>/roster.json
 
 `Points` is a COORDINATE SOURCE ONLY. It omits missed free throws entirely, so
 counting shots from it and from the event stream gives different answers with
@@ -76,6 +78,10 @@ class ResponseCache:
         """Where the season-level schedule response lives."""
         return self.root / season_code / "schedule.json"
 
+    def roster_path(self, season_code: str) -> Path:
+        """Where the season-level v2 roster response lives."""
+        return self.root / season_code / "roster.json"
+
     def read_schedule_bytes(self, season_code: str) -> bytes:
         """Read the exact cached schedule bytes without any network fallback."""
         path = self.schedule_path(season_code)
@@ -91,6 +97,21 @@ class ResponseCache:
     def read_schedule_json(self, season_code: str) -> dict[str, Any]:
         """Return the cached season schedule parsed without reshaping it."""
         return json.loads(self.read_schedule_bytes(season_code))
+
+    def read_roster_bytes(self, season_code: str) -> bytes:
+        """Read the exact cached roster bytes without any network fallback."""
+        path = self.roster_path(season_code)
+        try:
+            return path.read_bytes()
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"No cached roster response for season {season_code} at {path}. "
+                "Fetch and archive it before loading roster registrations."
+            ) from None
+
+    def read_roster_json(self, season_code: str) -> dict[str, Any]:
+        """Return the cached roster response parsed without reshaping it."""
+        return json.loads(self.read_roster_bytes(season_code))
 
     def exists(self, season_code: str, endpoint: str, gamecode: int) -> bool:
         return self.path_for(season_code, endpoint, gamecode).exists()
@@ -155,6 +176,17 @@ class ResponseCache:
             body=schedule_body,
             modified_at=datetime.fromtimestamp(schedule_path.stat().st_mtime, tz=UTC),
         )
+
+        roster_path = self.roster_path(season_code)
+        if roster_path.is_file():
+            yield CachedResponse(
+                season_code=season_code,
+                endpoint="Roster",
+                gamecode=None,
+                path=roster_path,
+                body=roster_path.read_bytes(),
+                modified_at=datetime.fromtimestamp(roster_path.stat().st_mtime, tz=UTC),
+            )
 
         gamecodes = sorted(
             {code for endpoint in ENDPOINTS for code in self.gamecodes(season_code, endpoint)}

@@ -281,6 +281,22 @@ def test_restore_downloads_schedule_then_all_current_played_responses(tmp_path):
     assert cache.read_bytes(SEASON, "PlaybyPlay", 9) == b'{"game":9,"endpoint":"PlaybyPlay"}'
 
 
+def test_restore_includes_an_optional_current_roster_snapshot(tmp_path):
+    """Break caught: the archive has roster bytes but an unattended runner drops them."""
+    connection, archive_storage = archived_season(played=())
+    roster_body = b'{"data":[],"total":0}'
+    roster, compressed = _entry(2, "Roster", None, roster_body)
+    connection.rows.append(tuple(roster.__dict__.values()))
+    archive_storage.objects[roster.storage_path] = compressed
+    cache = ResponseCache(tmp_path)
+
+    summary = restore_current_season_cache(connection, cache, archive_storage, SEASON)
+
+    assert summary.restored_responses == 2
+    assert cache.read_roster_bytes(SEASON) == roster_body
+    assert archive_storage.downloaded_identities == [("Schedule", None), ("Roster", None)]
+
+
 def test_restore_creates_a_missing_cache_root_after_staging_succeeds(tmp_path):
     """Break caught: a fresh ephemeral runner cannot install its verified staging tree."""
     connection, archive_storage = archived_season(played=(7,))

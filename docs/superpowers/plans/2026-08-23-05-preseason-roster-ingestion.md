@@ -1,6 +1,7 @@
 # Pre-season Roster Ingestion — Draft Session Plan
 
-**Status:** Draft. One implementation session; production deployment is a separate approval gate.
+**Status:** Implementation and migration gates complete 2026-08-24. Reviewed
+release and the first live archive/load verification are in progress.
 
 ## Purpose
 

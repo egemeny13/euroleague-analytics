@@ -17,8 +17,9 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0009_season_progress` | Adds private `season_progress`, the scheduled-game count and last-load timestamp used to disclose whether a season is complete, in progress, or unknown. Applied on 2026-08-23; E2026 is initialized and historical seasons deliberately remain unknown. |
 | `0010_game_source_state` | Adds private per-game provenance for the exact Boxscore, PlaybyPlay, and Points checksums successfully applied to warehouse rows. Reconciled with the equivalent pre-existing production table on 2026-08-23; no unprovable historical marker was inserted. |
 | `0011_public_view_security` | Makes all seven warehouse views `security_invoker` and revokes every `anon` and `authenticated` view privilege. Applied on 2026-08-23 UTC after a PostgreSQL 17.11 up/down/up rehearsal and full-result fingerprint comparison. |
+| `0012_roster_registration` | Adds the private source-native pre-season registration table approved by Decision 24. Applied on 2026-08-24 as Supabase migration version `20260824122346` after a PostgreSQL 17.6 up/down/up/down rehearsal. |
 
-The complete migration set and production both define eighteen tables. See
+The committed migration set and production both define nineteen tables. See
 `docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md` for the rehearsal, drift
 reconciliation, and production evidence.
 

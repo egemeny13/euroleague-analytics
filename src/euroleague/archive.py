@@ -313,8 +313,10 @@ def _write_bytes_atomically(path: Path, body: bytes) -> None:
 
 def _cache_path(cache: ResponseCache, entry: ArchiveIndexEntry) -> Path:
     """Return the canonical cache path for one season-level or game-level response."""
-    if entry.gamecode is None:
+    if entry.endpoint == "Schedule" and entry.gamecode is None:
         return cache.schedule_path(entry.season_code)
+    if entry.endpoint == "Roster" and entry.gamecode is None:
+        return cache.roster_path(entry.season_code)
     return cache.path_for(entry.season_code, entry.endpoint, entry.gamecode)
 
 
@@ -355,7 +357,8 @@ def _required_archive_entries(
 
     actual_identities = set(entries_by_identity)
     missing = expected_identities - actual_identities
-    extra = actual_identities - expected_identities
+    optional_identities = {("Roster", None)}
+    extra = actual_identities - expected_identities - optional_identities
     duplicates = {
         identity
         for identity, matching_entries in entries_by_identity.items()
@@ -379,7 +382,10 @@ def _required_archive_entries(
             f"Season {season_code} archive index cannot restore its played cache: "
             + "; ".join(problems)
         )
-    ordered_identities = [("Schedule", None)] + [
+    ordered_identities = [("Schedule", None)]
+    if ("Roster", None) in entries_by_identity:
+        ordered_identities.append(("Roster", None))
+    ordered_identities += [
         (endpoint, gamecode) for gamecode in played_gamecodes for endpoint in ENDPOINTS
     ]
     return tuple(entries_by_identity[identity][0] for identity in ordered_identities)

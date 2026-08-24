@@ -46,6 +46,7 @@ from euroleague.derived_load import (
     insert_staged_derived_game_rows,
     insert_staged_dimension_rows,
     load_derived_rows,
+    load_dimensions,
     prune_obsolete_dimensions,
     select_dimensions_for_game,
     stage_attached_game_rows,
@@ -66,6 +67,7 @@ from euroleague.load import (
     stage_raw_shot_rows,
 )
 from euroleague.parse import parse_cached_game, parse_shots
+from euroleague.roster import load_cached_roster
 from euroleague.source_state import (
     cached_game_source_checksums,
     record_cached_game_sources,
@@ -92,6 +94,7 @@ class LiveRunSummary:
     played: int
     already_loaded: int
     newly_loaded: tuple[int, ...]
+    roster_registrations: int = 0
 
     def as_log_line(self) -> str:
         """One line stating what happened, including when nothing did.
@@ -103,7 +106,8 @@ class LiveRunSummary:
         games = ",".join(str(code) for code in self.newly_loaded) if self.newly_loaded else "-"
         return (
             f"season {self.season_code}: scheduled={self.scheduled} played={self.played} "
-            f"already_loaded={self.already_loaded} new={len(self.newly_loaded)} games={games}"
+            f"already_loaded={self.already_loaded} new={len(self.newly_loaded)} games={games} "
+            f"roster_registrations={self.roster_registrations}"
         )
 
 
@@ -476,16 +480,25 @@ def run_live_pipeline(
     new_games = select_new_games(schedule_games, already)
     gamecodes = tuple(int(game["gameCode"]) for game in new_games)
 
+    if schedule_games:
+        record_season_progress(connection, season_code, len(schedule_games))
+
+    roster_registrations = 0
+    roster_path_for = getattr(cache, "roster_path", None)
+    has_roster_snapshot = callable(roster_path_for) and roster_path_for(season_code).is_file()
+    if has_roster_snapshot:
+        if not gamecodes:
+            load_dimensions(connection, build_dimensions(cache, season_code), season_code)
+        roster_registrations = load_cached_roster(connection, cache, season_code)
+
     summary = LiveRunSummary(
         season_code=season_code,
         scheduled=len(schedule_games),
         played=len(played_games(schedule_games)),
         already_loaded=len(already),
         newly_loaded=gamecodes,
+        roster_registrations=roster_registrations,
     )
-
-    if schedule_games:
-        record_season_progress(connection, season_code, len(schedule_games))
 
     if not gamecodes:
         progress(summary.as_log_line())

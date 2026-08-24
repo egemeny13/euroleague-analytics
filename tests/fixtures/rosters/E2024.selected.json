@@ -1,0 +1,86 @@
+{
+  "data": [
+    {
+      "person": {
+        "code": "011867",
+        "name": "DIAMANTOPOULOS, GEORGIOS",
+        "country": null,
+        "height": null,
+        "weight": null
+      },
+      "type": "Z",
+      "active": true,
+      "startDate": "2025-03-18T13:12:09.521",
+      "endDate": "2025-06-30T00:00:00",
+      "dorsal": "",
+      "position": -1,
+      "positionName": null,
+      "externalId": 50821,
+      "club": {
+        "code": "PAN",
+        "name": "Panathinaikos AKTOR Athens"
+      },
+      "season": {
+        "code": "E2024",
+        "competitionCode": "E"
+      }
+    },
+    {
+      "person": {
+        "code": "LHK",
+        "name": "PLEISS, TIBOR",
+        "country": {
+          "code": "GER",
+          "name": "Germany"
+        },
+        "height": 218,
+        "weight": 113
+      },
+      "type": "J",
+      "active": true,
+      "startDate": "2025-02-26T12:29:21.216",
+      "endDate": "2025-06-30T00:00:00",
+      "dorsal": "24",
+      "position": 3,
+      "positionName": "Center",
+      "externalId": 50798,
+      "club": {
+        "code": "PAN",
+        "name": "Panathinaikos AKTOR Athens"
+      },
+      "season": {
+        "code": "E2024",
+        "competitionCode": "E"
+      }
+    },
+    {
+      "person": {
+        "code": "013666",
+        "name": "SMITH JR, DENNIS",
+        "country": {
+          "code": "USA",
+          "name": "United States of America"
+        },
+        "height": 190,
+        "weight": 95
+      },
+      "type": "J",
+      "active": false,
+      "startDate": "2025-01-29T15:23:10.794",
+      "endDate": "2025-03-03T09:04:43.525",
+      "dorsal": "4",
+      "position": 1,
+      "positionName": "Guard",
+      "externalId": 50587,
+      "club": {
+        "code": "MAD",
+        "name": "Real Madrid"
+      },
+      "season": {
+        "code": "E2024",
+        "competitionCode": "E"
+      }
+    }
+  ],
+  "total": 3
+}
