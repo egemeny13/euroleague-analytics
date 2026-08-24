@@ -1,6 +1,8 @@
-# Decision 18 Live Re-measurement — Draft Session Plan
+# Decision 18 Live Re-measurement — Session Plan
 
-**Status:** Draft. One read-only production session.
+**Status:** Complete 2026-08-24. Read-only production run `32736140860` recorded
+all repetitions: `four_factors` passed; `lineup_on_off` and `clutch_filter`
+failed and were named for separate follow-up decisions with plan evidence.
 
 ## Purpose
 

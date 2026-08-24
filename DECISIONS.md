@@ -30,7 +30,7 @@ is binding — the decision is only approved with it.
 | 15 | How Python reaches Postgres | `psycopg` through the connection pooler |
 | 16 | Dependency tooling | `pip` with pinned requirements files |
 | 17 | `Points` is a coordinate source only | Approved with one condition |
-| 18 | MCP aggregation in views | Approved with a measurement |
+| 18 | MCP aggregation in views | Re-measured 2026-08-24 — four factors passed; lineup and clutch wall-clock conditions failed and require separate decisions |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
 | 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
 | 21 | The physical-size gate measures cost per game | Approved 2026-08-19 — a measured band that survives a live season |
@@ -750,6 +750,16 @@ reconstruction is served where the official box score has no equivalent —
 possessions, pace, lineups, on/off, clutch, and every per-100 rate.
 
 **Timing.** Settled and first implemented 2026-08-12.
+
+**2026-08-24 condition check.** The attended read-only re-measurement kept the
+403/98/24 ms thresholds unchanged. Four factors passed at 229.44 ms and 225.62
+ms. Lineup on/off failed at 232.09 ms and 236.91 ms; clutch failed at 152.69 ms
+and 153.41 ms. PostgreSQL `EXPLAIN ANALYZE` separated server execution from the
+client path: lineup took 108.961-124.600 ms, while clutch took only
+0.510-0.832 ms. The general view licence is therefore not fully re-earned.
+No view was promoted and no threshold was widened in the measurement session;
+the two failures are named for separate decisions in
+`docs/DECISION_18_REMEASUREMENT.md`.
 
 **Provenance.**
 - Basis: MEASURED
