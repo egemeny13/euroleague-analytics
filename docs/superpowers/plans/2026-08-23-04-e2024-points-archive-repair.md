@@ -1,6 +1,8 @@
 # E2024 Points Archive Repair — Draft Session Plan
 
-**Status:** Draft. Attended production-write session; no EuroLeague API requests.
+**Status:** Blocked 2026-08-24. The only known complete E2024 `Points` cache is
+on another computer and is not currently accessible. Source re-fetch is not an
+approved substitute for the exact bytes already parsed.
 
 ## Purpose
 
