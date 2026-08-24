@@ -30,7 +30,7 @@ is binding — the decision is only approved with it.
 | 15 | How Python reaches Postgres | `psycopg` through the connection pooler |
 | 16 | Dependency tooling | `pip` with pinned requirements files |
 | 17 | `Points` is a coordinate source only | Approved with one condition |
-| 18 | MCP aggregation in views | Re-measured 2026-08-24 — all three shapes passed at their original PostgreSQL-execution boundary; Order 7b rewrote lineup to one scan and passed at 88.509 ms |
+| 18 | MCP aggregation in views | Re-measured 2026-08-24 — all three shapes passed at their original PostgreSQL-execution boundary; Order 7b rewrote lineup to one scan (88.509 ms); Order 7c aligned MCP single lazy read-only connection lifecycle without changing Decision 18 |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
 | 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
 | 21 | The physical-size gate measures cost per game | Approved 2026-08-19 — a measured band that survives a live season |
@@ -794,6 +794,21 @@ are zero, and its score boundary does not express possession-start credit. The
 full alternatives, timings, plain-language walkthrough, and blind spots are in
 `docs/LINEUP_ON_OFF_PERFORMANCE_DECISION.md`. The owner requested execution of
 Order 7b on 2026-08-24.
+
+**Order 7c resolution — approved 2026-08-24.** A single lazy verified read-only
+connection is now owned by the long-lived serial stdio MCP server process. The
+database connection is deferred until the first query tool call, reused across
+subsequent calls with fresh cursors, and safely retries once on retryable
+network/pooler drops (`OperationalError`, `InterfaceError`). Passing
+`autocommit=True` and `prepare_threshold=None` removed the call-six preparation
+spike. Across two attended live workflow runs (runs 32774709049 and 32775446200),
+warm calls dropped from ~1.6–2.1s down to ~605–799 ms (a 61.9% to 62.4% same-run
+reduction), with 100% deterministic response fingerprint equality across all 35
+measured calls and no call-six preparation spike observed. Decision 18's
+PostgreSQL-execution boundary and 403/98/24 ms thresholds remain intact and
+unchanged. Full evidence is in `docs/MCP_CONNECTION_LIFECYCLE_REPORT.md`.
+Approved by Egemen Yücelen on 2026-08-24.
+
 
 **Provenance.**
 - Basis: MEASURED

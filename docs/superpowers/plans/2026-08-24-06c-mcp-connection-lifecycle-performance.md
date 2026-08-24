@@ -1,6 +1,9 @@
-# MCP Connection Lifecycle and End-to-End Latency — Session Plan
+# MCP Connection Lifecycle and End-to-End Latency — Completed Session Plan
 
-**Status:** Ready for implementation
+**Status:** Complete. Approved by the owner on 2026-08-24; single lazy connection
+reused with prepare_threshold=None; 61.9% to 62.4% same-run repeated tool call
+reduction; no schema or Decision 18 threshold change.
+
 
 **Intended implementer:** Gemini 3.7 Flash, with the repository tests and this
 document acting as the implementation contract.

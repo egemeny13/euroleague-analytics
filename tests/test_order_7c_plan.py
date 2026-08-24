@@ -9,7 +9,7 @@ def test_order_7c_plan_bounds_the_selected_connection_lifecycle() -> None:
     plan = PLAN.read_text(encoding="utf-8")
     normalized = " ".join(plan.split()).lower()
 
-    assert "**status:** ready for implementation" in plan.lower()
+    assert "**status:** complete" in plan.lower()
     assert "single lazy connection" in normalized
     assert "serial stdio" in normalized
     assert "no connection pool" in normalized
@@ -52,11 +52,11 @@ def test_order_7c_plan_separates_offline_acceptance_from_live_evidence() -> None
     assert "decision 18" in normalized
 
 
-def test_order_7c_is_the_next_actionable_roadmap_session() -> None:
+def test_order_7c_is_complete_in_roadmap() -> None:
     roadmap = Path("ROADMAP.md").read_text(encoding="utf-8")
     normalized = " ".join(roadmap.split())
 
-    assert "| 7c |" in roadmap
+    assert "| 7c | **Complete:**" in roadmap
     assert "06c-mcp-connection-lifecycle-performance.md" in roadmap
-    assert "Order 7c is the next currently actionable session" in normalized
+    assert "Order 7c resolved the user-visible connection lifecycle" in normalized
     assert roadmap.index("| 7c |") < roadmap.index("| 8 |")

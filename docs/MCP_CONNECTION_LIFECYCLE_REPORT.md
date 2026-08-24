@@ -26,7 +26,8 @@ Order 7c aligned the connection lifecycle with the long-lived serial stdio MCP s
   **Measured Workflow Head SHA:** `4e78e83004967044ec5288294911afc157567752`  
   **Implementation Commit SHA:** `da6d33b`
 - **Fingerprint-Verified Live Workflow Run:** [Run 32775446200](https://github.com/egemeny13/euroleague-analytics/actions/runs/32775446200)  
-  **Measured Workflow Head SHA:** `acbdce065377f0a6d0cff8dfcf4ce4b96f5b9d3b`
+  **Measured Workflow Head SHA:** `acbdce0563e016380f04c5884e94221e5413e712`
+
 - **Target:** Supabase Shared Pooler (port 5432, session mode)
 - **Client Environment:** Linux x86_64, Python 3.14.7 (GitHub Actions Ubuntu Runner)
 - **Workload:** 5 fresh child processes, each initialized over stdio JSON-RPC and executing 7 repeated calls for the E2024 clutch shape (`el_get_possessions` with `max_seconds_remaining=300, max_margin=5, aggregate=True`).
