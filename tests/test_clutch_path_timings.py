@@ -165,3 +165,9 @@ def test_order_7a_decision_brief_names_boundaries_and_blind_spots() -> None:
     assert "prepare_threshold" in brief
     assert "owner decision" in brief
     assert "blind spot" in brief
+    assert "32741425779" in brief
+    assert "136.623" in brief
+    assert "138.790" in brief
+    assert "273.244" in brief
+    assert "0.599" in brief
+    assert "recommendation: option a" in brief
