@@ -76,6 +76,16 @@ def test_query_shapes_reference_declared_schema_views_and_columns() -> None:
                 )
 
 
+def test_lineup_timing_shape_aggregates_both_sides_in_one_possession_scan() -> None:
+    """Break caught: the benchmark stops measuring the approved one-scan rewrite."""
+    lineup_sql = next(
+        shape["sql"].lower() for shape in QUERY_SHAPES if shape["name"] == "lineup_on_off"
+    )
+
+    assert "group by grouping sets" in lineup_sql
+    assert lineup_sql.count("from v_possession") == 1
+
+
 def test_timing_harness_measures_all_three_shapes() -> None:
     """The harness must measure all three Decision 18 shapes and report structured records."""
     conn = _StubTimingConnection()

@@ -701,44 +701,59 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     )
 
 
-# A lineup's offensive possessions and its defensive possessions are two
-# different populations, so both sides are aggregated and then joined on the
-# lineup. Doing it as one pass with FILTER would count a possession once for the
-# offense and never for the defense.
-_LINEUP_SPLIT = """
-with offense as (
-    select offense_lineup_id as lineup_id,
+# One possession contributes to two different lineup populations: offense and
+# defense. GROUPING SETS calculates both populations during one v_possession
+# scan. The materialized CTE keeps PostgreSQL from expanding the view a second
+# time when the two grouped populations are joined below.
+_LINEUP_GROUPED = """
+with grouped as materialized (
+    select case when grouping(offense_lineup_id) = 0
+                then offense_lineup_id else defense_lineup_id end as lineup_id,
+           grouping(offense_lineup_id) = 0 as is_offense,
            count(*) as possessions,
-           sum(points_scored) as points_for
+           sum(points_scored) as points
     from v_possession
     where season_code = %s {quarantine}
-    group by 1
-),
-defense as (
-    select defense_lineup_id as lineup_id,
-           count(*) as possessions_against,
-           sum(points_scored) as points_against
-    from v_possession
-    where season_code = %s {quarantine}
-    group by 1
+    group by grouping sets ((offense_lineup_id), (defense_lineup_id))
 )
-select l.lineup_id, l.team_code,
-       (select string_agg(p.display_name, ' | ' order by p.display_name)
-          from v_lineup_player lp join player p on p.player_id = lp.player_id
-         where lp.lineup_id = l.lineup_id) as players,
-       coalesce(o.possessions, 0) as possessions,
-       coalesce(o.points_for, 0) as points_for,
-       coalesce(d.possessions_against, 0) as possessions_against,
-       coalesce(d.points_against, 0) as points_against,
-       round(100.0 * o.points_for / nullif(o.possessions, 0), 2) as offensive_rating,
-       round(100.0 * d.points_against / nullif(d.possessions_against, 0), 2)
-           as defensive_rating,
-       round(100.0 * o.points_for / nullif(o.possessions, 0)
-           - 100.0 * d.points_against / nullif(d.possessions_against, 0), 2) as net_rating
-from lineup l
-left join offense o on o.lineup_id = l.lineup_id
-left join defense d on d.lineup_id = l.lineup_id
-where coalesce(o.possessions, 0) + coalesce(d.possessions_against, 0) > 0
+"""
+
+_LINEUP_RANKED_POSITIVE = """,
+ranked as materialized (
+    select o.lineup_id, l.team_code,
+           o.possessions,
+           o.points as points_for,
+           coalesce(d.possessions, 0) as possessions_against,
+           coalesce(d.points, 0) as points_against,
+           round(100.0 * o.points / nullif(o.possessions, 0), 2) as offensive_rating,
+           round(100.0 * d.points / nullif(d.possessions, 0), 2) as defensive_rating,
+           round(100.0 * o.points / nullif(o.possessions, 0)
+               - 100.0 * d.points / nullif(d.possessions, 0), 2) as net_rating
+    from grouped o
+    left join grouped d on d.lineup_id = o.lineup_id and not d.is_offense
+    join lineup l on l.lineup_id = o.lineup_id
+    where o.is_offense
+"""
+
+# min_possessions=0 historically includes a unit that appears only on defense.
+# That unusual population needs lineup as the outer relation. Keeping it on a
+# separate path preserves the public behaviour without slowing the normal
+# positive-minimum leaderboard measured by Decision 18.
+_LINEUP_RANKED_ALL = """,
+ranked as materialized (
+    select l.lineup_id, l.team_code,
+           coalesce(o.possessions, 0) as possessions,
+           coalesce(o.points, 0) as points_for,
+           coalesce(d.possessions, 0) as possessions_against,
+           coalesce(d.points, 0) as points_against,
+           round(100.0 * o.points / nullif(o.possessions, 0), 2) as offensive_rating,
+           round(100.0 * d.points / nullif(d.possessions, 0), 2) as defensive_rating,
+           round(100.0 * o.points / nullif(o.possessions, 0)
+               - 100.0 * d.points / nullif(d.possessions, 0), 2) as net_rating
+    from lineup l
+    left join grouped o on o.lineup_id = l.lineup_id and o.is_offense
+    left join grouped d on d.lineup_id = l.lineup_id and not d.is_offense
+    where coalesce(o.possessions, 0) + coalesce(d.possessions, 0) > 0
 """
 
 
@@ -751,8 +766,10 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     minimum = int(arguments.get("min_possessions", 25))
 
     quarantine = _quarantine_clause(include_quarantined)
-    sql = _LINEUP_SPLIT.format(quarantine=quarantine)
-    params: list[Any] = [season_code, season_code]
+    sql = _LINEUP_GROUPED.format(quarantine=quarantine)
+    sql += _LINEUP_RANKED_POSITIVE if minimum > 0 else _LINEUP_RANKED_ALL
+    minimum_expression = "o.possessions" if minimum > 0 else "coalesce(o.possessions, 0)"
+    params: list[Any] = [season_code]
 
     if arguments.get("team"):
         sql += " and l.team_code = %s"
@@ -764,9 +781,16 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         )
         params.append(resolve_player(cursor, season_code, arguments["contains_player"]))
 
+    sql += f" and {minimum_expression} >= %s order by net_rating desc nulls last limit %s offset %s"
     sql += (
-        " and coalesce(o.possessions, 0) >= %s"
-        " order by net_rating desc nulls last limit %s offset %s"
+        ") "
+        "select r.lineup_id, r.team_code, "
+        "       (select string_agg(p.display_name, ' | ' order by p.display_name) "
+        "          from v_lineup_player lp join player p on p.player_id = lp.player_id "
+        "         where lp.lineup_id = r.lineup_id) as players, "
+        "       r.possessions, r.points_for, r.possessions_against, r.points_against, "
+        "       r.offensive_rating, r.defensive_rating, r.net_rating "
+        "from ranked r order by r.net_rating desc nulls last"
     )
     cursor.execute(sql, (*params, minimum, limit, offset))
     rows = _rows(cursor)

@@ -185,4 +185,4 @@ def test_order_7a_owner_decision_closes_the_roadmap_item_without_widening_thresh
     assert "0.599-0.810 ms" in decisions
     assert "24 ms threshold is unchanged" in decisions
     assert "| 7a | **Complete:**" in roadmap
-    assert "Order 7b is the next currently actionable major task" in normalized_roadmap
+    assert "Order 7b resolved the remaining performance failure" in normalized_roadmap

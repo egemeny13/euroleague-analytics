@@ -1,7 +1,7 @@
-# Lineup On/off Performance Decision — Draft Session Plan
+# Lineup On/off Performance Decision — Session Plan
 
-**Status:** Draft. Follows the clutch measurement-path decision; no schema
-change is authorized by the measurement alone.
+**Status:** Complete — a one-scan `GROUPING SETS` rewrite passed at 88.509 ms;
+no schema change was required.
 
 ## Purpose
 
@@ -28,3 +28,13 @@ Run migration up/down/up if a table or index is approved.
 
 Do not widen 98 ms, change lineup meaning, or combine this with clutch latency
 attribution. A failed experiment is recorded rather than shipped.
+
+## Resolution
+
+The canonical two-scan query failed a same-session best-of-five comparison at
+115.074 ms. The selected one-scan rewrite passed at 88.509 ms with the 98 ms
+threshold unchanged. Bidirectional `EXCEPT ALL` checks found zero differences
+across 11,667 default-filtered and 12,304 all-game E2024/E2025 lineup aggregates,
+and zero differences in the canonical E2024 top 50. No index, table, or migration
+was added. Full evidence and blind spots are in
+`docs/LINEUP_ON_OFF_PERFORMANCE_DECISION.md`.
