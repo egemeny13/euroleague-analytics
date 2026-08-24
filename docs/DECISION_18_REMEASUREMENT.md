@@ -5,6 +5,14 @@
 **Context:** Decision 18 re-measurement for multi-season live serving (E2024 + E2025 loaded).
 **Status:** Complete measurement; one shape passed and two failed their binding wall-clock thresholds.
 
+**Subsequent Order 7a resolution (2026-08-24):** the clutch result compared two
+different boundaries. Its 24 ms baseline was PostgreSQL `EXPLAIN ANALYZE`
+execution, while this report's 152.69-153.41 ms result was remote client wall
+clock. The owner approved preserving the original server-execution boundary and
+unchanged threshold after run `32741425779` measured clutch at 0.599-0.810 ms.
+Clutch therefore passed; lineup remains the one unresolved Decision 18 shape.
+See `docs/CLUTCH_MEASUREMENT_PATH_DECISION.md`.
+
 ---
 
 ## Executive Summary

@@ -1,6 +1,6 @@
 # Clutch Measurement-path Decision Brief
 
-**Status:** Live evidence complete; owner decision pending.
+**Status:** Approved — Option A.
 
 ## Question
 
@@ -99,8 +99,7 @@ This compares clutch wall clock with the same connection's `SELECT 1` floor.
 It separates view cost from fixed path cost but creates a new normalized metric
 that Decision 18 did not originally approve.
 
-No option is approved in this draft. The live numbers above support an attended
-owner decision on the applicable latency boundary and optimisation target.
+The live numbers above support Option A without changing the numeric threshold.
 
 ## Recommendation: Option A
 
@@ -114,7 +113,27 @@ Record a separate end-to-end service objective before changing MCP connection
 reuse. Also change the repeatability harness in a later implementation step so
 it reports server execution for the Decision 18 licence and reports client-path
 latency separately, with automatic preparation disabled or call six named. This
-recommendation is evidence-backed but is not an owner decision.
+recommendation is evidence-backed and was presented for owner decision.
+
+## Owner decision
+
+Option A is approved. Decision 18's 24 ms clutch threshold continues to govern
+PostgreSQL execution measured with `EXPLAIN ANALYZE`, which is the same boundary
+and method that established the threshold. The threshold is unchanged.
+
+The clutch shape re-earned its licence at 0.599-0.810 ms. No clutch index,
+materialized aggregate, pooler-mode change, or schema change is approved. The
+separate user-visible latency target is the MCP connection lifecycle; defining
+and implementing connection reuse requires its own bounded task and evidence.
+
+**Provenance.**
+
+- Basis: MEASURED plus owner policy decision.
+- Evidence: GitHub Actions run `32741425779`, the preserved seven-call series,
+  server plans, prepared-statement counts, and the live evidence table above.
+- Alternatives considered: Option B (move 24 ms to remote wall clock) and
+  Option C (govern cost above a round-trip floor).
+- Approved: Egemen Yücelen on 2026-08-24 in the attended Order 7a session.
 
 ## Blind spots
 

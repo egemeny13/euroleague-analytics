@@ -171,3 +171,18 @@ def test_order_7a_decision_brief_names_boundaries_and_blind_spots() -> None:
     assert "273.244" in brief
     assert "0.599" in brief
     assert "recommendation: option a" in brief
+
+
+def test_order_7a_owner_decision_closes_the_roadmap_item_without_widening_threshold() -> None:
+    brief = Path("docs/CLUTCH_MEASUREMENT_PATH_DECISION.md").read_text(encoding="utf-8")
+    decisions = Path("DECISIONS.md").read_text(encoding="utf-8")
+    roadmap = Path("ROADMAP.md").read_text(encoding="utf-8")
+    normalized_roadmap = " ".join(roadmap.split())
+
+    assert "**Status:** Approved — Option A" in brief
+    assert "Approved: Egemen Yücelen on 2026-08-24" in brief
+    assert "**Order 7a resolution" in decisions
+    assert "0.599-0.810 ms" in decisions
+    assert "24 ms threshold is unchanged" in decisions
+    assert "| 7a | **Complete:**" in roadmap
+    assert "Order 7b is the next currently actionable major task" in normalized_roadmap
