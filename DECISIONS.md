@@ -30,7 +30,7 @@ is binding — the decision is only approved with it.
 | 15 | How Python reaches Postgres | `psycopg` through the connection pooler |
 | 16 | Dependency tooling | `pip` with pinned requirements files |
 | 17 | `Points` is a coordinate source only | Approved with one condition |
-| 18 | MCP aggregation in views | Re-measured 2026-08-24 — four factors and clutch passed at their original PostgreSQL-execution boundary; lineup failed and requires Order 7b |
+| 18 | MCP aggregation in views | Re-measured 2026-08-24 — all three shapes passed at their original PostgreSQL-execution boundary; Order 7b rewrote lineup to one scan and passed at 88.509 ms |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
 | 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
 | 21 | The physical-size gate measures cost per game | Approved 2026-08-19 — a measured band that survives a live season |
@@ -778,6 +778,22 @@ connection-lifecycle objective, not a reason to widen Decision 18 or change the
 clutch schema. The full boundary evidence and blind spots are in
 `docs/CLUTCH_MEASUREMENT_PATH_DECISION.md`. Approved by Egemen Yücelen on
 2026-08-24.
+
+**Order 7b resolution — implemented 2026-08-24.** The original lineup
+PostgreSQL-execution boundary is unchanged. The 98 ms threshold is unchanged.
+A same-session best-of-five comparison measured the canonical two-scan query at
+115.074 ms and a one-scan `GROUPING SETS` rewrite at 88.509 ms. The rewrite therefore
+re-earned the lineup view licence without an index or pre-computed table.
+
+The rewrite was accepted only after bidirectional `EXCEPT ALL` checks returned
+zero differences across 11,667 default-filtered and 12,304 all-game E2024/E2025
+lineup aggregates, plus the canonical E2024 top 50. It keeps the possession-start
+lineup convention and resolves team/player identity from the same relations.
+`lineup_stint` was explicitly rejected: all loaded stint possession counters
+are zero, and its score boundary does not express possession-start credit. The
+full alternatives, timings, plain-language walkthrough, and blind spots are in
+`docs/LINEUP_ON_OFF_PERFORMANCE_DECISION.md`. The owner requested execution of
+Order 7b on 2026-08-24.
 
 **Provenance.**
 - Basis: MEASURED

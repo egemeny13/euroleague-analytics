@@ -261,6 +261,65 @@ def test_lineup_stats_carry_the_straddle_caveat_without_being_asked():
     assert STRADDLE_CAVEAT in response["caveats"]
 
 
+def test_lineup_stats_aggregate_both_sides_in_one_possession_scan():
+    """Break caught: lineup on/off returns to two full season possession scans."""
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["lineup_id", "team_code", "possessions"], []),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_lineup_stats(cursor, {"season": "E2024"})
+
+    lineup_sql = cursor.statements[1].lower()
+    assert "group by grouping sets" in lineup_sql
+    assert lineup_sql.count("from v_possession") == 1
+
+
+def test_lineup_stats_zero_minimum_keeps_defense_only_units() -> None:
+    """A zero minimum preserves units with defense but no offensive possession."""
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["lineup_id", "team_code", "possessions"], []),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_lineup_stats(cursor, {"season": "E2024", "min_possessions": 0})
+
+    lineup_sql = cursor.statements[1].lower()
+    assert "from lineup l" in lineup_sql
+    assert "coalesce(o.possessions, 0) >= %s" in lineup_sql
+    assert lineup_sql.count("from v_possession") == 1
+
+
 def test_lineup_stats_filter_by_a_player_through_the_unpivoted_view():
     cursor = RecordingCursor(
         [
