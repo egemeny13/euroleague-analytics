@@ -140,6 +140,23 @@ class ResponseCache:
     def checksum(self, season_code: str, endpoint: str, gamecode: int) -> str:
         return sha256_of_bytes(self.read_bytes(season_code, endpoint, gamecode))
 
+    def response(self, season_code: str, endpoint: str, gamecode: int) -> CachedResponse:
+        """One cached game response with the same provenance `responses()` gives it.
+
+        `responses()` walks a whole season; this reads a single identity. Both
+        report `modified_at` as the file's modification time, which means "these
+        bytes reached our disk then" and is not claimed to be an HTTP timestamp.
+        """
+        path = self.path_for(season_code, endpoint, gamecode)
+        return CachedResponse(
+            season_code=season_code,
+            endpoint=endpoint,
+            gamecode=gamecode,
+            path=path,
+            body=self.read_bytes(season_code, endpoint, gamecode),
+            modified_at=datetime.fromtimestamp(path.stat().st_mtime, tz=UTC),
+        )
+
     def gamecodes(self, season_code: str, endpoint: str) -> list[int]:
         """Every gamecode cached for one season and endpoint, ascending.
 

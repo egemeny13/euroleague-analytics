@@ -1,0 +1,2648 @@
+{
+  "cached_responses": 330,
+  "endpoint": "Points",
+  "exact_bytes": 16713709,
+  "records": [
+    {
+      "byte_size": 49160,
+      "canonical_sha256": "3f98748ebc5d7ed8bf658a49eddb4d61811fc04ff355a5679b4aab2a441ed1d0",
+      "content_sha256": "79f3cfdae1167f1a65db3289e8de74e7d2cd2bd325e166782d12848dc00a3f98",
+      "gamecode": 1,
+      "storage_path": "E2024/Points/79f3cfdae1167f1a65db3289e8de74e7d2cd2bd325e166782d12848dc00a3f98.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48513,
+      "canonical_sha256": "fd80f29c5ae5d3ca72a8524fd80d1beddf04a18e46d9e09dba306f6138f9bee1",
+      "content_sha256": "dc5765a532d204fc69f94d8714a666e7e8bb74fff2c4144f63cc79fc9d0829f0",
+      "gamecode": 2,
+      "storage_path": "E2024/Points/dc5765a532d204fc69f94d8714a666e7e8bb74fff2c4144f63cc79fc9d0829f0.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46267,
+      "canonical_sha256": "2609e7b3f9df969cddeeaa2d6cbcc8db55caa504a88537f96089f99c0e6bb783",
+      "content_sha256": "236547d241e18687f0b5efde38f3a80124da508f833bae61f25f81a0496fdc53",
+      "gamecode": 3,
+      "storage_path": "E2024/Points/236547d241e18687f0b5efde38f3a80124da508f833bae61f25f81a0496fdc53.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47721,
+      "canonical_sha256": "5a76b3c3407de74999520dd4408e325fb51f6bb27461aa0b67634d29fa611f08",
+      "content_sha256": "3c1a0dfc7e9ef363a465fa8b9e444360c7c44e99870fcb98f96d3ce2b51815bc",
+      "gamecode": 4,
+      "storage_path": "E2024/Points/3c1a0dfc7e9ef363a465fa8b9e444360c7c44e99870fcb98f96d3ce2b51815bc.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50285,
+      "canonical_sha256": "a3a4a880dddb8a21e1b0f72639897e1d998c82f9fbc3bf08ba6c9bcc511b2fc4",
+      "content_sha256": "35b6802fa7039bbcf33c57308cb1bc881148e76a4acf655f0f8b06a91d159af9",
+      "gamecode": 5,
+      "storage_path": "E2024/Points/35b6802fa7039bbcf33c57308cb1bc881148e76a4acf655f0f8b06a91d159af9.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47461,
+      "canonical_sha256": "e06c00f97f25a7d86e07ae7b719c5782fade6431b18e0e953dd3459d3bf62d2e",
+      "content_sha256": "b55682dc49f2867083775c276c77adad60a044983e575c933da01451679ae06e",
+      "gamecode": 6,
+      "storage_path": "E2024/Points/b55682dc49f2867083775c276c77adad60a044983e575c933da01451679ae06e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51304,
+      "canonical_sha256": "9c4102a0b9ca17f1d42a843f58d6ce9af827fcefc75c30f7d6e0c319b599b87c",
+      "content_sha256": "02126f42c20a27f9e11ec1ad77ec0f271592505983dd624956b46c2a9460ed17",
+      "gamecode": 7,
+      "storage_path": "E2024/Points/02126f42c20a27f9e11ec1ad77ec0f271592505983dd624956b46c2a9460ed17.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49827,
+      "canonical_sha256": "000308be72545c0f389c95d12fcf98e04b76be355b9a37590fc23832aff9997d",
+      "content_sha256": "e1704228a579022bca9be9b7afce5f6ac88649a8aaa0006c1eefc91d6c8f460e",
+      "gamecode": 8,
+      "storage_path": "E2024/Points/e1704228a579022bca9be9b7afce5f6ac88649a8aaa0006c1eefc91d6c8f460e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48320,
+      "canonical_sha256": "36151a17a6cad7a16c00b5018e171ee2fdd083f9ff675d9863fae83549f56595",
+      "content_sha256": "ae949a8467aa18cff99a4a5d9dc5d362c3cd4a7a7dd54e07713c5994bea6e08c",
+      "gamecode": 9,
+      "storage_path": "E2024/Points/ae949a8467aa18cff99a4a5d9dc5d362c3cd4a7a7dd54e07713c5994bea6e08c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49838,
+      "canonical_sha256": "feaa18d946ffd555083bb00c1802a6e2fcd1a86ea3eef484e47171000938d2f7",
+      "content_sha256": "7e3456470640f81f39a4c919c813e20077a16e6e6c41d2f2cc553a8aa1c317f3",
+      "gamecode": 10,
+      "storage_path": "E2024/Points/7e3456470640f81f39a4c919c813e20077a16e6e6c41d2f2cc553a8aa1c317f3.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 45511,
+      "canonical_sha256": "8122dd1431e121ef2dc6f7fa4bf23e496cc3cf646993890cd9a0876dd9b6e084",
+      "content_sha256": "1ae7003dfdcc74257a590b8cef9695fcdb3e11ed7c08f0658e6be8465bbf1e61",
+      "gamecode": 11,
+      "storage_path": "E2024/Points/1ae7003dfdcc74257a590b8cef9695fcdb3e11ed7c08f0658e6be8465bbf1e61.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54167,
+      "canonical_sha256": "23002acb243fa2cdaac38d81e05835cb403fdc54a0c201d05d03a9bfed630255",
+      "content_sha256": "200cc0d2004b1678db05dfc9ccb0a2401096f30e01576e13684a49f3abbaf6c4",
+      "gamecode": 12,
+      "storage_path": "E2024/Points/200cc0d2004b1678db05dfc9ccb0a2401096f30e01576e13684a49f3abbaf6c4.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51203,
+      "canonical_sha256": "41f4037a0bac88c69b0184939423052e2cc9ac3f6ebd93c5dd616ec1aba12cd3",
+      "content_sha256": "08ef880679691caf45523d67522b0f1a8e19b29fa08ee970ed5dd556f6e653bc",
+      "gamecode": 13,
+      "storage_path": "E2024/Points/08ef880679691caf45523d67522b0f1a8e19b29fa08ee970ed5dd556f6e653bc.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52606,
+      "canonical_sha256": "f9cbfd73fd340e74412ba17af360015b2ded58d0c71f6855e8bfa49ca123dd3c",
+      "content_sha256": "4c2314f7bc3f121839f0556a550530b295b4db7f4efbc84ba44596cb284a82a5",
+      "gamecode": 14,
+      "storage_path": "E2024/Points/4c2314f7bc3f121839f0556a550530b295b4db7f4efbc84ba44596cb284a82a5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50155,
+      "canonical_sha256": "ca73a33307b4e7a03ce44d4e7846efe493471ad1ebbfcd8e04c31b6ba401b13d",
+      "content_sha256": "beac437ee2c18e86640a99e45074e8228988c119aabaf1f6ccb586c5140ad34a",
+      "gamecode": 15,
+      "storage_path": "E2024/Points/beac437ee2c18e86640a99e45074e8228988c119aabaf1f6ccb586c5140ad34a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49808,
+      "canonical_sha256": "2bd9b09c6b7ed752b0063bb538638a25ac7ade8d78d4bff78ecbdf89b30c7e1d",
+      "content_sha256": "3ebc67ef746d3fa1d2a77e7e2ced75ce6224aa2161c5b3c0bac06773b9123f5d",
+      "gamecode": 16,
+      "storage_path": "E2024/Points/3ebc67ef746d3fa1d2a77e7e2ced75ce6224aa2161c5b3c0bac06773b9123f5d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48161,
+      "canonical_sha256": "a6683565040c37560aa6f85f69f7a6ad384bc7b8efca92669e855684c0df2470",
+      "content_sha256": "c698a5099b2b7d7f139dc3ef9d7e237ac3f34509f61a0213ba47ab8c6deddea2",
+      "gamecode": 17,
+      "storage_path": "E2024/Points/c698a5099b2b7d7f139dc3ef9d7e237ac3f34509f61a0213ba47ab8c6deddea2.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52816,
+      "canonical_sha256": "7870883ecdebfe6a0e9b8a3bde356bd3098429f91ca855561e4bfbbdb7238161",
+      "content_sha256": "d1d9ff0c0f2c9f82868e9cfbf7d87b9623bca45b1f3c2356e646b99594f2059a",
+      "gamecode": 18,
+      "storage_path": "E2024/Points/d1d9ff0c0f2c9f82868e9cfbf7d87b9623bca45b1f3c2356e646b99594f2059a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54413,
+      "canonical_sha256": "462bdc1d06e3ac0c21889e3f2f432d4bbbea96b411b7f45dd58d54483b1d5ba3",
+      "content_sha256": "87541d0821a25f0cc39f253708fd4ae1ffeea3e58c2d311864b2fdc143cd5cdd",
+      "gamecode": 19,
+      "storage_path": "E2024/Points/87541d0821a25f0cc39f253708fd4ae1ffeea3e58c2d311864b2fdc143cd5cdd.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 44469,
+      "canonical_sha256": "875b992deb5716360e9874c69941389937f4efd2418646eb67c8fe2583d931cf",
+      "content_sha256": "4e5382d16a1c599e73338562c58a9edee98e3c5d3e7e560dd88f20bafd3ff8e3",
+      "gamecode": 20,
+      "storage_path": "E2024/Points/4e5382d16a1c599e73338562c58a9edee98e3c5d3e7e560dd88f20bafd3ff8e3.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48741,
+      "canonical_sha256": "70ead69514e20b8394ccb60bfe09d7d178388e30e93f3c39217a1135361cbd29",
+      "content_sha256": "bdc68e91fc5e3a279107ef01e534297d6a61a90505a2ac038134f994740b842e",
+      "gamecode": 21,
+      "storage_path": "E2024/Points/bdc68e91fc5e3a279107ef01e534297d6a61a90505a2ac038134f994740b842e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48810,
+      "canonical_sha256": "3c997fb25170b879fb8965e0bbb1d9d0efd2475d84ba670e18a763b683b5bee6",
+      "content_sha256": "26ff643a1a7ca1685ef671147609801eca1e99e7735f8e8805a247e5bb8796fd",
+      "gamecode": 22,
+      "storage_path": "E2024/Points/26ff643a1a7ca1685ef671147609801eca1e99e7735f8e8805a247e5bb8796fd.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54092,
+      "canonical_sha256": "48c35c3eea3971fd408499244b502e3af722a8931551b9fcf77612c6223e6182",
+      "content_sha256": "9f4e94108d877aca1ef33d7754c08d42a07a863bdd7033e1e0bfe0541de23343",
+      "gamecode": 23,
+      "storage_path": "E2024/Points/9f4e94108d877aca1ef33d7754c08d42a07a863bdd7033e1e0bfe0541de23343.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47609,
+      "canonical_sha256": "24843a91368b615faf6df58e06edf6089831c493cd8bd3777f0a0a54cf515b1a",
+      "content_sha256": "b909eca3c6e119d47a7ad48be462b05f9c0cbe930f5d237a580302ef4b07f704",
+      "gamecode": 24,
+      "storage_path": "E2024/Points/b909eca3c6e119d47a7ad48be462b05f9c0cbe930f5d237a580302ef4b07f704.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47591,
+      "canonical_sha256": "50a5663353d7d063558f94e76d63958e6d03e1a218d5b638600346025ff8d2bf",
+      "content_sha256": "b39e2c152451061607bdd2f0814c71a9c6ba116c4aecabcb05ee000207d2dfb1",
+      "gamecode": 25,
+      "storage_path": "E2024/Points/b39e2c152451061607bdd2f0814c71a9c6ba116c4aecabcb05ee000207d2dfb1.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46986,
+      "canonical_sha256": "5a701cf23727e83198d2f15905f0c4d1cf687f4d2d460c2fc605cd1daa0fc803",
+      "content_sha256": "368cc4f061abd808a13d6940939aa7e3ee24c98133dc6e449b7c3fb4a0832429",
+      "gamecode": 26,
+      "storage_path": "E2024/Points/368cc4f061abd808a13d6940939aa7e3ee24c98133dc6e449b7c3fb4a0832429.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49034,
+      "canonical_sha256": "7a0983026b6363820335c66f076325842c373ad824487e2f285eab60b3140f58",
+      "content_sha256": "d139a497d5d56adad6bcabf11094f0a7a05cc2869a21d3f30999e662b0d7710d",
+      "gamecode": 27,
+      "storage_path": "E2024/Points/d139a497d5d56adad6bcabf11094f0a7a05cc2869a21d3f30999e662b0d7710d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49513,
+      "canonical_sha256": "46723ed1f8fbaaefd2a75916b92ccffe570e017968afd4d557eb3d2e01b91b82",
+      "content_sha256": "c199d0ad144e6221d43b3b9dac9fcc35585e6313e4721e3fded22eb6f5ffa793",
+      "gamecode": 28,
+      "storage_path": "E2024/Points/c199d0ad144e6221d43b3b9dac9fcc35585e6313e4721e3fded22eb6f5ffa793.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50408,
+      "canonical_sha256": "252aace1f808a66c3ef7ec2a214a9816cd845016fbc952d162b8a1398ab9a60d",
+      "content_sha256": "06ec3cdc883cc3f43731cbf2de03b3a11a8fd3b39b59709a4ca4ffec40585caa",
+      "gamecode": 29,
+      "storage_path": "E2024/Points/06ec3cdc883cc3f43731cbf2de03b3a11a8fd3b39b59709a4ca4ffec40585caa.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55623,
+      "canonical_sha256": "64f0176db8d1474b09788afe550ab55e1141b7d2119e954ecb1d31999ae34491",
+      "content_sha256": "57e8b77391299dc63005407edc28dd2bc4247cee7badab2872d9437da6981d75",
+      "gamecode": 30,
+      "storage_path": "E2024/Points/57e8b77391299dc63005407edc28dd2bc4247cee7badab2872d9437da6981d75.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49730,
+      "canonical_sha256": "f53b5e7164f4b2ec6084aaebe68c69586be99c50160d4113abc22c196b772a93",
+      "content_sha256": "fb72c6bc59a8ce80dc7a58b9ab97433d4268fc31260911c4130e63de456f7db4",
+      "gamecode": 31,
+      "storage_path": "E2024/Points/fb72c6bc59a8ce80dc7a58b9ab97433d4268fc31260911c4130e63de456f7db4.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51726,
+      "canonical_sha256": "373ce8f95a7240743ef13d82337c097b0b447b206840d8522517c9f52138d49c",
+      "content_sha256": "73571bdbde0490be3753930e2012d8c1da138fdfd857a47cebb41ce9826935ef",
+      "gamecode": 32,
+      "storage_path": "E2024/Points/73571bdbde0490be3753930e2012d8c1da138fdfd857a47cebb41ce9826935ef.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55973,
+      "canonical_sha256": "d8d25d9000cce24e946b0b4143bff1e3e1b20783d3995e47723607a3264f8b78",
+      "content_sha256": "1d7c28837c9b78a4770fe0f8276f0e12a7f4573f5f4d244cc0c6265355110394",
+      "gamecode": 33,
+      "storage_path": "E2024/Points/1d7c28837c9b78a4770fe0f8276f0e12a7f4573f5f4d244cc0c6265355110394.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47904,
+      "canonical_sha256": "d9976f00555f3c2252b8300fefd0bfe990dd1d69095235bc989e1f74e3c8670a",
+      "content_sha256": "89d7a50b9a4207c8199957f2282c60a646b16ba657b2098cb01d189e30d0cac5",
+      "gamecode": 34,
+      "storage_path": "E2024/Points/89d7a50b9a4207c8199957f2282c60a646b16ba657b2098cb01d189e30d0cac5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50320,
+      "canonical_sha256": "ca53ba9638d26ec140d90e9414d098920b81418ef7113497afaf5725aa5ed100",
+      "content_sha256": "7bdacb26dd39b0e5ec589aacbd14b57a894eb9aa970e28f5d39600b4ee92c86a",
+      "gamecode": 35,
+      "storage_path": "E2024/Points/7bdacb26dd39b0e5ec589aacbd14b57a894eb9aa970e28f5d39600b4ee92c86a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49203,
+      "canonical_sha256": "cad92823cf0e0c6b2b532123b2c62c341257cd3d27b39edace228dccff50771b",
+      "content_sha256": "331ccf03df0da3e61c3dc0d584771c3411a96bbcc0bcebf7fb05bd16a9082c9a",
+      "gamecode": 36,
+      "storage_path": "E2024/Points/331ccf03df0da3e61c3dc0d584771c3411a96bbcc0bcebf7fb05bd16a9082c9a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46007,
+      "canonical_sha256": "39456dce6a021fe9ba4461835a353af6a2a3b929702a32e3400f68838d75c418",
+      "content_sha256": "4fa494e8e7597b0437c280d85531a304cf42df8e96c7eb28e76e0a9d140dfa80",
+      "gamecode": 37,
+      "storage_path": "E2024/Points/4fa494e8e7597b0437c280d85531a304cf42df8e96c7eb28e76e0a9d140dfa80.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51996,
+      "canonical_sha256": "94ced3f3fdce2824d9610e0903b99ba2f712208adae321371d2a326ecbce207a",
+      "content_sha256": "626f5ce2275e2c86de371aeb39d57b9a373826b2cc0dd2b2ab6de1dbc65b4e62",
+      "gamecode": 38,
+      "storage_path": "E2024/Points/626f5ce2275e2c86de371aeb39d57b9a373826b2cc0dd2b2ab6de1dbc65b4e62.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47699,
+      "canonical_sha256": "ccb57e1cfdb3df8e2ff476d6d5724ba89d95c00875297277f3ccfb91f1e629f2",
+      "content_sha256": "40a2f0c1f153d0bbf3a11bdf58454eb79f054172377978110944f44df43ab3d9",
+      "gamecode": 39,
+      "storage_path": "E2024/Points/40a2f0c1f153d0bbf3a11bdf58454eb79f054172377978110944f44df43ab3d9.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49501,
+      "canonical_sha256": "cf21c8974c24499078683043701b98ec444bc1f3f39435afc53622e10f7dcd9d",
+      "content_sha256": "7d33cd4d9b3943efb65082190b442f2c621d80879b43559257cde541a0af0a05",
+      "gamecode": 40,
+      "storage_path": "E2024/Points/7d33cd4d9b3943efb65082190b442f2c621d80879b43559257cde541a0af0a05.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46709,
+      "canonical_sha256": "8cce2e66988f14c7e9bbfa2191375f4202a627ec2dc07517e718f301eb6311b5",
+      "content_sha256": "84f896f0c20c4ec12d004021d890a9e54304474fb68aaf8f1605c0b006edeb60",
+      "gamecode": 41,
+      "storage_path": "E2024/Points/84f896f0c20c4ec12d004021d890a9e54304474fb68aaf8f1605c0b006edeb60.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53537,
+      "canonical_sha256": "03afdfa0fa23d7a653491a4e06e356e544709e4916bc5e7a4067c198a4ac037e",
+      "content_sha256": "6aeb627ef7651be632fbf9a21c2f75e09bdaef11abe0ca513eb27a82df341b9a",
+      "gamecode": 42,
+      "storage_path": "E2024/Points/6aeb627ef7651be632fbf9a21c2f75e09bdaef11abe0ca513eb27a82df341b9a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 45669,
+      "canonical_sha256": "67d3e8173f69404f919f41a0cd60043933b96000cf75f5ae0f861b4418b0c5b3",
+      "content_sha256": "3de622b1aebfd001e08f5f85626d15a484977e917acd147a0254cf8d1c4361fa",
+      "gamecode": 43,
+      "storage_path": "E2024/Points/3de622b1aebfd001e08f5f85626d15a484977e917acd147a0254cf8d1c4361fa.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50394,
+      "canonical_sha256": "3669b5531fa662c3f0db6e4ae891ce53c00e875b618787f98065709e7dd48d24",
+      "content_sha256": "00f40cd33f30a1886379a9a9513a78d3d5b0ed06fb11e5214ec34f67872c6651",
+      "gamecode": 44,
+      "storage_path": "E2024/Points/00f40cd33f30a1886379a9a9513a78d3d5b0ed06fb11e5214ec34f67872c6651.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47670,
+      "canonical_sha256": "e5dd34ed3c6330e08e3e95cba9eb468bc0d7ecbe30938dfa5d760b6c61591e81",
+      "content_sha256": "e58055beb60a490f34afe4e462c07bccd8e6faddc9e2013b32abdbd79c3ce034",
+      "gamecode": 45,
+      "storage_path": "E2024/Points/e58055beb60a490f34afe4e462c07bccd8e6faddc9e2013b32abdbd79c3ce034.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52152,
+      "canonical_sha256": "6568ef9f63cfeb98c456fd87f2c268399600bc9386a012b4d9dc445d848b2f55",
+      "content_sha256": "9154726c4143488e31e287f586f7f6bbe2896a69e2fa8930feddf79a2601c51b",
+      "gamecode": 46,
+      "storage_path": "E2024/Points/9154726c4143488e31e287f586f7f6bbe2896a69e2fa8930feddf79a2601c51b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51867,
+      "canonical_sha256": "d953801d9621ebc7bff547d20d4268378548c3d80bf385cc3e85e118b096d6d6",
+      "content_sha256": "e2d96e1b4f6b02c92cccbfaa819ecbf455a9a43ba3ea00f795ee30543c80f607",
+      "gamecode": 47,
+      "storage_path": "E2024/Points/e2d96e1b4f6b02c92cccbfaa819ecbf455a9a43ba3ea00f795ee30543c80f607.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47459,
+      "canonical_sha256": "599d4b3ed582027cb90d8b560aba00409be31b59d4975faa5dec943f4da6b327",
+      "content_sha256": "a92fb0da0ae0ae777aef36c5d78b7d336261e98e95c0f96e5eea140b8e9decd7",
+      "gamecode": 48,
+      "storage_path": "E2024/Points/a92fb0da0ae0ae777aef36c5d78b7d336261e98e95c0f96e5eea140b8e9decd7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54580,
+      "canonical_sha256": "423fdf617c3977e95e913beb3b30a58d9343d8c0c70ea90963d9b63fd76716ac",
+      "content_sha256": "35094cf3e7e194b8ef2317c9f0b967660ebcd14e46f2d9828c43c63a9c9f2cc1",
+      "gamecode": 49,
+      "storage_path": "E2024/Points/35094cf3e7e194b8ef2317c9f0b967660ebcd14e46f2d9828c43c63a9c9f2cc1.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48182,
+      "canonical_sha256": "458ad59c16a4948c52236c09b944c567c68206f3bb4b54d1146e44fc7ebb738b",
+      "content_sha256": "0d7c9203275bb1dda3d7f7dc73f23dcb3bcf5f33d32c1e4a8628f5ed5b5bea68",
+      "gamecode": 50,
+      "storage_path": "E2024/Points/0d7c9203275bb1dda3d7f7dc73f23dcb3bcf5f33d32c1e4a8628f5ed5b5bea68.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 43805,
+      "canonical_sha256": "ce530f70635057584b3dd46366bc0694ce36cc3434ef4518474bb34bf0d1b3f1",
+      "content_sha256": "5e27b5c0bff6084bce60140fc72fc9d5f31d0f14b341d07a8c2e03fb25a435a5",
+      "gamecode": 51,
+      "storage_path": "E2024/Points/5e27b5c0bff6084bce60140fc72fc9d5f31d0f14b341d07a8c2e03fb25a435a5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54462,
+      "canonical_sha256": "2296928c01222c588ce07a5f01b1ab5c4ae544cc0f99d4968378278082b62a45",
+      "content_sha256": "488f3fdecdbe656e0dc21787699d62b8c7ab5ac9fd277c8603d06a0791a12aac",
+      "gamecode": 52,
+      "storage_path": "E2024/Points/488f3fdecdbe656e0dc21787699d62b8c7ab5ac9fd277c8603d06a0791a12aac.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48821,
+      "canonical_sha256": "bb44651aa862ac3a2fd82e4a60e41b818681d754a3b320d740ed96e82b4587cc",
+      "content_sha256": "82acc5bdb6932adb36aa8772e318beb0925456094229cf7b8cb69844702238a8",
+      "gamecode": 53,
+      "storage_path": "E2024/Points/82acc5bdb6932adb36aa8772e318beb0925456094229cf7b8cb69844702238a8.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53306,
+      "canonical_sha256": "47d2a2c9ea6e89f68ad250dba4fbd24bddb48daedb14b2392e6e741ed3c4746a",
+      "content_sha256": "1e2700f26b5a18d1a06c90ea1881ce2220ac126b18f2de03a385ebb45405f892",
+      "gamecode": 54,
+      "storage_path": "E2024/Points/1e2700f26b5a18d1a06c90ea1881ce2220ac126b18f2de03a385ebb45405f892.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46065,
+      "canonical_sha256": "3db831e3441aabfe5b6cde1fcfe76ff24ac8004371338c335263cc1e2e12c04f",
+      "content_sha256": "c86b3f9a7685872336af99d84c1832e41e2b9f233e67ad02fd747e9e6a0fcd36",
+      "gamecode": 55,
+      "storage_path": "E2024/Points/c86b3f9a7685872336af99d84c1832e41e2b9f233e67ad02fd747e9e6a0fcd36.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51898,
+      "canonical_sha256": "8049791b2fa90c73217f676aca4fb767907e30ebb6fe05c38cb51a2e240f0d6e",
+      "content_sha256": "a65b0eee0236a9f6145e9ab92eab76ad6cfba2a14b5cf78bff00e9786f935e51",
+      "gamecode": 56,
+      "storage_path": "E2024/Points/a65b0eee0236a9f6145e9ab92eab76ad6cfba2a14b5cf78bff00e9786f935e51.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55137,
+      "canonical_sha256": "18f93cd0aa01fa639d43332b3e463a7e0f343321ca01f9936caaab7b6a47ee71",
+      "content_sha256": "2e9a4d219435e0eb24e906faddb88ef760d3a728cce62236df5e673f31d90bfc",
+      "gamecode": 57,
+      "storage_path": "E2024/Points/2e9a4d219435e0eb24e906faddb88ef760d3a728cce62236df5e673f31d90bfc.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49902,
+      "canonical_sha256": "e799d36fd0448b1d5f1e65b92d58657a45f181018b15ce4f1ae60aeddd0d0123",
+      "content_sha256": "8c99b56d7a4c63000760b5515988fe51bf39892aa862e7e2c2f827d616bff459",
+      "gamecode": 58,
+      "storage_path": "E2024/Points/8c99b56d7a4c63000760b5515988fe51bf39892aa862e7e2c2f827d616bff459.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46800,
+      "canonical_sha256": "1ce3f220ce97441e7033430c9d46dab74e1c91e0db90bb6c3eb71cc18606f096",
+      "content_sha256": "789eeda9924c27b4e43e26044b924337da7a15f69dc18d0c995fc30a9db5c24c",
+      "gamecode": 59,
+      "storage_path": "E2024/Points/789eeda9924c27b4e43e26044b924337da7a15f69dc18d0c995fc30a9db5c24c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 42179,
+      "canonical_sha256": "b95a870cdd47ea5c925b69e595b5c28bc13c9a3d8a0bad8580d5c91b644c5a1e",
+      "content_sha256": "b93ba544aec647e7e5906a53a389a8154231583b60685005f552da8018fee271",
+      "gamecode": 60,
+      "storage_path": "E2024/Points/b93ba544aec647e7e5906a53a389a8154231583b60685005f552da8018fee271.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46128,
+      "canonical_sha256": "afc8fb89c0fec4d19365acc3ac57d1c45f0212454ed4030d68b18e83680f5739",
+      "content_sha256": "15087df0b572546cbc942c619fce22a27bd9aedc3acc5f68bce064752590afbe",
+      "gamecode": 61,
+      "storage_path": "E2024/Points/15087df0b572546cbc942c619fce22a27bd9aedc3acc5f68bce064752590afbe.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50008,
+      "canonical_sha256": "b547ddc853f5506803ac1d92fbe130628055edcc38ebee32fc49000e1f4fcd3e",
+      "content_sha256": "a1b062dc546dd3b9678832634b673011f8d5b8e1e8250fd4cf9a36aa07f4510e",
+      "gamecode": 62,
+      "storage_path": "E2024/Points/a1b062dc546dd3b9678832634b673011f8d5b8e1e8250fd4cf9a36aa07f4510e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56482,
+      "canonical_sha256": "555084c97980bc2416246467bc2391108db5eb0db625847ba6cc59d6feefc339",
+      "content_sha256": "3ae18ca227ba59f169f29d9060d8967811ab7e207ea8f090e00f9afa0530ba53",
+      "gamecode": 63,
+      "storage_path": "E2024/Points/3ae18ca227ba59f169f29d9060d8967811ab7e207ea8f090e00f9afa0530ba53.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48972,
+      "canonical_sha256": "03e8807082188fcca70707a73ed5f4890bb52307e47af9605e5dcc147f73249f",
+      "content_sha256": "4da944135f8bbf817c1d39569e3177c43831533834a58abd0088df8909b1b970",
+      "gamecode": 64,
+      "storage_path": "E2024/Points/4da944135f8bbf817c1d39569e3177c43831533834a58abd0088df8909b1b970.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52733,
+      "canonical_sha256": "1bdbbfa908cf605db50543354e4002e2b06f50eedc728ab2a8069b05d662a8c4",
+      "content_sha256": "7ccf835048b726c8a735f3991f2ea4c35cbb46983c0eac4e14be93be57203aba",
+      "gamecode": 65,
+      "storage_path": "E2024/Points/7ccf835048b726c8a735f3991f2ea4c35cbb46983c0eac4e14be93be57203aba.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50951,
+      "canonical_sha256": "9ed4b7e57db95260fb3418450335ea6649bbdbca23168833a0f2efd037255e08",
+      "content_sha256": "80edee1bf7f132007354dbaaac3f5bc61bd58c55cbc289df38406634fb87414c",
+      "gamecode": 66,
+      "storage_path": "E2024/Points/80edee1bf7f132007354dbaaac3f5bc61bd58c55cbc289df38406634fb87414c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52838,
+      "canonical_sha256": "53a7ad07ab65f195fdac1dac2f9dd0d8bdfa3ae07f5bc868f76edc89f5fe7748",
+      "content_sha256": "00049d6c0d4130040ec33714cad4ac2750eb866875a9abf14b377f3875208793",
+      "gamecode": 67,
+      "storage_path": "E2024/Points/00049d6c0d4130040ec33714cad4ac2750eb866875a9abf14b377f3875208793.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48882,
+      "canonical_sha256": "c8c89867904db665d2c4bc7d50bb48aed55f2a9a2e929b3c7d6ea2e9a49c83dd",
+      "content_sha256": "c8095e67ea2c279044fdbc033c1efdfb70391825af15990c13695886335c46b2",
+      "gamecode": 68,
+      "storage_path": "E2024/Points/c8095e67ea2c279044fdbc033c1efdfb70391825af15990c13695886335c46b2.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54190,
+      "canonical_sha256": "614b3a51f356597a79f1f7c6b9bf596fbd6f63d8f89534abdaf42522db929a88",
+      "content_sha256": "ae316d40d08517fa774bbdea2c640625fcbeee6f0a8cdec51e96923883f5a0f7",
+      "gamecode": 69,
+      "storage_path": "E2024/Points/ae316d40d08517fa774bbdea2c640625fcbeee6f0a8cdec51e96923883f5a0f7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49346,
+      "canonical_sha256": "6b93247b502e4a144f59b4afc94bf7b8d120353190782d1131743132c2123763",
+      "content_sha256": "a8dfe93be44bcdeeec3a262aa00c70b0979715c1a6e234464a93ce2f0f2d23a1",
+      "gamecode": 70,
+      "storage_path": "E2024/Points/a8dfe93be44bcdeeec3a262aa00c70b0979715c1a6e234464a93ce2f0f2d23a1.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 45793,
+      "canonical_sha256": "1a484053a7885f18574a7779e9b8b7911fca24d7051bb7e488cc87736544e59c",
+      "content_sha256": "3f697c42254af9a7b9601fb31e1f0adae2cb5560aae89bdf1ab42929bcd961fd",
+      "gamecode": 71,
+      "storage_path": "E2024/Points/3f697c42254af9a7b9601fb31e1f0adae2cb5560aae89bdf1ab42929bcd961fd.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47969,
+      "canonical_sha256": "1d6214e99444e00ffa45fdae1f97a8619e72ce08e7f51cba649cd509cd70c615",
+      "content_sha256": "a5c73d99105439f383e5a21ce3806afc5019c6f4c40b7b50591ae21e292584c3",
+      "gamecode": 72,
+      "storage_path": "E2024/Points/a5c73d99105439f383e5a21ce3806afc5019c6f4c40b7b50591ae21e292584c3.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47001,
+      "canonical_sha256": "a9da54dfd4f3d6138ddbe65dde88a7dd9ad950b3bd74b1e0facc0ccbac32687b",
+      "content_sha256": "b17f144cf54b31da87b4815823ae886e142d6ed072c2265033b9d30baca5d58b",
+      "gamecode": 73,
+      "storage_path": "E2024/Points/b17f144cf54b31da87b4815823ae886e142d6ed072c2265033b9d30baca5d58b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53593,
+      "canonical_sha256": "2db511213b528b55cfabefb1bcbac6b2db86f0a962353354fd1c652ac685e387",
+      "content_sha256": "dab2b8dd25a74f4c846dafad8d30567d9fb3750e9e682c6df9bc779c2799f704",
+      "gamecode": 74,
+      "storage_path": "E2024/Points/dab2b8dd25a74f4c846dafad8d30567d9fb3750e9e682c6df9bc779c2799f704.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 62484,
+      "canonical_sha256": "1fa01da09c173956e015217be73234d1d9b35e972ca5540239a3c3d0cf491e5e",
+      "content_sha256": "7b80735338bbc1b4aa1bde93aae9d72d636a8101ad6d2d6c554267ada3a41100",
+      "gamecode": 75,
+      "storage_path": "E2024/Points/7b80735338bbc1b4aa1bde93aae9d72d636a8101ad6d2d6c554267ada3a41100.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54210,
+      "canonical_sha256": "3b7da1b4128cffd21c04fe9aa47398f67f929e587eff0e6e914bd37f35249dc3",
+      "content_sha256": "4371cfae12b0cfa255280d2cd9da409b8e3e0a60ffb0c1546f2aba37046ec9cc",
+      "gamecode": 76,
+      "storage_path": "E2024/Points/4371cfae12b0cfa255280d2cd9da409b8e3e0a60ffb0c1546f2aba37046ec9cc.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50445,
+      "canonical_sha256": "09c1a826ee0ffa78f1b3031fa6505116d0f2fc3bf08905ce2d93e860a9c5ddde",
+      "content_sha256": "c0995eba143060d0fd93a38c78106e062d73b686c9c2cd1a83fa8ec39821dd61",
+      "gamecode": 77,
+      "storage_path": "E2024/Points/c0995eba143060d0fd93a38c78106e062d73b686c9c2cd1a83fa8ec39821dd61.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52339,
+      "canonical_sha256": "b8e13b525ee16c273457fda120701c244ae7596e9b18efb19474bb3fce338820",
+      "content_sha256": "0f57eeb618c9e27a11a508dc634e63ccf7d108c146b6ddb7958c7129a4b765bd",
+      "gamecode": 78,
+      "storage_path": "E2024/Points/0f57eeb618c9e27a11a508dc634e63ccf7d108c146b6ddb7958c7129a4b765bd.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50699,
+      "canonical_sha256": "6116a1b5ebaee867324b93bef062e61c5f7ca6267401a792699e87140ac2981f",
+      "content_sha256": "8c81c99cadb8e7707edf2f0a993d29ffb890ce5468ee139b727b9adb17928ead",
+      "gamecode": 79,
+      "storage_path": "E2024/Points/8c81c99cadb8e7707edf2f0a993d29ffb890ce5468ee139b727b9adb17928ead.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56426,
+      "canonical_sha256": "273e3b2da2937bb8f2aa054091405d433c45b52b836695fa0e35103a37fd3516",
+      "content_sha256": "0a136a9a911ac2db9e5b5f8b6ffe407615d14fa50046542986d0a3a7a34ab902",
+      "gamecode": 80,
+      "storage_path": "E2024/Points/0a136a9a911ac2db9e5b5f8b6ffe407615d14fa50046542986d0a3a7a34ab902.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50983,
+      "canonical_sha256": "4953a97d209f1b59a260657314984143533445e0d3a65dbc8a318f9fdf5ae0e4",
+      "content_sha256": "c904a0e429a4b4b478cdb28d501d166cc94592e7ebe08e4133b6a62c465e00dc",
+      "gamecode": 81,
+      "storage_path": "E2024/Points/c904a0e429a4b4b478cdb28d501d166cc94592e7ebe08e4133b6a62c465e00dc.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46369,
+      "canonical_sha256": "71574f26bf5bf2513f713099b88a35a3fd321fecf9416918ba4430f85fee8723",
+      "content_sha256": "5b11c6d8d167c78cb9c5df1f92178bfead2fd213ba1075cb04cf64ccccc4418d",
+      "gamecode": 82,
+      "storage_path": "E2024/Points/5b11c6d8d167c78cb9c5df1f92178bfead2fd213ba1075cb04cf64ccccc4418d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52878,
+      "canonical_sha256": "79dc68eabd9ca27d886606a7f2fb7cbffd1cce025fd9369ea1e7f3a6d036b370",
+      "content_sha256": "36f27d9f7417a98f28062d499f58120e2cc04cdb59b0c587b8ae60a44205f8c0",
+      "gamecode": 83,
+      "storage_path": "E2024/Points/36f27d9f7417a98f28062d499f58120e2cc04cdb59b0c587b8ae60a44205f8c0.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53543,
+      "canonical_sha256": "8e2968df7af5de2972100637a395f510f7c57906a14caf3748682c8086b459dc",
+      "content_sha256": "aa393993bff493bae0486fb7ed22f211ea6bf5806cac942d039a8d351aa9adc8",
+      "gamecode": 84,
+      "storage_path": "E2024/Points/aa393993bff493bae0486fb7ed22f211ea6bf5806cac942d039a8d351aa9adc8.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50724,
+      "canonical_sha256": "20c69a67a33feca7a2a177dfc61ccde14800e84ffd00ff1a833fa6e161d9faba",
+      "content_sha256": "ee99c09bafdd586933b8cd201eae468445b25f4c223d783a89510794b914da4f",
+      "gamecode": 85,
+      "storage_path": "E2024/Points/ee99c09bafdd586933b8cd201eae468445b25f4c223d783a89510794b914da4f.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55133,
+      "canonical_sha256": "d83678950c49277483421646d0373a4bbb7372e36f7ba23ad72dca235ab2d52d",
+      "content_sha256": "3acd682d12ff30abc32484596da4699ed6766f1a9a9e323874e620fff7f597dd",
+      "gamecode": 86,
+      "storage_path": "E2024/Points/3acd682d12ff30abc32484596da4699ed6766f1a9a9e323874e620fff7f597dd.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53772,
+      "canonical_sha256": "894c8531bd13388573f1afcccb1f136624711934df53017d07fa1fab54206ff5",
+      "content_sha256": "704994d92ce2b9937b6f061753962828d06fceeef729b27b53ecf48f4306e754",
+      "gamecode": 87,
+      "storage_path": "E2024/Points/704994d92ce2b9937b6f061753962828d06fceeef729b27b53ecf48f4306e754.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52464,
+      "canonical_sha256": "32d530b4e084dd3109d9ede9d8cc2f52fb7a128366ba3c13ca2456d292390fb2",
+      "content_sha256": "2faa45ab979dc737110fdc9c3fcb0a7a6c65334dc0b19ef8cd31e1e9473b1e97",
+      "gamecode": 88,
+      "storage_path": "E2024/Points/2faa45ab979dc737110fdc9c3fcb0a7a6c65334dc0b19ef8cd31e1e9473b1e97.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51282,
+      "canonical_sha256": "c760286735dbee3aece9ca5e3c61ac4eb59df4dd3b12a77c949c5f1bb92993cf",
+      "content_sha256": "c3ad65589bccc1336f75c4e536a8df19e4a4d542090d763e813d1b0dbb386854",
+      "gamecode": 89,
+      "storage_path": "E2024/Points/c3ad65589bccc1336f75c4e536a8df19e4a4d542090d763e813d1b0dbb386854.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47087,
+      "canonical_sha256": "1df470fc3a9ffd64df7d3ec0995fb10bbd0ec03ed575351075751e3163c9737b",
+      "content_sha256": "a80528185d222e25eff8d41c5aac8eec27613ecd20bd98a236badca0ba9e214a",
+      "gamecode": 90,
+      "storage_path": "E2024/Points/a80528185d222e25eff8d41c5aac8eec27613ecd20bd98a236badca0ba9e214a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51313,
+      "canonical_sha256": "4904cd44852d71940b18e739c2346515a134bc4b7c960582dbd296bbbab181dd",
+      "content_sha256": "f19c223751da4e595f8e90dab8db3bb84d20be9ce0f2ea32a4490d15e4b68f87",
+      "gamecode": 91,
+      "storage_path": "E2024/Points/f19c223751da4e595f8e90dab8db3bb84d20be9ce0f2ea32a4490d15e4b68f87.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50430,
+      "canonical_sha256": "39473a0de52a77d96e176df70692bba25c6318f1f4820f9e45da1aed17709a0f",
+      "content_sha256": "a9f79630849e5b198bb166c48f3676e347182babfb3eab087c09144273188423",
+      "gamecode": 92,
+      "storage_path": "E2024/Points/a9f79630849e5b198bb166c48f3676e347182babfb3eab087c09144273188423.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54806,
+      "canonical_sha256": "c437152a4eea4f0bcb9540950d35c30f85bf9616ab3ff969e2e0c4a184ecceab",
+      "content_sha256": "0d5ecfb34f462df2ce9da65d5f343f219bbb36f5e7d92f7e3f6694969dbdc42d",
+      "gamecode": 93,
+      "storage_path": "E2024/Points/0d5ecfb34f462df2ce9da65d5f343f219bbb36f5e7d92f7e3f6694969dbdc42d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46888,
+      "canonical_sha256": "31bc789c1ed8ab468ff06ae7e017f5beecd728b51b77a8fc20fc195630bee9f9",
+      "content_sha256": "c15672ae2d00205559c44382b0b4a48e8997675b638556dd547b6feaeeb032cb",
+      "gamecode": 94,
+      "storage_path": "E2024/Points/c15672ae2d00205559c44382b0b4a48e8997675b638556dd547b6feaeeb032cb.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50490,
+      "canonical_sha256": "40aa3f20e8479aadb2965918a7bf3c4b2b1ccc2aff3a7f31790d7e225e7d0ff6",
+      "content_sha256": "483fa7ece789855dd46223a879e3c0bd461fdcb767a41ccdacf5862c0925f6ba",
+      "gamecode": 95,
+      "storage_path": "E2024/Points/483fa7ece789855dd46223a879e3c0bd461fdcb767a41ccdacf5862c0925f6ba.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47935,
+      "canonical_sha256": "ee97f41878d419e39b353650c400fe86c645b9593ef9e5e92cb02e257c966a98",
+      "content_sha256": "78578a18f4b1004faed8a816afeb6dc9db429e7980d2d90c931cb222e81afabd",
+      "gamecode": 96,
+      "storage_path": "E2024/Points/78578a18f4b1004faed8a816afeb6dc9db429e7980d2d90c931cb222e81afabd.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52693,
+      "canonical_sha256": "dc60080a0b5fd8b5eff7c07bce0f41907d93e22c20b980508fd9a1a87f8b8021",
+      "content_sha256": "b7aea978c63a67e9c715e8abee943af7ec405834751835c5c090285e1b791ad5",
+      "gamecode": 97,
+      "storage_path": "E2024/Points/b7aea978c63a67e9c715e8abee943af7ec405834751835c5c090285e1b791ad5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47899,
+      "canonical_sha256": "3c8f853bc4692248531c54610c76a54e1cf6350687473fe25714748cfcb3578e",
+      "content_sha256": "8d710e2fffc16de58f2fd3778e53b3695c524583142fa415e95f6751b9decbe3",
+      "gamecode": 98,
+      "storage_path": "E2024/Points/8d710e2fffc16de58f2fd3778e53b3695c524583142fa415e95f6751b9decbe3.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47946,
+      "canonical_sha256": "c74a9152f5bc4575825a0946cdc7310cbc195194f3585caf9fabff5b37cc9291",
+      "content_sha256": "fecb56098dd0b283e0b03740db78f93228cd1db9b33c59bbcb06dff00c657eca",
+      "gamecode": 99,
+      "storage_path": "E2024/Points/fecb56098dd0b283e0b03740db78f93228cd1db9b33c59bbcb06dff00c657eca.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51431,
+      "canonical_sha256": "ea6811ba1f2406d7fa7060c73283c1f9f79a846000e13a258c4e537d4ff019ae",
+      "content_sha256": "410566d7261728ae4fb87e5aa974e9fa1633969f8f4ce89152819587cb7f4ddb",
+      "gamecode": 100,
+      "storage_path": "E2024/Points/410566d7261728ae4fb87e5aa974e9fa1633969f8f4ce89152819587cb7f4ddb.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 57107,
+      "canonical_sha256": "24352051a7a9b4d095a98454609e043bdb04b755bb49fa07913e655ccc573482",
+      "content_sha256": "3eddb9e6d59d03887107e5cba86aee7ba1fc6b878cbba3867681376cbd4bf03e",
+      "gamecode": 101,
+      "storage_path": "E2024/Points/3eddb9e6d59d03887107e5cba86aee7ba1fc6b878cbba3867681376cbd4bf03e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52143,
+      "canonical_sha256": "9819764d6ac6ea2d572361c834b57c165dd01ba456ae1909708454f8b1e563c7",
+      "content_sha256": "3d7978d24871df46102589259bfe5ccae7853ee5433498522cb25bd5f7068b96",
+      "gamecode": 102,
+      "storage_path": "E2024/Points/3d7978d24871df46102589259bfe5ccae7853ee5433498522cb25bd5f7068b96.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48068,
+      "canonical_sha256": "2c00b2e04e61bce118c95b30a16f2eb381807e0bcec84ad687033aab8f5deeb2",
+      "content_sha256": "6c1c17a6308f39e893c0e4a43f6ad9cda8a8fd945962deea7da32804908dd7d2",
+      "gamecode": 103,
+      "storage_path": "E2024/Points/6c1c17a6308f39e893c0e4a43f6ad9cda8a8fd945962deea7da32804908dd7d2.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54212,
+      "canonical_sha256": "252e2b5d2a5e90781061518ca63979ede1c19e58add982bc669014694a4f41a1",
+      "content_sha256": "b5cfed6db2f4faae43429ded956d9777d1bd13b48776f99a8ef02d521e4ccfba",
+      "gamecode": 104,
+      "storage_path": "E2024/Points/b5cfed6db2f4faae43429ded956d9777d1bd13b48776f99a8ef02d521e4ccfba.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51511,
+      "canonical_sha256": "88d20663df81eebf0a3d0f13f73ebe4d9c642e15473c242529f0bf6fe3b708b4",
+      "content_sha256": "31d889f5bf8c594dd7607cfbb77c23f2841ec9f282305036e0762b4afb128beb",
+      "gamecode": 105,
+      "storage_path": "E2024/Points/31d889f5bf8c594dd7607cfbb77c23f2841ec9f282305036e0762b4afb128beb.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53453,
+      "canonical_sha256": "9a4bc3be3c8a38160099fe8134daa94edc40edf185bdee2fb382b88a884b6cfa",
+      "content_sha256": "b7fa38be90682798be7118059286e874a52d5bc48f496b9fee50b5aa2e7be054",
+      "gamecode": 106,
+      "storage_path": "E2024/Points/b7fa38be90682798be7118059286e874a52d5bc48f496b9fee50b5aa2e7be054.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 61387,
+      "canonical_sha256": "b3373704b68985c2e00475bb07801e7fb93804f4b7439d9da715ba65f9727304",
+      "content_sha256": "c11995ce6756050c48d22a9a64fd75b763173fe7fd0dc0941f386a94398138a6",
+      "gamecode": 107,
+      "storage_path": "E2024/Points/c11995ce6756050c48d22a9a64fd75b763173fe7fd0dc0941f386a94398138a6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48180,
+      "canonical_sha256": "380a5b102f9e5c87057ae91c3ec452317d492da32166fcd152e660430f4c7413",
+      "content_sha256": "8ee011213a5755f1be280ab7f94016b9fd7269cf17f96dba515130ed11335f58",
+      "gamecode": 108,
+      "storage_path": "E2024/Points/8ee011213a5755f1be280ab7f94016b9fd7269cf17f96dba515130ed11335f58.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49210,
+      "canonical_sha256": "924907f0a4899c64b0bac51a0de96fe8debb530c83d5f635c4e9df890f760a48",
+      "content_sha256": "6eae2040c8be9a05c2448ca4f41dd983cf308bb3961ac59af8d8d4e01f6d84ba",
+      "gamecode": 109,
+      "storage_path": "E2024/Points/6eae2040c8be9a05c2448ca4f41dd983cf308bb3961ac59af8d8d4e01f6d84ba.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46535,
+      "canonical_sha256": "53648363558a2b5777b976c47d085d539d15acf0a401f1430f83307073715e06",
+      "content_sha256": "a94012651ff1f966e14d8311c284ddb714d7d500c4e40b2e217e22c872eb515a",
+      "gamecode": 110,
+      "storage_path": "E2024/Points/a94012651ff1f966e14d8311c284ddb714d7d500c4e40b2e217e22c872eb515a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49873,
+      "canonical_sha256": "a3512eadc52d241ba3ed44fe0788e776ae6e20fa5ec337e2f1881f7a24243364",
+      "content_sha256": "744a0a2463372797069c49ea008820daa1f4815067ede6eb4edd8573c85b01dc",
+      "gamecode": 111,
+      "storage_path": "E2024/Points/744a0a2463372797069c49ea008820daa1f4815067ede6eb4edd8573c85b01dc.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46125,
+      "canonical_sha256": "23c4e7137bf18e6a2d8feaebd031df675065a269f86eab4899f17d299f6971ac",
+      "content_sha256": "2f21f20016db77ce58b7a02bd04a5a675c96ee87b7da6268c8848da3d4a91f32",
+      "gamecode": 112,
+      "storage_path": "E2024/Points/2f21f20016db77ce58b7a02bd04a5a675c96ee87b7da6268c8848da3d4a91f32.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48464,
+      "canonical_sha256": "b9c64d78351e7af421fb15edf5a8b5380bba30dc9fe5dbf9061508141d8b6588",
+      "content_sha256": "a5036628e7afa5c54f9de69008950632151f89a58839993563f5dd8580535c91",
+      "gamecode": 113,
+      "storage_path": "E2024/Points/a5036628e7afa5c54f9de69008950632151f89a58839993563f5dd8580535c91.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54583,
+      "canonical_sha256": "e9a2583632bbf8270e30f37f7a447a361f73507523ddfbce8c0ad6371ae957d1",
+      "content_sha256": "b98376c8b5bbf30e322b943d5aaee61da3ae36e578debc0e3beab682149b1f82",
+      "gamecode": 114,
+      "storage_path": "E2024/Points/b98376c8b5bbf30e322b943d5aaee61da3ae36e578debc0e3beab682149b1f82.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46864,
+      "canonical_sha256": "695ae2ac7d8edcf38f522d78c0e1cf7786d0143bfbc6054dc339a1511780f74f",
+      "content_sha256": "0062499ce7b7741dfd33ccfb8b276e710a06b5d35801adec7b40aba0d7f3171c",
+      "gamecode": 115,
+      "storage_path": "E2024/Points/0062499ce7b7741dfd33ccfb8b276e710a06b5d35801adec7b40aba0d7f3171c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51931,
+      "canonical_sha256": "43254f1c103565a686e501c6a728b7bea0f6df29b16fa37b2cee949f9fb4b8a2",
+      "content_sha256": "7590487f0426bed722eb8329aa3a18e6b2c095f7a752f088d15e7c351bc56223",
+      "gamecode": 116,
+      "storage_path": "E2024/Points/7590487f0426bed722eb8329aa3a18e6b2c095f7a752f088d15e7c351bc56223.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 64818,
+      "canonical_sha256": "88d4d08a0cfb8fa2cce0e1260d36cb3b03e162ca938d92b5e6e1606e57d0f974",
+      "content_sha256": "46f49ac2c4d957dbe4940c779c974b51a4b31b37df790d60588cbd4adcd7f7de",
+      "gamecode": 117,
+      "storage_path": "E2024/Points/46f49ac2c4d957dbe4940c779c974b51a4b31b37df790d60588cbd4adcd7f7de.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52386,
+      "canonical_sha256": "f63a9630f0e88238ce5a94fbc0f931c978006db24d05586879e0bf64aee3e601",
+      "content_sha256": "751d7689e0079fcfa1ab3e8f56a363d05eab6190e84d3985288d1ce41e9cbeca",
+      "gamecode": 118,
+      "storage_path": "E2024/Points/751d7689e0079fcfa1ab3e8f56a363d05eab6190e84d3985288d1ce41e9cbeca.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46368,
+      "canonical_sha256": "0ea01a488bcf088078ce2e90d95c1f50a337998e8ab74f7bb9ff1603818ae1d9",
+      "content_sha256": "985c0b7479a951d48158e01430960ceb551ba62b0b44bd0e7bf2418a0905c0cb",
+      "gamecode": 119,
+      "storage_path": "E2024/Points/985c0b7479a951d48158e01430960ceb551ba62b0b44bd0e7bf2418a0905c0cb.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47703,
+      "canonical_sha256": "b6997773db99905ac4006f6e4e34734708851f5537f601e735e14d03d8a754e9",
+      "content_sha256": "d4c69d3f73c476423c66f6ebc0ae39a69714e9d76439f178bbb180560ef1a346",
+      "gamecode": 120,
+      "storage_path": "E2024/Points/d4c69d3f73c476423c66f6ebc0ae39a69714e9d76439f178bbb180560ef1a346.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48062,
+      "canonical_sha256": "6ca31be058e7659a3d915fa6e888291ab48d319d8fe481d7ba57d15cdd847f67",
+      "content_sha256": "7d1f15d1b00735a57df03c63dd9b6999ee0609de41772ba81e8aa94202d95453",
+      "gamecode": 121,
+      "storage_path": "E2024/Points/7d1f15d1b00735a57df03c63dd9b6999ee0609de41772ba81e8aa94202d95453.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50159,
+      "canonical_sha256": "1b5f133739fa261f949fe637c157fa471f016613cc9eca48581e1c59fbb14466",
+      "content_sha256": "33c333983824070d86f61801e2220fa1304163a2a62144f25b5f18f3a358140c",
+      "gamecode": 122,
+      "storage_path": "E2024/Points/33c333983824070d86f61801e2220fa1304163a2a62144f25b5f18f3a358140c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52116,
+      "canonical_sha256": "7e768b2e3c710746b727af60de6b17fb393524e31af8725a56e389a1b4576326",
+      "content_sha256": "b0db2b4c6bab785fe120b1498d962f8346d526654533162f9c2bca81d0115156",
+      "gamecode": 123,
+      "storage_path": "E2024/Points/b0db2b4c6bab785fe120b1498d962f8346d526654533162f9c2bca81d0115156.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55618,
+      "canonical_sha256": "82398ab86ca3ad8eab43feb6b0f5fad8856902b2c7566872442dc3c28c0f1e0f",
+      "content_sha256": "1e96dc86182f763de50a4bc539a1995f190c17f9cbe1ca724b71d8fa4ebb5aa1",
+      "gamecode": 124,
+      "storage_path": "E2024/Points/1e96dc86182f763de50a4bc539a1995f190c17f9cbe1ca724b71d8fa4ebb5aa1.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54199,
+      "canonical_sha256": "3ca74dc38b356ff339b224fd0208e144cfaa0931a589abeb11d048b15d118bca",
+      "content_sha256": "8b07c34c6e8828d09096edaa96aeeaef5e0929e9a254cc89dbe100e027a84012",
+      "gamecode": 125,
+      "storage_path": "E2024/Points/8b07c34c6e8828d09096edaa96aeeaef5e0929e9a254cc89dbe100e027a84012.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54338,
+      "canonical_sha256": "bed70fb2758ac5b09e0bdce4a877a99684263b72ed76fa405bd94fee0961a8c9",
+      "content_sha256": "c81df24e95701b07d6ad9a1328014b3bc191d09ef6d3f69a254514883810d322",
+      "gamecode": 126,
+      "storage_path": "E2024/Points/c81df24e95701b07d6ad9a1328014b3bc191d09ef6d3f69a254514883810d322.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51854,
+      "canonical_sha256": "624b653650488de978e64f18ab1dbaced9cc921b96ed71b273d96fb91813c5fa",
+      "content_sha256": "ca396d7ae5a994771881cbef37c756971f7eac1347ed580361d14568fc608596",
+      "gamecode": 127,
+      "storage_path": "E2024/Points/ca396d7ae5a994771881cbef37c756971f7eac1347ed580361d14568fc608596.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50184,
+      "canonical_sha256": "204258207bb514b62d2aebd94923b683af0a31700e90036b6eb428c857e6e759",
+      "content_sha256": "7e6b23a7d3713c68999dca64ed4ebcaa8e3336f35ebdd874126a94d039ffdf20",
+      "gamecode": 128,
+      "storage_path": "E2024/Points/7e6b23a7d3713c68999dca64ed4ebcaa8e3336f35ebdd874126a94d039ffdf20.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49071,
+      "canonical_sha256": "7c995a04b125f86443160de316b497c83ab3eecfb5e790b6df43ae554414feb8",
+      "content_sha256": "785cddafb77d250de4e7ba2cc062985c48aaf1a75a757f752863e40cd642fb1a",
+      "gamecode": 129,
+      "storage_path": "E2024/Points/785cddafb77d250de4e7ba2cc062985c48aaf1a75a757f752863e40cd642fb1a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53189,
+      "canonical_sha256": "db3eecbc9a536a0e04adb4779f7deae61276dcdebe935f6fa9a92860a9fb8eb6",
+      "content_sha256": "2c6ad7f7f423ff03676a6a3a2ea17a6c02aa0c3e244a0add0c7f0746ecca160e",
+      "gamecode": 130,
+      "storage_path": "E2024/Points/2c6ad7f7f423ff03676a6a3a2ea17a6c02aa0c3e244a0add0c7f0746ecca160e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51047,
+      "canonical_sha256": "d8293d4326ca3d36229e9589c68080e74ba29cb952d8163682de3619a9f36ab2",
+      "content_sha256": "52226d8f33647bf25d6e9418ffef84fbde662534f97ede44414cf390a11145ca",
+      "gamecode": 131,
+      "storage_path": "E2024/Points/52226d8f33647bf25d6e9418ffef84fbde662534f97ede44414cf390a11145ca.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50974,
+      "canonical_sha256": "0c0a078625484f445f2fde5eee9e5659036c52655830e5fe01a16a82e80a0d0a",
+      "content_sha256": "2028f41001f82a500e2480548f3ababf8dfbb873f8aad675ed330a1c849aa1ad",
+      "gamecode": 132,
+      "storage_path": "E2024/Points/2028f41001f82a500e2480548f3ababf8dfbb873f8aad675ed330a1c849aa1ad.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47826,
+      "canonical_sha256": "f7979f2263eafe89c9e0266327e0168569673cbbc8c586d3a69bdb0d5e8b4124",
+      "content_sha256": "4cb3fd28d7503af5c87b8aba01e27b67f5f7f7e4c56a4d69361f719d7f1dfc5d",
+      "gamecode": 133,
+      "storage_path": "E2024/Points/4cb3fd28d7503af5c87b8aba01e27b67f5f7f7e4c56a4d69361f719d7f1dfc5d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49809,
+      "canonical_sha256": "b258118299dbdc7d1e74187cca33b93ef416b8ffca0727270d1ad8566cbcf483",
+      "content_sha256": "0534ea93ec4021c9a881202ee7ad61abbc1397bbc1745700eab16dd061d56ed7",
+      "gamecode": 134,
+      "storage_path": "E2024/Points/0534ea93ec4021c9a881202ee7ad61abbc1397bbc1745700eab16dd061d56ed7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54765,
+      "canonical_sha256": "ac0a9c2b2ea933963d023815b7fbb6647f493522f2e8c75ec96f3d28170a3084",
+      "content_sha256": "461a3fb913be5d5d91c3fbc7c44ca1ea98230f115baeb3886eb976d958e6937a",
+      "gamecode": 135,
+      "storage_path": "E2024/Points/461a3fb913be5d5d91c3fbc7c44ca1ea98230f115baeb3886eb976d958e6937a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50946,
+      "canonical_sha256": "bb5f1756d7c614257b5d64848b9b7912a47c6c01bf95bd253fce963d356f9d4c",
+      "content_sha256": "c920b4f264933a1028be9ef7dc31cd5cd15ce614cfc64f4df0132f71de1ac4ac",
+      "gamecode": 136,
+      "storage_path": "E2024/Points/c920b4f264933a1028be9ef7dc31cd5cd15ce614cfc64f4df0132f71de1ac4ac.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51010,
+      "canonical_sha256": "dd8f8ce4923f305597d4777d23c977a8db1e02e84ddbff1d3d6bc4dc6cd99e46",
+      "content_sha256": "e5d15966f04ee1967b3a4d9886f9d68f63ad6941388b2c5591e48065416225c1",
+      "gamecode": 137,
+      "storage_path": "E2024/Points/e5d15966f04ee1967b3a4d9886f9d68f63ad6941388b2c5591e48065416225c1.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47343,
+      "canonical_sha256": "d6161f45dbea7f44916c27715bc3dd79f1a53b62fcae646a0a36231b524c384d",
+      "content_sha256": "a959ea6282cf68d142e7f2f51f08b11c8ae0d4b3f752263f1e286fbfdd24a959",
+      "gamecode": 138,
+      "storage_path": "E2024/Points/a959ea6282cf68d142e7f2f51f08b11c8ae0d4b3f752263f1e286fbfdd24a959.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56663,
+      "canonical_sha256": "0aa64b27d77e88ceecf447def3ec93eb2e83a9887f770fe7263e4ee47bf1d49d",
+      "content_sha256": "bd39222bbc47d5069bcde3016e33dc0dbff86c52b20884ad88a06548666ffec6",
+      "gamecode": 139,
+      "storage_path": "E2024/Points/bd39222bbc47d5069bcde3016e33dc0dbff86c52b20884ad88a06548666ffec6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50816,
+      "canonical_sha256": "0f7cf33ddaf5a438363845d950a777d6c1622f429f4395dfe1a975a5c1895b32",
+      "content_sha256": "418ac536b11a5b6bb09d9966aa154f277c22625f9ca047dc9df5602b6b211d1f",
+      "gamecode": 140,
+      "storage_path": "E2024/Points/418ac536b11a5b6bb09d9966aa154f277c22625f9ca047dc9df5602b6b211d1f.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51561,
+      "canonical_sha256": "e9611df1416cdec410275c2512b813919870092c5d0d0ee8b29c27014e637a03",
+      "content_sha256": "575634d0d8e34db6e1d03bf28d7a4b3d21b07d92a783ef62724918748bacd0df",
+      "gamecode": 141,
+      "storage_path": "E2024/Points/575634d0d8e34db6e1d03bf28d7a4b3d21b07d92a783ef62724918748bacd0df.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46026,
+      "canonical_sha256": "a91e838c2260a0d949f1852642f8ab8df95373e8259283a48fe4a3be4031e022",
+      "content_sha256": "1738818bd0880ae717b3ef7c132198f443dc0e7765a0dea6ae9fbde3aec97563",
+      "gamecode": 142,
+      "storage_path": "E2024/Points/1738818bd0880ae717b3ef7c132198f443dc0e7765a0dea6ae9fbde3aec97563.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50081,
+      "canonical_sha256": "6d47b75d1084592d06b3a9b821280eee4f800f5a2f03e784ea327ea02da5f438",
+      "content_sha256": "88ab9bebc8f77de9359965b8ec17838f472df383687f52abbf357ed8d6a33f5f",
+      "gamecode": 143,
+      "storage_path": "E2024/Points/88ab9bebc8f77de9359965b8ec17838f472df383687f52abbf357ed8d6a33f5f.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47611,
+      "canonical_sha256": "80fb49510dda447d84733b3736b4b9d70f8b1a340c345b497410898c1a45b5a1",
+      "content_sha256": "f9dcab04e8c4bf6ed704f01ea9cafa8ca793c2d410e6067550b07fb6e077d86e",
+      "gamecode": 144,
+      "storage_path": "E2024/Points/f9dcab04e8c4bf6ed704f01ea9cafa8ca793c2d410e6067550b07fb6e077d86e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49119,
+      "canonical_sha256": "619b1958c7135e78195b413bc652fcfafb4014e75540f2c850cb3898c6a6dea1",
+      "content_sha256": "c8cdbbd7f6e6fc172ed99fc39849f45d86804819ad66c2187eee77bcf1269be3",
+      "gamecode": 145,
+      "storage_path": "E2024/Points/c8cdbbd7f6e6fc172ed99fc39849f45d86804819ad66c2187eee77bcf1269be3.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54018,
+      "canonical_sha256": "2cc10c103f53c45240fc4a7e88f2599e09098042c7889833d9ae0146ce8f4660",
+      "content_sha256": "e27b91f85506e3cd5aeaf5d0915245a4d4b6946504ebc1b6ba704206d79db905",
+      "gamecode": 146,
+      "storage_path": "E2024/Points/e27b91f85506e3cd5aeaf5d0915245a4d4b6946504ebc1b6ba704206d79db905.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50419,
+      "canonical_sha256": "262efe5f0e104fca9bfb99678706b28cb96fa379f59f95dd385eadbc1e51849f",
+      "content_sha256": "32db26a7762092dee13ecb0f597e7d8a8243009ef26f9c0934ca6d9cb1575007",
+      "gamecode": 147,
+      "storage_path": "E2024/Points/32db26a7762092dee13ecb0f597e7d8a8243009ef26f9c0934ca6d9cb1575007.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 43353,
+      "canonical_sha256": "efb7859f1016a7ea68f32ba4bba02800239ea66d88329e49475eebf65ad13b01",
+      "content_sha256": "b77abea76a7ed222d6952244f6ea749805c1ab9d61d2d25d748b13e387106301",
+      "gamecode": 148,
+      "storage_path": "E2024/Points/b77abea76a7ed222d6952244f6ea749805c1ab9d61d2d25d748b13e387106301.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49031,
+      "canonical_sha256": "42ae3022a5b22c233d853b183852fc8face140364b34104698158085e3e53660",
+      "content_sha256": "5d44b2786bb606d32563d7f3400f3af99e1881c5d1eeb543d4e5e6a8a0fe5bc0",
+      "gamecode": 149,
+      "storage_path": "E2024/Points/5d44b2786bb606d32563d7f3400f3af99e1881c5d1eeb543d4e5e6a8a0fe5bc0.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55854,
+      "canonical_sha256": "e31f31c6301493eb45fa71e15e791516c5727d3188e9feb1a663752ab447d3be",
+      "content_sha256": "c2ccb3950b7c146f1d80d30ae7a97784dbdfbcedb40a0054fe76d64ef8c80f63",
+      "gamecode": 150,
+      "storage_path": "E2024/Points/c2ccb3950b7c146f1d80d30ae7a97784dbdfbcedb40a0054fe76d64ef8c80f63.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50352,
+      "canonical_sha256": "18b195e6de59c2fd6efc6dc9d08298d43794154abec7b46c3e9d83834c77d2c3",
+      "content_sha256": "e76b1e82a2b1d2b89cc865584920d11d55e123ac33e1e9e9663ccd677e302f7a",
+      "gamecode": 151,
+      "storage_path": "E2024/Points/e76b1e82a2b1d2b89cc865584920d11d55e123ac33e1e9e9663ccd677e302f7a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49346,
+      "canonical_sha256": "3f34f8b5a63aec02f492b4330aa7ac673e95f29718c460cfa7bc9c8c8a02876e",
+      "content_sha256": "24c59e8561bcdc5ba06983529035f71d228ade34a467618b92b8437e382c056e",
+      "gamecode": 152,
+      "storage_path": "E2024/Points/24c59e8561bcdc5ba06983529035f71d228ade34a467618b92b8437e382c056e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48919,
+      "canonical_sha256": "a059992a10867c1c7b8b8eeb14558d6611a02ddd923b71cbd30ddd51201c24ba",
+      "content_sha256": "8a9f474960cc94cf7deb9c09c30df1072ea6c1307591d1acd86bf615b9e718f6",
+      "gamecode": 153,
+      "storage_path": "E2024/Points/8a9f474960cc94cf7deb9c09c30df1072ea6c1307591d1acd86bf615b9e718f6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49109,
+      "canonical_sha256": "a092bb79f71206039cfe1f29507b7e15b0cd034816968d7bec697e38d9e43f7c",
+      "content_sha256": "25e39b99ee304af92adc228116c90639d2def681563811fdac32a4b7b57064d7",
+      "gamecode": 154,
+      "storage_path": "E2024/Points/25e39b99ee304af92adc228116c90639d2def681563811fdac32a4b7b57064d7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48007,
+      "canonical_sha256": "c6d2e72a942e4fae05ad86de74acad863cf2d8f9c04c31638384e71560cea6e5",
+      "content_sha256": "6360b85ee6cca1590b8204f085a7d02a266f2d8972d252224a53ae12d25fccba",
+      "gamecode": 155,
+      "storage_path": "E2024/Points/6360b85ee6cca1590b8204f085a7d02a266f2d8972d252224a53ae12d25fccba.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 44055,
+      "canonical_sha256": "b5ceb405d28c2cff6e84ad8af3d309336908ca5684a9228065c69b8ca3d637ba",
+      "content_sha256": "424ccba0d6563bd118c830af29d9630dd437f946ceddb7c897f46841df3f699b",
+      "gamecode": 156,
+      "storage_path": "E2024/Points/424ccba0d6563bd118c830af29d9630dd437f946ceddb7c897f46841df3f699b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49380,
+      "canonical_sha256": "cc49f8a32b600fb9a7a7ed4b75a843a955c57b263fe4656ec987b003595e5736",
+      "content_sha256": "4a14c79303dd533a9fac5dae8b60b20a62d2f225aa3a03a7b19a8be31a3c09d6",
+      "gamecode": 157,
+      "storage_path": "E2024/Points/4a14c79303dd533a9fac5dae8b60b20a62d2f225aa3a03a7b19a8be31a3c09d6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47714,
+      "canonical_sha256": "8ff7043329e46c2fc4ca8e2b6fe1ad2e4134e55be528e82160ba29d44a5117bd",
+      "content_sha256": "552bf767ed3ec62ea2c9d0075c8a0d85ed5be22c0a5619f61ee4975c5a0efe24",
+      "gamecode": 158,
+      "storage_path": "E2024/Points/552bf767ed3ec62ea2c9d0075c8a0d85ed5be22c0a5619f61ee4975c5a0efe24.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49291,
+      "canonical_sha256": "d1e9bc44e4cb46b09332a7a0dd53d9d3bb1d8e60651edbb909b9c00adc1f6bda",
+      "content_sha256": "dd16cecff32f8c0f699b7f20c4f9a1719ca0646246f5dc6cc0924fadb31aaf13",
+      "gamecode": 159,
+      "storage_path": "E2024/Points/dd16cecff32f8c0f699b7f20c4f9a1719ca0646246f5dc6cc0924fadb31aaf13.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 57362,
+      "canonical_sha256": "ad326fd8c94edab0b9acf277d749fc85573bebd94602d5fcbadfa9ff17648d85",
+      "content_sha256": "abb9ff4f94bb4b745fe70d5849619b531ebaf31a7cd678888cacdb7923fd6e01",
+      "gamecode": 160,
+      "storage_path": "E2024/Points/abb9ff4f94bb4b745fe70d5849619b531ebaf31a7cd678888cacdb7923fd6e01.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51439,
+      "canonical_sha256": "d7b05f9fa9828c4a9c19745071ba1f175548266d3d3ffdafca5fa7abb4663063",
+      "content_sha256": "b1c0c676e5d6168a9dcd4f2c495d2aebea54793be14a944e2c4b9efd116e38d5",
+      "gamecode": 161,
+      "storage_path": "E2024/Points/b1c0c676e5d6168a9dcd4f2c495d2aebea54793be14a944e2c4b9efd116e38d5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48274,
+      "canonical_sha256": "f263bfbe1b89cffedb151326fba1aa32fb029d35e9b759962a0b6514362e5b14",
+      "content_sha256": "983e6c4fc64e7db72bf78ad8036ec8233655008c1de49e2f5fcad22c84db2d7d",
+      "gamecode": 162,
+      "storage_path": "E2024/Points/983e6c4fc64e7db72bf78ad8036ec8233655008c1de49e2f5fcad22c84db2d7d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46952,
+      "canonical_sha256": "97e435ccbac2b85b04dd8588edbec666c6b2f9e7253097e05605c00c6769612d",
+      "content_sha256": "1e49abc9fe47eb266799b1d2fc4a2566194fbd082336c954367ef06c334c8598",
+      "gamecode": 163,
+      "storage_path": "E2024/Points/1e49abc9fe47eb266799b1d2fc4a2566194fbd082336c954367ef06c334c8598.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52734,
+      "canonical_sha256": "c761d28ae3e88dd10c6943b7e7a71c38946aeef8e18984867e78384698267f08",
+      "content_sha256": "51563f0c2bc7a26d57bcc5015ed8ab0278774aa230ec551f3fa8122e92a3e827",
+      "gamecode": 164,
+      "storage_path": "E2024/Points/51563f0c2bc7a26d57bcc5015ed8ab0278774aa230ec551f3fa8122e92a3e827.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46610,
+      "canonical_sha256": "7b9913d155b4f8872dca562bbf0f73bb9ff6835a6e05e46b6e3a8fa53c029aae",
+      "content_sha256": "5d466668c4106c03164edf7ec5f0833b5e2c4ab73f651b50c9baa2871ae9dcd2",
+      "gamecode": 165,
+      "storage_path": "E2024/Points/5d466668c4106c03164edf7ec5f0833b5e2c4ab73f651b50c9baa2871ae9dcd2.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50097,
+      "canonical_sha256": "7b126379073faf14e34b7ced4e8fc5ace4acd273c13cc5b4a066d1315280e92d",
+      "content_sha256": "9276c2d76e4ba6ca9a425e284b5cafdfd8fc1f19db5eafd2bb6587b5ec6988c1",
+      "gamecode": 166,
+      "storage_path": "E2024/Points/9276c2d76e4ba6ca9a425e284b5cafdfd8fc1f19db5eafd2bb6587b5ec6988c1.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50847,
+      "canonical_sha256": "118b1e51ce810600142284bd8d5c0c31fb84c8f841ef7b64833b42fb75ed48db",
+      "content_sha256": "1cf251a47c5eabe30814bb6828991a7c7dfbe7395c1a43a5d9467a6703ac8e1f",
+      "gamecode": 167,
+      "storage_path": "E2024/Points/1cf251a47c5eabe30814bb6828991a7c7dfbe7395c1a43a5d9467a6703ac8e1f.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47400,
+      "canonical_sha256": "f994b29f9019e6c509179472274593216e6da4cb3d16657740a75a6b73bae608",
+      "content_sha256": "f47bbad6846927b985f7a251c0298fdb0b19d953474d71112ed4f0381599f44a",
+      "gamecode": 168,
+      "storage_path": "E2024/Points/f47bbad6846927b985f7a251c0298fdb0b19d953474d71112ed4f0381599f44a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56933,
+      "canonical_sha256": "fc3bd5f266927e59852a430906ce4a66b9d7d0977e2d21be6557a7c090bbc498",
+      "content_sha256": "af3adb65d6d5772ce7cadff42139381fc01d7638292b84fba85841c73597e9d8",
+      "gamecode": 169,
+      "storage_path": "E2024/Points/af3adb65d6d5772ce7cadff42139381fc01d7638292b84fba85841c73597e9d8.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52901,
+      "canonical_sha256": "858d1fb081a26db3628fbf41464c8310a4df4c2d96b2b668d20001d431304a27",
+      "content_sha256": "4c6ef76c4c9aa37bda4b1829bb826f8a518aa90b9c77f1ee13f16fc975bc33f0",
+      "gamecode": 170,
+      "storage_path": "E2024/Points/4c6ef76c4c9aa37bda4b1829bb826f8a518aa90b9c77f1ee13f16fc975bc33f0.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48997,
+      "canonical_sha256": "40ac68f442a3854a3fd2b61acf29a5ca8ed3712b4854025d06e7acc4c52af032",
+      "content_sha256": "9ee92c0361ce6e99cd484b0a364b6a639dd2705ede1307a630fe99139e980af6",
+      "gamecode": 171,
+      "storage_path": "E2024/Points/9ee92c0361ce6e99cd484b0a364b6a639dd2705ede1307a630fe99139e980af6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47311,
+      "canonical_sha256": "674ea77d075df762ffcc15f6780238338b7320253e4415e0d3e4cde78b9d6454",
+      "content_sha256": "09db5c4668ce44a6aa949a7c540da267234b2c82da7860a0fced36949c9ff761",
+      "gamecode": 172,
+      "storage_path": "E2024/Points/09db5c4668ce44a6aa949a7c540da267234b2c82da7860a0fced36949c9ff761.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50451,
+      "canonical_sha256": "923a6fece4760c6c7b0c51ddfe82c7c0b4fba6ac4d6f5b956cfe6d1cb8624cbd",
+      "content_sha256": "b8e1cc436eb9164cfd33b41db1d3aefe1ba48a2db626e9f95c1466da24e28d7a",
+      "gamecode": 173,
+      "storage_path": "E2024/Points/b8e1cc436eb9164cfd33b41db1d3aefe1ba48a2db626e9f95c1466da24e28d7a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52856,
+      "canonical_sha256": "aa67315f3ec06a1fe9b9b5e96851ee45e798cf1ed4ad02452f0fd4d79ed94c73",
+      "content_sha256": "8c6aa22bef38ac16878ab6c0173697c4a1d996df9cdfdce12afb79115280e500",
+      "gamecode": 174,
+      "storage_path": "E2024/Points/8c6aa22bef38ac16878ab6c0173697c4a1d996df9cdfdce12afb79115280e500.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54775,
+      "canonical_sha256": "04d1cd625c14332f6fe12ab6a87ae516aacfeaa146dd2f205922943503c727e2",
+      "content_sha256": "5be435362caa47e7581583afe37fe1b83a885f8d93e728974da473badc8905ec",
+      "gamecode": 175,
+      "storage_path": "E2024/Points/5be435362caa47e7581583afe37fe1b83a885f8d93e728974da473badc8905ec.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46789,
+      "canonical_sha256": "fac955a22f91896aff5f8d86aede7f3593940a8939cc9622b434a8148e224c5d",
+      "content_sha256": "89d9e8ea7a58bd1673d192e55088179135156a78fd86b7ea1c038c5d2d1e328a",
+      "gamecode": 176,
+      "storage_path": "E2024/Points/89d9e8ea7a58bd1673d192e55088179135156a78fd86b7ea1c038c5d2d1e328a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51369,
+      "canonical_sha256": "afc479376f87e1e682b05b5d16270812fa77f822a4b40702d231e82233c512bb",
+      "content_sha256": "807e048e6b8ae277bfa6d92319870161b6d98e967515deb0e2dd795fab93043c",
+      "gamecode": 177,
+      "storage_path": "E2024/Points/807e048e6b8ae277bfa6d92319870161b6d98e967515deb0e2dd795fab93043c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52881,
+      "canonical_sha256": "23af68154adc018da037f80cd9e6fbb4c2e78b0b64a148cd75b02dd77c5661a9",
+      "content_sha256": "e87f0f0a09d530fb20b64393fd7114c584d300bb0e5089637d89c38b9640554e",
+      "gamecode": 178,
+      "storage_path": "E2024/Points/e87f0f0a09d530fb20b64393fd7114c584d300bb0e5089637d89c38b9640554e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47124,
+      "canonical_sha256": "f45f6da0093422d97bd6b42666c138ef1d9e4b834d57ae09beea36550e7eb6d7",
+      "content_sha256": "9f3043a9e15667cd40ccb2ddd79d107ee01e0f14a13af8dc9e253549d81000fa",
+      "gamecode": 179,
+      "storage_path": "E2024/Points/9f3043a9e15667cd40ccb2ddd79d107ee01e0f14a13af8dc9e253549d81000fa.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49629,
+      "canonical_sha256": "ef75ad9ab9130412eec73745c793250bd8eaee93172686b1cbdc90711793c920",
+      "content_sha256": "69f559e69ec136b141baed9e400dc2d0ff09ffc0175520b1251a78bc58407bd5",
+      "gamecode": 180,
+      "storage_path": "E2024/Points/69f559e69ec136b141baed9e400dc2d0ff09ffc0175520b1251a78bc58407bd5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47867,
+      "canonical_sha256": "a3d02fd34e8a182860bbb58bafcc0e225e2ceeaa5c7c6679a9a6f114aae310e0",
+      "content_sha256": "89ecc8c0dc6454a30dee9ef67d056373ca76117151205402aa69f48074070fa6",
+      "gamecode": 181,
+      "storage_path": "E2024/Points/89ecc8c0dc6454a30dee9ef67d056373ca76117151205402aa69f48074070fa6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 57102,
+      "canonical_sha256": "a58e4bd9c89ad3c1ba2523167efc668129d270c098abc9c859da849b070c1a39",
+      "content_sha256": "4887d6def71c5af2338e69c1c207ed0c89a067b12877294d461b0f1dda476bb7",
+      "gamecode": 182,
+      "storage_path": "E2024/Points/4887d6def71c5af2338e69c1c207ed0c89a067b12877294d461b0f1dda476bb7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49350,
+      "canonical_sha256": "27fc51b4137c81091eac5baadcc3d422533401ee51973480b0f666dfc86be560",
+      "content_sha256": "85cf004098f1179e626041f86711485317fde6dd9c55f0c42be72d5c94d0deb4",
+      "gamecode": 183,
+      "storage_path": "E2024/Points/85cf004098f1179e626041f86711485317fde6dd9c55f0c42be72d5c94d0deb4.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52400,
+      "canonical_sha256": "05d9e6c36ea83283ba5aca12999884135f6b5adf0116b48a4304fe2bc4cf0cf9",
+      "content_sha256": "9720d9c670697a127fc15701768a6092030e617819b3ee86d5ac0e4301111826",
+      "gamecode": 184,
+      "storage_path": "E2024/Points/9720d9c670697a127fc15701768a6092030e617819b3ee86d5ac0e4301111826.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 60578,
+      "canonical_sha256": "7ce5cadd5a467769772c6e7e28a207383825bc5cc87f71b4349862e663357418",
+      "content_sha256": "11449b1485196505c721d83c1bf8545f93c422831acda370512b379c64b0444c",
+      "gamecode": 185,
+      "storage_path": "E2024/Points/11449b1485196505c721d83c1bf8545f93c422831acda370512b379c64b0444c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46715,
+      "canonical_sha256": "52dd1078ad94a22ddc96da00a1d126a27a35f2f3bacf813072c2a1979d29e0e8",
+      "content_sha256": "5aac12892daf661962fc1277a218769fb1d857006661c16a22e49aa2c7807fe7",
+      "gamecode": 186,
+      "storage_path": "E2024/Points/5aac12892daf661962fc1277a218769fb1d857006661c16a22e49aa2c7807fe7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46722,
+      "canonical_sha256": "93eda670066b8c99a7dfb8a34368e57fbead3a435b9dbc27d37cb41e3b4231a2",
+      "content_sha256": "4ec7175c591c51cac2a4fa0ea7ff0dcda4cb02766f6efe98073d6fa47dc1ff2a",
+      "gamecode": 187,
+      "storage_path": "E2024/Points/4ec7175c591c51cac2a4fa0ea7ff0dcda4cb02766f6efe98073d6fa47dc1ff2a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48993,
+      "canonical_sha256": "34c3d3bc299fa573a38a36c52448589e009178e188a15ed62bbee38b40b4efe5",
+      "content_sha256": "22c3e0f3bfe946ed96c2f5da0ef810357de3be1ade90ccc18e79596b3e2250c4",
+      "gamecode": 188,
+      "storage_path": "E2024/Points/22c3e0f3bfe946ed96c2f5da0ef810357de3be1ade90ccc18e79596b3e2250c4.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 44573,
+      "canonical_sha256": "c2c8dd4c1d9c36df2ac531a460e9dae83d359b8ec92092ec916278f330e27ee5",
+      "content_sha256": "71e4b863ee051d7d3b57d65a912d89fe8b5fd43f4ebdb655b7b505b0f8651047",
+      "gamecode": 189,
+      "storage_path": "E2024/Points/71e4b863ee051d7d3b57d65a912d89fe8b5fd43f4ebdb655b7b505b0f8651047.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55399,
+      "canonical_sha256": "e29dd32a2d8c829071863ae7f8813f615e7965185feb790f7536ddc43c35cec9",
+      "content_sha256": "a860fb91d4d5fd124482d133ad974e6f467f5a692025a936d8b161f36ec24bc6",
+      "gamecode": 190,
+      "storage_path": "E2024/Points/a860fb91d4d5fd124482d133ad974e6f467f5a692025a936d8b161f36ec24bc6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 45301,
+      "canonical_sha256": "e5b09fff21e6e835bd2e3bdc67c07675aa67cfea4f4ae786ce56a631a29fb73d",
+      "content_sha256": "9daf82166fcf4304bcf4c609e866c2a419ea915e83e21ea2c8abdccf058b2d4d",
+      "gamecode": 191,
+      "storage_path": "E2024/Points/9daf82166fcf4304bcf4c609e866c2a419ea915e83e21ea2c8abdccf058b2d4d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56275,
+      "canonical_sha256": "e597997efbcaaba6bdb1d9e979d49ee37a27779748a189b627b117f3c05a5caa",
+      "content_sha256": "4a3d68ec74f0ae6473b8c07dc6322083b9032f3ed4126b6cbc3350ceb59ce6ab",
+      "gamecode": 192,
+      "storage_path": "E2024/Points/4a3d68ec74f0ae6473b8c07dc6322083b9032f3ed4126b6cbc3350ceb59ce6ab.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53017,
+      "canonical_sha256": "76788b62543bbabb54754f2434284a32d371f28a0a5421aa8660da7e226c0bf7",
+      "content_sha256": "f8c14533269ab82771fdadffe9a4d2d446548ff480698ba2c1ead636a74afee5",
+      "gamecode": 193,
+      "storage_path": "E2024/Points/f8c14533269ab82771fdadffe9a4d2d446548ff480698ba2c1ead636a74afee5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50709,
+      "canonical_sha256": "c5ba371e3c74d422f1babfc9856251d051d2543206a3865a30114f680615803b",
+      "content_sha256": "4994f9e89e894592c0004cde1bda68b6c0796bcac511111fde990b38696bf4ef",
+      "gamecode": 194,
+      "storage_path": "E2024/Points/4994f9e89e894592c0004cde1bda68b6c0796bcac511111fde990b38696bf4ef.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52889,
+      "canonical_sha256": "ee28ea9933ee70052657867c5e9e0e315b6242e9faaf2e0eee5698194b4794af",
+      "content_sha256": "a812ad67a13b11a4dda8d689a1a0753f109832a94448f0d2960bebe0d5665def",
+      "gamecode": 195,
+      "storage_path": "E2024/Points/a812ad67a13b11a4dda8d689a1a0753f109832a94448f0d2960bebe0d5665def.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49152,
+      "canonical_sha256": "0a72661656b4459f7866cd5ab3145985c4d323a953a4cba40b46ca896fe9d2a8",
+      "content_sha256": "871f297e684a4613d0a4fd143e4135e2cb89f1689048ef8f9f793d19b6a4f86b",
+      "gamecode": 196,
+      "storage_path": "E2024/Points/871f297e684a4613d0a4fd143e4135e2cb89f1689048ef8f9f793d19b6a4f86b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52167,
+      "canonical_sha256": "eb2bc5f862c71c756af83b551f24854aa2b41302d2bd801b5408a522c4c8e2a5",
+      "content_sha256": "9bfacae94a891266cc7a437b7815f667c8739cffe62fd815a8e798e91005a78a",
+      "gamecode": 197,
+      "storage_path": "E2024/Points/9bfacae94a891266cc7a437b7815f667c8739cffe62fd815a8e798e91005a78a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 44877,
+      "canonical_sha256": "41f7e586decb2eec499d773d9f897b970dda952cf6559e6cb1dfb74f12895224",
+      "content_sha256": "a7b798ca9a7fecf77545866b763965f3fec6c436e39f360dfbd5cbe9486c418b",
+      "gamecode": 198,
+      "storage_path": "E2024/Points/a7b798ca9a7fecf77545866b763965f3fec6c436e39f360dfbd5cbe9486c418b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49567,
+      "canonical_sha256": "90e0fac59aacd8f8f88b5d42bcfff7d78982160f7a16f9029560e46820943009",
+      "content_sha256": "4e5ea278c3d66a101bd9996996e00cbfc27000cae09bc8aedc8819fcff235eea",
+      "gamecode": 199,
+      "storage_path": "E2024/Points/4e5ea278c3d66a101bd9996996e00cbfc27000cae09bc8aedc8819fcff235eea.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53132,
+      "canonical_sha256": "b17d811b34efd1abebf9d521c58d68496878e3cf875d5cbce500238c41771f93",
+      "content_sha256": "1f0021d3a83ce5e8938622b6d6960df74919767ceb3e19159d38fc311cd6525c",
+      "gamecode": 200,
+      "storage_path": "E2024/Points/1f0021d3a83ce5e8938622b6d6960df74919767ceb3e19159d38fc311cd6525c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51007,
+      "canonical_sha256": "a635fd73f094356fc37db5728f1f795caf24888fbd25ccd0544968bc3207bd6c",
+      "content_sha256": "9832851c0ab69c777a96b3e6750d57787022e857a6b4f727a73c6949a2e7f635",
+      "gamecode": 201,
+      "storage_path": "E2024/Points/9832851c0ab69c777a96b3e6750d57787022e857a6b4f727a73c6949a2e7f635.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56962,
+      "canonical_sha256": "308962c9cd75c7bc36908d898764de3413572521140d92ebf34baf68469b2a4d",
+      "content_sha256": "10fbd6a34aea4bd05c86d9357c824b9b6e929725ef4334e49ed267833a9d5240",
+      "gamecode": 202,
+      "storage_path": "E2024/Points/10fbd6a34aea4bd05c86d9357c824b9b6e929725ef4334e49ed267833a9d5240.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46118,
+      "canonical_sha256": "a8edc13235cdfa9b467ef564e76dea85ff6893ba2f5211d6d8a81f94c9b0aef5",
+      "content_sha256": "5e4b050770baa18c05e7d502aef56542268feb648a8507ad1bfb4ac0f58a4832",
+      "gamecode": 203,
+      "storage_path": "E2024/Points/5e4b050770baa18c05e7d502aef56542268feb648a8507ad1bfb4ac0f58a4832.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50641,
+      "canonical_sha256": "26e7d7b0f6e7686ede7731379c72ffe147f45dc70f7bbe82fb5fba4d56fc6816",
+      "content_sha256": "2ffc1d0e8fc17243a7b6f12b5c06360bd323d2f881bffec33498b441773be5f0",
+      "gamecode": 204,
+      "storage_path": "E2024/Points/2ffc1d0e8fc17243a7b6f12b5c06360bd323d2f881bffec33498b441773be5f0.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51329,
+      "canonical_sha256": "87a5db229bf8ab77b10eddd95b5d617f3e890a1c63d3415af90e3725cb4c3df9",
+      "content_sha256": "b6ba6b1b2233c05a9eef3c15c39aa9db51aa7527e02f78f45730373998b1d9d9",
+      "gamecode": 205,
+      "storage_path": "E2024/Points/b6ba6b1b2233c05a9eef3c15c39aa9db51aa7527e02f78f45730373998b1d9d9.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51611,
+      "canonical_sha256": "61c9df8aafb14805be983f2e1e2af678b0e29b261e496ad873d922aadeb3c48e",
+      "content_sha256": "47ecc7006e6c0a3185e59c6d0d51580060d53285f5fe5a18187b5cc5f22d5c5e",
+      "gamecode": 206,
+      "storage_path": "E2024/Points/47ecc7006e6c0a3185e59c6d0d51580060d53285f5fe5a18187b5cc5f22d5c5e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47691,
+      "canonical_sha256": "ee8e66eec125a226833fe9c29e52bef7b10078bf31da21e73df8ca262db0d74e",
+      "content_sha256": "88d74368abede714b91253d32ac74582d9264343d19d235a4b89ae0198c030c5",
+      "gamecode": 207,
+      "storage_path": "E2024/Points/88d74368abede714b91253d32ac74582d9264343d19d235a4b89ae0198c030c5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51079,
+      "canonical_sha256": "3513d5bc183b705d8012ff5a47c426c56f0c807615fdade1543fb2c87196dbd1",
+      "content_sha256": "9fc73212de8254f2e284d579d0ba323091eb619e2846705d6b6d64c34ee18bdc",
+      "gamecode": 208,
+      "storage_path": "E2024/Points/9fc73212de8254f2e284d579d0ba323091eb619e2846705d6b6d64c34ee18bdc.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49614,
+      "canonical_sha256": "81d4c2348ff11681c06adbf07e75f5ff29fbb4768e2f0d5b85136feaa6c05273",
+      "content_sha256": "591d6edbc82e7907a7be69bbf18ebe20e944b88f9c6880c72acd3f5f308b3fa6",
+      "gamecode": 209,
+      "storage_path": "E2024/Points/591d6edbc82e7907a7be69bbf18ebe20e944b88f9c6880c72acd3f5f308b3fa6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49055,
+      "canonical_sha256": "373b9fdfe11f936ffadd458ddd301d1019410d3c038499821a075f4bdffa25cb",
+      "content_sha256": "4e22f31f6073c20cc9ee90d65ebc1d2c003a01c45bee11d95b35ae8b7b70d50f",
+      "gamecode": 210,
+      "storage_path": "E2024/Points/4e22f31f6073c20cc9ee90d65ebc1d2c003a01c45bee11d95b35ae8b7b70d50f.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53002,
+      "canonical_sha256": "c68a06202c95a0ee34c618144e17a6142306b67b52d9947d16aae5491f5353a4",
+      "content_sha256": "de8441f1e6cc3a1a7f661d654de16b5637a89aed2edce66b6472f5c65b09f2d7",
+      "gamecode": 211,
+      "storage_path": "E2024/Points/de8441f1e6cc3a1a7f661d654de16b5637a89aed2edce66b6472f5c65b09f2d7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52488,
+      "canonical_sha256": "6e7e1c0a4e75a4fb882af9c2f516c312a59cf3ca93284d451b27eb7786960031",
+      "content_sha256": "95714aa10cb0c49f9cca63dc4d30644a63220b17af7469bb642d24a966b1a440",
+      "gamecode": 212,
+      "storage_path": "E2024/Points/95714aa10cb0c49f9cca63dc4d30644a63220b17af7469bb642d24a966b1a440.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46060,
+      "canonical_sha256": "2409adb085a70cfd661c3ed8f9605724d3e5c674db6af3a3497360276392e60e",
+      "content_sha256": "3f6468101be6a7749d5e9f40d18d21c020fd1a38b61535be21ae37b422a04ba7",
+      "gamecode": 213,
+      "storage_path": "E2024/Points/3f6468101be6a7749d5e9f40d18d21c020fd1a38b61535be21ae37b422a04ba7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54525,
+      "canonical_sha256": "26729847f42b159511f378083fb31f52b5193cf7010f793207c4961f0d1d2909",
+      "content_sha256": "481b3b27117b6aa726121f86377e40e05842fe6eb01e98d4cc736e6d1f674fb6",
+      "gamecode": 214,
+      "storage_path": "E2024/Points/481b3b27117b6aa726121f86377e40e05842fe6eb01e98d4cc736e6d1f674fb6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52617,
+      "canonical_sha256": "8dfa904a1c1395596582ca5d6ab7b053abd206b76a11d84a8b7413cb996de0e1",
+      "content_sha256": "d1067aee330b1e96238ada8e6284369042263229a95aab5da7f1366bbe5fe286",
+      "gamecode": 215,
+      "storage_path": "E2024/Points/d1067aee330b1e96238ada8e6284369042263229a95aab5da7f1366bbe5fe286.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47997,
+      "canonical_sha256": "de27df7e830594d9762ca319015150a963647170af2b01deb9e906f863a1d143",
+      "content_sha256": "30ee2bf45adaa34acccb28c0f4b9b24f1eb6006b84205ea4fa23cacf4fb57d76",
+      "gamecode": 216,
+      "storage_path": "E2024/Points/30ee2bf45adaa34acccb28c0f4b9b24f1eb6006b84205ea4fa23cacf4fb57d76.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50276,
+      "canonical_sha256": "7807e79990a38b27781cb2c2885df8821d5b4e08b9051e2dcf5b1cf4c66dabec",
+      "content_sha256": "be5e10288d33aa73c150d66978bf2ae6647067fb21c0fa68d40b00c9d0c55454",
+      "gamecode": 217,
+      "storage_path": "E2024/Points/be5e10288d33aa73c150d66978bf2ae6647067fb21c0fa68d40b00c9d0c55454.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51474,
+      "canonical_sha256": "b907cddf5744dcfd4db4110bf94c8b4eff4db074637d872e716b6546d9f03725",
+      "content_sha256": "b8dd6434502552f5700fd9d7c9a1e641516f6139213d4437037d04826aa54841",
+      "gamecode": 218,
+      "storage_path": "E2024/Points/b8dd6434502552f5700fd9d7c9a1e641516f6139213d4437037d04826aa54841.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54359,
+      "canonical_sha256": "69fdbf1f144c1bcee11530f32a00b2493a65788116eee9ca25f140b89d687daf",
+      "content_sha256": "db6e4b7c00b6264e10de5e9f51e04ce15a258d0e5c738de91c308e22927aed08",
+      "gamecode": 219,
+      "storage_path": "E2024/Points/db6e4b7c00b6264e10de5e9f51e04ce15a258d0e5c738de91c308e22927aed08.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55220,
+      "canonical_sha256": "04e81a360b0b00b0c9b1de159dac6152afb6a9c67be1c16a11b4e08f0c1c233f",
+      "content_sha256": "fea720ba9cbfff7f316c5139b1a06e6c241d32fd27bfcee063afbb0c736a641c",
+      "gamecode": 220,
+      "storage_path": "E2024/Points/fea720ba9cbfff7f316c5139b1a06e6c241d32fd27bfcee063afbb0c736a641c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46041,
+      "canonical_sha256": "416fe36670fd20c219efe2ebe633c476027e80c986ec34641b7d1f99eb8e0ee8",
+      "content_sha256": "0b6cccb2f7e3dce15b78ad95abb865b29cc5a74a72edb738542a05809b0c1e35",
+      "gamecode": 221,
+      "storage_path": "E2024/Points/0b6cccb2f7e3dce15b78ad95abb865b29cc5a74a72edb738542a05809b0c1e35.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52876,
+      "canonical_sha256": "be4bc611307e4cb5b62fb80f97116927c0deb1a3c193f455c67b6f25ae898fbe",
+      "content_sha256": "f2060b19e4f75627d643cfb84cb87a7983472141a91b44c8dd6dd7a9c0d5f19b",
+      "gamecode": 222,
+      "storage_path": "E2024/Points/f2060b19e4f75627d643cfb84cb87a7983472141a91b44c8dd6dd7a9c0d5f19b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49347,
+      "canonical_sha256": "1dbf4d63732e1c4c290244ccf585b0614cbc0d5a5212db680ab10abaadf2b5e0",
+      "content_sha256": "7c22ba573ebeddd79b2cb7031bc13cd4061710b18b668d2d6ca55313cf9d1715",
+      "gamecode": 223,
+      "storage_path": "E2024/Points/7c22ba573ebeddd79b2cb7031bc13cd4061710b18b668d2d6ca55313cf9d1715.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48700,
+      "canonical_sha256": "394cf877c022d7c185b3e763ef0256133cb766c80b8aa36692783b95ffc36bc6",
+      "content_sha256": "6d80e19976016077283db576ed8280a78d5211b1262ee5096ef3cb071a85ca66",
+      "gamecode": 224,
+      "storage_path": "E2024/Points/6d80e19976016077283db576ed8280a78d5211b1262ee5096ef3cb071a85ca66.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 44449,
+      "canonical_sha256": "c5cbb0449a729346b4fe638136c0c1a173b9be35cf870ecb6a4ae6280146b409",
+      "content_sha256": "ef82ea1697e97af5b8dfe7ca1d8b9e41b8dac4a15c491eb71784af9f720bbfcf",
+      "gamecode": 225,
+      "storage_path": "E2024/Points/ef82ea1697e97af5b8dfe7ca1d8b9e41b8dac4a15c491eb71784af9f720bbfcf.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 44547,
+      "canonical_sha256": "5e989f59633bd05f92542e0a4cb2f14e25b53e3e118403f6eaef43dec4e9b7b7",
+      "content_sha256": "721b377c037e9ca9c1861e8248199feb2a22a662821fe40636842ded3d598f6d",
+      "gamecode": 226,
+      "storage_path": "E2024/Points/721b377c037e9ca9c1861e8248199feb2a22a662821fe40636842ded3d598f6d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47760,
+      "canonical_sha256": "8048a032a072ed6bb49ff61451096b7a877f7a1ee9e818175a1c5ee321fb3e86",
+      "content_sha256": "2b9b81e282c64bc4e23cadf6cb834ee18d82e3264a2fc7808c0b0762ce14569e",
+      "gamecode": 227,
+      "storage_path": "E2024/Points/2b9b81e282c64bc4e23cadf6cb834ee18d82e3264a2fc7808c0b0762ce14569e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52976,
+      "canonical_sha256": "0cceb7279ff1981a42f43525fc7176579cd90ad8101746a5c648a9908f85a95c",
+      "content_sha256": "2c07848e7959993de916722f833cc073fe14476ab1fa7d39c61f1d1682fb3841",
+      "gamecode": 228,
+      "storage_path": "E2024/Points/2c07848e7959993de916722f833cc073fe14476ab1fa7d39c61f1d1682fb3841.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47920,
+      "canonical_sha256": "fe9073efa8b2f94d5d37623eb77ab3fa76fda8577742a9731fc556601813dc91",
+      "content_sha256": "e64940345b7f547e152a5b11a8dee8a88c2c33a3639a6b403adad60bb4f77830",
+      "gamecode": 229,
+      "storage_path": "E2024/Points/e64940345b7f547e152a5b11a8dee8a88c2c33a3639a6b403adad60bb4f77830.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46708,
+      "canonical_sha256": "22edd70d9e4b770938579a79226bb072c908784edb0eb686c5bd5783956ec738",
+      "content_sha256": "755e95373c7989bddfc525e1435c6b72965d3b6cb20220b8ed57276fce08d653",
+      "gamecode": 230,
+      "storage_path": "E2024/Points/755e95373c7989bddfc525e1435c6b72965d3b6cb20220b8ed57276fce08d653.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48263,
+      "canonical_sha256": "b176353231b1d04091a7a1f109a1ef0af5bcd56bd35f5666b9e3534d3b11f885",
+      "content_sha256": "caa8736f3c052cbfac1d576a752b748fee65bbc1ffffc2d70d529329823f14c5",
+      "gamecode": 231,
+      "storage_path": "E2024/Points/caa8736f3c052cbfac1d576a752b748fee65bbc1ffffc2d70d529329823f14c5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48851,
+      "canonical_sha256": "0335408fdfc6d5c261263742c85c5b0cf7a71ebe506858eac8e2bd979b3edb0e",
+      "content_sha256": "35de5ac865306cb90c9d3db0285a7eabff17dd1aaf0b0ccb077306f086f8257e",
+      "gamecode": 232,
+      "storage_path": "E2024/Points/35de5ac865306cb90c9d3db0285a7eabff17dd1aaf0b0ccb077306f086f8257e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50413,
+      "canonical_sha256": "0f3f1764a80a83b6df8b8e2982a63ffd4d0c55a876e42c4cdee92b06ded6e7c3",
+      "content_sha256": "9f11c32b7a8bc2654ac04b47fcc1f9393a8b275013217e7421d7ce6dd262a446",
+      "gamecode": 233,
+      "storage_path": "E2024/Points/9f11c32b7a8bc2654ac04b47fcc1f9393a8b275013217e7421d7ce6dd262a446.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47652,
+      "canonical_sha256": "a8944925140eb92f124397a222b567ba478720f801063147511aec40f30069a4",
+      "content_sha256": "da12bc71b76ca36ae49f2ab0db9a2c32acd8a81a043589e7bd9ec3ba402102be",
+      "gamecode": 234,
+      "storage_path": "E2024/Points/da12bc71b76ca36ae49f2ab0db9a2c32acd8a81a043589e7bd9ec3ba402102be.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46573,
+      "canonical_sha256": "3428da6d281208adac3af794737c33fad42801454838230ba2b6f443347b50bb",
+      "content_sha256": "4d3c2172327c5c192a46f460a00526701450edca122293576b4624444c3246e5",
+      "gamecode": 235,
+      "storage_path": "E2024/Points/4d3c2172327c5c192a46f460a00526701450edca122293576b4624444c3246e5.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50443,
+      "canonical_sha256": "79a1734e107614e71a9b4749a66fa756ea9da2b60cce423a409ce88f3a80cf84",
+      "content_sha256": "72586cba64acfb075674baf90c88284b829d51ae58769079419f74b1238d9212",
+      "gamecode": 236,
+      "storage_path": "E2024/Points/72586cba64acfb075674baf90c88284b829d51ae58769079419f74b1238d9212.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53967,
+      "canonical_sha256": "faa7b0acea395b790f74f1e4173dd34f4a22f716aaf9345b190adcee2ad81a7d",
+      "content_sha256": "25d3f2c75ce25fd7b440771c6d9c37cb29b97730956156561bd11faab93407c8",
+      "gamecode": 237,
+      "storage_path": "E2024/Points/25d3f2c75ce25fd7b440771c6d9c37cb29b97730956156561bd11faab93407c8.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56389,
+      "canonical_sha256": "b52c4521f4dff69183e6d184babb7685ec92ae3a6b04981d7e551c8cfb1c8850",
+      "content_sha256": "318e09864f10999c27530d1ddcbb3a54cdb1ddc94683d8289720a2741f62bc0a",
+      "gamecode": 238,
+      "storage_path": "E2024/Points/318e09864f10999c27530d1ddcbb3a54cdb1ddc94683d8289720a2741f62bc0a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 57150,
+      "canonical_sha256": "ffad11973cd19480e87a1eb90741cffd550b041e2db6efe4b753d7078471206b",
+      "content_sha256": "0bf02052f99626c8f177d808b7571cb19e596495860238e134be096e5f4c25d9",
+      "gamecode": 239,
+      "storage_path": "E2024/Points/0bf02052f99626c8f177d808b7571cb19e596495860238e134be096e5f4c25d9.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52529,
+      "canonical_sha256": "d22d31220d89a98e4d66b22bdb3fc84fdbedb0e86962d6c3b7c199dde7c529d1",
+      "content_sha256": "aa2782fbe1cd21364b1b1d82fdf8bc0cee63c662c1876ee81a459fd801fdb35a",
+      "gamecode": 240,
+      "storage_path": "E2024/Points/aa2782fbe1cd21364b1b1d82fdf8bc0cee63c662c1876ee81a459fd801fdb35a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52016,
+      "canonical_sha256": "c0809f8577b2b880d96dd9242b324aaf32ed54b97d8307b302ae521e84e5707b",
+      "content_sha256": "026a64d0a294bd95e54e9236161fb2df2ae21b0d56f6bbdf51f85bb56b46879b",
+      "gamecode": 241,
+      "storage_path": "E2024/Points/026a64d0a294bd95e54e9236161fb2df2ae21b0d56f6bbdf51f85bb56b46879b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50423,
+      "canonical_sha256": "62e6ff5d2887abd72c56f518452e6f2407e611e947d0fd6c5745f28625604ba6",
+      "content_sha256": "6094648a6e8140b9bb2efabfc8c12bd7583e12b319d165d9856ea9e9358d0590",
+      "gamecode": 242,
+      "storage_path": "E2024/Points/6094648a6e8140b9bb2efabfc8c12bd7583e12b319d165d9856ea9e9358d0590.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50815,
+      "canonical_sha256": "120b5f073bc1133592310d26a0f4de760903d4a045192cbbe01409e0869cede6",
+      "content_sha256": "3f35e296549d149d87461261d4e439afd3f457a568c9e94259a8dc9b3267fd19",
+      "gamecode": 243,
+      "storage_path": "E2024/Points/3f35e296549d149d87461261d4e439afd3f457a568c9e94259a8dc9b3267fd19.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49593,
+      "canonical_sha256": "6f3d3d4e953b121cfe356315ed6626e11ffe3fba55fc9a2e6a123824bbdead08",
+      "content_sha256": "ca011bb432c94adc7fd1c615183ef85b49009e4a9441d2a983296e473b68cb2d",
+      "gamecode": 244,
+      "storage_path": "E2024/Points/ca011bb432c94adc7fd1c615183ef85b49009e4a9441d2a983296e473b68cb2d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49987,
+      "canonical_sha256": "e75f0cf94696a8dcb9d3d2783576a2180b0169f303c67c812ec87650287c904a",
+      "content_sha256": "ae73e8527664fb575bfdbda2fcbe61b9c90fb99249d63d2211389c6001af85e1",
+      "gamecode": 245,
+      "storage_path": "E2024/Points/ae73e8527664fb575bfdbda2fcbe61b9c90fb99249d63d2211389c6001af85e1.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49201,
+      "canonical_sha256": "98650b0f749287d6668feaeb72be65ad1c3fc55851073681d92ab0cc0898c72e",
+      "content_sha256": "5ade191b7aaa8c7b43ef5b29055245a7a423a6a32681cbe3cb5fe735fde02172",
+      "gamecode": 246,
+      "storage_path": "E2024/Points/5ade191b7aaa8c7b43ef5b29055245a7a423a6a32681cbe3cb5fe735fde02172.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49589,
+      "canonical_sha256": "0b6bd84705d5dae329a72f27f5647b9c58e8eddce86bcc8862564e5a22c8969e",
+      "content_sha256": "a000c233d8a9e2a488e5cee94cc127420bae11a627a8cb18506c213748b06120",
+      "gamecode": 247,
+      "storage_path": "E2024/Points/a000c233d8a9e2a488e5cee94cc127420bae11a627a8cb18506c213748b06120.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49459,
+      "canonical_sha256": "ebdfba1c85fb6bb671804129bcd5b7f3164b3def254358afc982a2a1f11c9fb1",
+      "content_sha256": "f9fc3ca447d8d1f396892acb6a28de5415fbbb6709e6e53f0bf1880bad92353f",
+      "gamecode": 248,
+      "storage_path": "E2024/Points/f9fc3ca447d8d1f396892acb6a28de5415fbbb6709e6e53f0bf1880bad92353f.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47379,
+      "canonical_sha256": "a0e95b178553555a35cae98f108599d91cd7860bfcf52e870ed7446a5c015530",
+      "content_sha256": "ea2a2c45f753e122002fa52cfd579e1a0d7f2521ca76f050b37ea996a7fa2386",
+      "gamecode": 249,
+      "storage_path": "E2024/Points/ea2a2c45f753e122002fa52cfd579e1a0d7f2521ca76f050b37ea996a7fa2386.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56326,
+      "canonical_sha256": "f137524f3184168612bef66976f7820a68e4ee756c75f610a2b8e531e3415b64",
+      "content_sha256": "7890a1f146d872096c76fd58d45062f567d9aa06569cda6b83a5dbe297ae9f7e",
+      "gamecode": 250,
+      "storage_path": "E2024/Points/7890a1f146d872096c76fd58d45062f567d9aa06569cda6b83a5dbe297ae9f7e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 45494,
+      "canonical_sha256": "766d4d76444c232152b87a2188f1972a5b619ad331b5e9822a4a519d4d99a20f",
+      "content_sha256": "2c89ace233ad983377b5efd05e3614e8c8db2e7bf331918e6707038263681f1e",
+      "gamecode": 251,
+      "storage_path": "E2024/Points/2c89ace233ad983377b5efd05e3614e8c8db2e7bf331918e6707038263681f1e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54878,
+      "canonical_sha256": "77f94d693b5ef3af8344582af226f602fca33dbab21b4b04dbff03a3e1478ae7",
+      "content_sha256": "04ddaec1b6d0c4cff59968024e6929dbba5a211f7fc88a9785b76ef47631dc6d",
+      "gamecode": 252,
+      "storage_path": "E2024/Points/04ddaec1b6d0c4cff59968024e6929dbba5a211f7fc88a9785b76ef47631dc6d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49310,
+      "canonical_sha256": "7476c4828ee9bc8bd6bfb4865a204b0ad1ed49f2220793b79bd4c024315e42f2",
+      "content_sha256": "3093291f95ad71ae36ee7176132a7e16bafdb42602f67c1e2b989a46f51fd0a9",
+      "gamecode": 253,
+      "storage_path": "E2024/Points/3093291f95ad71ae36ee7176132a7e16bafdb42602f67c1e2b989a46f51fd0a9.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48236,
+      "canonical_sha256": "77ab574cbc9c347698627e2e1646551683189a3a2c7c418e4813b82a38d526d6",
+      "content_sha256": "15fdca234d30d0ca679c72f843ca08fc15c1975c64c560f8f21bd1e96ae2e711",
+      "gamecode": 254,
+      "storage_path": "E2024/Points/15fdca234d30d0ca679c72f843ca08fc15c1975c64c560f8f21bd1e96ae2e711.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55322,
+      "canonical_sha256": "23a18a0ed7b03632c25336b8ce9fb1de10d68e7f71011e09abce20f69660f766",
+      "content_sha256": "7d15a0e49be5e38b614df7432b9465b8b4ae6a44877eed31bb2ca409a7bbeae3",
+      "gamecode": 255,
+      "storage_path": "E2024/Points/7d15a0e49be5e38b614df7432b9465b8b4ae6a44877eed31bb2ca409a7bbeae3.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49913,
+      "canonical_sha256": "98c2568607e589e4b503d8888650439acfb401dfd537d61ae9048b8d4a995533",
+      "content_sha256": "d9dbe88a18492fc2372dbcaf29903d23daa4b8c148c7c2b6d8a1f389c4a8f65d",
+      "gamecode": 256,
+      "storage_path": "E2024/Points/d9dbe88a18492fc2372dbcaf29903d23daa4b8c148c7c2b6d8a1f389c4a8f65d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 60438,
+      "canonical_sha256": "642e3f23dcaef01cdf54e9f8c45d677dafff392f26dedb067d3050c448e9b1f2",
+      "content_sha256": "3763aee0e61069edf17e969e67e2b2762b3d56efb11618fd0f7e9bd3d9cd8dee",
+      "gamecode": 257,
+      "storage_path": "E2024/Points/3763aee0e61069edf17e969e67e2b2762b3d56efb11618fd0f7e9bd3d9cd8dee.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50885,
+      "canonical_sha256": "fa663bec45cdbcd651b0a2233528226f86e13f5288bd4792d1f9f22f9945fb7a",
+      "content_sha256": "455903ba66be5df8390a51f062679187739b0bbd0fa5383e177e8379f9cfba24",
+      "gamecode": 258,
+      "storage_path": "E2024/Points/455903ba66be5df8390a51f062679187739b0bbd0fa5383e177e8379f9cfba24.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47824,
+      "canonical_sha256": "416c3461b555076ed7bf452783b655080c6c602c3b30b0a49498bc9fa17b8325",
+      "content_sha256": "937c9c13e964a114174fd2a012355228bfdce5e3f9ec3ac449753ab8c11c5cf4",
+      "gamecode": 259,
+      "storage_path": "E2024/Points/937c9c13e964a114174fd2a012355228bfdce5e3f9ec3ac449753ab8c11c5cf4.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55238,
+      "canonical_sha256": "93f9de9cf0395d7c605129efb15919de7878185e6120026b8a3990fbc0289d53",
+      "content_sha256": "a6d9b07a05bf9bcd8df6355e4437d1397ed455dccded6b1f0367201ef93d0276",
+      "gamecode": 260,
+      "storage_path": "E2024/Points/a6d9b07a05bf9bcd8df6355e4437d1397ed455dccded6b1f0367201ef93d0276.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46675,
+      "canonical_sha256": "b0cb7399c9d035a5977ff8e846b6fb3bc1c7b679631c64b7e35d7ea9857178ce",
+      "content_sha256": "dfa09ed727fcfc9cc06f8c6a9ad8c2654138fafe062b5b9eeb295897320f4487",
+      "gamecode": 261,
+      "storage_path": "E2024/Points/dfa09ed727fcfc9cc06f8c6a9ad8c2654138fafe062b5b9eeb295897320f4487.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53065,
+      "canonical_sha256": "a9e6c486e5862581909eaa9da8f45585cfd5be13bf5c49eb4ba22dd40351cd89",
+      "content_sha256": "9b3519f424151f84ea602c59af8e1cbc490c89440792b9e70ce78e0be3ace960",
+      "gamecode": 262,
+      "storage_path": "E2024/Points/9b3519f424151f84ea602c59af8e1cbc490c89440792b9e70ce78e0be3ace960.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53716,
+      "canonical_sha256": "79c03723c5e9cb4ab274ebb08291be3b3b9ce9f7328714dea6723c424f808c0d",
+      "content_sha256": "baf121c043d90cae6f9c9b2892b30712a61d9168b8aebc5d274c087ed06a8557",
+      "gamecode": 263,
+      "storage_path": "E2024/Points/baf121c043d90cae6f9c9b2892b30712a61d9168b8aebc5d274c087ed06a8557.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46244,
+      "canonical_sha256": "a3135bb72c543407b216ccccf0b19404e09c675d71e26e3ad1502f2fcaf8b8bb",
+      "content_sha256": "63118289c8cdb2f61a1d078205e37f9353fafed256b08eafc3a46a0e0c309ce9",
+      "gamecode": 264,
+      "storage_path": "E2024/Points/63118289c8cdb2f61a1d078205e37f9353fafed256b08eafc3a46a0e0c309ce9.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50788,
+      "canonical_sha256": "6b53336eeb9b8d5c1298780a596c085f080449d0726ec927281e63823528d765",
+      "content_sha256": "a3459b6a94436280d671fe1d5be98de1d5982996070f89f03a12b98e08f99944",
+      "gamecode": 265,
+      "storage_path": "E2024/Points/a3459b6a94436280d671fe1d5be98de1d5982996070f89f03a12b98e08f99944.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48489,
+      "canonical_sha256": "c5a2d2118de877428ba58ab0d996f8fe5d149fd417cc3d9cac7c438fad062473",
+      "content_sha256": "237b8cd3a99585757c6ee6d292166e1dc0fabd995af2e373b90e246ace39db20",
+      "gamecode": 266,
+      "storage_path": "E2024/Points/237b8cd3a99585757c6ee6d292166e1dc0fabd995af2e373b90e246ace39db20.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52354,
+      "canonical_sha256": "b8e4a25c4025406411751ba528709188e3beaae1a07a5ecee0439687f8bc2ed8",
+      "content_sha256": "358a1121c7bdeadc19baca5df1656a23716ef40cc70adfd6501368853549477d",
+      "gamecode": 267,
+      "storage_path": "E2024/Points/358a1121c7bdeadc19baca5df1656a23716ef40cc70adfd6501368853549477d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53251,
+      "canonical_sha256": "75a42a12831bc439d2f46dcb91db7170f174f495f85340eb8156ece9f1a9f1e4",
+      "content_sha256": "c68452b47ee83600ce240001a7c0c01940a40e1df41b13b5361635cddc5f6e87",
+      "gamecode": 268,
+      "storage_path": "E2024/Points/c68452b47ee83600ce240001a7c0c01940a40e1df41b13b5361635cddc5f6e87.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49181,
+      "canonical_sha256": "1d9a0d8d1bbe834eaa58d2e7d4eba1cea20fff671849d978935a9dbab71a7397",
+      "content_sha256": "a17324da74eef5361ea54c05c35f90dffa6294ae99bc42f4f516c419eb15ccf7",
+      "gamecode": 269,
+      "storage_path": "E2024/Points/a17324da74eef5361ea54c05c35f90dffa6294ae99bc42f4f516c419eb15ccf7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50596,
+      "canonical_sha256": "3805efde5b81886eeef650fd6f21edf24fac845a5ad2a96a802b9e43ee152bf5",
+      "content_sha256": "a9f0df87906ab580416767c716afee2543756275a0b48a94263088f99cf75dee",
+      "gamecode": 270,
+      "storage_path": "E2024/Points/a9f0df87906ab580416767c716afee2543756275a0b48a94263088f99cf75dee.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54451,
+      "canonical_sha256": "a55937acbd69d99022e891bda2c3d4e236caaed6c1022688e535a3d253d56c5c",
+      "content_sha256": "c7dd64ae72d04e8f6557bd6e5526be071c8ec41eb9ffec5637302492fd5a232f",
+      "gamecode": 271,
+      "storage_path": "E2024/Points/c7dd64ae72d04e8f6557bd6e5526be071c8ec41eb9ffec5637302492fd5a232f.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 61705,
+      "canonical_sha256": "cfc219ad0ec206d302bdf06e96a410711bce5fc107c39fac84ec6c8214cd2626",
+      "content_sha256": "361f17ed23ff17e78fd1f489cc3ff77bf8df76eb94ae77d45de9feb9c6469f65",
+      "gamecode": 272,
+      "storage_path": "E2024/Points/361f17ed23ff17e78fd1f489cc3ff77bf8df76eb94ae77d45de9feb9c6469f65.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53177,
+      "canonical_sha256": "501c8e32b5aad4f12ec08e0035a9a6bb667d11991a7c6ee05badfb044a177617",
+      "content_sha256": "f629fd84c10acf3710a034d1a6cb815b5ceb45e841bd76a12ed102a4770d1660",
+      "gamecode": 273,
+      "storage_path": "E2024/Points/f629fd84c10acf3710a034d1a6cb815b5ceb45e841bd76a12ed102a4770d1660.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49204,
+      "canonical_sha256": "8ddac56cbd6387b4f06bad1065d441a7b93dca80a2aef31093a0fc25f31b4514",
+      "content_sha256": "cd0f5eb97772189ba336dbba98ab487142f50a83b4e94d0e3c49e896a752c0e3",
+      "gamecode": 274,
+      "storage_path": "E2024/Points/cd0f5eb97772189ba336dbba98ab487142f50a83b4e94d0e3c49e896a752c0e3.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46960,
+      "canonical_sha256": "dfec15ac931a3dfeb6cd5f375c52790ae53227272007aca0b0f8a0788aca5589",
+      "content_sha256": "470e1f1456b8b8e52d7fbfad85372afdd81f32bfa5ce3b3d0bf7fec3ced43b57",
+      "gamecode": 275,
+      "storage_path": "E2024/Points/470e1f1456b8b8e52d7fbfad85372afdd81f32bfa5ce3b3d0bf7fec3ced43b57.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52153,
+      "canonical_sha256": "bcd2593cabd253938e3aaa6cdf3165505ab0a39b53369048782ac37bb2eb7db1",
+      "content_sha256": "8124493f196462fb1d6bbc049c54548c1e23a42ea5a267d5f86e88c39875ac0c",
+      "gamecode": 276,
+      "storage_path": "E2024/Points/8124493f196462fb1d6bbc049c54548c1e23a42ea5a267d5f86e88c39875ac0c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48872,
+      "canonical_sha256": "2baddc3c61527a84a616d2d142072f6a81c0df082ec9a1b59e4aa8cae9b3ab59",
+      "content_sha256": "aba2d226d01307e14e111b27a8f6f1fc8fd2e646b40679341d5c4f98be23a95a",
+      "gamecode": 277,
+      "storage_path": "E2024/Points/aba2d226d01307e14e111b27a8f6f1fc8fd2e646b40679341d5c4f98be23a95a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47507,
+      "canonical_sha256": "64f36a569d8232796bce6f94b45308ea592004ea398ed7038454c177c17faa04",
+      "content_sha256": "2aa45feef183872d1951dcabced319a47089478a850c65469f7158f12bf95bb1",
+      "gamecode": 278,
+      "storage_path": "E2024/Points/2aa45feef183872d1951dcabced319a47089478a850c65469f7158f12bf95bb1.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 59152,
+      "canonical_sha256": "463291e0308991bf44248c197983fb8351e2f91953dcff040893a58fb1d779f7",
+      "content_sha256": "44eb36193a6e419276493b5a38f66167846e8c47f0e4242389e377880dfee293",
+      "gamecode": 279,
+      "storage_path": "E2024/Points/44eb36193a6e419276493b5a38f66167846e8c47f0e4242389e377880dfee293.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47294,
+      "canonical_sha256": "e8d72789a033f339edc4c7e3276d4283ed27e4fc4c84066146cf5388cd26f5ce",
+      "content_sha256": "58f5d3d9d88b96a0bd410d183b1cf2d5af8c3503495661bd12e0f6697d9b82ab",
+      "gamecode": 280,
+      "storage_path": "E2024/Points/58f5d3d9d88b96a0bd410d183b1cf2d5af8c3503495661bd12e0f6697d9b82ab.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52172,
+      "canonical_sha256": "a19073f34c242b4064e74bce8711fc57c5399d1c4d04a8ea5ba58ed4f54a253a",
+      "content_sha256": "c0e8dbd62fcdb10921953e555ac5308303dc696c0fe092f745cf28fa42f05548",
+      "gamecode": 281,
+      "storage_path": "E2024/Points/c0e8dbd62fcdb10921953e555ac5308303dc696c0fe092f745cf28fa42f05548.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54118,
+      "canonical_sha256": "2e99a1972c5b2e441a3a16d4dd90f3e2a666d4cf137d8430496f2888c5087e3e",
+      "content_sha256": "f8d715d16d6467a1806062297a200f349adf8a3f20f2a108fb184c040ea1f74d",
+      "gamecode": 282,
+      "storage_path": "E2024/Points/f8d715d16d6467a1806062297a200f349adf8a3f20f2a108fb184c040ea1f74d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47973,
+      "canonical_sha256": "31ad312ff07d3824ee27927abb98fa93308bd3351733fc3a1cdde58a685e7688",
+      "content_sha256": "0c5e7aebc95d795ba9faf1234ebe4adb653c1f7c0785474d2416db0fa058faa2",
+      "gamecode": 283,
+      "storage_path": "E2024/Points/0c5e7aebc95d795ba9faf1234ebe4adb653c1f7c0785474d2416db0fa058faa2.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46575,
+      "canonical_sha256": "0952fc5afb246294e293bd80877170895fa92dc65412dcd50e9aa6fb1c59d3c5",
+      "content_sha256": "ba4dbb89cd9446d0559116135567f5191ce51fa950aa8d9cda9e898ce85f0da6",
+      "gamecode": 284,
+      "storage_path": "E2024/Points/ba4dbb89cd9446d0559116135567f5191ce51fa950aa8d9cda9e898ce85f0da6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55351,
+      "canonical_sha256": "36db49ffa602806905253567568dc45595b2980811e4b2d944aef2736729c16b",
+      "content_sha256": "e0d3a23e6c86716e7dce1762d040e60e389fd5958aa7ec1a047c0aa3bc5f1277",
+      "gamecode": 285,
+      "storage_path": "E2024/Points/e0d3a23e6c86716e7dce1762d040e60e389fd5958aa7ec1a047c0aa3bc5f1277.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51959,
+      "canonical_sha256": "dbf91697f16f6ab1f37c13ddd1f3528d62c7beb28efe3baa916af130dbc8973f",
+      "content_sha256": "f6569d5d5ba4a531aa799005cfd1386276a1d8151a5df9ab6ead290279d8eae0",
+      "gamecode": 286,
+      "storage_path": "E2024/Points/f6569d5d5ba4a531aa799005cfd1386276a1d8151a5df9ab6ead290279d8eae0.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54076,
+      "canonical_sha256": "e8210f2a3b93ccf4775e1b7e956ad57078322cb5a79c710116fe227c58f0de72",
+      "content_sha256": "8912b412cd5e35f9abc11f86b5c1d65b98bf01fff8fb8817e8a0753201ba614c",
+      "gamecode": 287,
+      "storage_path": "E2024/Points/8912b412cd5e35f9abc11f86b5c1d65b98bf01fff8fb8817e8a0753201ba614c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55774,
+      "canonical_sha256": "cb586c9b5e93cb2807d030b91c6965d9631d43687313d5000ad013ffe5bf3eef",
+      "content_sha256": "56f15a6b429f81263dfeca5c87e0e7b8c5c8749e9b8399752fcde5fb2f53596c",
+      "gamecode": 288,
+      "storage_path": "E2024/Points/56f15a6b429f81263dfeca5c87e0e7b8c5c8749e9b8399752fcde5fb2f53596c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47828,
+      "canonical_sha256": "6ff4383bf63eefd2538fe2e6d16eb5e2bc655c85650af774fcde12cbfa40b86e",
+      "content_sha256": "02a8124bf8e151d391d917cd45a4f88656e19b57f36a19852e5712fe0a057406",
+      "gamecode": 289,
+      "storage_path": "E2024/Points/02a8124bf8e151d391d917cd45a4f88656e19b57f36a19852e5712fe0a057406.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51637,
+      "canonical_sha256": "500d20c57567a3f193b905dc31f84bb673c6c2623bb76a5a7f6469ce8161b3f7",
+      "content_sha256": "3571079ceffcc575da9ffabcbe2de9aae5a20175da4a07f9f48819e7c24dd9cc",
+      "gamecode": 290,
+      "storage_path": "E2024/Points/3571079ceffcc575da9ffabcbe2de9aae5a20175da4a07f9f48819e7c24dd9cc.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47766,
+      "canonical_sha256": "15b032ab626d41e7e8b22a80f10ed21172c8af4a99ceeaf6a7e231cbfb3ea241",
+      "content_sha256": "87fdc213a301d70869356168bf0329163814850b9e03ed077c78ba677da8467c",
+      "gamecode": 291,
+      "storage_path": "E2024/Points/87fdc213a301d70869356168bf0329163814850b9e03ed077c78ba677da8467c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53925,
+      "canonical_sha256": "48fcf95fe0e677bf51b02f0474e2b57f7d3dfb183450c488a4f37d5ee0bd2729",
+      "content_sha256": "def03f85c6d04c5637fd4173f69c4b5938fa80d497b2f2e5a39ad8725f5bee5a",
+      "gamecode": 292,
+      "storage_path": "E2024/Points/def03f85c6d04c5637fd4173f69c4b5938fa80d497b2f2e5a39ad8725f5bee5a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50220,
+      "canonical_sha256": "2b75b49cb4807c31b85a17eb9cb83cab57e1ed785f83dda37772ee4c5b66fd2d",
+      "content_sha256": "f160a0b1e01ba9065774336ab27b4f78d05d15c908fb11df9ad5313c1d783bba",
+      "gamecode": 293,
+      "storage_path": "E2024/Points/f160a0b1e01ba9065774336ab27b4f78d05d15c908fb11df9ad5313c1d783bba.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52660,
+      "canonical_sha256": "53555d638fee253086bbd6959b2eec80297b5acba975d1f26a37edfc6091e50d",
+      "content_sha256": "814336c734bca70bd3fc6a9d00914b7bce8dc5123c88a9ef6c7e9a891f8a5ceb",
+      "gamecode": 294,
+      "storage_path": "E2024/Points/814336c734bca70bd3fc6a9d00914b7bce8dc5123c88a9ef6c7e9a891f8a5ceb.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56578,
+      "canonical_sha256": "c9cb46484bd3da5c02e9be19e5b75c08ccf31e8e589e22f8fb6da00dc99c1be2",
+      "content_sha256": "b339ae8a6dc3928676fd78d2c72415f42953bdac587ba3d93d3e46db1d64600a",
+      "gamecode": 295,
+      "storage_path": "E2024/Points/b339ae8a6dc3928676fd78d2c72415f42953bdac587ba3d93d3e46db1d64600a.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52622,
+      "canonical_sha256": "c803709ce2c16fa0428d21018d1cc81a3dfb206cd023cb1b87f57cee95ae2d46",
+      "content_sha256": "fe5f9fbcdddac83b646a153243a7ccb4d093a01c24a71c1e44358124fee7cd36",
+      "gamecode": 296,
+      "storage_path": "E2024/Points/fe5f9fbcdddac83b646a153243a7ccb4d093a01c24a71c1e44358124fee7cd36.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47943,
+      "canonical_sha256": "ce031e7370c9c0757f800c06032b3310cdbab32ba37ea2610b7ac05018beb601",
+      "content_sha256": "a49579f124cb6ada6798e27bdfc3321e10fe79ee1bfd941603f89453485f00c2",
+      "gamecode": 297,
+      "storage_path": "E2024/Points/a49579f124cb6ada6798e27bdfc3321e10fe79ee1bfd941603f89453485f00c2.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47751,
+      "canonical_sha256": "19811fe5b758abe958b38058dd3adc08ff7ad8ab7383996516a93d16891cea64",
+      "content_sha256": "cea031662a8bcfc82792f6ee8b7c3754d8ab80e50f8cc928ff14aab5d99e5cae",
+      "gamecode": 298,
+      "storage_path": "E2024/Points/cea031662a8bcfc82792f6ee8b7c3754d8ab80e50f8cc928ff14aab5d99e5cae.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53596,
+      "canonical_sha256": "a3419a68501275fa0813f9063ea969d19337059940c1d5b8304de1bb819988a0",
+      "content_sha256": "18a54c93539059f6033dd30008d557f6d8a4a573ba5027344fc598b0a02e0ff0",
+      "gamecode": 299,
+      "storage_path": "E2024/Points/18a54c93539059f6033dd30008d557f6d8a4a573ba5027344fc598b0a02e0ff0.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55204,
+      "canonical_sha256": "d66570f867eaa6afd40e6c37ec2a6ada434177344091a02522f0d04ebf7625ce",
+      "content_sha256": "04399ceaf69e64e9c21b7e14093ec4846d515d59d3d74f5cf3a5103d7a97f677",
+      "gamecode": 300,
+      "storage_path": "E2024/Points/04399ceaf69e64e9c21b7e14093ec4846d515d59d3d74f5cf3a5103d7a97f677.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54114,
+      "canonical_sha256": "ad93d53eb7aef7082411262f5ee14ee42b533b0c7fbf7960c76a6552c2c3f795",
+      "content_sha256": "8c91f70ecb36f7bab104c44df5322910900926cf19268cb4bc6132ae4234d4c7",
+      "gamecode": 301,
+      "storage_path": "E2024/Points/8c91f70ecb36f7bab104c44df5322910900926cf19268cb4bc6132ae4234d4c7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 45684,
+      "canonical_sha256": "15e2428512aff27db9b6135de11c1535631b842ab8f8eab944cb52fe56be0276",
+      "content_sha256": "c0e3a90bf232330bfc42385fb2184349408ebe2c9c6edffeb3785916a795ba3e",
+      "gamecode": 302,
+      "storage_path": "E2024/Points/c0e3a90bf232330bfc42385fb2184349408ebe2c9c6edffeb3785916a795ba3e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47327,
+      "canonical_sha256": "14fdad7ad75dd085f0f2f1e5b54741e7731e593e8e509c9ad9eb97deb74f20b5",
+      "content_sha256": "004e1f568b4857a1829a8921e0c4e5e383f61d7afb0b1c22bb736d0a7c90c4b2",
+      "gamecode": 303,
+      "storage_path": "E2024/Points/004e1f568b4857a1829a8921e0c4e5e383f61d7afb0b1c22bb736d0a7c90c4b2.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54491,
+      "canonical_sha256": "238bb6b985989c36c46bf74b6fee05493f489888407ba070a49ab1a85e76f6b5",
+      "content_sha256": "ebd2c48293665cdf8c4a07ed792e17285f201a19cc417c67391897d71b9df018",
+      "gamecode": 304,
+      "storage_path": "E2024/Points/ebd2c48293665cdf8c4a07ed792e17285f201a19cc417c67391897d71b9df018.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 56933,
+      "canonical_sha256": "21db3e3a73c5102eddbbce3826f476874ba867c199cb6b1f180441c34bf4b3c3",
+      "content_sha256": "3bd3ae5053fe38765f938bb79fbef7c4e883a092cec674e06b81425f09b67d74",
+      "gamecode": 305,
+      "storage_path": "E2024/Points/3bd3ae5053fe38765f938bb79fbef7c4e883a092cec674e06b81425f09b67d74.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50604,
+      "canonical_sha256": "e702ae873a2c1fcb98ad1830faac4529ef543e5ff6f15cffe15c265ce6a828b9",
+      "content_sha256": "90a1d9dc635680f6dcde8a9d631c37f9c67a516af61f20f0c26688abf5b36318",
+      "gamecode": 306,
+      "storage_path": "E2024/Points/90a1d9dc635680f6dcde8a9d631c37f9c67a516af61f20f0c26688abf5b36318.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50809,
+      "canonical_sha256": "54f5b77a5f7a55d5761df3bbb3844da98269e6264ab7d423d97ee0264422d04a",
+      "content_sha256": "1cb0cc568cef2965cba527f1c8ceabe2d6969695af2df70d6e2f85c8462dcdef",
+      "gamecode": 307,
+      "storage_path": "E2024/Points/1cb0cc568cef2965cba527f1c8ceabe2d6969695af2df70d6e2f85c8462dcdef.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54597,
+      "canonical_sha256": "859759a03f899afd0bc2a5e67b568282b33c5a2608642549d01381987a9fc940",
+      "content_sha256": "b80c2dccb2defba0fa613a02b3aab90a65f629fb604a5e6d777b166d79c10bec",
+      "gamecode": 308,
+      "storage_path": "E2024/Points/b80c2dccb2defba0fa613a02b3aab90a65f629fb604a5e6d777b166d79c10bec.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 45726,
+      "canonical_sha256": "026790c9fec89775af49dcd4be18f496f5438e165426cc41973742a569589a59",
+      "content_sha256": "5c500a77812047055e3816f009d854394d9e8966ed310efa2a79eca0c683ec23",
+      "gamecode": 309,
+      "storage_path": "E2024/Points/5c500a77812047055e3816f009d854394d9e8966ed310efa2a79eca0c683ec23.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48020,
+      "canonical_sha256": "4e9993bd2afe69c6c5df033fb4084f1997b2b864893c596fe8bbceb6f006e5c6",
+      "content_sha256": "e9712a2d2d40e33f03fbbcacf109a99c224d767effc15164d035cf20b7cc8f02",
+      "gamecode": 310,
+      "storage_path": "E2024/Points/e9712a2d2d40e33f03fbbcacf109a99c224d767effc15164d035cf20b7cc8f02.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 53289,
+      "canonical_sha256": "74e28600f0cf954143d999c2277d2ec794b8ca3124152bcac114671bb41f84a7",
+      "content_sha256": "898a79009d21746440bdc28375eb3afa159def08d822b8247611325110ad6324",
+      "gamecode": 311,
+      "storage_path": "E2024/Points/898a79009d21746440bdc28375eb3afa159def08d822b8247611325110ad6324.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 55219,
+      "canonical_sha256": "401af029cf39bab3e3324e153e3b70b052a435fd8798d916a6caab3b5edf0136",
+      "content_sha256": "84fb605184d27b925798ed8313d5bc2d27a51b9a3c3279ac8fd5e9439b47fc5d",
+      "gamecode": 312,
+      "storage_path": "E2024/Points/84fb605184d27b925798ed8313d5bc2d27a51b9a3c3279ac8fd5e9439b47fc5d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47960,
+      "canonical_sha256": "0e3230492d570ad934b1c11fce8f339d2ad1c6c573183832894f8cf748f77010",
+      "content_sha256": "f9701e187ac5123df49cb9553199f23dae952eb37b5052eb89fc7866182ef092",
+      "gamecode": 313,
+      "storage_path": "E2024/Points/f9701e187ac5123df49cb9553199f23dae952eb37b5052eb89fc7866182ef092.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49952,
+      "canonical_sha256": "411835b8eaf8518495588fc944d2a560a4caa53d5ebcb3de6f55281bc32c2754",
+      "content_sha256": "d455ac7998fb437c8324ef44ff77f370041e8d4a12e1feff80f6766f802b766e",
+      "gamecode": 314,
+      "storage_path": "E2024/Points/d455ac7998fb437c8324ef44ff77f370041e8d4a12e1feff80f6766f802b766e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48426,
+      "canonical_sha256": "5ec5125a1b2e8e1a60c0536aa45bf71067d8eeb3bf23e0bcd07e829a40810e9e",
+      "content_sha256": "9e75cbfb7a2962cb4856e3bfc355d2a1e3a8c4c46ac84339bc6466ad75b0eb9c",
+      "gamecode": 315,
+      "storage_path": "E2024/Points/9e75cbfb7a2962cb4856e3bfc355d2a1e3a8c4c46ac84339bc6466ad75b0eb9c.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47323,
+      "canonical_sha256": "530e38da7fbd73cd45a7b2ab103321c35af37c290c7294998b8841544ca00a9c",
+      "content_sha256": "e19ac926cd6d27f821d93bf06ce7aebfcf98387b124335b8d3c39f287eb8168b",
+      "gamecode": 316,
+      "storage_path": "E2024/Points/e19ac926cd6d27f821d93bf06ce7aebfcf98387b124335b8d3c39f287eb8168b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49812,
+      "canonical_sha256": "7136e92d26395a11a8613a00114c9d086058d482e0b5224304383f9593c78214",
+      "content_sha256": "b6aa55c0f2a4fbb0d97064c16c7d021764cb76970e77835947fb6e9a23e60be7",
+      "gamecode": 317,
+      "storage_path": "E2024/Points/b6aa55c0f2a4fbb0d97064c16c7d021764cb76970e77835947fb6e9a23e60be7.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47043,
+      "canonical_sha256": "e8864ba08ea39946690d9d47319284a12ca3397ea32ebcb2f3b0c1f708026117",
+      "content_sha256": "21d81f0001f8f7a1efcdbc186add05a50339c7b12f40b9aedfe82195a321ff6f",
+      "gamecode": 318,
+      "storage_path": "E2024/Points/21d81f0001f8f7a1efcdbc186add05a50339c7b12f40b9aedfe82195a321ff6f.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48461,
+      "canonical_sha256": "12cbc799ba3f6f1860a73ef100a28ff1fdc420fd20ef53622160a49469e6b3f4",
+      "content_sha256": "51fb668d7fc35aa8fc16434e6b7974387ec016366fa4822036b8231e851321af",
+      "gamecode": 319,
+      "storage_path": "E2024/Points/51fb668d7fc35aa8fc16434e6b7974387ec016366fa4822036b8231e851321af.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 47959,
+      "canonical_sha256": "1e5b42ba617dd107c7af16e692dbbfc966aca412bdb2ead917bc9202e471066c",
+      "content_sha256": "d7e54f25884f942001b34f48aca71b4b1d6a4811028252e1d4994f5c50e56f0b",
+      "gamecode": 320,
+      "storage_path": "E2024/Points/d7e54f25884f942001b34f48aca71b4b1d6a4811028252e1d4994f5c50e56f0b.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 54681,
+      "canonical_sha256": "1ff413aba5820cc0a2c68cb705d65c2a18874b969811d6dc2c4d8faaa5d155f7",
+      "content_sha256": "7052366ae5707469f1199ec2991b9b32f55bbf5e21f48b4770ebbc58ac95089d",
+      "gamecode": 321,
+      "storage_path": "E2024/Points/7052366ae5707469f1199ec2991b9b32f55bbf5e21f48b4770ebbc58ac95089d.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50876,
+      "canonical_sha256": "07883ba2eaca84b4c9d95a1643d3d4694b8f5d2b9b1fa1b889070cb28bad1ad4",
+      "content_sha256": "0264006a93c06577428de28c309326736c7a8eeb8bdf1747253539fcadf737c4",
+      "gamecode": 322,
+      "storage_path": "E2024/Points/0264006a93c06577428de28c309326736c7a8eeb8bdf1747253539fcadf737c4.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52785,
+      "canonical_sha256": "6d193900b8b31c61d3dda08eb42ac1dc17504a4b5b0e3ee062c2069f9728522f",
+      "content_sha256": "6d595850ab5d635adcd8f3925a81c76850b91214660a0696ec8f61a312562eb6",
+      "gamecode": 323,
+      "storage_path": "E2024/Points/6d595850ab5d635adcd8f3925a81c76850b91214660a0696ec8f61a312562eb6.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48238,
+      "canonical_sha256": "9b468235c1bf69dbeed11b20f6d69942f0cba8fdacb60ddd8309ce472bdf5d5d",
+      "content_sha256": "4b5ae3bd2cc433d2093f76a8d56876632e5c0c18f846aab028d988423b3b0750",
+      "gamecode": 324,
+      "storage_path": "E2024/Points/4b5ae3bd2cc433d2093f76a8d56876632e5c0c18f846aab028d988423b3b0750.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 48617,
+      "canonical_sha256": "32401dc0234e99741c9c95f35ec04e8119608ab7d415a8a00b995ac376e5e38e",
+      "content_sha256": "679b0e958ebae033f857539eee9eeddb4ef6b1d1a517a5316b563745fc7e6813",
+      "gamecode": 325,
+      "storage_path": "E2024/Points/679b0e958ebae033f857539eee9eeddb4ef6b1d1a517a5316b563745fc7e6813.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 51579,
+      "canonical_sha256": "0cf3726dc1b31ed5f90303d90e9082cdf2616dc5cd73ff1b5c3c752dd4ead64e",
+      "content_sha256": "dc70691319a3f4bd2cbccf4609cbca70a1fbe3e332c03a07dd1d5d80f5b36f4e",
+      "gamecode": 326,
+      "storage_path": "E2024/Points/dc70691319a3f4bd2cbccf4609cbca70a1fbe3e332c03a07dd1d5d80f5b36f4e.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 49905,
+      "canonical_sha256": "cbec21f9d418d8a59e0b04fefaa0183ac9be5928b1b0cffd130d334fd58a442a",
+      "content_sha256": "ce5a369f980263a7dafe3452f79f171c2a8412196d936d50ced727a8cd78b718",
+      "gamecode": 327,
+      "storage_path": "E2024/Points/ce5a369f980263a7dafe3452f79f171c2a8412196d936d50ced727a8cd78b718.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 46991,
+      "canonical_sha256": "3fac94161f465adab2b291981a45343df61983b09da8719967d5f385431c14ee",
+      "content_sha256": "a22001bf5117c7d9228a98365e2b8c942dc58dfaa698beac246cfad0d56ef8cd",
+      "gamecode": 328,
+      "storage_path": "E2024/Points/a22001bf5117c7d9228a98365e2b8c942dc58dfaa698beac246cfad0d56ef8cd.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 52546,
+      "canonical_sha256": "d40c386e927f238183fc3ca7b898730e04c2eba21e6a101fc7bf9991c506265d",
+      "content_sha256": "392ec223bcde9ae5fb39444243485947a5356f17d8bb26f84516e215477fcbbb",
+      "gamecode": 329,
+      "storage_path": "E2024/Points/392ec223bcde9ae5fb39444243485947a5356f17d8bb26f84516e215477fcbbb.json.gz",
+      "valid_json": true
+    },
+    {
+      "byte_size": 50883,
+      "canonical_sha256": "1c5ad8fc1adfc8995dbed01d7e118d7e86c039980871f95a454c14266e328caf",
+      "content_sha256": "4edc2bfa9f3454a61da05f5c449bd85fed0123821bd0731206d2827a869ac7db",
+      "gamecode": 330,
+      "storage_path": "E2024/Points/4edc2bfa9f3454a61da05f5c449bd85fed0123821bd0731206d2827a869ac7db.json.gz",
+      "valid_json": true
+    }
+  ],
+  "season_code": "E2024"
+}

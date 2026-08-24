@@ -72,6 +72,16 @@ Per `CLAUDE.md`, every check must state its blind spot:
 
 To backfill the missing E2024 `Points` archive entries without re-fetching from the EuroLeague API:
 
-1. Ensure the local response cache holds the 330 E2024 `Points` JSON files (`cache/E2024/Points/*.json`).
-2. Run `src/euroleague/archive.py:archive_season(connection, cache, storage, "E2024")` or execute the upload script targeting `Points`.
-3. Verify that `raw_api_response` records 330 `Points` rows for `E2024` and `reconcile_warehouse_archive_gap` returns `is_gap = False`.
+1. Ensure the local response cache holds the 330 E2024 `Points` JSON files
+   (`exploration/cache/E2024/Points/*.json`). Verified present and complete on
+   2026-08-25; see `docs/E2024_POINTS_ARCHIVE_REPAIR_REPORT.md`.
+2. Inspect without writing:
+   `python scripts/repair_archive.py E2024 --endpoint Points --dry-run`.
+3. With owner approval in the same sitting, write:
+   `python scripts/repair_archive.py E2024 --endpoint Points --live`.
+   This uses `repair_endpoint_archive`, which is scoped to one endpoint,
+   verifies every object it uploads, and is safe to interrupt and rerun.
+   `archive_season` is the wrong tool here: it would re-walk every endpoint of
+   the season rather than the one with the gap.
+4. Verify that `raw_api_response` records 330 current `Points` rows for `E2024`
+   and `reconcile_warehouse_archive_gap` returns `is_gap = False`.
