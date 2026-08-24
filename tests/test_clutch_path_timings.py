@@ -139,6 +139,9 @@ def test_transaction_pooler_url_refuses_an_unrelated_host() -> None:
 def test_order_7a_entrypoint_is_manual_read_only_and_preserves_prepare_modes() -> None:
     script = Path("scripts/measure_clutch_path.py").read_text(encoding="utf-8")
     workflow = Path(".github/workflows/clutch-measurement-path.yml").read_text(encoding="utf-8")
+    dispatchable_from_branch = Path(".github/workflows/decision-18-remeasurement.yml").read_text(
+        encoding="utf-8"
+    )
 
     assert "SET TRANSACTION READ ONLY" in script
     assert "SHOW transaction_read_only" in script
@@ -150,6 +153,7 @@ def test_order_7a_entrypoint_is_manual_read_only_and_preserves_prepare_modes() -
     assert "schedule:" not in workflow
     assert "DATABASE_URL: ${{ secrets.DATABASE_URL }}" in workflow
     assert "--repetitions 7" in workflow
+    assert "scripts/measure_clutch_path.py" in dispatchable_from_branch
 
 
 def test_order_7a_decision_brief_names_boundaries_and_blind_spots() -> None:
