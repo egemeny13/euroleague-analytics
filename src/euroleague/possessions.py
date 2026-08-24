@@ -125,6 +125,13 @@ def _other_team(team_code: str, teams: tuple[str, str]) -> str:
     )
 
 
+def _scorer_received_the_foul(between: Sequence[EventRecord], scorer_id: str | None) -> bool:
+    """Did the player who just scored receive a foul before these free throws?"""
+    if scorer_id is None:
+        return False
+    return any(event.playtype == "RV" and event.player_id == scorer_id for event in between)
+
+
 def _free_throw_contexts(events: Sequence[EventRecord]) -> dict[int, _FreeThrowContext]:
     positions = {event.ingest_index: position for position, event in enumerate(events)}
     contexts: dict[int, _FreeThrowContext] = {}
@@ -143,7 +150,19 @@ def _free_throw_contexts(events: Sequence[EventRecord]) -> dict[int, _FreeThrowC
             previous_ball_event is not None
             and previous_ball_event.playtype in {"2FGM", "3FGM"}
             and previous_ball_event.team_code == first_shot.team_code
-            and previous_ball_event.player_id == first_shot.player_id
+            and (
+                previous_ball_event.player_id == first_shot.player_id
+                # The fouled scorer can leave the court before taking the bonus,
+                # and a team-mate then shoots it. Identifying the bonus by the
+                # shooter misses that; the `RV` row names who was fouled, which
+                # is explicit data rather than an inference. The window is
+                # bounded by the basket and the first shot, so a foul in the
+                # next possession cannot reach into it.
+                or _scorer_received_the_foul(
+                    events[positions[previous_ball_event.ingest_index] + 1 : first_position],
+                    previous_ball_event.player_id,
+                )
+            )
         )
         has_retaining_foul = any(
             foul.playtype in POSSESSION_RETAINING_FOUL_TYPES for foul in trip.preceding_fouls

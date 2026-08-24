@@ -265,7 +265,7 @@ as using it to estimate. I will not do this without your explicit approval.
 | # | Decision | Status |
 |---|---|---|
 | 1 | A possession continues through an offensive rebound. We count possessions, not plays. | **Approved.** It is the standard, and it is what makes our numbers comparable to everyone else's. |
-| 2 | On an and-one, the possession ends at the basket, not at the free throw. | **Approved.** Measured at 1,316 events a season; getting it wrong fixes or breaks 47 games. |
+| 2 | On an and-one, the possession ends at the basket, not at the free throw. | **Approved.** Measured at 1,316 events a season; getting it wrong fixes or breaks 47 games. Refined 2026-08-25: the bonus is recognised when the shooter is the scorer **or** the scorer received the foul (`RV`) between the basket and the trip. The fouled scorer can be substituted before shooting, and 5 E2024 trips were being read as separate possessions. See `docs/POSSESSION_RESIDUAL_REPORT.md`. |
 | 3 | A free-throw trip is broken by any ball-touching event and by a new foul. | **Approved.** It is wrong 6 times in 6,835 trips, and all 6 are named and testable. |
 | 4 | A period that ends with a team still holding the ball counts a possession for that team. | **Withdrawn — measure first.** The principle is not in doubt; the mechanism is. The period-end markers do not add up (Section 2) and no rule can be written until it is known why. See M1 below. |
 | 5 | Do team rebounds — no player, valid team code, 1,112 defensive and 1,166 offensive — end and continue possessions the same way player rebounds do? | **Withdrawn — measure first.** Asking for a choice between unmeasured possibilities is not a decision to put to an owner. See M2 below. |

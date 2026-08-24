@@ -598,7 +598,7 @@ because a previous one finishes early; its gate is the next row's precondition.
 | 7b | **Complete:** [`2026-08-24-06b-lineup-on-off-performance-decision.md`](docs/superpowers/plans/2026-08-24-06b-lineup-on-off-performance-decision.md) | Lineup failed both wall-clock and server execution thresholds; use its captured plan to choose query rewrite, index, or aggregate promotion. | The one-scan rewrite preserved the canonical result and passed at 88.509 ms under the unchanged 98 ms gate. |
 | 7c | **Complete:** [`2026-08-24-06c-mcp-connection-lifecycle-performance.md`](docs/superpowers/plans/2026-08-24-06c-mcp-connection-lifecycle-performance.md) | Order 7a proved that fresh connection and read-only setup dominate repeated MCP latency; the long-lived serial stdio process currently pays that cost on every tool call. | One lazy verified-read-only connection is reused, bounded reconnect tests pass, the real JSON-RPC path is measured, and the owner accepted the attended evidence without changing Decision 18. |
 | 8 | [`07-e2026-opening-week-validation.md`](docs/superpowers/plans/2026-08-23-07-e2026-opening-week-validation.md) | This evidence cannot exist before games are played. Earliest start is 2026-09-24. | Initial load plus +6h/+24h/+72h/+7d settlement evidence and per-season correction safety are recorded. |
-| 9 | [`08-possession-residual-investigation.md`](docs/superpowers/plans/2026-08-23-08-possession-residual-investigation.md) | Important quality research, but quarantine makes it non-blocking for launch. | The residual is explained or narrowed by a new falsifiable diagnostic without weakening the gate. |
+| 9 | **Complete:** [`08-possession-residual-investigation.md`](docs/superpowers/plans/2026-08-23-08-possession-residual-investigation.md) | Important quality research, but quarantine makes it non-blocking for launch. | The residual is explained or narrowed by a new falsifiable diagnostic without weakening the gate. |
 | 10 | [`09-historical-archive-expansion.md`](docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md) | Long-running backfill belongs after live operations are stable. | A bounded season batch is archived with checksums, cadence, and storage projection evidence. |
 | 11 | [`10-eurocup-onboarding.md`](docs/superpowers/plans/2026-08-23-10-eurocup-onboarding.md) | Decision 11 keeps EuroCup schema-ready but deferred until EuroLeague is operationally proven. | A measured pilot passes competition isolation and storage gates before any full load. |
 
@@ -621,6 +621,12 @@ one-scan query rewrite, without an index, table, or threshold change. Order 7c
 resolved the user-visible connection lifecycle, demonstrating a 61.9% to 62.4%
 same-run reduction in repeated MCP tool calls with 100% deterministic response
 equality across all 35 measured calls and no call-six preparation spike observed.
-Order 8 is date-gated operational proof (earliest start 2026-09-24). Order 9 is
-a disclosed quality improvement. Orders 10-11 are post-release expansion and
+Order 8 is date-gated operational proof (earliest start 2026-09-24). Order 9 is complete: every unit of every game's
+possession-count difference is now located in the event stream, the completeness
+identity is asserted per game across both cached seasons, and the decomposition
+shows 11 of the 31 failing games carry no anomalous site at all. One real defect
+was found and fixed - an and-one bonus taken by a substitute counted as a second
+possession - moving E2024 from 314 to 316 games inside the gate with no game
+regressing in either season. The gate, its tolerance and every quarantine are
+unchanged; evidence is in `docs/POSSESSION_RESIDUAL_REPORT.md`. Orders 10-11 are post-release expansion and
 may be postponed without weakening the E2026 launch claim.

@@ -1,6 +1,10 @@
 # Possession Residual Investigation — Draft Session Plan
 
-**Status:** Draft. One research session; non-blocking for E2026 launch.
+**Status:** Complete 2026-08-25. The residual is decomposed rather than
+eliminated: every unit is located, one defect was fixed, and the remaining
+anomalies are 30 named sites with event indices. No invariant was weakened and
+no quarantined game was silently included. Evidence:
+`docs/POSSESSION_RESIDUAL_REPORT.md`.
 
 ## Purpose
 
