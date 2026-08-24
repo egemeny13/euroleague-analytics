@@ -484,7 +484,7 @@ knowing before the first long run:
 Following the compaction and incremental loader work in Blocks A and B (`docs/STORAGE_COMPACTION_REPORT.md`, `docs/E2026_LIVE_SEASON_PLAN.md`):
 
 - **Block C — Automated Scheduled Pipeline**: Complete and verified (`docs/BLOCK_C_REPORT.md`). Scheduled fetch, incremental load, derived rebuild, and validation gates run on GitHub Actions (`.github/workflows/e2026-live.yml`).
-- **Block D — Pre-season Rosters**: Implementation, database-free validation, the disposable migration gate, and production migration 0012 are complete (`docs/PRESEASON_ROSTER_INGESTION_REPORT.md`). The reviewed release and first live roster load are in progress.
+- **Block D — Pre-season Rosters**: Complete and production-verified (`docs/PRESEASON_ROSTER_INGESTION_REPORT.md`). Migration 0012, reviewed release, exact-byte archive, 203-row zero-game E2026 load, public-role isolation, and an unchanged idempotency rerun all passed.
 - **Block E — Multi-season Serving & Maintenance**: Migrations 0008-0010, truthful zero-game E2026 progress, public-view security hardening, and release verification are complete. Decision 18 live timing remains next after Block D closes.
 
 ### Open Items Carried into Live Season
@@ -591,7 +591,7 @@ because a previous one finishes early; its gate is the next row's precondition.
 | 3 | **Complete:** [`03a-public-view-security-hardening.md`](docs/superpowers/plans/2026-08-23-03a-public-view-security-hardening.md) | The production advisor found six security-definer views with inherited public grants; release must not preserve an unexamined Data API path. | Advisor errors are gone, public-role behavior is explicit, and MCP view results remain unchanged. |
 | 4 | **Complete:** [`03-release-and-actions-verification.md`](docs/superpowers/plans/2026-08-23-03-release-and-actions-verification.md) | Publish the local commits through a review branch, never by pushing protected `master`. | PR/merge policy is satisfied and one real workflow summary is inspected. |
 | 5 | **Temporarily deferred:** [`04-e2024-points-archive-repair.md`](docs/superpowers/plans/2026-08-23-04-e2024-points-archive-repair.md) | Close the known recoverability hole without re-fetching source data. The owner approved proceeding to Order 6 on 2026-08-24 because the only known copy of the required E2024 `Points` cache is on another computer and is not currently accessible. | All 330 objects and index rows verify and reconciliation is clean. |
-| 6 | **Implementation and migration complete; live load in progress:** [`05-preseason-roster-ingestion.md`](docs/superpowers/plans/2026-08-23-05-preseason-roster-ingestion.md) | Complete Block D using the endpoint already proved by reconnaissance. | Parser, archive path, ingest, idempotency, and zero-game E2026 gate pass; migration 0012 is rehearsed on a disposable database and applied only with separate owner approval. |
+| 6 | **Complete:** [`05-preseason-roster-ingestion.md`](docs/superpowers/plans/2026-08-23-05-preseason-roster-ingestion.md) | Complete Block D using the endpoint already proved by reconnaissance. | Parser, archive path, ingest, idempotency, and zero-game E2026 gate pass; migration 0012 is rehearsed on a disposable database and applied only with separate owner approval. |
 | 7 | [`06-decision-18-live-remeasurement.md`](docs/superpowers/plans/2026-08-23-06-decision-18-live-remeasurement.md) | Re-earn the view-performance licence against the activated multi-season schema. | Real timings are recorded; every failure is named for a separate optimisation decision. |
 | 8 | [`07-e2026-opening-week-validation.md`](docs/superpowers/plans/2026-08-23-07-e2026-opening-week-validation.md) | This evidence cannot exist before games are played. Earliest start is 2026-09-24. | Initial load plus +6h/+24h/+72h/+7d settlement evidence and per-season correction safety are recorded. |
 | 9 | [`08-possession-residual-investigation.md`](docs/superpowers/plans/2026-08-23-08-possession-residual-investigation.md) | Important quality research, but quarantine makes it non-blocking for launch. | The residual is explained or narrowed by a new falsifiable diagnostic without weakening the gate. |
@@ -600,9 +600,10 @@ because a previous one finishes early; its gate is the next row's precondition.
 
 Orders 1-4 are complete. Order 5 is blocked only on access to the existing local
 cache and remains required; the owner approved starting Order 6 before Order 5
-on 2026-08-24, without weakening or waiving Order 5's gate. Order 6's
-implementation and migration activation are complete; its reviewed live load
-is in progress. Orders 5-7 are the remaining pre-release path. Order 8 is
+on 2026-08-24, without weakening or waiving Order 5's gate. Order 6 is complete
+through reviewed production activation and an unchanged idempotency rerun.
+Orders 5 and 7 are the remaining pre-release path; Order 7 is the next currently
+actionable major task while Order 5 waits for the existing cache. Order 8 is
 date-gated operational proof. Order 9 is
 a disclosed quality improvement. Orders 10-11 are post-release expansion and
 may be postponed without weakening the E2026 launch claim.
