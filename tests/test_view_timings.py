@@ -89,8 +89,21 @@ def test_timing_harness_measures_all_three_shapes() -> None:
         assert isinstance(m, ShapeMeasurement)
         assert m.threshold_ms == THRESHOLDS_MS[m.shape_name]
         assert m.elapsed_ms >= 0.0
+        assert m.warmup_ms >= 0.0
+        assert len(m.timings_ms) == 1
+        assert m.elapsed_ms == min(m.timings_ms)
         assert m.passed is True
         assert m.named_for_promotion is False
+
+
+def test_timing_harness_records_every_repetition_after_one_warmup() -> None:
+    """Break caught: the report retains only a best number with no run evidence."""
+    conn = _StubTimingConnection()
+
+    measurements = measure_view_query_shapes(conn, season_code="E2024", repetitions=4)
+
+    assert all(len(measurement.timings_ms) == 4 for measurement in measurements)
+    assert len(conn.cursor_obj.executed_queries) == len(QUERY_SHAPES) * 5
 
 
 def test_timing_harness_names_slow_shape_for_promotion() -> None:
@@ -120,6 +133,19 @@ def test_decision_18_remeasurement_document_structure() -> None:
     assert "E2025" in content
     assert "cold cache" in content.lower()
     assert "concurrent" in content.lower()
+
+
+def test_production_timing_entrypoint_is_manual_and_forces_read_only_connections() -> None:
+    """Break caught: a scheduled benchmark can write or collide with live ingestion."""
+    script = Path("scripts/measure_view_timings.py").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/decision-18-remeasurement.yml").read_text(encoding="utf-8")
+
+    assert "default_transaction_read_only=on" in script
+    assert "SHOW transaction_read_only" in script
+    assert "workflow_dispatch:" in workflow
+    assert "schedule:" not in workflow
+    assert "DATABASE_URL: ${{ secrets.DATABASE_URL }}" in workflow
+    assert "scripts/measure_view_timings.py" in workflow
 
 
 @pytest.mark.warehouse

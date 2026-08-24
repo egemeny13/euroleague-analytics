@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -21,6 +20,8 @@ class ShapeMeasurement:
     shape_name: str
     description: str
     threshold_ms: float
+    warmup_ms: float
+    timings_ms: tuple[float, ...]
     elapsed_ms: float
     passed: bool
     named_for_promotion: bool
@@ -102,6 +103,13 @@ QUERY_SHAPES: list[dict[str, Any]] = [
 ]
 
 
+def _execute_once(cursor: Any, sql: str, params: tuple[str, ...]) -> float:
+    start = time.perf_counter()
+    cursor.execute(sql, params)
+    cursor.fetchall()
+    return (time.perf_counter() - start) * 1000.0
+
+
 def measure_view_query_shapes(
     connection: Any,
     season_code: str = "E2024",
@@ -124,26 +132,20 @@ def measure_view_query_shapes(
 
         params = tuple(season_code for _ in range(params_count))
 
-        timings: list[float] = []
-        for _ in range(max(1, repetitions)):
-            start = time.perf_counter()
-            try:
-                cur.execute(sql_to_run, params)
-            except Exception:
-                cur.execute(sql_to_run)
-            with contextlib.suppress(Exception):
-                _ = cur.fetchall()
-            duration_ms = (time.perf_counter() - start) * 1000.0
-            timings.append(duration_ms)
+        warmup_ms = _execute_once(cur, sql_to_run, params)
+        timings = [_execute_once(cur, sql_to_run, params) for _ in range(max(1, repetitions))]
 
-        best_ms = min(timings)
+        rounded_timings = tuple(round(duration, 2) for duration in timings)
+        best_ms = min(rounded_timings)
         passed = best_ms <= threshold
         results.append(
             ShapeMeasurement(
                 shape_name=name,
                 description=desc,
                 threshold_ms=threshold,
-                elapsed_ms=round(best_ms, 2),
+                warmup_ms=round(warmup_ms, 2),
+                timings_ms=rounded_timings,
+                elapsed_ms=best_ms,
                 passed=passed,
                 named_for_promotion=not passed,
             )
