@@ -133,6 +133,12 @@ def test_decision_18_remeasurement_document_structure() -> None:
     assert "E2025" in content
     assert "cold cache" in content.lower()
     assert "concurrent" in content.lower()
+    assert "32736140860" in content
+    assert "transaction_read_only" in content
+    assert "232.09" in content
+    assert "153.41" in content
+    assert "lineup_on_off" in content
+    assert "clutch_filter" in content
 
 
 def test_production_timing_entrypoint_is_manual_and_forces_read_only_connections() -> None:
