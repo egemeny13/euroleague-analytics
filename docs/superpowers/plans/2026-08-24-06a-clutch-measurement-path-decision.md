@@ -1,7 +1,7 @@
-# Clutch Measurement-path Performance Decision — Draft Session Plan
+# Clutch Measurement-path Performance Decision — Completed Session Plan
 
-**Status:** Draft. Read-only diagnosis first; any schema or threshold change
-requires a later attended owner decision.
+**Status:** Complete. Option A approved by the owner on 2026-08-24; no schema or
+threshold change.
 
 ## Purpose
 
@@ -30,3 +30,12 @@ a table, or redefine the threshold until the owner approves the interpretation.
 A warm Supabase pooler cannot reproduce a cold backend. One runner region does
 not represent every MCP client. Server execution time alone does not represent
 user-visible latency.
+
+## Result
+
+GitHub Actions run `32741425779` measured a 135-137 ms fixed client round trip,
+only 1.960-2.479 ms of incremental clutch cost, and 0.599-0.810 ms PostgreSQL
+execution. It also proved psycopg automatic preparation caused the repeatable
+sixth-call spike. The owner approved keeping Decision 18 at its original
+PostgreSQL-execution boundary with the 24 ms threshold unchanged. The full
+evidence and decision are in `docs/CLUTCH_MEASUREMENT_PATH_DECISION.md`.

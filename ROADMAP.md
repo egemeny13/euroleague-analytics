@@ -594,7 +594,7 @@ because a previous one finishes early; its gate is the next row's precondition.
 | 5 | **Blocked:** [`04-e2024-points-archive-repair.md`](docs/superpowers/plans/2026-08-23-04-e2024-points-archive-repair.md) | Close the known recoverability hole without re-fetching source data. The owner confirmed the only known copy of the required E2024 `Points` cache is on another computer and is not currently accessible; source re-fetch is not an approved substitute. | All 330 objects and index rows verify and reconciliation is clean. |
 | 6 | **Complete:** [`05-preseason-roster-ingestion.md`](docs/superpowers/plans/2026-08-23-05-preseason-roster-ingestion.md) | Complete Block D using the endpoint already proved by reconnaissance. | Parser, archive path, ingest, idempotency, and zero-game E2026 gate pass; migration 0012 is rehearsed on a disposable database and applied only with separate owner approval. |
 | 7 | **Complete — 1 pass, 2 failures named:** [`06-decision-18-live-remeasurement.md`](docs/superpowers/plans/2026-08-23-06-decision-18-live-remeasurement.md) | Re-earn the view-performance licence against the activated multi-season schema. | Real timings are recorded; every failure is named for a separate optimisation decision. |
-| 7a | [`2026-08-24-06a-clutch-measurement-path-decision.md`](docs/superpowers/plans/2026-08-24-06a-clutch-measurement-path-decision.md) | Clutch failed at 152.69-153.41 ms wall clock while PostgreSQL executed in 0.510-0.832 ms; attribute the gap before changing schema. | The applicable latency boundary and optimisation target are measured and approved without widening Decision 18 silently. |
+| 7a | **Complete:** [`2026-08-24-06a-clutch-measurement-path-decision.md`](docs/superpowers/plans/2026-08-24-06a-clutch-measurement-path-decision.md) | Clutch failed at 152.69-153.41 ms wall clock while PostgreSQL executed in 0.510-0.832 ms; attribute the gap before changing schema. | PostgreSQL execution remains the approved boundary; clutch passed at 0.599-0.810 ms with the 24 ms threshold unchanged. |
 | 7b | [`2026-08-24-06b-lineup-on-off-performance-decision.md`](docs/superpowers/plans/2026-08-24-06b-lineup-on-off-performance-decision.md) | Lineup failed both wall-clock and server execution thresholds; use its captured plan to choose query rewrite, index, or aggregate promotion. | The approved implementation returns the canonical shape to <=98 ms under the same gate. |
 | 8 | [`07-e2026-opening-week-validation.md`](docs/superpowers/plans/2026-08-23-07-e2026-opening-week-validation.md) | This evidence cannot exist before games are played. Earliest start is 2026-09-24. | Initial load plus +6h/+24h/+72h/+7d settlement evidence and per-season correction safety are recorded. |
 | 9 | [`08-possession-residual-investigation.md`](docs/superpowers/plans/2026-08-23-08-possession-residual-investigation.md) | Important quality research, but quarantine makes it non-blocking for launch. | The residual is explained or narrowed by a new falsifiable diagnostic without weakening the gate. |
@@ -606,10 +606,10 @@ cache and remains required; the owner approved starting Order 6 before Order 5
 on 2026-08-24, without weakening or waiving Order 5's gate. Order 6 is complete
 through reviewed production activation and an unchanged idempotency rerun.
 Order 5 remains blocked on the existing cache. Order 7 is complete with one
-pass and two named failures. Order 7a is the next currently actionable major
-task; Order 7b follows because the latency attribution may change how its
-wall-clock gap is interpreted. Orders 7a and 7b are the remaining pre-release
-performance path. Order 8 is
+initial pass and two named failures. Order 7a resolved clutch as a measurement-
+boundary mismatch without changing its threshold or schema. Order 7b is the
+next currently actionable major task and the only remaining pre-release
+performance decision. Order 8 is
 date-gated operational proof. Order 9 is
 a disclosed quality improvement. Orders 10-11 are post-release expansion and
 may be postponed without weakening the E2026 launch claim.

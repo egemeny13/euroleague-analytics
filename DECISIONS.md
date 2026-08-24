@@ -30,7 +30,7 @@ is binding — the decision is only approved with it.
 | 15 | How Python reaches Postgres | `psycopg` through the connection pooler |
 | 16 | Dependency tooling | `pip` with pinned requirements files |
 | 17 | `Points` is a coordinate source only | Approved with one condition |
-| 18 | MCP aggregation in views | Re-measured 2026-08-24 — four factors passed; lineup and clutch wall-clock conditions failed and require separate decisions |
+| 18 | MCP aggregation in views | Re-measured 2026-08-24 — four factors and clutch passed at their original PostgreSQL-execution boundary; lineup failed and requires Order 7b |
 | 19 | The game winner is derived in `v_game` | Implemented; no recorded owner approval |
 | 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
 | 21 | The physical-size gate measures cost per game | Approved 2026-08-19 — a measured band that survives a live season |
@@ -760,6 +760,24 @@ client path: lineup took 108.961-124.600 ms, while clutch took only
 No view was promoted and no threshold was widened in the measurement session;
 the two failures are named for separate decisions in
 `docs/DECISION_18_REMEASUREMENT.md`.
+
+**Order 7a resolution — approved 2026-08-24.** The original 24 ms clutch
+measurement was PostgreSQL execution from `EXPLAIN ANALYZE`, not a remote
+client's wall clock. Decision 18 continues to govern that original boundary;
+the 24 ms threshold is unchanged. A second attended, forced-read-only run
+measured PostgreSQL execution at 0.599-0.810 ms, so clutch re-earned its view
+licence. The established client spent 135-137 ms on a fixed `SELECT 1` round
+trip and only 1.960-2.479 ms more on the unchanged clutch query. An index or
+materialized aggregate cannot remove that fixed path cost and is not approved.
+
+The same run explained the earlier periodic spike: with psycopg's default
+`prepare_threshold=5`, the sixth clutch execution rose to 273.244 ms and the
+server-visible prepared-statement count increased; disabling preparation
+removed the spike. User-visible MCP latency is now explicitly a separate
+connection-lifecycle objective, not a reason to widen Decision 18 or change the
+clutch schema. The full boundary evidence and blind spots are in
+`docs/CLUTCH_MEASUREMENT_PATH_DECISION.md`. Approved by Egemen Yücelen on
+2026-08-24.
 
 **Provenance.**
 - Basis: MEASURED

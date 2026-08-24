@@ -1,4 +1,4 @@
-name: Decision 18 live re-measurement
+name: Clutch measurement-path diagnosis
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: decision-18-live-remeasurement
+  group: clutch-measurement-path
   cancel-in-progress: false
 
 jobs:
@@ -27,7 +27,5 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install -e .
-      - name: Measure Decision 18 query shapes in forced read-only sessions
-        run: python scripts/measure_view_timings.py --season E2024 --repetitions 5 --sessions 2
-      - name: Attribute clutch latency at named read-only boundaries
+      - name: Measure clutch latency at named read-only boundaries
         run: python scripts/measure_clutch_path.py --season E2024 --repetitions 7
