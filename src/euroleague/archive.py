@@ -7,7 +7,7 @@ import json
 import os
 import shutil
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -35,6 +35,14 @@ class ArchiveIndexError(RuntimeError):
 
 class IncompleteSeasonCache(RuntimeError):
     """Raised when cached game endpoint identities differ from the schedule."""
+
+
+class CachedResponseMissing(RuntimeError):
+    """Raised when a response the caller expects on local disk is not there."""
+
+
+class MalformedCachedResponse(RuntimeError):
+    """Raised when a cached body cannot be parsed, so cannot be canonically hashed."""
 
 
 @dataclass(frozen=True)
@@ -681,6 +689,268 @@ def archive_season(
         "exact_bytes": exact_bytes,
         "verified_samples": verified_samples,
     }
+
+
+@dataclass(frozen=True)
+class CachedResponseRecord:
+    """What one cached body is, before anything is uploaded or recorded."""
+
+    season_code: str
+    endpoint: str
+    gamecode: int
+    byte_size: int
+    content_sha256: str
+    canonical_sha256: str | None
+    storage_path: str
+    valid_json: bool
+
+
+@dataclass(frozen=True)
+class EndpointRepairSummary:
+    """What one repair run did, in the numbers a before/after record needs."""
+
+    season_code: str
+    endpoint: str
+    cached_responses: int
+    already_current: int
+    newly_recorded: int
+    verified_objects: int
+    exact_bytes: int
+
+
+def inventory_cached_endpoint(
+    cache: ResponseCache, season_code: str, endpoint: str
+) -> tuple[CachedResponseRecord, ...]:
+    """Describe every cached body for one season and endpoint without writing anything.
+
+    Reading the whole inventory first is what makes the repair auditable: the
+    checksums are known, and can be recorded, before a single object is
+    uploaded. A body that will not parse is reported rather than raised on,
+    because the caller wants the complete picture, not the first problem.
+    """
+    if endpoint not in ENDPOINTS:
+        raise ValueError(
+            f"{endpoint!r} is not a per-game source endpoint. "
+            f"Known endpoints are {', '.join(ENDPOINTS)}."
+        )
+    records: list[CachedResponseRecord] = []
+    for gamecode in cache.gamecodes(season_code, endpoint):
+        body = cache.read_bytes(season_code, endpoint, gamecode)
+        content_sha256 = sha256_of_bytes(body)
+        try:
+            canonical_sha256 = sha256_of_bytes(canonical_json_bytes(body))
+        except json.JSONDecodeError, UnicodeDecodeError:
+            canonical_sha256 = None
+        records.append(
+            CachedResponseRecord(
+                season_code=season_code,
+                endpoint=endpoint,
+                gamecode=gamecode,
+                byte_size=len(body),
+                content_sha256=content_sha256,
+                canonical_sha256=canonical_sha256,
+                storage_path=f"{season_code}/{endpoint}/{content_sha256}.json.gz",
+                valid_json=canonical_sha256 is not None,
+            )
+        )
+    return tuple(records)
+
+
+def repair_endpoint_archive(
+    connection: Any,
+    cache: ResponseCache,
+    storage: SupabaseStorage,
+    season_code: str,
+    endpoint: str,
+    *,
+    expected_gamecodes: Iterable[int] | None = None,
+    progress: Callable[[str], None] = print,
+) -> EndpointRepairSummary:
+    """Archive one endpoint of one season from bytes already on disk, resumably.
+
+    This exists for the E2024 `Points` gap: 51,193 shot rows were parsed from
+    330 cached responses that were never uploaded, and re-fetching them from the
+    source is not an approved substitute for the exact bytes that were parsed.
+
+    Every check that can stop the run happens before the first byte is written:
+    an expected response missing from disk, a body that will not parse, or a
+    game whose *current* archived body is a different one. Then, per game and in
+    this order, the object is uploaded (never overwritten), downloaded and
+    checksum-verified, and only then does its metadata become current in its own
+    short transaction. An interrupted run therefore leaves an archive whose index
+    describes objects that exist, and a rerun re-verifies what is already there
+    instead of duplicating it.
+
+    What it does not check: that these bytes are what the source API would
+    return today. That is the settlement re-check's job (Decision 7), and this
+    function never reaches the network beyond Supabase Storage.
+    """
+    if endpoint not in ENDPOINTS:
+        raise ValueError(
+            f"{endpoint!r} is not a per-game source endpoint, so it cannot be repaired "
+            f"per game. Known endpoints are {', '.join(ENDPOINTS)}; the season-level "
+            f"Schedule and Roster responses are archived by the normal fetch path."
+        )
+
+    records = inventory_cached_endpoint(cache, season_code, endpoint)
+    cached = {record.gamecode: record for record in records}
+
+    if expected_gamecodes is not None:
+        missing = sorted(set(expected_gamecodes) - cached.keys())
+        if missing:
+            raise CachedResponseMissing(
+                f"{season_code} {endpoint} is missing {len(missing)} cached response(s) "
+                f"on local disk: game(s) {', '.join(str(code) for code in missing[:20])}"
+                f"{' ...' if len(missing) > 20 else ''}. Restore them from the machine "
+                f"that holds the cache; this repair never fetches from the source API."
+            )
+
+    malformed = [record.gamecode for record in records if not record.valid_json]
+    if malformed:
+        raise MalformedCachedResponse(
+            f"{season_code} {endpoint} has {len(malformed)} cached body/bodies that will "
+            f"not parse as JSON: game(s) {', '.join(str(code) for code in malformed[:20])}"
+            f"{' ...' if len(malformed) > 20 else ''}. Replace them from a good copy of "
+            f"the cache before archiving; a body that cannot be parsed cannot be "
+            f"checksum-addressed as one."
+        )
+
+    current = {
+        entry.gamecode: entry
+        for entry in current_archive_entries(connection, season_code)
+        if entry.endpoint == endpoint
+    }
+    conflicts = [
+        gamecode
+        for gamecode, record in sorted(cached.items())
+        if gamecode in current and current[gamecode].content_sha256 != record.content_sha256
+    ]
+    if conflicts:
+        first = conflicts[0]
+        raise ArchiveIndexError(
+            f"{season_code} {endpoint} game {first} is already archived with a different "
+            f"current body: index {current[first].content_sha256}, local cache "
+            f"{cached[first].content_sha256}"
+            f"{f' (and {len(conflicts) - 1} more game(s))' if len(conflicts) > 1 else ''}. "
+            f"Nothing was written. A differing body is a source revision, which belongs to "
+            f"the Decision 7 settlement re-check path, not to this repair; resolve it there "
+            f"before rerunning."
+        )
+
+    storage.ensure_private_bucket()
+
+    already_current = 0
+    newly_recorded = 0
+    verified_objects = 0
+    exact_bytes = 0
+    for position, gamecode in enumerate(sorted(cached), start=1):
+        archived = build_archive_object(cache.response(season_code, endpoint, gamecode))
+        storage.upload_immutable(archived)
+        storage.download_verified(archived)
+        verified_objects += 1
+        with connection.transaction():
+            record_archive_observation(connection, archived)
+        if gamecode in current:
+            already_current += 1
+        else:
+            newly_recorded += 1
+        exact_bytes += archived.byte_size
+        progress(
+            f"[{position:>3}/{len(cached)}] archived {endpoint} game {gamecode}: "
+            f"{archived.byte_size:,} exact bytes, verified {archived.content_sha256}"
+        )
+
+    return EndpointRepairSummary(
+        season_code=season_code,
+        endpoint=endpoint,
+        cached_responses=len(cached),
+        already_current=already_current,
+        newly_recorded=newly_recorded,
+        verified_objects=verified_objects,
+        exact_bytes=exact_bytes,
+    )
+
+
+@dataclass(frozen=True)
+class RestoreComparison:
+    """A season restored out of the archive, diffed against the cache on disk."""
+
+    season_code: str
+    restored_responses: int
+    compared_files: int
+    identical: int
+    differing: tuple[str, ...]
+    only_in_restore: tuple[str, ...]
+    only_in_reference: tuple[str, ...]
+
+    @property
+    def matches(self) -> bool:
+        return not (self.differing or self.only_in_restore or self.only_in_reference)
+
+
+def _archived_response_paths(cache: ResponseCache, season_code: str) -> dict[str, Path]:
+    """Map `Points/7.json`-style labels to files, ignoring anything not a response.
+
+    A cache directory also holds bookkeeping a response archive never contains -
+    E2024 keeps a `fetch_failures.json` beside its responses. Comparing those
+    would report a difference that is not one.
+
+    **This ignores files outside that shape entirely.** A stray response written
+    under an unknown endpoint name is not compared and not reported.
+    """
+    season_root = cache.root / season_code
+    paths: dict[str, Path] = {}
+    for name in ("schedule.json", "roster.json"):
+        path = season_root / name
+        if path.is_file():
+            paths[name] = path
+    for endpoint in ENDPOINTS:
+        directory = season_root / endpoint
+        if not directory.is_dir():
+            continue
+        for path in directory.glob("*.json"):
+            if path.stem.isdigit():
+                paths[f"{endpoint}/{path.name}"] = path
+    return paths
+
+
+def restore_and_compare(
+    connection: Any,
+    storage: SupabaseStorage,
+    season_code: str,
+    reference_cache: ResponseCache,
+    workspace_root: Path,
+) -> RestoreComparison:
+    """Rebuild a season from the archive into a scratch directory and diff it against disk.
+
+    This is what makes an archive repair worth anything: not that rows were
+    written, but that the season can be reconstructed from them byte for byte.
+    The restore goes into `workspace_root`, never into the cache being compared
+    against, so a bad archive cannot damage the copy it is being checked against.
+
+    What it cannot detect: whether both copies are wrong in the same way. It
+    compares the archive with local disk, and local disk is where the archive
+    came from.
+    """
+    workspace_root.mkdir(parents=True, exist_ok=True)
+    restored_cache = ResponseCache(workspace_root)
+    summary = restore_current_season_cache(connection, restored_cache, storage, season_code)
+
+    restored = _archived_response_paths(restored_cache, season_code)
+    reference = _archived_response_paths(reference_cache, season_code)
+    shared = sorted(restored.keys() & reference.keys())
+    differing = tuple(
+        label for label in shared if restored[label].read_bytes() != reference[label].read_bytes()
+    )
+    return RestoreComparison(
+        season_code=season_code,
+        restored_responses=summary.restored_responses,
+        compared_files=len(shared),
+        identical=len(shared) - len(differing),
+        differing=differing,
+        only_in_restore=tuple(sorted(restored.keys() - reference.keys())),
+        only_in_reference=tuple(sorted(reference.keys() - restored.keys())),
+    )
 
 
 @dataclass(frozen=True)

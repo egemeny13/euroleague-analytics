@@ -591,7 +591,7 @@ because a previous one finishes early; its gate is the next row's precondition.
 | 2 | **Complete:** [`02-production-migrations-and-progress-backfill.md`](docs/superpowers/plans/2026-08-23-02-production-migrations-and-progress-backfill.md) | The live workflow and MCP disclosure need schema 0008/0009/0010 before activation. | All three migrations are verified; progress and applied checksums are initialized only where truthful evidence exists. |
 | 3 | **Complete:** [`03a-public-view-security-hardening.md`](docs/superpowers/plans/2026-08-23-03a-public-view-security-hardening.md) | The production advisor found six security-definer views with inherited public grants; release must not preserve an unexamined Data API path. | Advisor errors are gone, public-role behavior is explicit, and MCP view results remain unchanged. |
 | 4 | **Complete:** [`03-release-and-actions-verification.md`](docs/superpowers/plans/2026-08-23-03-release-and-actions-verification.md) | Publish the local commits through a review branch, never by pushing protected `master`. | PR/merge policy is satisfied and one real workflow summary is inspected. |
-| 5 | **Blocked:** [`04-e2024-points-archive-repair.md`](docs/superpowers/plans/2026-08-23-04-e2024-points-archive-repair.md) | Close the known recoverability hole without re-fetching source data. The owner confirmed the only known copy of the required E2024 `Points` cache is on another computer and is not currently accessible; source re-fetch is not an approved substitute. | All 330 objects and index rows verify and reconciliation is clean. |
+| 5 | **Complete:** [`04-e2024-points-archive-repair.md`](docs/superpowers/plans/2026-08-23-04-e2024-points-archive-repair.md) | Close the known recoverability hole without re-fetching source data. The cache was carried to this machine on 2026-08-25 and verified against its transport manifest; source re-fetch was never used. | All 330 objects and index rows verify and reconciliation is clean. |
 | 6 | **Complete:** [`05-preseason-roster-ingestion.md`](docs/superpowers/plans/2026-08-23-05-preseason-roster-ingestion.md) | Complete Block D using the endpoint already proved by reconnaissance. | Parser, archive path, ingest, idempotency, and zero-game E2026 gate pass; migration 0012 is rehearsed on a disposable database and applied only with separate owner approval. |
 | 7 | **Complete — 1 pass, 2 failures named:** [`06-decision-18-live-remeasurement.md`](docs/superpowers/plans/2026-08-23-06-decision-18-live-remeasurement.md) | Re-earn the view-performance licence against the activated multi-season schema. | Real timings are recorded; every failure is named for a separate optimisation decision. |
 | 7a | **Complete:** [`2026-08-24-06a-clutch-measurement-path-decision.md`](docs/superpowers/plans/2026-08-24-06a-clutch-measurement-path-decision.md) | Clutch failed at 152.69-153.41 ms wall clock while PostgreSQL executed in 0.510-0.832 ms; attribute the gap before changing schema. | PostgreSQL execution remains the approved boundary; clutch passed at 0.599-0.810 ms with the 24 ms threshold unchanged. |
@@ -602,12 +602,19 @@ because a previous one finishes early; its gate is the next row's precondition.
 | 10 | [`09-historical-archive-expansion.md`](docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md) | Long-running backfill belongs after live operations are stable. | A bounded season batch is archived with checksums, cadence, and storage projection evidence. |
 | 11 | [`10-eurocup-onboarding.md`](docs/superpowers/plans/2026-08-23-10-eurocup-onboarding.md) | Decision 11 keeps EuroCup schema-ready but deferred until EuroLeague is operationally proven. | A measured pilot passes competition isolation and storage gates before any full load. |
 
-Orders 1-4 are complete. Order 5 is blocked only on access to the existing local
-cache and remains required; the owner approved starting Order 6 before Order 5
-on 2026-08-24, without weakening or waiving Order 5's gate. Order 6 is complete
+Orders 1-4 are complete. The owner approved starting Order 6 before Order 5 on
+2026-08-24, without weakening or waiving Order 5's gate, and Order 6 is complete
 through reviewed production activation and an unchanged idempotency rerun.
-Order 5 remains blocked on the existing cache. Order 7 is complete with one
-initial pass and two named failures. Order 7a resolved clutch as a measurement-
+Order 5 is now complete on its original gate, unrelaxed: the cache was carried
+to this machine and verified against its transport manifest, and 330 `Points`
+responses — 16,713,709 exact bytes, 51,193 coordinate rows equal to the E2024
+`raw_shot` count — were uploaded, verified per object and indexed with owner
+approval on 2026-08-25. Every stored index row matches the checksum inventory
+recorded before the first upload, reconciliation is clean for E2024 and E2025,
+a fresh restore rebuilt 991 of 991 responses byte-identically, and no warehouse
+fact row changed. Evidence is in
+`docs/E2024_POINTS_ARCHIVE_REPAIR_REPORT.md`.
+Order 7 is complete with one initial pass and two named failures. Order 7a resolved clutch as a measurement-
 boundary mismatch without changing its threshold or schema. Order 7b resolved
 the remaining performance failure at the database-execution boundary with a
 one-scan query rewrite, without an index, table, or threshold change. Order 7c

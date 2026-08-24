@@ -1,8 +1,13 @@
 # E2024 Points Archive Repair — Draft Session Plan
 
-**Status:** Blocked 2026-08-24. The only known complete E2024 `Points` cache is
-on another computer and is not currently accessible. Source re-fetch is not an
-approved substitute for the exact bytes already parsed.
+**Status:** Complete 2026-08-25. The cache blocker was resolved by carrying the
+330 E2024 `Points` bodies to this machine and verifying them against the
+transport manifest. All six work items ran, the owner approved the write
+immediately before it, and every gate clause is met: 330 current index rows and
+330 verified objects, clean reconciliation for E2024 and E2025, a 991/991
+byte-identical restore, and unchanged warehouse fact rows. Source re-fetch was
+never used and remains not an approved substitute for the exact bytes that
+were parsed. Evidence: `docs/E2024_POINTS_ARCHIVE_REPAIR_REPORT.md`.
 
 ## Purpose
 
