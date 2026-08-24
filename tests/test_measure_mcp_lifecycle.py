@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
 from euroleague.measure_mcp_lifecycle import (
     LifecycleSuiteReport,
+    ProcessCallMeasurement,
     ProcessSessionMeasurement,
+    compute_content_fingerprint,
     measure_lifecycle_suite,
     run_mcp_session,
 )
@@ -55,7 +56,18 @@ def _generate_valid_mock_responses(repetitions: int = 7) -> list[dict[str, Any]]
     return responses
 
 
-def test_run_mcp_session_records_startup_and_all_calls() -> None:
+def test_compute_content_fingerprint_is_deterministic() -> None:
+    dict_a = {"team": "PAN", "possessions": 10, "nested": {"a": 1, "b": 2}}
+    dict_b = {"nested": {"b": 2, "a": 1}, "possessions": 10, "team": "PAN"}
+
+    fp_a = compute_content_fingerprint(dict_a)
+    fp_b = compute_content_fingerprint(dict_b)
+
+    assert fp_a == fp_b
+    assert len(fp_a) == 64
+
+
+def test_run_mcp_session_records_startup_calls_and_fingerprints() -> None:
     mock_responses = _generate_valid_mock_responses(repetitions=7)
     stream = MockStdInOut(mock_responses)
 
@@ -75,6 +87,11 @@ def test_run_mcp_session_records_startup_and_all_calls() -> None:
     assert session.call_six_ms is not None
     assert session.total_session_ms >= session.first_call_ms
     assert session.first_response_sample == {"rows": [{"team": "PAN", "possessions": 10}]}
+
+    # Verify all calls have matching content fingerprint
+    expected_fp = compute_content_fingerprint({"rows": [{"team": "PAN", "possessions": 10}]})
+    for call in session.calls:
+        assert call.content_fingerprint == expected_fp
 
     # Verify requests sent
     assert len(stream.received_requests) == 9  # init + notif + 7 calls
@@ -128,14 +145,17 @@ def test_run_mcp_session_validates_repetitions() -> None:
 def test_measure_lifecycle_suite_aggregates_across_processes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    fixed_fp = compute_content_fingerprint({"rows": [{"team": "PAN"}]})
+
     def fake_single_process(
         command: list[str], process_index: int, season_code: str, repetitions: int, env: Any = None
     ) -> ProcessSessionMeasurement:
         calls = tuple(
-            MagicMock(
+            ProcessCallMeasurement(
                 call_number=i,
                 duration_ms=100.0 + (process_index * 10) + i,
                 row_count=5,
+                content_fingerprint=fixed_fp,
                 is_error=False,
             )
             for i in range(1, repetitions + 1)
@@ -169,4 +189,52 @@ def test_measure_lifecycle_suite_aggregates_across_processes(
     assert report.median_first_call_ms > 0
     assert report.median_warm_call_ms > 0
     assert report.median_call_six_ms is not None
+    assert report.content_fingerprint == fixed_fp
+    assert report.fingerprint_verified_equal is True
     assert isinstance(report.to_dict(), dict)
+
+
+def test_measure_lifecycle_suite_raises_on_fingerprint_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_single_process_mismatch(
+        command: list[str], process_index: int, season_code: str, repetitions: int, env: Any = None
+    ) -> ProcessSessionMeasurement:
+        # Give process 2 a different fingerprint
+        fp = (
+            compute_content_fingerprint({"rows": [{"team": "PAN"}]})
+            if process_index == 1
+            else compute_content_fingerprint({"rows": [{"team": "OLY"}]})
+        )
+        calls = tuple(
+            ProcessCallMeasurement(
+                call_number=i,
+                duration_ms=100.0 + (process_index * 10) + i,
+                row_count=5,
+                content_fingerprint=fp,
+                is_error=False,
+            )
+            for i in range(1, repetitions + 1)
+        )
+        return ProcessSessionMeasurement(
+            process_index=process_index,
+            startup_ms=50.0,
+            calls=calls,
+            first_call_ms=calls[0].duration_ms,
+            median_warm_ms=120.0,
+            call_six_ms=calls[5].duration_ms,
+            total_session_ms=500.0,
+            first_response_sample={"rows": [{"team": "PAN"}]},
+        )
+
+    monkeypatch.setattr(
+        "euroleague.measure_mcp_lifecycle.measure_single_process", fake_single_process_mismatch
+    )
+
+    with pytest.raises(RuntimeError, match="Response content fingerprint mismatch"):
+        measure_lifecycle_suite(
+            command=["python", "dummy.py"],
+            season_code="E2024",
+            repetitions=7,
+            processes=5,
+        )

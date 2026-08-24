@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import statistics
 import subprocess
@@ -22,6 +23,18 @@ CLUTCH_POSSESSIONS_CALL = {
 }
 
 
+def compute_content_fingerprint(structured_content: dict[str, Any]) -> str:
+    """Compute a deterministic SHA-256 fingerprint of the structured JSON content."""
+    canonical_bytes = json.dumps(
+        structured_content,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical_bytes).hexdigest()
+
+
 @dataclass(frozen=True)
 class ProcessCallMeasurement:
     """One measured JSON-RPC tool call within an MCP session."""
@@ -29,6 +42,7 @@ class ProcessCallMeasurement:
     call_number: int
     duration_ms: float
     row_count: int
+    content_fingerprint: str
     is_error: bool
 
 
@@ -57,6 +71,8 @@ class LifecycleSuiteReport:
     median_first_call_ms: float
     median_warm_call_ms: float
     median_call_six_ms: float | None
+    content_fingerprint: str
+    fingerprint_verified_equal: bool
     sessions: tuple[ProcessSessionMeasurement, ...]
 
     def to_dict(self) -> dict[str, Any]:
@@ -151,6 +167,8 @@ def run_mcp_session(
                 f"Tool call #{call_num} returned invalid structuredContent: {result}"
             )
 
+        fingerprint = compute_content_fingerprint(structured)
+
         if call_num == 1:
             first_response_sample = structured
 
@@ -159,6 +177,7 @@ def run_mcp_session(
                 call_number=call_num,
                 duration_ms=duration_ms,
                 row_count=len(rows),
+                content_fingerprint=fingerprint,
                 is_error=False,
             )
         )
@@ -252,6 +271,16 @@ def measure_lifecycle_suite(
     all_startup = [s.startup_ms for s in sessions]
     all_call_six = [s.call_six_ms for s in sessions if s.call_six_ms is not None]
 
+    # Assert equality of response fingerprint across all calls in all processes
+    all_fingerprints = [c.content_fingerprint for s in sessions for c in s.calls]
+    unique_fingerprints = set(all_fingerprints)
+    if len(unique_fingerprints) != 1:
+        raise RuntimeError(
+            f"Response content fingerprint mismatch across {len(all_fingerprints)} calls! "
+            f"Found {len(unique_fingerprints)} distinct fingerprints: {unique_fingerprints}"
+        )
+    canonical_fingerprint = next(iter(unique_fingerprints))
+
     return LifecycleSuiteReport(
         season_code=season_code,
         repetitions_per_process=repetitions,
@@ -262,5 +291,7 @@ def measure_lifecycle_suite(
         if all_warm_calls
         else round(statistics.median(all_first_calls), 3),
         median_call_six_ms=round(statistics.median(all_call_six), 3) if all_call_six else None,
+        content_fingerprint=canonical_fingerprint,
+        fingerprint_verified_equal=True,
         sessions=tuple(sessions),
     )

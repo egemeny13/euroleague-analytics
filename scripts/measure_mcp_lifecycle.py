@@ -68,6 +68,8 @@ def main(argv: list[str] | None = None) -> int:
             "median_first_call_ms": suite_report.median_first_call_ms,
             "median_warm_call_ms": suite_report.median_warm_call_ms,
             "median_call_six_ms": suite_report.median_call_six_ms,
+            "content_fingerprint": suite_report.content_fingerprint,
+            "fingerprint_verified_equal": suite_report.fingerprint_verified_equal,
         },
         "suite": suite_report.to_dict(),
     }
