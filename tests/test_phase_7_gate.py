@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 
 from euroleague.config import DatabaseSettings
-from euroleague.mcp.db import connect
+from euroleague.mcp.db import ReadOnlyConnectionManager, connect
 from euroleague.mcp.queries import (
     describe_warehouse,
     find_games,
@@ -279,24 +279,28 @@ def test_a_quarantined_game_is_refused_by_default_and_served_when_asked(cursor):
 
 def test_every_registered_tool_executes_against_the_warehouse(cursor):
     settings = DatabaseSettings.from_env()
-    registry = build_registry(lambda: connect(settings))
-    assert set(registry) == set(TOOL_NAMES)
+    manager = ReadOnlyConnectionManager(lambda: connect(settings))
+    try:
+        registry = build_registry(manager.run)
+        assert set(registry) == set(TOOL_NAMES)
 
-    calls = {
-        "el_describe_warehouse": {},
-        "el_find_games": {"season": SEASON, "limit": 5},
-        "el_get_game": {"season": SEASON, "gamecode": 1},
-        "el_get_team_stats": {"season": SEASON, "team": "PAN"},
-        "el_get_player_stats": {"season": SEASON, "team": "PAN", "limit": 5},
-        "el_get_lineup_stats": {"season": SEASON, "team": "PAN", "limit": 5},
-        "el_get_player_on_off": {"season": SEASON, "player": "SHORTS, TJ"},
-        "el_get_possessions": {"season": SEASON, "limit": 5},
-        "el_get_play_by_play": {"season": SEASON, "gamecode": 1, "limit": 5},
-        "el_get_shot_data": {"season": SEASON, "gamecode": 1, "limit": 5},
-    }
-    assert set(calls) == set(registry)
-    for name, arguments in calls.items():
-        response = registry[name].handler(arguments)
-        assert "coverage" in response, name
-        assert "excluded" in response, name
-        assert response["rows"], name
+        calls = {
+            "el_describe_warehouse": {},
+            "el_find_games": {"season": SEASON, "limit": 5},
+            "el_get_game": {"season": SEASON, "gamecode": 1},
+            "el_get_team_stats": {"season": SEASON, "team": "PAN"},
+            "el_get_player_stats": {"season": SEASON, "team": "PAN", "limit": 5},
+            "el_get_lineup_stats": {"season": SEASON, "team": "PAN", "limit": 5},
+            "el_get_player_on_off": {"season": SEASON, "player": "SHORTS, TJ"},
+            "el_get_possessions": {"season": SEASON, "limit": 5},
+            "el_get_play_by_play": {"season": SEASON, "gamecode": 1, "limit": 5},
+            "el_get_shot_data": {"season": SEASON, "gamecode": 1, "limit": 5},
+        }
+        assert set(calls) == set(registry)
+        for name, arguments in calls.items():
+            response = registry[name].handler(arguments)
+            assert "coverage" in response, name
+            assert "excluded" in response, name
+            assert response["rows"], name
+    finally:
+        manager.close()

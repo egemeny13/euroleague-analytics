@@ -2,25 +2,20 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from euroleague.mcp.tools import TOOL_NAMES, build_registry
 
 
-class NullConnection:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        return None
-
-    def cursor(self):
-        raise AssertionError("The contract test must not reach the database.")
+def _null_runner(query: Any, args: dict[str, Any]) -> dict[str, Any]:
+    raise AssertionError("The contract test must not reach the database.")
 
 
 @pytest.fixture
 def registry():
-    return build_registry(lambda: NullConnection())
+    return build_registry(_null_runner)
 
 
 def test_ten_tools_are_declared():
