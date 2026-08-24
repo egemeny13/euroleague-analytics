@@ -170,6 +170,41 @@ def test_fetched_schedule_is_cached_before_it_is_parsed(tmp_path) -> None:
     assert (tmp_path / "E2025" / "schedule.json").read_bytes() == body
 
 
+def test_roster_fetch_is_cached_exactly_and_uses_a_bounded_season_request(tmp_path) -> None:
+    body = _roster_bytes([{"type": "U"}])
+    observations = []
+    transport = RecordingTransport([StubResponse(200, {}, body)])
+    fetcher = make_fetcher(
+        tmp_path,
+        transport,
+        successful_observation=observations.append,
+    )
+
+    observation = fetcher.fetch_roster("E2026")
+
+    assert (tmp_path / "E2026" / "roster.json").read_bytes() == body
+    assert transport.calls[0][0].endswith("/seasons/E2026/people?limit=2000")
+    assert observation.endpoint == "Roster"
+    assert observation.gamecode is None
+    assert observations == [observation]
+
+
+def test_incomplete_roster_page_is_cached_before_validation_refuses_it(tmp_path) -> None:
+    from euroleague.roster import RosterCompletenessError
+
+    body = json.dumps({"data": [{"type": "U"}], "total": 2}).encode()
+    fetcher = make_fetcher(tmp_path, RecordingTransport([StubResponse(200, {}, body)]))
+
+    with pytest.raises(RosterCompletenessError):
+        fetcher.fetch_roster("E2026")
+
+    assert (tmp_path / "E2026" / "roster.json").read_bytes() == body
+
+
+def _roster_bytes(rows: list[dict]) -> bytes:
+    return json.dumps({"data": rows, "total": len(rows)}).encode("utf-8")
+
+
 def test_429_retry_after_is_honored_before_success(tmp_path) -> None:
     write_one_missing_points_target(tmp_path)
     transport = RecordingTransport(

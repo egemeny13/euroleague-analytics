@@ -35,6 +35,8 @@ is binding — the decision is only approved with it.
 | 20 | The free-tier hot window | **E2026, E2025, E2024** since the 2026-08-18 amendment; measured to fit with 14.40% headroom. Conditions A and B closed; C and D stand |
 | 21 | The physical-size gate measures cost per game | Approved 2026-08-19 — a measured band that survives a live season |
 | 22 | Attach derived event references on first insert | Approved and implemented 2026-08-19 — zero `game_event` updates in both full-season database gates |
+| 23 | Public Data API view access | Approved and implemented 2026-08-24 — no warehouse view is public |
+| 24 | Pre-season roster identity and registration grain | Approved 2026-08-24 — source-native registrations; no invented player-ID mapping |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -63,6 +65,11 @@ Item 22 closes Block B's attachment-write decision. The owner approved Option A
 on 2026-08-19 from `docs/POSSESSION_ATTACHMENT_DECISION_BRIEF.md`, after the
 current and replacement writers were both measured on a disposable PostgreSQL
 17.6 database.
+
+Item 24 closes Block D's roster schema decision. The owner approved Option A on
+2026-08-24 from `docs/PRESEASON_ROSTER_SCHEMA_DECISION_BRIEF.md` after the full
+E2026 pre-season roster and the available E2024/E2025 pages were compared with
+production player identities.
 
 ---
 
@@ -1168,6 +1175,59 @@ blanket claim that the whole public REST surface exposed nothing.
   and the advisor ERROR in place; or both independent controls.
 - Approved: the owner, 2026-08-24 Europe/Istanbul, choosing both controls in the
   attended security session.
+
+---
+
+## 24. Pre-season rosters keep their source identity and registration grain
+
+Store one source-native row per roster registration in a separate
+`roster_registration` table. Keep `person.code` unchanged as
+`source_person_code`; do not prepend `P`, join it to `player`, or use names to
+bridge the v2 roster and game-source identity namespaces. A registration is
+identified by season plus the source's registration `externalId`, not by person
+plus team, because one player can register with the same team more than once in
+one season.
+
+**Why.** Across the complete E2026 snapshot, zero of 203 roster person codes
+matched `player.player_id` directly, while all 203 matched after adding `P`.
+That is evidence of a convention, but applying it to a player who has never
+appeared in a box score would manufacture an identifier the game source has not
+provided and would violate the binding rule that player IDs are opaque. E2024
+also contains two Paris registrations for source person `013370`, with distinct
+source registration IDs and date ranges; a person-team-season row would erase
+one of them.
+
+**Conditions.**
+
+- The exact roster response is cached and archived before parsing, and parsed
+  rows point to the immutable response version they came from.
+- Only source role `J` is loaded as a player registration. Staff and score-crew
+  rows never enter the table.
+- Source array position is retained. Strings are trimmed, but source person
+  codes are otherwise unchanged.
+- The parser rejects a page whose returned row count is below the source's
+  reported `total`; E2024 and E2025 proved the default 500-row response is not
+  necessarily a complete season.
+- Roster ingestion may insert missing `team` and `team_season` rows but never
+  update an existing dimension row and never insert or update `player`.
+- The table uses RLS with no public policy or grant. Production migration,
+  archive upload, and row load require a separate attended approval gate.
+
+**Provenance.**
+
+- Basis: MIXED. Identity match counts, pagination totals, role counts, and the
+  repeated registration are measured; choosing a separate source-native table
+  is a schema and risk decision.
+- Evidence: `docs/PRESEASON_ROSTER_SCHEMA_DECISION_BRIEF.md` and the six cached
+  probe checksums in `exploration/ROSTER_ENDPOINT_FINDINGS.md`.
+- Alternatives considered: prepend `P` and load `player` (rejected because it
+  parses an opaque ID and loses membership/history), or add season/team roster
+  fields to global `player` (rejected because it overloads the dimension and
+  cannot represent transfers or repeat registrations).
+- Approved: Egemen Yücelen on 2026-08-24, choosing Option A. The initial
+  approval covered offline code, tests, and migration files. Later in the same
+  attended session, the owner separately approved completing the remaining
+  production migration, archive, load, and verification work.
 
 ---
 

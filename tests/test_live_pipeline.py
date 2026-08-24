@@ -81,6 +81,51 @@ def test_a_season_with_nothing_played_yet_selects_nothing() -> None:
     assert select_new_games([_game(n, played=False) for n in range(1, 381)], set()) == []
 
 
+def test_zero_game_live_run_loads_schedule_dimensions_and_cached_rosters(
+    monkeypatch, tmp_path
+) -> None:
+    """Break caught: pre-season succeeds while persisting no teams or roster rows."""
+    from euroleague.cache import ResponseCache
+    from euroleague.derived import DimensionRows
+
+    cache = ResponseCache(tmp_path)
+    season_dir = tmp_path / "E2026"
+    season_dir.mkdir(parents=True)
+    cache.schedule_path("E2026").write_text(
+        json.dumps({"data": [_game(code, played=False) for code in range(1, 381)]}),
+        encoding="utf-8",
+    )
+    cache.roster_path("E2026").write_text('{"data":[],"total":0}', encoding="utf-8")
+    calls: list[str] = []
+
+    monkeypatch.setattr(live_module, "loaded_gamecodes", lambda connection, season: set())
+    monkeypatch.setattr(
+        live_module,
+        "build_dimensions",
+        lambda consumed_cache, season: DimensionRows(
+            (), (("AAA",),), ((season, "AAA", "E", "Alpha"),)
+        ),
+    )
+    monkeypatch.setattr(
+        live_module,
+        "load_dimensions",
+        lambda connection, dimensions, season: calls.append("dimensions") or {},
+    )
+    monkeypatch.setattr(
+        live_module,
+        "load_cached_roster",
+        lambda connection, consumed_cache, season: calls.append("roster") or 203,
+    )
+    monkeypatch.setattr(live_module, "record_season_progress", lambda *args: None)
+
+    summary = run_live_pipeline(object(), cache, "E2026", progress=lambda line: None)
+
+    assert calls == ["dimensions", "roster"]
+    assert summary.played == 0
+    assert summary.roster_registrations == 203
+    assert "roster_registrations=203" in summary.as_log_line()
+
+
 def test_a_warehouse_holding_a_game_the_schedule_no_longer_marks_played_is_left_alone() -> None:
     """Break caught: a schedule revision silently deletes a loaded game."""
     # The selector adds; it never removes. A game vanishing from the played

@@ -1,0 +1,89 @@
+{
+  "data": [
+    {
+      "person": {
+        "code": "000406",
+        "name": "GEORGALLIS, IOANNIS",
+        "country": {
+          "code": "GRE",
+          "name": "Greece"
+        },
+        "height": 0,
+        "weight": 0
+      },
+      "type": "A",
+      "active": false,
+      "startDate": "2025-09-08T13:50:26.188",
+      "endDate": "2026-04-14T10:34:21.267",
+      "dorsal": "",
+      "position": 0,
+      "positionName": null,
+      "externalId": 51887,
+      "club": {
+        "code": "DUB",
+        "name": "Dubai Basketball"
+      },
+      "season": {
+        "code": "E2025",
+        "competitionCode": "E"
+      }
+    },
+    {
+      "person": {
+        "code": "008811",
+        "name": "FALL, MOUSTAPHA",
+        "country": {
+          "code": "FRA",
+          "name": "France"
+        },
+        "height": 218,
+        "weight": 127
+      },
+      "type": "J",
+      "active": true,
+      "startDate": "2026-02-25T15:07:09.067",
+      "endDate": "2026-06-30T00:00:00",
+      "dorsal": "10",
+      "position": 3,
+      "positionName": "Center",
+      "externalId": 54199,
+      "club": {
+        "code": "OLY",
+        "name": "Olympiacos Piraeus"
+      },
+      "season": {
+        "code": "E2025",
+        "competitionCode": "E"
+      }
+    },
+    {
+      "person": {
+        "code": "014213",
+        "name": "PAYNE, CAMERON",
+        "country": {
+          "code": "USA",
+          "name": "United States of America"
+        },
+        "height": 191,
+        "weight": 83
+      },
+      "type": "J",
+      "active": false,
+      "startDate": "2025-12-23T09:08:21.393",
+      "endDate": "2026-02-26T13:46:58.449",
+      "dorsal": "15",
+      "position": 1,
+      "positionName": "Guard",
+      "externalId": 53805,
+      "club": {
+        "code": "PAR",
+        "name": "Partizan Mozzart Bet Belgrade"
+      },
+      "season": {
+        "code": "E2025",
+        "competitionCode": "E"
+      }
+    }
+  ],
+  "total": 3
+}

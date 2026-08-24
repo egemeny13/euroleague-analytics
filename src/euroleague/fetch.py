@@ -17,6 +17,7 @@ from urllib.parse import urlencode
 import requests
 
 from euroleague.cache import ENDPOINTS, ResponseCache
+from euroleague.roster import parse_roster_bytes
 
 DEFAULT_CACHE_ROOT = Path(__file__).resolve().parents[2] / "exploration" / "cache"
 
@@ -100,6 +101,13 @@ def _game_url(season_code: str, endpoint: str, gamecode: int) -> str:
     return f"https://live.euroleague.net/api/{endpoint}?{query}"
 
 
+def _roster_url(season_code: str) -> str:
+    # E2025 currently reports 1,055 rows. A 2,000-row bound returns that season
+    # in one exact response while the parser still rejects any future overflow.
+    query = urlencode({"limit": 2000})
+    return f"https://api-live.euroleague.net/v2/competitions/E/seasons/{season_code}/people?{query}"
+
+
 def _write_exact(path: Path, body: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f"{path.name}.part")
@@ -142,6 +150,7 @@ class ArchiveFetcher:
         max_retries: int = 6,
         successful_observation: Callable[[FetchObservation], None] | None = None,
         require_fresh_schedule: bool = False,
+        include_roster: bool = False,
     ) -> None:
         self.transport = transport
         self.cache = ResponseCache(cache_root)
@@ -155,6 +164,7 @@ class ArchiveFetcher:
         self.max_retries = max_retries
         self.successful_observation = successful_observation
         self.require_fresh_schedule = require_fresh_schedule
+        self.include_roster = include_roster
         self._counters = _Counters()
         self._next_request_at: float | None = None
         self._started_at = 0.0
@@ -280,6 +290,40 @@ class ArchiveFetcher:
             url=_schedule_url(season_code),
         )
 
+    def fetch_roster(self, season_code: str) -> FetchObservation:
+        """Refresh, cache, archive, then validate one complete season roster.
+
+        A live roster changes before and during the season, so a requested
+        roster is always re-fetched. Exact superseded bytes remain beside the
+        canonical cache file, and parsing happens only after the new body is on
+        disk and the successful-observation archive callback has run.
+        """
+        observation = self._request_with_retry(
+            season_code=season_code,
+            gamecode=None,
+            endpoint="Roster",
+            url=_roster_url(season_code),
+        )
+        if observation is None or observation.http_status != 200:
+            status = "no response" if observation is None else f"HTTP {observation.http_status}"
+            raise FetchError(
+                f"Could not fetch the roster for {season_code}: {status}. "
+                "Keep the existing cache and retry later."
+            )
+        path = self.cache.roster_path(season_code)
+        previous = path.read_bytes() if path.is_file() else None
+        if previous is not None and previous != observation.body:
+            _preserve_superseded(path, previous)
+        if previous == observation.body:
+            self._counters.fetched_files += 1
+            self._counters.fetched_bytes += observation.byte_length
+            if self.successful_observation is not None:
+                self.successful_observation(observation)
+        else:
+            self._cache_successful_observation(observation, path, game_response=False)
+        parse_roster_bytes(path.read_bytes(), season_code)
+        return observation
+
     def _cache_successful_observation(
         self, observation: FetchObservation, path: Path, *, game_response: bool
     ) -> None:
@@ -402,16 +446,18 @@ class ArchiveFetcher:
 
     def _fetch_season_uninterrupted(self, season_code: str) -> FetchSummary:
         started_at = self._started_at
+        if self.include_roster:
+            self.fetch_roster(season_code)
         schedule = self._read_or_fetch_schedule(season_code)
         games = list(schedule["data"])
         played_games = [game for game in games if game.get("played") is True]
-        total_targets = len(played_games) * len(ENDPOINTS)
+        total_targets = len(played_games) * len(ENDPOINTS) + int(self.include_roster)
         self._scheduled_games = len(games)
         self._played_games = len(played_games)
         self._unplayed_games = len(games) - len(played_games)
         self._total_targets = total_targets
         permanent_404s = self._permanent_404s()
-        completed_targets = 0
+        completed_targets = int(self.include_roster)
 
         for game in played_games:
             gamecode = int(game["gameCode"])

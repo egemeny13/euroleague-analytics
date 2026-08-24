@@ -1,0 +1,89 @@
+{
+  "data": [
+    {
+      "person": {
+        "code": "003983",
+        "name": "AVRAMOVIC, ALEKSA",
+        "country": {
+          "code": "SRB",
+          "name": "Serbia"
+        },
+        "height": 193,
+        "weight": 87
+      },
+      "type": "J",
+      "active": true,
+      "startDate": "2026-08-12T08:28:42.527",
+      "endDate": "2027-06-30T00:00:00",
+      "dorsal": "4",
+      "position": 1,
+      "positionName": "Guard",
+      "externalId": 54941,
+      "club": {
+        "code": "DUB",
+        "name": "Dubai Basketball"
+      },
+      "season": {
+        "code": "E2026",
+        "competitionCode": "E"
+      }
+    },
+    {
+      "person": {
+        "code": "002329",
+        "name": "ULANOVAS, EDGARAS",
+        "country": {
+          "code": "LTU",
+          "name": "Lithuania"
+        },
+        "height": 199,
+        "weight": 99
+      },
+      "type": "J",
+      "active": true,
+      "startDate": "2026-08-12T08:26:02.256",
+      "endDate": "2027-06-30T00:00:00",
+      "dorsal": "92",
+      "position": 2,
+      "positionName": "Forward",
+      "externalId": 54940,
+      "club": {
+        "code": "ZAL",
+        "name": "Zalgiris Kaunas"
+      },
+      "season": {
+        "code": "E2026",
+        "competitionCode": "E"
+      }
+    },
+    {
+      "person": {
+        "code": "013950",
+        "name": "BANJANIN, NENAD",
+        "country": {
+          "code": "SRB",
+          "name": "Serbia"
+        },
+        "height": 0,
+        "weight": 0
+      },
+      "type": "U",
+      "active": true,
+      "startDate": "2026-08-11T10:41:20.627",
+      "endDate": "2027-06-30T00:00:00",
+      "dorsal": "",
+      "position": 0,
+      "positionName": null,
+      "externalId": 54739,
+      "club": {
+        "code": "DUB",
+        "name": "Dubai Basketball"
+      },
+      "season": {
+        "code": "E2026",
+        "competitionCode": "E"
+      }
+    }
+  ],
+  "total": 3
+}

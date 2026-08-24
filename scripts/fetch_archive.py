@@ -69,6 +69,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="fail rather than derive targets from a cached schedule after a refresh failure",
     )
+    parser.add_argument(
+        "--include-roster",
+        action="store_true",
+        help="also refresh the complete season-level v2 roster response",
+    )
     return parser
 
 
@@ -104,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
                             connection, storage, observation
                         ),
                         require_fresh_schedule=args.require_fresh_schedule,
+                        include_roster=True,
                     )
 
                 summaries = fetch_seasons(
@@ -120,6 +126,7 @@ def main(argv: list[str] | None = None) -> int:
                     fetch_log_path=args.fetch_log,
                     timeout_seconds=args.timeout_seconds,
                     require_fresh_schedule=args.require_fresh_schedule,
+                    include_roster=args.include_roster,
                 )
 
             summaries = fetch_seasons(
