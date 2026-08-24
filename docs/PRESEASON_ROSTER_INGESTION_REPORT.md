@@ -1,9 +1,8 @@
 # Pre-season Roster Ingestion Report
 
 **Date:** 2026-08-24  
-**Status:** Implementation and migration gate complete. Production migration
-applied; first live archive upload and roster load are pending release of the
-reviewed code.
+**Status:** Complete. Reviewed implementation, migration, first live load,
+idempotency rerun, archive, access-control, and advisor gates passed.
 
 ## Outcome
 
@@ -20,6 +19,13 @@ approved on 2026-08-24 and the migration was applied as Supabase migration
 version `20260824122346`. Production structure verification found 18 expected
 columns, both foreign keys, all checks and indexes, RLS enabled, zero public
 grants, and zero rows before the first live load.
+
+PR [#4](https://github.com/egemeny13/euroleague-analytics/pull/4) passed CI and
+merged to `master` as `2461926be5339c43d9cc907fd87b5e3727702d59`. Two attended
+production workflow runs then loaded and reloaded the same E2026 snapshot
+successfully. The second run left the archive response, Storage object, row
+count, source response links, and row fingerprint unchanged; it added only a
+second truthful fetch observation.
 
 ## Plain-language execution path
 
@@ -102,6 +108,18 @@ empty and valid.
 - Production migration gate: version `20260824122346` was applied and the
   resulting table structure, keys, indexes, RLS, and grants were inspected.
 
+## Production activation evidence
+
+- First workflow: [run 32729184062](https://github.com/egemeny13/euroleague-analytics/actions/runs/32729184062), successful in 37 seconds. It fetched the schedule and roster, reported 380 scheduled and zero played games, and loaded 203 registrations.
+- Idempotency workflow: [run 32729399393](https://github.com/egemeny13/euroleague-analytics/actions/runs/32729399393), successful in 29 seconds. It again reported 203 registrations and no game owed a settlement re-check.
+- Current archive response: ID `1872`, exact-byte SHA-256 `0e3a0746f7709bba3604303bd855c98545962d0ef4765cafaf38eb7a1df3e5ec`, canonical SHA-256 `585450f4ac473f8f3fffaf28433dd36fa9127f1913969dfe5c6c5cdc9101b4fc`, 223,831 bytes.
+- Storage verification found exactly one object at `E2026/Roster/0e3a0746f7709bba3604303bd855c98545962d0ef4765cafaf38eb7a1df3e5ec.json.gz`. Two successful fetch observations point to the same immutable response.
+- Production holds 203 `J` registrations across 19 teams, zero non-player roles, and all 203 rows point to response `1872`. Preserved source indexes run from 0 through 203; the omitted position is the archived non-player row.
+- The ordered production row fingerprint remained `b71be018bab4fe986026287b3b3976fb` across both runs. Response ID, checksum, first-seen time, Storage-object count, row count, and fingerprint were identical after the rerun.
+- Direct joins from roster `source_person_code` to game `player_id` still return zero matches, confirming that the loader did not rewrite the opaque source identity.
+- RLS is enabled and public grant count is zero. Direct `SELECT` attempts as both `anon` and `authenticated` failed with PostgreSQL `42501 permission denied`.
+- Supabase security and performance advisors returned no ERROR or WARN findings. The roster table has only the expected informational `rls_enabled_no_policy` finding; its no-policy state is deliberate private-table behavior, and no roster foreign-key index finding exists.
+
 ## Explicit exclusions and volatility
 
 - `total` can reveal a truncated page; it cannot reveal a club or person the
@@ -114,9 +132,8 @@ empty and valid.
 - The roster snapshot is the source's current registration view, not proof that
   a player dressed, entered a game, or was eligible under competition rules.
 - Source timestamps are stored without a timezone because none is supplied.
-- The migration checks do not by themselves prove the live source, Storage
-  upload, or production row load. Those are verified separately after the
-  reviewed implementation reaches `master`.
+- The checks prove the measured 2026-08-24 snapshot and two executions; they do
+  not guarantee that the undocumented upstream contract will remain unchanged.
 
 ## Post-tipoff merge rule
 

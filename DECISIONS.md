@@ -1227,7 +1227,10 @@ one of them.
 - Approved: Egemen Yücelen on 2026-08-24, choosing Option A. The initial
   approval covered offline code, tests, and migration files. Later in the same
   attended session, the owner separately approved completing the remaining
-  production migration, archive, load, and verification work.
+  production migration, archive, load, and verification work. PR #4, Supabase
+  migration `20260824122346`, and workflow runs `32729184062` and `32729399393`
+  completed that gate; the detailed evidence is in
+  `docs/PRESEASON_ROSTER_INGESTION_REPORT.md`.
 
 ---
 

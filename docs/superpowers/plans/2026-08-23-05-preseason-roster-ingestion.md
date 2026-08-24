@@ -1,7 +1,7 @@
 # Pre-season Roster Ingestion — Draft Session Plan
 
-**Status:** Implementation and migration gates complete 2026-08-24. Reviewed
-release and the first live archive/load verification are in progress.
+**Status:** Complete 2026-08-24. Reviewed release, migration, first live
+archive/load, public-role isolation, and unchanged idempotency rerun passed.
 
 ## Purpose
 
