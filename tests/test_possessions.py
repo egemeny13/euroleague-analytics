@@ -455,3 +455,54 @@ def test_each_team_is_within_two_independently_counted_possessions(season: str) 
             failures.append((gamecode, home_team, home_count, away_team, away_count))
 
     assert failures == []
+
+
+def test_and_one_bonus_taken_by_a_substitute_still_belongs_to_the_closed_possession() -> None:
+    """Break caught: the bonus counts a second possession when the shooter changed.
+
+    The fouled scorer can leave the court before the bonus is taken - an injury
+    substitution - and a team-mate then shoots it. The shot is still the bonus
+    for the basket that already closed the possession. Recognising it by the
+    shooter's identity misses exactly this case; the `RV` row says who was
+    fouled, and that is explicit data rather than an inference.
+
+    Measured in E2024 games 29 and 270.
+    """
+    events = [
+        _event(0, "2FGM", "AAA", "P1", score_a=2),
+        _event(1, "CM", "BBB", "DEF", score_a=2),
+        _event(2, "RV", "AAA", "P1", score_a=2),
+        _event(3, "IN", "AAA", "P2", score_a=2),
+        _event(4, "OUT", "AAA", "P1", score_a=2),
+        _event(5, "FTM", "AAA", "P2", score_a=3),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 1, "BBB": 0}
+    assert [possession.end_reason for possession in result.possessions] == ["made_shot"]
+    assert result.team_points["AAA"] == 3
+    assert result.off_possession_points["AAA"] == 0
+
+
+def test_a_foul_on_a_different_player_after_a_basket_is_not_a_bonus() -> None:
+    """Break caught: relaxing the shooter check swallows an ordinary next possession.
+
+    A foul on someone other than the scorer, after the basket, is a foul in the
+    next possession - the defence had the ball and gave it back. Its free throws
+    must close a possession of their own.
+    """
+    events = [
+        _event(0, "2FGM", "AAA", "P1", score_a=2),
+        _event(1, "CM", "BBB", "DEF", score_a=2),
+        _event(2, "RV", "AAA", "P3", score_a=2),
+        _event(3, "FTM", "AAA", "P3", score_a=3),
+    ]
+
+    result = count_game_possessions(events, "AAA", "BBB")
+
+    assert result.team_counts == {"AAA": 2, "BBB": 0}
+    assert [possession.end_reason for possession in result.possessions] == [
+        "made_shot",
+        "made_free_throw",
+    ]

@@ -7,15 +7,20 @@ This is **not** an API wrapper. Thin wrappers already exist. The value is in the
 derived layer: possessions reconstructed from the event stream, four factors,
 and lineup-level on/off metrics reconstructed play by play.
 
-**Status: pre-release, with two complete historical seasons loaded and the
-E2026 live-season schema activated; the workflow is not yet released or proven
-by a real GitHub Actions run.**
-Core phases 0-8 and live-season Blocks A-C are complete in the repository.
-E2024 holds 330 games, 176,483 events,
-51,193 `raw_shot` coordinate rows and 47,831 derived possessions. E2025 holds
-402 games, 222,976 events, 64,137 `raw_shot` coordinate rows and 59,483 derived
-possessions. Ten read-only MCP tools run over seven versioned views, and ten
+**Status: pre-release, with two complete historical seasons loaded, the E2026
+live-season workflow released and exercised, and opening-week proof date-gated
+until the first E2026 game.** Core phases 0-8, live-season Blocks A-E, production
+security hardening, and the attended release checks are complete. E2026 has 380
+scheduled games, zero played games, and 203 archived and loaded preseason roster
+rows. Ten read-only MCP tools run over seven security-invoker views, and ten
 published evaluations are re-earned by live gates.
+
+Production currently holds 47,831 E2024 and 59,483 E2025 derived possessions.
+The Order 9 counter fix produces 47,829 and 59,482 respectively: three phantom
+possessions are removed across 732 games, with no game regressing. Applying
+those corrected counts and two E2024 quarantine changes to production requires
+a separately approved derived-layer rebuild; until then, the live warehouse
+truthfully reports the older persisted state.
 
 The free-tier hot window is decided: **E2024, E2025 and E2026**. The 2026-08-18
 compaction confirmed that a complete 380-game E2026 projects to 427,991,775
@@ -26,18 +31,20 @@ before every backfill and again when its real game count is known. If the window
 stops fitting, dropping E2024 is a fresh owner decision, never an automatic
 fallback.
 
-Four operational limitations remain explicit. Twenty-four of 330 E2024 games are
-quarantined by validation invariants and excluded from every default answer; 16
-carry the named possession residual that is measured but not yet explained.
-Migrations 0008-0010 are applied and E2026 truthfully reports 380 scheduled and
-0 loaded games, while E2024/E2025 completeness remains unknown rather than
-receiving invented migration-time timestamps. Six legacy views still carry
-Supabase `security_definer_view` ERROR findings and inherited public grants;
-they must be hardened before release. E2024's 330 `Points` responses exist in
-the local cache but are missing from the immutable production archive.
-Pre-season roster ingestion, a real GitHub Actions summary run, and current
-Decision 18 timings still need attended sessions. The server discloses data
-exclusions rather than smoothing them over.
+The remaining launch proof is operational rather than architectural. Order 8
+must observe the first real E2026 archive/load and its +6h, +24h, +72h, and +7d
+settlement checkpoints; it cannot start before the first game. Storage headroom
+must be re-projected from actual E2026 bytes per game, and the per-season minutes
+correction must prove that it helps E2026 before it can run there. The server
+discloses data exclusions rather than smoothing them over.
+
+Order 9 located every unit of the possession residual without weakening the
+gate. After its counter fix, 14 E2024 and 17 E2025 games remain outside the
+two-possession tolerance. Thirty anomalous sites are named by event index, while
+11 of the 31 failing games contain only period structure, parity, or a possession
+the same team lawfully retained. Whether to model those structural components
+and recover the 11 games is a separate owner decision; quarantine remains the
+conservative default.
 The ordered session sequence and remaining conditions are in
 [`ROADMAP.md`](ROADMAP.md) and
 [`DECISIONS.md`](DECISIONS.md).
@@ -45,11 +52,12 @@ The ordered session sequence and remaining conditions are in
 Possession counts have no external ground truth: nobody publishes a comparable
 EuroLeague count. They rest on a mechanical invariant that counts each team's
 five approved endings independently and requires the totals to differ by no more
-than 2. That invariant fails in 16 of 330 E2024 games; those games are quarantined
-as `possession_gate` and excluded from every default answer. The separate check
-against the official final score proves point-attribution exhaustiveness — no
-point was dropped, double-counted or invented — but cannot detect a misplaced
-possession boundary.
+than 2. After the Order 9 fix, that invariant fails in 14 of 330 E2024 games;
+those games are quarantined as `possession_gate` and excluded from every default
+answer after the approved rebuild reaches production. The separate check against
+the official final score proves point-attribution exhaustiveness — no point was
+dropped, double-counted or invented — but cannot detect a misplaced possession
+boundary.
 
 ---
 

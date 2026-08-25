@@ -451,12 +451,16 @@ def test_full_e2024_remaining_rows_pass_every_phase_5_population_gate() -> None:
         assert row.quarantine_reasons == expected_reasons
         assert row.excluded_by_default == bool(expected_reasons)
 
-    # The 16 games whose two independently counted totals disagree by more than
+    # The 14 games whose two independently counted totals disagree by more than
     # two. Quarantined and excluded by default, never dropped.
+    #
+    # Games 29 and 270 left this set on 2026-08-25: each held an and-one bonus
+    # taken by a substitute after the fouled scorer left the court, which the
+    # counter had been reading as a separate possession. See
+    # `docs/POSSESSION_RESIDUAL_REPORT.md`.
     assert gate_failures == {
         3,
         18,
-        29,
         45,
         75,
         156,
@@ -466,7 +470,6 @@ def test_full_e2024_remaining_rows_pass_every_phase_5_population_gate() -> None:
         238,
         239,
         262,
-        270,
         290,
         296,
         323,

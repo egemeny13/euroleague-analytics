@@ -433,6 +433,15 @@ unmeasurable shot ordering — in exchange for no measured improvement. The
 approved Section 4 grouping rule is therefore unchanged, and the decision is
 closed rather than open.
 
+### Superseded 2026-08-25 by the residual decomposition
+
+The residual is no longer unexplained. Every unit of every game's difference is
+now located in the event stream and categorised, and 11 of the 31 failing games
+turn out to carry no anomalous site at all. One defect found there - an and-one
+bonus taken by a substitute - moved E2024 from 314 to 316 passing games and the
+quarantine set from 16 games to 14. The numbers in this report are the state
+before that work; see `docs/POSSESSION_RESIDUAL_REPORT.md`.
+
 ### Four candidate causes measured and eliminated
 
 The residual is genuinely unexplained, and these four are ruled out rather than
