@@ -4,7 +4,7 @@ Three project rules meet here, and all three fail silently if they are merely
 remembered rather than enforced:
 
 - A silent exclusion is how a model confidently reports a season total that is
-  quietly missing 24 games (SCHEMA_PROPOSAL.md section 5).
+  quietly missing 22 games (SCHEMA_PROPOSAL.md section 5).
 - A minutes value without its provenance is a number that will be misquoted
   (DECISIONS.md item 3, condition A).
 - A documented approximation without a measured magnitude is not documented
@@ -39,7 +39,7 @@ MINUTES_EXPLANATION: dict[str, str] = {
 
 STRADDLE_CAVEAT = (
     "A possession that spans a substitution is credited wholly to the lineup on court "
-    "when it started. Measured across E2024: 2,917 of 47,831 possessions, 6.10 %."
+    "when it started. Measured across E2024: 2,917 of 47,829 possessions, 6.10 %."
 )
 
 FREE_THROW_CAVEAT = (

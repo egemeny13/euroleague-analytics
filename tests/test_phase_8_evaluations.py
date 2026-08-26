@@ -49,7 +49,7 @@ EVALUATION_FILE = Path(__file__).resolve().parents[1] / "evaluation.xml"
 # Every evaluation is pinned to this population, so these three numbers appear in
 # the disclosure of nearly every answer below.
 GAMES_IN_SEASON = 330
-EXCLUDED_GAMES = 24
+EXCLUDED_GAMES = 22
 GAMES_INCLUDED = GAMES_IN_SEASON - EXCLUDED_GAMES
 
 # Distinctive strings that must survive in the published prose. A number here that
@@ -63,8 +63,8 @@ PUBLISHED_FIGURES = {
     "5": ["108.45", "126.09", "71 possessions", "69 possessions"],
     "6": ["726", "27.75", "1,112.2", "120.92"],
     "7": ["229", "150.65", "77 exact possessions"],
-    "8": ["44,301", "50,968", "2,687", "6.07%", "75.38"],
-    "9": ["3b9da9d95beb1c909213b98e708fb229", "127.03", "103.95", "+23.08", "119.98"],
+    "8": ["44,577", "51,296", "2,710", "6.08%", "75.38"],
+    "9": ["3b9da9d95beb1c909213b98e708fb229", "127.03", "103.95", "+23.08", "120.55"],
     "10": ["539", "542", "567", "568", "576"],
 }
 
@@ -402,8 +402,8 @@ def test_evaluation_7_highest_scoring_game_found_by_complete_pagination(cursor, 
         if not page["truncated"]:
             break
         offset = page["next_offset"]
-    assert len(walked) == GAMES_INCLUDED == 306
-    assert len({row["gamecode"] for row in walked}) == 306, "pagination repeated a game"
+    assert len(walked) == GAMES_INCLUDED == 308
+    assert len({row["gamecode"] for row in walked}) == 308, "pagination repeated a game"
 
     highest = max(walked, key=lambda row: row["home_score"] + row["away_score"])
     assert highest["gamecode"] == 185
@@ -429,22 +429,22 @@ def test_evaluation_7_highest_scoring_game_found_by_complete_pagination(cursor, 
 
 def test_evaluation_8_season_totals_carry_their_exclusion_count(cursor, evaluations):
     (truth,) = run_ground_truth(cursor, evaluations["8"])
-    assert int(truth[0]["games"]) == 306
-    assert int(truth[0]["possessions"]) == 44_301
-    assert int(truth[0]["points"]) == 50_968
-    assert int(truth[0]["straddling_possessions"]) == 2_687
-    assert float(truth[0]["straddle_rate_pct"]) == 6.07
+    assert int(truth[0]["games"]) == 308
+    assert int(truth[0]["possessions"]) == 44_577
+    assert int(truth[0]["points"]) == 51_296
+    assert int(truth[0]["straddling_possessions"]) == 2_710
+    assert float(truth[0]["straddle_rate_pct"]) == 6.08
     assert int(truth[0]["excluded_games"]) == EXCLUDED_GAMES
 
     aggregate = get_possessions(cursor, {"season": SEASON, "aggregate": True})
     possessions = sum(row["possessions"] for row in aggregate["rows"])
     points = sum(row["points"] for row in aggregate["rows"])
     straddling = sum(row["straddling_a_substitution"] for row in aggregate["rows"])
-    assert possessions == 44_301
-    assert points == 50_968
-    assert straddling == 2_687
-    assert round(100.0 * straddling / possessions, 2) == 6.07
-    assert aggregate["coverage"]["games_included"] == 306
+    assert possessions == 44_577
+    assert points == 51_296
+    assert straddling == 2_710
+    assert round(100.0 * straddling / possessions, 2) == 6.08
+    assert aggregate["coverage"]["games_included"] == 308
     assert aggregate["excluded"]["games"] == EXCLUDED_GAMES, "the exclusion count is not optional"
     assert sum(aggregate["excluded"]["reasons"].values()) >= EXCLUDED_GAMES
 
@@ -487,8 +487,16 @@ def test_evaluation_9_identity_to_lineup_to_on_off_for_one_player(cursor, evalua
         assert numbers(from_tool[split], "possessions", "points_for") == numbers(
             from_truth[split], "possessions", "points_for"
         )
-    assert numbers(from_tool["on"], "offensive_rating", "defensive_rating") == [119.98, 111.99]
-    assert numbers(from_tool["off"], "offensive_rating", "defensive_rating") == [116.56, 114.72]
+    assert numbers(
+        from_tool["on"], "possessions", "points_for", "possessions_against", "points_against"
+    ) == [1_319, 1_590, 1_300, 1_444]
+    assert numbers(
+        from_tool["off"], "possessions", "points_for", "possessions_against", "points_against"
+    ) == [1_469, 1_720, 1_493, 1_714]
+    assert numbers(from_tool["on"], "offensive_rating", "defensive_rating") == [120.55, 111.08]
+    assert numbers(from_tool["off"], "offensive_rating", "defensive_rating") == [117.09, 114.80]
+    assert numbers(from_tool["on"], "net_rating") == [9.47]
+    assert numbers(from_tool["off"], "net_rating") == [2.28]
 
 
 def test_evaluation_10_final_scoring_events_stay_in_source_order(cursor, evaluations):

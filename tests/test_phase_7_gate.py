@@ -30,8 +30,8 @@ from euroleague.mcp.tools import TOOL_NAMES, build_registry
 pytestmark = pytest.mark.warehouse
 
 SEASON = "E2024"
-TOTAL_POSSESSIONS = 47_831
-EXCLUDED_GAMES = 24
+TOTAL_POSSESSIONS = 47_829
+EXCLUDED_GAMES = 22
 STRADDLING_POSSESSIONS = 2_917
 TOTAL_GAMES = 330
 TOTAL_EVENTS = 176_483

@@ -76,7 +76,7 @@ def test_live_phase_5_base_gate() -> None:
         "team": 18,
         "team_season": 18,
         "game_event": 176_483,
-        "possession": 47_831,
+        "possession": 47_829,
     }
 
 
@@ -266,7 +266,7 @@ def test_live_completed_phase_5_gate() -> None:
         "game_event": 176_483,
         "player_game_minutes": 7863,
         "game_quality": 330,
-        "possession": 47_831,
+        "possession": 47_829,
         "attribution_issues": 7,
         "raw_minute_mismatches": 36,
         "corrected_minute_mismatches": 4,

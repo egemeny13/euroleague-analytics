@@ -26,6 +26,7 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
         raw = warehouse_snapshot(connection, SEASON)
         base = assert_phase5_base_reconciles(connection, SEASON)
         derived = assert_phase5_reconciles(connection, SEASON)
+        fingerprints = derived_snapshot(connection, SEASON)
 
     assert {table: fingerprint.count for table, fingerprint in raw.items()} == {
         "raw_api_response": 1_207,
@@ -41,7 +42,7 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
         "team": 20,
         "team_season": 20,
         "game_event": 222_976,
-        "possession": 59_483,
+        "possession": 59_482,
     }
     assert derived == {
         "lineup": 7_281,
@@ -49,7 +50,7 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
         "game_event": 222_976,
         "player_game_minutes": 9_540,
         "game_quality": 402,
-        "possession": 59_483,
+        "possession": 59_482,
         "attribution_issues": 16,
         "raw_minute_mismatches": 99,
         "corrected_minute_mismatches": 14,
@@ -70,6 +71,14 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
             263,
             384,
         ),
+    }
+    assert fingerprints == {
+        "lineup": TableFingerprint(7_281, "fabfb8b61192e2efffe7c865cbbf9a44"),
+        "lineup_stint": TableFingerprint(17_790, "32ab77663e26ea8008d821b1f603326f"),
+        "game_event": TableFingerprint(222_976, "23c2544836c9b427a7be8430a1ee702b"),
+        "player_game_minutes": TableFingerprint(9_540, "81606d5aa9ab6f014afd9c1936cba809"),
+        "game_quality": TableFingerprint(402, "ebe44c90defa90e56b050c548f3d90d7"),
+        "possession": TableFingerprint(59_482, "b0a2360f2504a1e4e33b03ec2d293ea4"),
     }
 
 
@@ -135,16 +144,16 @@ def test_live_e2025_quarantine_has_the_measured_reasons_and_possession_games() -
     assert substitution_state_games == (215,)
 
 
-def test_live_e2024_fingerprints_are_unchanged_from_before_the_load() -> None:
-    """Break caught: loading E2025 rewrites or re-scopes any E2024 content."""
+def test_live_e2024_fingerprints_match_order_5_and_order_9() -> None:
+    """Break caught: later work rewrites or re-scopes any accepted E2024 content."""
     settings = DatabaseSettings.from_env()
     with psycopg.connect(settings.url()) as connection:
         raw = warehouse_snapshot(connection, "E2024")
         derived = derived_snapshot(connection, "E2024")
 
     assert raw == {
-        "raw_api_response": TableFingerprint(661, "381a54e792d89fef4c1e472fc988827b"),
-        "raw_api_fetch": TableFingerprint(661, "1cc424447a5cb757c0aed55e39a01205"),
+        "raw_api_response": TableFingerprint(991, "95f2683ea70f66f1f0090136cd6f15e2"),
+        "raw_api_fetch": TableFingerprint(991, "24cb29bc5db76ca264a7e2b0a77d49d6"),
         "raw_game": TableFingerprint(330, "706239e43e0f039eea2e09c0447fba4b"),
         "raw_boxscore_player": TableFingerprint(7_863, "986a2671f24298557a86d6111cc63fe8"),
         "raw_boxscore_team": TableFingerprint(1_320, "30ddfdfa405dee9650247635711b5908"),
@@ -154,8 +163,8 @@ def test_live_e2024_fingerprints_are_unchanged_from_before_the_load() -> None:
     assert derived == {
         "lineup": TableFingerprint(5_985, "31543e1aa887b06de60809550bd32ff8"),
         "lineup_stint": TableFingerprint(13_927, "5643117a3abf966ccc6e9f63efbdc18a"),
-        "game_event": TableFingerprint(176_483, "0a30f9b352103df5ea31781128988fff"),
+        "game_event": TableFingerprint(176_483, "6efb53d2d053abbd634145b8bb655ceb"),
         "player_game_minutes": TableFingerprint(7_863, "89897157cf4e918165f7527e8dc42b81"),
-        "game_quality": TableFingerprint(330, "deb43192aa5da8507b9759a99809af45"),
-        "possession": TableFingerprint(47_831, "acbb7c860d399fc53d03a0688b6b1178"),
+        "game_quality": TableFingerprint(330, "051207411ad379769325e5f9485b1925"),
+        "possession": TableFingerprint(47_829, "670595518dbe73679e6e09e42b71af7f"),
     }

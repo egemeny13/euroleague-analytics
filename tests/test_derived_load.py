@@ -27,6 +27,7 @@ from euroleague.derived_load import (
     load_game_events,
     load_phase5_base_rows,
     load_remaining_rows,
+    replace_derived_games,
 )
 
 
@@ -639,6 +640,93 @@ def test_incremental_orchestrator_refuses_any_existing_selected_event_before_wri
         query for query, _ in connection.executions if "derived rows for selected games" in query
     )
     assert "stint_index" not in safety_query
+    assert connection.transactions_started == 0
+
+
+def test_targeted_replacement_changes_only_the_named_existing_game() -> None:
+    """Break caught: correcting one game rewrites another game or the whole season."""
+    events_51, remaining_51 = _complete_game(51)
+    events_52, remaining_52 = _complete_game(52)
+    events = events_51 + events_52
+    remaining = RemainingDerivedRows(
+        lineups=remaining_51.lineups + remaining_52.lineups,
+        stints=remaining_51.stints + remaining_52.stints,
+        event_attachments=(remaining_51.event_attachments + remaining_52.event_attachments),
+        player_minutes=remaining_51.player_minutes + remaining_52.player_minutes,
+        game_qualities=remaining_51.game_qualities + remaining_52.game_qualities,
+        possessions=remaining_51.possessions + remaining_52.possessions,
+    )
+    connection = Connection(derived_game_rows=1)
+
+    counts = replace_derived_games(
+        connection,
+        events,
+        remaining,
+        "E2026",
+        gamecodes=[52],
+    )
+
+    assert counts["game_event"] == 1
+    assert counts["possession"] == 1
+    assert {row[1] for row in connection.copied["stage_game_event"]} == {52}
+    deletes = [
+        (query, params)
+        for query, params in connection.executions
+        if query.startswith("DELETE FROM")
+    ]
+    assert [query.split()[2] for query, _ in deletes] == [
+        "game_event",
+        "possession",
+        "player_game_minutes",
+        "game_quality",
+        "lineup_stint",
+    ]
+    assert all(params == ("E2026", 52) for _, params in deletes)
+    assert connection.transactions_started == 1
+    assert connection.transactions_committed == 1
+
+
+def test_targeted_replacement_rolls_back_delete_and_insert_together() -> None:
+    """Break caught: a failed replacement leaves the existing game deleted."""
+    events, remaining = _complete_game(51)
+    connection = Connection(fail_query_prefix="INSERT INTO game_event")
+
+    with pytest.raises(RuntimeError, match="injected database failure"):
+        replace_derived_games(
+            connection,
+            events,
+            remaining,
+            "E2026",
+            gamecodes=[51],
+        )
+
+    assert connection.transactions_started == 1
+    assert connection.transactions_committed == 0
+    assert connection.transactions_rolled_back == 1
+
+
+def test_targeted_replacement_of_zero_games_is_a_clean_no_op() -> None:
+    """Break caught: an empty correction target stages or deletes season rows."""
+    connection = Connection(derived_game_rows=1)
+
+    counts = replace_derived_games(
+        connection,
+        (),
+        _remaining_games(()),
+        "E2026",
+        gamecodes=[],
+    )
+
+    assert counts == {
+        "lineup": 0,
+        "lineup_stint": 0,
+        "game_event": 0,
+        "game_event_attached": 0,
+        "player_game_minutes": 0,
+        "game_quality": 0,
+        "possession": 0,
+    }
+    assert connection.executions == []
     assert connection.transactions_started == 0
 
 
