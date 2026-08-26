@@ -62,3 +62,48 @@ def test_every_schema_property_carries_a_description(registry):
     for tool in registry.values():
         for name, prop in tool.input_schema["properties"].items():
             assert prop.get("description"), f"{tool.name}.{name}"
+
+
+@pytest.mark.parametrize("name", TOOL_NAMES)
+def test_every_tool_rejects_string_for_include_quarantined_before_database_use(name: str, registry):
+    """Break caught: a non-empty string is coerced to true and reaches the database runner."""
+    tool = registry[name]
+    with pytest.raises(ValueError, match=r"include_quarantined must be true or false"):
+        tool.handler({"include_quarantined": "false"})
+
+
+@pytest.mark.parametrize("name", TOOL_NAMES)
+def test_every_tool_rejects_null_for_include_quarantined_before_database_use(name: str, registry):
+    """Break caught: explicit null is coerced to false instead of rejected."""
+    tool = registry[name]
+    with pytest.raises(ValueError, match=r"include_quarantined must be true or false"):
+        tool.handler({"include_quarantined": None})
+
+
+def test_registry_boolean_validation_rejects_strings_for_other_boolean_properties(registry):
+    """Break caught: tool-specific boolean flags like per_game or aggregate accept strings."""
+    with pytest.raises(ValueError, match=r"per_game must be true or false"):
+        registry["el_get_player_stats"].handler({"per_game": "false"})
+
+    with pytest.raises(ValueError, match=r"aggregate must be true or false"):
+        registry["el_get_possessions"].handler({"aggregate": "false"})
+
+    with pytest.raises(ValueError, match=r"only_with_real_coordinates must be true or false"):
+        registry["el_get_shot_data"].handler({"only_with_real_coordinates": "false"})
+
+
+def test_registry_allows_literal_booleans_to_reach_runner():
+    """Break caught: literal booleans are blocked by the registry validator."""
+    calls = []
+
+    def recording_runner(query: Any, args: dict[str, Any]) -> dict[str, Any]:
+        calls.append((query, args))
+        return {}
+
+    reg = build_registry(recording_runner)
+    for name in TOOL_NAMES:
+        tool = reg[name]
+        tool.handler({"include_quarantined": True})
+        assert calls[-1][1]["include_quarantined"] is True
+        tool.handler({"include_quarantined": False})
+        assert calls[-1][1]["include_quarantined"] is False

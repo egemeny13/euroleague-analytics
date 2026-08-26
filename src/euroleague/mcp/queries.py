@@ -198,7 +198,7 @@ def shot_coordinate_coverage_for(cursor: Cursor, season_code: str) -> dict[str, 
     }
 
 
-def _shot_boolean(arguments: dict[str, Any], name: str, default: bool | None) -> bool | None:
+def _boolean(arguments: dict[str, Any], name: str, default: bool | None = False) -> bool | None:
     """Read an optional JSON Boolean without treating non-empty strings as true."""
     if name not in arguments:
         return default
@@ -208,8 +208,12 @@ def _shot_boolean(arguments: dict[str, Any], name: str, default: bool | None) ->
     return value
 
 
+_shot_boolean = _boolean
+
+
 def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """Coverage, quality and vocabulary - what a model should read first."""
+    _boolean(arguments, "include_quarantined", False)
     cursor.execute(
         "select g.season_code, count(*) as games, "
         "count(*) filter (where g.excluded_by_default) as excluded_games, "
@@ -333,9 +337,9 @@ def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, A
 
 def get_shot_data(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """Shot attempts from game_event, with raw_shot used only for coordinates."""
-    include_quarantined = _shot_boolean(arguments, "include_quarantined", False)
-    made = _shot_boolean(arguments, "made", None)
-    only_with_real_coordinates = _shot_boolean(arguments, "only_with_real_coordinates", False)
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
+    made = _boolean(arguments, "made", None)
+    only_with_real_coordinates = _boolean(arguments, "only_with_real_coordinates", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
     offset = max(int(arguments.get("offset", 0)), 0)
@@ -431,7 +435,7 @@ def get_shot_data(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
 
 def find_games(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """Which games match a filter. Paginated, never unbounded."""
-    include_quarantined = bool(arguments.get("include_quarantined", False))
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
     offset = max(int(arguments.get("offset", 0)), 0)
@@ -488,7 +492,7 @@ def find_games(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
 
 def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """One game in full: both team lines, the four factors, possessions and pace."""
-    include_quarantined = bool(arguments.get("include_quarantined", False))
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     gamecode = int(arguments["gamecode"])
 
@@ -555,7 +559,7 @@ _CLUTCH_JOIN = (
 
 def get_team_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """A team's season profile: four factors, ratings and pace."""
-    include_quarantined = bool(arguments.get("include_quarantined", False))
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
 
     conditions = ["t.season_code = %s"]
@@ -631,7 +635,8 @@ def get_team_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
 
 def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """A player's season totals or per-game averages, with per-100 rates."""
-    include_quarantined = bool(arguments.get("include_quarantined", False))
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
+    per_game = _boolean(arguments, "per_game", False)
     season_code = resolve_season(cursor, arguments["season"])
     minutes_basis = arguments.get("minutes_basis", "corrected")
     if minutes_basis not in ("corrected", "raw", "official"):
@@ -644,7 +649,6 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         "raw": "seconds_raw",
         "official": "seconds_official",
     }[minutes_basis]
-    per_game = bool(arguments.get("per_game", False))
     limit = clamp_limit(arguments.get("limit"))
     offset = max(int(arguments.get("offset", 0)), 0)
 
@@ -769,7 +773,7 @@ ranked as materialized (
 
 def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """Five-man units, ranked. The metric no other public EuroLeague project has."""
-    include_quarantined = bool(arguments.get("include_quarantined", False))
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
     offset = max(int(arguments.get("offset", 0)), 0)
@@ -846,7 +850,7 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
 
 def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """How a team performs with one player on the floor, against without him."""
-    include_quarantined = bool(arguments.get("include_quarantined", False))
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     player_id = resolve_player(cursor, season_code, arguments["player"])
     quarantine = _quarantine_clause(include_quarantined)
@@ -935,7 +939,8 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
     filter on them, which is why no threshold is baked into the warehouse and no
     rebuild is needed when somebody's definition of clutch changes.
     """
-    include_quarantined = bool(arguments.get("include_quarantined", False))
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
+    aggregate = _boolean(arguments, "aggregate", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
     offset = max(int(arguments.get("offset", 0)), 0)
@@ -965,7 +970,7 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
 
     where = " and ".join(conditions)
 
-    if bool(arguments.get("aggregate", False)):
+    if aggregate:
         cursor.execute(
             f"select offense_team_code as team_code, count(*) as possessions, "
             f"sum(points_scored) as points, "
@@ -1021,7 +1026,7 @@ def get_play_by_play(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     throws; numberofplay is entry order and is out of sequence in every game of
     E2024. Sorting by either corrupts lineup data silently.
     """
-    include_quarantined = bool(arguments.get("include_quarantined", False))
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     gamecode = int(arguments["gamecode"])
     limit = clamp_limit(arguments.get("limit"))

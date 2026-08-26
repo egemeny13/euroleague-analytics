@@ -12,7 +12,9 @@ from euroleague.mcp.queries import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
     clamp_limit,
+    describe_warehouse,
     find_games,
+    get_game,
     get_lineup_stats,
     get_play_by_play,
     get_player_on_off,
@@ -847,3 +849,65 @@ def test_lineup_stats_pagination_reports_exact_totals_across_all_page_ranges():
     assert res_none["rows"] == []
     assert res_none["truncated"] is False
     assert "next_offset" not in res_none
+
+
+def test_player_stats_per_game_rejects_strings_and_null():
+    """Break caught: per_game='false' is coerced to True by bool()."""
+    cursor = RecordingCursor([])
+    with pytest.raises(ValueError, match=r"per_game must be true or false"):
+        get_player_stats(cursor, {"season": "E2024", "per_game": "false"})
+
+    with pytest.raises(ValueError, match=r"per_game must be true or false"):
+        get_player_stats(cursor, {"season": "E2024", "per_game": None})
+
+
+def test_possessions_aggregate_rejects_strings_and_null():
+    """Break caught: aggregate='false' is coerced to True by bool()."""
+    cursor = RecordingCursor([])
+    with pytest.raises(ValueError, match=r"aggregate must be true or false"):
+        get_possessions(cursor, {"season": "E2024", "aggregate": "false"})
+
+    with pytest.raises(ValueError, match=r"aggregate must be true or false"):
+        get_possessions(cursor, {"season": "E2024", "aggregate": None})
+
+
+@pytest.mark.parametrize(
+    ("query_fn", "extra_args"),
+    [
+        (describe_warehouse, {}),
+        (find_games, {}),
+        (get_game, {"gamecode": 1}),
+        (get_team_stats, {}),
+        (get_player_stats, {}),
+        (get_lineup_stats, {}),
+        (get_player_on_off, {"player": "P012774"}),
+        (get_possessions, {}),
+        (get_play_by_play, {"gamecode": 1}),
+    ],
+)
+def test_direct_query_path_rejects_string_include_quarantined(query_fn, extra_args):
+    """Break caught: direct query functions coerce include_quarantined='false' to True."""
+    cursor = RecordingCursor([(["season_code"], [("E2024",)])])
+    with pytest.raises(ValueError, match=r"include_quarantined must be true or false"):
+        query_fn(cursor, {"season": "E2024", "include_quarantined": "false", **extra_args})
+
+
+@pytest.mark.parametrize(
+    ("query_fn", "extra_args"),
+    [
+        (describe_warehouse, {}),
+        (find_games, {}),
+        (get_game, {"gamecode": 1}),
+        (get_team_stats, {}),
+        (get_player_stats, {}),
+        (get_lineup_stats, {}),
+        (get_player_on_off, {"player": "P012774"}),
+        (get_possessions, {}),
+        (get_play_by_play, {"gamecode": 1}),
+    ],
+)
+def test_direct_query_path_rejects_null_include_quarantined(query_fn, extra_args):
+    """Break caught: direct query functions accept include_quarantined=None without error."""
+    cursor = RecordingCursor([(["season_code"], [("E2024",)])])
+    with pytest.raises(ValueError, match=r"include_quarantined must be true or false"):
+        query_fn(cursor, {"season": "E2024", "include_quarantined": None, **extra_args})

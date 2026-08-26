@@ -67,6 +67,14 @@ def _schema(properties: dict[str, Any], required: list[str] | None = None) -> di
     }
 
 
+def _validate_booleans(schema: dict[str, Any], arguments: dict[str, Any]) -> None:
+    """Ensure any schema-defined boolean argument present is a literal bool."""
+    properties = schema.get("properties", {})
+    for name, prop in properties.items():
+        if prop.get("type") == "boolean" and name in arguments:
+            queries._boolean(arguments, name)
+
+
 def build_registry(
     runner: Callable[
         [Callable[[Any, dict[str, Any]], dict[str, Any]], dict[str, Any]], dict[str, Any]
@@ -74,14 +82,30 @@ def build_registry(
 ) -> dict[str, Tool]:
     """Bind each query function to the supplied query runner."""
 
-    def bind(query: Callable[[Any, dict], dict]) -> Callable[[dict], dict]:
+    def bind(query: Callable[[Any, dict], dict], schema: dict[str, Any]) -> Callable[[dict], dict]:
         def handler(arguments: dict[str, Any]) -> dict[str, Any]:
+            _validate_booleans(schema, arguments)
             return runner(query, arguments)
 
         return handler
 
+    def tool(
+        name: str,
+        title: str,
+        description: str,
+        input_schema: dict[str, Any],
+        query: Callable[[Any, dict], dict],
+    ) -> Tool:
+        return Tool(
+            name=name,
+            title=title,
+            description=description,
+            input_schema=input_schema,
+            handler=bind(query, input_schema),
+        )
+
     tools = [
-        Tool(
+        tool(
             name="el_describe_warehouse",
             title="Warehouse coverage and quality",
             description=(
@@ -96,9 +120,9 @@ def build_registry(
                 "coordinate coverage is available."
             ),
             input_schema=_schema({}),
-            handler=bind(queries.describe_warehouse),
+            query=queries.describe_warehouse,
         ),
-        Tool(
+        tool(
             name="el_find_games",
             title="Find games",
             description=(
@@ -143,9 +167,9 @@ def build_registry(
                 },
                 required=["season"],
             ),
-            handler=bind(queries.find_games),
+            query=queries.find_games,
         ),
-        Tool(
+        tool(
             name="el_get_game",
             title="One game in full",
             description=(
@@ -167,9 +191,9 @@ def build_registry(
                 },
                 required=["season", "gamecode"],
             ),
-            handler=bind(queries.get_game),
+            query=queries.get_game,
         ),
-        Tool(
+        tool(
             name="el_get_team_stats",
             title="Team season profile",
             description=(
@@ -207,9 +231,9 @@ def build_registry(
                 },
                 required=["season"],
             ),
-            handler=bind(queries.get_team_stats),
+            query=queries.get_team_stats,
         ),
-        Tool(
+        tool(
             name="el_get_player_stats",
             title="Player season line",
             description=(
@@ -254,9 +278,9 @@ def build_registry(
                 },
                 required=["season"],
             ),
-            handler=bind(queries.get_player_stats),
+            query=queries.get_player_stats,
         ),
-        Tool(
+        tool(
             name="el_get_lineup_stats",
             title="Five-man unit performance",
             description=(
@@ -291,9 +315,9 @@ def build_registry(
                 },
                 required=["season"],
             ),
-            handler=bind(queries.get_lineup_stats),
+            query=queries.get_lineup_stats,
         ),
-        Tool(
+        tool(
             name="el_get_player_on_off",
             title="On/off split",
             description=(
@@ -319,9 +343,9 @@ def build_registry(
                 },
                 required=["season", "player"],
             ),
-            handler=bind(queries.get_player_on_off),
+            query=queries.get_player_on_off,
         ),
-        Tool(
+        tool(
             name="el_get_possessions",
             title="Possessions, filtered",
             description=(
@@ -381,9 +405,9 @@ def build_registry(
                 },
                 required=["season"],
             ),
-            handler=bind(queries.get_possessions),
+            query=queries.get_possessions,
         ),
-        Tool(
+        tool(
             name="el_get_play_by_play",
             title="Event stream with lineups",
             description=(
@@ -425,9 +449,9 @@ def build_registry(
                 },
                 required=["season", "gamecode"],
             ),
-            handler=bind(queries.get_play_by_play),
+            query=queries.get_play_by_play,
         ),
-        Tool(
+        tool(
             name="el_get_shot_data",
             title="Shot attempts and locations",
             description=(
@@ -484,7 +508,7 @@ def build_registry(
                 },
                 required=["season"],
             ),
-            handler=bind(queries.get_shot_data),
+            query=queries.get_shot_data,
         ),
     ]
     return {tool.name: tool for tool in tools}
