@@ -117,6 +117,10 @@ the archived response without a test failing.
 
 ## Development
 
+Python >= 3.14 is required (`pyproject.toml` declares `requires-python = ">=3.14"`).
+Older Python interpreters cannot parse Python 3.14 exception syntax (PEP 758)
+and will raise a `SyntaxError` during import.
+
 ```sh
 python -m venv .venv
 .venv/Scripts/pip install -r requirements-dev.txt   # Linux/macOS: .venv/bin/pip
