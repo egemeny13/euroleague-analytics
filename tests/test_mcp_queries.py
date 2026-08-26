@@ -911,3 +911,288 @@ def test_direct_query_path_rejects_null_include_quarantined(query_fn, extra_args
     cursor = RecordingCursor([(["season_code"], [("E2024",)])])
     with pytest.raises(ValueError, match=r"include_quarantined must be true or false"):
         query_fn(cursor, {"season": "E2024", "include_quarantined": None, **extra_args})
+
+
+def test_player_stats_secondary_order_clause():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["player_id"], [("P012774",)]),
+            (["total"], [(1,)]),
+            (["player_id", "points"], [("P012774", 20.0)]),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_player_stats(cursor, {"season": "E2024", "player": "P012774"})
+
+    statement = cursor.statements[3]
+    assert "order by points desc nulls last, player_id limit %s offset %s" in statement
+
+
+def test_lineup_stats_secondary_order_clauses():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (
+                ["lineup_id", "team_code", "possessions", "points_for"],
+                [("5cb938769be71ec8eb6565979d6667ae", "PRS", 346, 394)],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_lineup_stats(cursor, {"season": "E2024"})
+
+    statement = cursor.statements[1]
+    assert "order by r.net_rating desc nulls last, r.lineup_id" in statement
+    assert "order by p.net_rating desc nulls last, p.lineup_id" in statement
+
+
+def test_player_stats_pagination_with_tied_points_is_deterministic_and_complete():
+    """Tied player rankings produce an identical, non-repeating sequence across small pages."""
+    conn = sqlite3.connect(":memory:")
+    cur = conn.cursor()
+    cur.execute("create table raw_game (season_code text, gamecode integer)")
+    cur.execute(
+        "create table raw_boxscore_player (season_code text, gamecode integer, player_id text)"
+    )
+    cur.execute("create table player (player_id text, display_name text)")
+    cur.execute("create table team_season (season_code text, team_code text, display_name text)")
+    cur.execute(
+        "create table v_player_game ("
+        "season_code text, gamecode integer, player_id text, player_name text, team_code text, "
+        "is_starter integer, seconds_official integer, seconds_corrected integer, "
+        "seconds_raw integer, points integer, total_rebounds integer, assists integer, "
+        "steals integer, turnovers integer, valuation integer, field_goals_made integer, "
+        "three_pointers_made integer, field_goals_attempted integer, team_possessions integer, "
+        "excluded_by_default integer)"
+    )
+
+    cur.execute("insert into raw_game values ('E2024', 1)")
+    cur.execute("insert into team_season values ('E2024', 'PAN', 'Panathinaikos')")
+
+    players_data = [
+        ("P010", "Player 10", 20),
+        ("P002", "Player 2", 20),
+        ("P005", "Player 5", 20),
+        ("P001", "Player 1", 20),
+        ("P008", "Player 8", 10),
+        ("P003", "Player 3", 10),
+        ("P007", "Player 7", 10),
+        ("P009", "Player 9", 5),
+        ("P004", "Player 4", 5),
+        ("P006", "Player 6", 0),
+    ]
+    for pid, pname, pts in players_data:
+        cur.execute("insert into player values (?, ?)", (pid, pname))
+        cur.execute("insert into raw_boxscore_player values ('E2024', 1, ?)", (pid,))
+        cur.execute(
+            "insert into v_player_game values "
+            "('E2024', 1, ?, ?, 'PAN', 1, 1200, 1200, 1200, ?, 5, 3, 1, 2, 15, 4, 1, 8, 50, 0)",
+            (pid, pname, pts),
+        )
+
+    adapter = _SqliteCursorAdapter(conn)
+
+    whole = get_player_stats(adapter, {"season": "E2024", "team": "PAN", "limit": 200, "offset": 0})
+    whole_ids = [row["player_id"] for row in whole["rows"]]
+    assert len(whole_ids) == len(players_data)
+
+    paged_ids: list[str] = []
+    page_size = 2
+    for offset in range(0, len(players_data) + page_size, page_size):
+        page = get_player_stats(
+            adapter, {"season": "E2024", "team": "PAN", "limit": page_size, "offset": offset}
+        )
+        paged_ids.extend(row["player_id"] for row in page["rows"])
+
+    assert paged_ids == whole_ids
+    assert len(paged_ids) == len(set(paged_ids))
+    assert set(paged_ids) == {pid for pid, _, _ in players_data}
+    expected_order = [
+        "P001",
+        "P002",
+        "P005",
+        "P010",
+        "P003",
+        "P007",
+        "P008",
+        "P004",
+        "P009",
+        "P006",
+    ]
+    assert whole_ids == expected_order
+
+
+def test_lineup_stats_pagination_with_tied_ratings_is_deterministic_and_complete():
+    """Tied lineup rankings produce an identical, non-repeating sequence across small pages."""
+    conn = sqlite3.connect(":memory:")
+    cur = conn.cursor()
+    cur.execute("create table raw_game (season_code text, gamecode integer)")
+    cur.execute("create table team_season (season_code text, team_code text, display_name text)")
+    cur.execute("create table player (player_id text, display_name text)")
+    cur.execute(
+        "create table lineup (lineup_id text primary key, team_code text, "
+        "player_id_1 text, player_id_2 text, player_id_3 text, player_id_4 text, player_id_5 text)"
+    )
+    cur.execute("create table v_lineup_player (lineup_id text, team_code text, player_id text)")
+    cur.execute(
+        "create table v_possession ("
+        "season_code text, gamecode integer, possession_index integer, "
+        "offense_team_code text, defense_team_code text, "
+        "offense_lineup_id text, defense_lineup_id text, "
+        "points_scored integer, excluded_by_default integer)"
+    )
+
+    cur.execute("insert into raw_game values ('E2024', 1)")
+    cur.execute("insert into team_season values ('E2024', 'PRS', 'Paris Basketball')")
+
+    cur.execute("insert into player values ('P_DEF', 'Defender')")
+    cur.execute(
+        "insert into lineup values ('L_DEF', 'DEF', 'P_DEF', 'P_DEF', 'P_DEF', 'P_DEF', 'P_DEF')"
+    )
+
+    lineups_data = [
+        ("L_05", 2),
+        ("L_01", 2),
+        ("L_03", 2),
+        ("L_06", 1),
+        ("L_02", 1),
+        ("L_04", 1),
+    ]
+    for lid, pts_per_pos in lineups_data:
+        pid = f"P_{lid}"
+        cur.execute("insert into player values (?, ?)", (pid, f"Player {lid}"))
+        cur.execute(
+            "insert into lineup values (?, 'PRS', ?, ?, ?, ?, ?)",
+            (lid, pid, pid, pid, pid, pid),
+        )
+        cur.execute("insert into v_lineup_player values (?, 'PRS', ?)", (lid, pid))
+        for p_idx in range(30):
+            # Offensive possessions
+            cur.execute(
+                "insert into v_possession values ('E2024', 1, ?, 'PRS', 'DEF', ?, 'L_DEF', ?, 0)",
+                (p_idx, lid, pts_per_pos),
+            )
+            # Defensive possessions
+            cur.execute(
+                "insert into v_possession values ('E2024', 1, ?, 'DEF', 'PRS', 'L_DEF', ?, 0, 0)",
+                (100 + p_idx, lid),
+            )
+
+    adapter = _SqliteCursorAdapter(conn)
+
+    whole = get_lineup_stats(
+        adapter,
+        {"season": "E2024", "team": "PRS", "min_possessions": 25, "limit": 200, "offset": 0},
+    )
+    whole_ids = [row["lineup_id"] for row in whole["rows"]]
+    assert len(whole_ids) == len(lineups_data)
+
+    paged_ids: list[str] = []
+    page_size = 2
+    for offset in range(0, len(lineups_data) + page_size, page_size):
+        page = get_lineup_stats(
+            adapter,
+            {
+                "season": "E2024",
+                "team": "PRS",
+                "min_possessions": 25,
+                "limit": page_size,
+                "offset": offset,
+            },
+        )
+        paged_ids.extend(row["lineup_id"] for row in page["rows"])
+
+    assert paged_ids == whole_ids
+    assert len(paged_ids) == len(set(paged_ids))
+    assert set(paged_ids) == {lid for lid, _ in lineups_data}
+    expected_order = ["L_01", "L_03", "L_05", "L_02", "L_04", "L_06"]
+    assert whole_ids == expected_order
+
+
+def test_tied_pagination_edge_cases_and_probes():
+    """Edge cases: limit=1 one-by-one paging, negative offset, and out-of-bounds offset."""
+    conn = sqlite3.connect(":memory:")
+    cur = conn.cursor()
+    cur.execute("create table raw_game (season_code text, gamecode integer)")
+    cur.execute(
+        "create table raw_boxscore_player (season_code text, gamecode integer, player_id text)"
+    )
+    cur.execute("create table player (player_id text, display_name text)")
+    cur.execute("create table team_season (season_code text, team_code text, display_name text)")
+    cur.execute(
+        "create table v_player_game ("
+        "season_code text, gamecode integer, player_id text, player_name text, team_code text, "
+        "is_starter integer, seconds_official integer, seconds_corrected integer, "
+        "seconds_raw integer, points integer, total_rebounds integer, assists integer, "
+        "steals integer, turnovers integer, valuation integer, field_goals_made integer, "
+        "three_pointers_made integer, field_goals_attempted integer, team_possessions integer, "
+        "excluded_by_default integer)"
+    )
+
+    cur.execute("insert into raw_game values ('E2024', 1)")
+    cur.execute("insert into team_season values ('E2024', 'PAN', 'Panathinaikos')")
+
+    # 4 players, all tied at 10 points
+    for i in [4, 1, 3, 2]:
+        pid = f"P{i:02d}"
+        cur.execute("insert into player values (?, ?)", (pid, f"Player {i}"))
+        cur.execute("insert into raw_boxscore_player values ('E2024', 1, ?)", (pid,))
+        cur.execute(
+            "insert into v_player_game values "
+            "('E2024', 1, ?, ?, 'PAN', 1, 1200, 1200, 1200, 10, 5, 3, 1, 2, 15, 4, 1, 8, 50, 0)",
+            (pid, f"Player {i}"),
+        )
+
+    adapter = _SqliteCursorAdapter(conn)
+
+    # 1. Probe limit=1 stepping
+    step_ids = []
+    for offset in range(4):
+        res = get_player_stats(
+            adapter, {"season": "E2024", "team": "PAN", "limit": 1, "offset": offset}
+        )
+        step_ids.append(res["rows"][0]["player_id"])
+    assert step_ids == ["P01", "P02", "P03", "P04"]
+
+    # 2. Probe negative offset (clamps to 0)
+    neg_res = get_player_stats(
+        adapter, {"season": "E2024", "team": "PAN", "limit": 2, "offset": -5}
+    )
+    assert [r["player_id"] for r in neg_res["rows"]] == ["P01", "P02"]
+    assert neg_res["truncated"] is True
+    assert neg_res["next_offset"] == 2
+
+    # 3. Probe offset past the end
+    oob_res = get_player_stats(
+        adapter, {"season": "E2024", "team": "PAN", "limit": 2, "offset": 100}
+    )
+    assert oob_res["rows"] == []
+    assert oob_res["total_available"] == 4
+    assert oob_res["row_count"] == 0

@@ -692,7 +692,7 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         f"  as points_per_100_team_possessions "
         f"from v_player_game where {where} "
         f"group by player_id having sum({seconds_column}) >= %s "
-        f"order by points desc nulls last limit %s offset %s",
+        f"order by points desc nulls last, player_id limit %s offset %s",
         (*params, min_seconds, limit, offset),
     )
     rows = _rows(cursor)
@@ -809,7 +809,7 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         "           r.possessions, r.points_for, r.possessions_against, r.points_against,\n"
         "           r.offensive_rating, r.defensive_rating, r.net_rating\n"
         "    from ranked r\n"
-        "    order by r.net_rating desc nulls last\n"
+        "    order by r.net_rating desc nulls last, r.lineup_id\n"
         "    limit %s offset %s\n"
         ")\n"
         "select p.lineup_id, p.team_code, p.players,\n"
@@ -818,7 +818,7 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         "       s.total_available\n"
         "from summary s\n"
         "left join paged p on 1 = 1\n"
-        "order by p.net_rating desc nulls last"
+        "order by p.net_rating desc nulls last, p.lineup_id"
     )
     cursor.execute(sql, (*params, minimum, limit, offset))
     raw_rows = _rows(cursor)
