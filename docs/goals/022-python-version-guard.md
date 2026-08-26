@@ -11,6 +11,7 @@ acceptance:
   - uv run pytest tests/test_mcp_connection_lifecycle.py
   - uv run ruff check .
   - uv run ruff format --check .
+  - uv run pytest
 ---
 
 ## Outcome (plain language)
@@ -46,6 +47,17 @@ interpreters. Its `euroleague` imports sit at `:25-30`, after the `sys.path`
 insertion at `:23`. A version check placed above those imports runs before
 anything can raise `SyntaxError`.
 
+**Placement trap.** `scripts/mcp_server.py:15` is `from __future__ import
+annotations`, which Python requires to be the first statement after the
+docstring — the guard goes *below* it, not above. That `__future__` import is
+also what lets the file use modern annotation syntax while still parsing on old
+interpreters, so it must not be removed to make room. Related: ruff selects `UP`
+(pyupgrade) with `target-version = "py314"` (`pyproject.toml:40`), so writing
+`Optional[...]` to be old-Python-safe will be flagged, while a bare `X | None`
+annotation would fail at definition time on 3.9 without the `__future__` import.
+Keep the import, keep modern annotations, and let the `ast.parse` test prove the
+file still parses.
+
 **How to make it testable.** The check cannot be tested by running an old
 interpreter in CI. Split it: a small pure function that takes a version tuple and
 returns either a message or `None`, plus one call at import time that passes the
@@ -64,10 +76,12 @@ Evidence and the wider assessment: `docs/TEST_PERIOD_READINESS.md`, finding T1-1
 it concurrently.
 
 **Interfaces (from 021-readme-current-claims):** goal 021 leaves `README.md`'s
-Development section with a corrected offline test count and its Claude Desktop
-configuration block using a generic placeholder path. This goal adds the Python
-version requirement to that same section; it does not re-touch the test count or
-the path.
+Development section with its dated test-suite sentence re-measured, and its
+Claude Desktop configuration block using a generic placeholder path. This goal
+adds the Python version requirement to that same section; it does not re-touch
+the dated sentence or the path. Note that this goal's own new tests will make
+021's count stale as a *current* number — which is exactly why 021 keeps it
+dated.
 
 ## Acceptance criteria
 
@@ -75,12 +89,15 @@ the path.
   returns a plain-language message for anything below 3.14 and `None` otherwise;
   the message names the required version, the version actually running, and the
   `SyntaxError` symptom so a person searching the error text can find it.
-- [ ] That function is called with the real `sys.version_info` before the
-  `euroleague` imports, printing to stderr and exiting non-zero — and
-  `scripts/mcp_server.py` itself uses no syntax newer than 3.9, so it parses far
-  enough back to deliver the message.
-- [ ] Tests covering both directions: a below-minimum tuple returns a message
-  containing "3.14", and the current interpreter's own version returns `None`.
+- [ ] That function is called with the real `sys.version_info` below the
+  `from __future__` import and above the `euroleague` imports, printing to
+  stderr and exiting non-zero.
+- [ ] A test asserting `scripts/mcp_server.py` parses on an old interpreter —
+  `ast.parse(source, feature_version=(3, 9))` succeeds — so the claim that the
+  file can deliver its own message is mechanical rather than asserted.
+- [ ] Tests in `tests/test_mcp_connection_lifecycle.py` covering both
+  directions: a below-minimum tuple returns a message containing "3.14", and the
+  current interpreter's own version returns `None`.
 - [ ] `README.md` states the Python 3.14 requirement in its Development section,
   including the `SyntaxError` a wrong version produces.
 - [ ] `uv run pytest` is green, and `uv run ruff check .` and

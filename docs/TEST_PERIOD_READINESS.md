@@ -45,7 +45,7 @@ code is unpublished.
 | T1-2 | High | `config.py` validates the pooler host and port but not the username, which is exactly what T0-1 got wrong | `src/euroleague/config.py:168` |
 | T2-1 | Medium | Audit finding P2-3 was never converted to a goal: `settlement_recheck.py`'s docstring contradicts the code | `scripts/settlement_recheck.py:30` |
 | T2-2 | Medium | Audit finding P2-4 was never converted to a goal: `.env.example` names the live project three times | `.env.example:12`, `:26`, `:32` |
-| T3-1 | Low | `README.md` states a stale test count and hardcodes the owner's absolute path | `README.md:129`, `:161` |
+| T3-1 | Low | `README.md` hardcodes the owner's absolute path; its dated test count is true but overtaken | `README.md:161`, `:127-129` |
 | T3-2 | Low | There is no route for testers to report what they find | absent |
 
 Recommended order: **T0-1** and **T0-2** before any tester is given anything.
@@ -347,14 +347,31 @@ time, so these two are worth doing in one pass.
 
 ---
 
-## T3-1 — Two stale claims in the README
+## T3-1 — A machine-specific path in the README, and a measurement worth re-dating
 
-- **`README.md:129`** says the suite is **648 offline tests**. It is now **848**
-  (935 collected, 87 deselected). The number was true when written; the suite has
-  grown since.
+**Corrected 2026-08-27, after the contract red-team caught it.** This finding
+originally claimed the README's test count was a stale false claim. It is not.
+`README.md:127-129` reads "On 2026-08-23 the reconciled working tree passed 648
+offline tests" — a **dated measurement, and a true one**. Replacing `648` with
+`848` while leaving the date would have asserted that 848 tests passed on
+2026-08-23, which nobody measured: a new false claim, worse than the sentence it
+replaced. Goal 021 was rewritten accordingly, and re-dates the count and the date
+together instead.
+
+What remains in this finding:
+
 - **`README.md:161`** hardcodes `E:/dev/euroleague-analytics/scripts/mcp_server.py`
   in the Claude Desktop configuration block. That is the owner's path on the
-  owner's machine, and it is the one block a tester will copy verbatim.
+  owner's machine, and it is the one block a tester will copy verbatim. This half
+  was correct as first written.
+- **`README.md:127-129`** is true but overtaken — the suite is now 848 (935
+  collected, 87 deselected), measured 2026-08-27. Re-dating it is worth doing;
+  correcting it is not, because there is nothing incorrect.
+
+**A note that generalises.** A dated measurement does not go stale, and this
+repository uses that form deliberately. Any README sentence pinned to "the
+current count" would be falsified by the next goal that adds a test — including,
+in this case, four of its own siblings in the same queue.
 
 ---
 

@@ -11,6 +11,7 @@ acceptance:
   - uv run pytest tests/test_config.py
   - uv run ruff check .
   - uv run ruff format --check .
+  - uv run pytest
 ---
 
 ## Outcome (plain language)
@@ -34,13 +35,20 @@ DatabaseSettings.from_url(
 → ACCEPTED, user = 'postgres'
 ```
 
-That is the exact shape that has been failing the nightly E2026 pipeline. Runs
-`32808587913` (2026-08-25) and `32929876947` (2026-08-26) each failed all three
-steps with `FATAL: password authentication failed for user "postgres"` against
-`aws-0-eu-central-1.pooler.supabase.com`. The repository secret is the thing that
-is wrong and only the owner can repaste it — that is tracked separately as an
-owner item and is **not** part of this goal. This goal adds the check that would
-have named the problem in one line instead of two silent red nights.
+That shape is **consistent with** what has been failing the nightly E2026
+pipeline, and is why this check is worth having — but it is not proven to be the
+cause. Runs `32808587913` (2026-08-25) and `32929876947` (2026-08-26) each failed
+all three steps with `FATAL: password authentication failed for user "postgres"`
+against `aws-0-eu-central-1.pooler.supabase.com`. That message is equally
+consistent with a bare username and with a correct username plus a rotated
+password; the repository secret is opaque and nothing in this repo can tell the
+two apart. Settling it needs the owner to read the secret's username or the
+Supabase auth log for those two runs — tracked separately as an owner item, and
+**not** part of this goal.
+
+**Nothing in the criteria rests on that causal claim.** They require only the new
+validation, which is correct to have either way: a pooler URL with an
+unqualified username cannot connect, whatever else is also wrong.
 
 `from_url` (`src/euroleague/config.py:119-170`) already refuses the two other
 wrong Supabase strings, each with a message naming the failure, the reason and
@@ -68,8 +76,10 @@ Evidence and the wider assessment: `docs/TEST_PERIOD_READINESS.md`, finding T1-2
 ## Acceptance criteria
 
 - [ ] A test in `tests/test_config.py` asserting that a `.pooler.supabase.com`
-  host whose username contains no `.` separator raises — failing before the fix
-  (the URL is currently accepted), passing after.
+  host whose username contains no `.` separator raises a named exception class
+  of its own, sitting alongside `DirectHostError` and `TransactionPoolerError`
+  (both `ValueError` subclasses, `src/euroleague/config.py:86` and `:90`) —
+  failing before the fix, since the URL is currently accepted, and passing after.
 - [ ] The raised message names the required `postgres.<project-ref>` shape, and
   follows the file's existing rule of never interpolating the raw URL or the
   password into the message.

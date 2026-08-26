@@ -11,6 +11,7 @@ acceptance:
   - uv run pytest tests/test_ci_configuration.py
   - uv run ruff check .
   - uv run ruff format --check .
+  - uv run pytest
 ---
 
 ## Outcome (plain language)

@@ -11,6 +11,7 @@ acceptance:
   - uv run pytest tests/test_ci_configuration.py
   - uv run ruff check .
   - uv run ruff format --check .
+  - uv run pytest
 ---
 
 ## Outcome (plain language)
@@ -57,13 +58,22 @@ something reproducible.
 **New files.** `CONTRIBUTING.md` and everything under `.github/ISSUE_TEMPLATE/`
 do not exist yet and are created by this goal.
 
+**Interfaces (from 020-redact-env-example-project):** both goals add a test
+function to `tests/test_ci_configuration.py`, which is why this one is ordered
+after it. Goal 020 leaves that file with an assertion that `.env.example`
+contains no twenty-lowercase-letter project reference. This goal adds a separate
+function asserting the reporting-route files exist; the two do not share a
+function or a fixture.
+
 Evidence and the wider assessment: `docs/TEST_PERIOD_READINESS.md`, finding T3-2.
 
 ## Acceptance criteria
 
-- [ ] `CONTRIBUTING.md` states where a tester sends a finding, what a good report
-  contains, and — in one short paragraph — that reports become inbox lines and
-  then goal contracts, so a reporter can see where their report went.
+- [ ] `CONTRIBUTING.md` names **GitHub issues on this repository** as the route,
+  states what a good report contains, and — in one short paragraph — explains
+  that reports become inbox lines and then goal contracts, so a reporter can see
+  where their report went. The route is named here so the implementer executes a
+  decision rather than making one.
 - [ ] A GitHub issue template under `.github/ISSUE_TEMPLATE/` prompts for the
   season, the tool called, the arguments, the answer received, the answer
   expected, and whether the response declared minutes as raw or corrected.
