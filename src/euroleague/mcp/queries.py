@@ -661,6 +661,16 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
 
     where = " and ".join(conditions)
     divisor = "count(*)" if per_game else "1"
+    min_seconds = int(arguments.get("min_seconds", 0))
+
+    cursor.execute(
+        f"select count(*) as total from ("
+        f"select 1 from v_player_game where {where} "
+        f"group by player_id having sum({seconds_column}) >= %s"
+        f") sub",
+        (*params, min_seconds),
+    )
+    total = _rows(cursor)[0]["total"]
 
     cursor.execute(
         f"select player_id, max(player_name) as player_name, "
@@ -679,7 +689,7 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         f"from v_player_game where {where} "
         f"group by player_id having sum({seconds_column}) >= %s "
         f"order by points desc nulls last limit %s offset %s",
-        (*params, int(arguments.get("min_seconds", 0)), limit, offset),
+        (*params, min_seconds, limit, offset),
     )
     rows = _rows(cursor)
 
@@ -690,7 +700,7 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         minutes_basis=minutes_basis,
         limit=limit,
         offset=offset,
-        total_available=offset + len(rows) + (1 if len(rows) == limit else 0),
+        total_available=total,
         caveats=[
             "Counting statistics are the official euroleague.net box score, not "
             "recounted from events.",
@@ -781,19 +791,40 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         )
         params.append(resolve_player(cursor, season_code, arguments["contains_player"]))
 
-    sql += f" and {minimum_expression} >= %s order by net_rating desc nulls last limit %s offset %s"
     sql += (
-        ") "
-        "select r.lineup_id, r.team_code, "
-        "       (select string_agg(p.display_name, ' | ' order by p.display_name) "
-        "          from v_lineup_player lp join player p on p.player_id = lp.player_id "
-        "         where lp.lineup_id = r.lineup_id) as players, "
-        "       r.possessions, r.points_for, r.possessions_against, r.points_against, "
-        "       r.offensive_rating, r.defensive_rating, r.net_rating "
-        "from ranked r order by r.net_rating desc nulls last"
+        f" and {minimum_expression} >= %s\n"
+        "),\n"
+        "summary as (\n"
+        "    select count(*) as total_available from ranked\n"
+        "),\n"
+        "paged as (\n"
+        "    select r.lineup_id, r.team_code,\n"
+        "           (select string_agg(p.display_name, ' | ' order by p.display_name)\n"
+        "              from v_lineup_player lp join player p on p.player_id = lp.player_id\n"
+        "             where lp.lineup_id = r.lineup_id) as players,\n"
+        "           r.possessions, r.points_for, r.possessions_against, r.points_against,\n"
+        "           r.offensive_rating, r.defensive_rating, r.net_rating\n"
+        "    from ranked r\n"
+        "    order by r.net_rating desc nulls last\n"
+        "    limit %s offset %s\n"
+        ")\n"
+        "select p.lineup_id, p.team_code, p.players,\n"
+        "       p.possessions, p.points_for, p.possessions_against, p.points_against,\n"
+        "       p.offensive_rating, p.defensive_rating, p.net_rating,\n"
+        "       s.total_available\n"
+        "from summary s\n"
+        "left join paged p on 1 = 1\n"
+        "order by p.net_rating desc nulls last"
     )
     cursor.execute(sql, (*params, minimum, limit, offset))
-    rows = _rows(cursor)
+    raw_rows = _rows(cursor)
+
+    if raw_rows and raw_rows[0].get("lineup_id") is None:
+        total = raw_rows[0].get("total_available", 0)
+        rows = []
+    else:
+        total = raw_rows[0].get("total_available", len(raw_rows)) if raw_rows else 0
+        rows = [{k: v for k, v in row.items() if k != "total_available"} for row in raw_rows]
 
     return build_response(
         rows=rows,
@@ -801,7 +832,7 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         excluded=exclusions_for(cursor, season_code, include_quarantined),
         limit=limit,
         offset=offset,
-        total_available=offset + len(rows) + (1 if len(rows) == limit else 0),
+        total_available=total,
         caveats=[
             "Lineup samples are small. A five-man unit with 30 possessions is noise; "
             "raise min_possessions before drawing a conclusion.",

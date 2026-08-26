@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 
 import pytest
@@ -153,6 +154,7 @@ def test_player_stats_declare_their_minutes_basis():
         [
             (["season_code"], [("E2024",)]),
             (["player_id"], [("P012774",)]),
+            (["total"], [(1,)]),
             (["player_id", "minutes"], [("P012774", 28.4)]),
             (
                 [
@@ -172,7 +174,7 @@ def test_player_stats_declare_their_minutes_basis():
 
     response = get_player_stats(cursor, {"season": "E2024", "player": "P012774"})
 
-    assert "sum(seconds_corrected)" in cursor.statements[2]
+    assert "sum(seconds_corrected)" in cursor.statements[3]
     assert response["minutes_basis"]["value"] == "corrected"
 
 
@@ -180,6 +182,7 @@ def test_player_stats_identify_participants_by_official_seconds_not_the_api_flag
     cursor = RecordingCursor(
         [
             (["season_code"], [("E2024",)]),
+            (["total"], [(0,)]),
             (["player_id"], []),
             (
                 [
@@ -208,6 +211,7 @@ def test_player_stats_can_serve_raw_minutes_and_say_so():
         [
             (["season_code"], [("E2024",)]),
             (["player_id"], [("P012774",)]),
+            (["total"], [(1,)]),
             (["player_id", "minutes"], [("P012774", 28.4)]),
             (
                 [
@@ -230,7 +234,7 @@ def test_player_stats_can_serve_raw_minutes_and_say_so():
         {"season": "E2024", "player": "P012774", "minutes_basis": "raw"},
     )
 
-    assert "sum(seconds_raw)" in cursor.statements[2]
+    assert "sum(seconds_raw)" in cursor.statements[3]
     assert response["minutes_basis"]["value"] == "raw"
 
 
@@ -417,10 +421,49 @@ class _SqliteCursorAdapter:
         sqlite_sql = (
             sql.replace("%s", "?")
             .replace("::date", "")
+            .replace("::numeric", "")
             .replace("ilike", "like")
             .replace("ILIKE", "LIKE")
+            .replace(" as materialized", " as")
+            .replace("nulls last", "")
         )
-        self.cursor.execute(sqlite_sql, params)
+        if "string_agg(" in sqlite_sql:
+            sqlite_sql = re.sub(
+                r"string_agg\([^)]+\)",
+                r"group_concat(p.display_name, ' | ')",
+                sqlite_sql,
+            )
+
+        actual_params = list(params)
+        if "group by grouping sets" in sqlite_sql:
+            quar_match = re.search(
+                r"where season_code = \?([^g]*)group by grouping sets", sqlite_sql
+            )
+            quar_str = quar_match.group(1).strip() if quar_match else ""
+            if quar_str:
+                quar_str = " " + quar_str
+            grouped_union = (
+                f"select offense_lineup_id as lineup_id, 1 as is_offense, "
+                f"count(*) as possessions, sum(points_scored) as points "
+                f"from v_possession where season_code = ?{quar_str} group by offense_lineup_id "
+                f"union all "
+                f"select defense_lineup_id as lineup_id, 0 as is_offense, "
+                f"count(*) as possessions, sum(points_scored) as points "
+                f"from v_possession where season_code = ?{quar_str} group by defense_lineup_id"
+            )
+            grouped_pattern = (
+                r"select case when grouping\(offense_lineup_id\) = 0.*?"
+                r"group by grouping sets \(\(offense_lineup_id\), \(defense_lineup_id\)\)"
+            )
+            sqlite_sql = re.sub(
+                grouped_pattern,
+                grouped_union,
+                sqlite_sql,
+                flags=re.DOTALL,
+            )
+            actual_params.insert(1, actual_params[0])
+
+        self.cursor.execute(sqlite_sql, actual_params)
         self.description = self.cursor.description
         self._rows = self.cursor.fetchall()
 
@@ -622,3 +665,185 @@ def test_play_by_play_orders_by_ingest_index_and_nothing_else():
     assert "order by ingest_index" in statement
     assert "markertime" not in statement.split("order by")[1]
     assert "numberofplay" not in statement
+
+
+def test_player_stats_pagination_reports_exact_totals_across_all_page_ranges():
+    """Exact player count N is reported regardless of limit or offset."""
+    conn = sqlite3.connect(":memory:")
+    cur = conn.cursor()
+    cur.execute("create table raw_game (season_code text, gamecode integer)")
+    cur.execute(
+        "create table raw_boxscore_player (season_code text, gamecode integer, player_id text)"
+    )
+    cur.execute("create table player (player_id text, display_name text)")
+    cur.execute("create table team_season (season_code text, team_code text, display_name text)")
+    cur.execute(
+        "create table v_player_game ("
+        "season_code text, gamecode integer, player_id text, player_name text, team_code text, "
+        "is_starter integer, seconds_official integer, seconds_corrected integer, "
+        "seconds_raw integer, points integer, total_rebounds integer, assists integer, "
+        "steals integer, turnovers integer, valuation integer, field_goals_made integer, "
+        "three_pointers_made integer, field_goals_attempted integer, team_possessions integer, "
+        "excluded_by_default integer)"
+    )
+
+    cur.execute("insert into raw_game values ('E2024', 1)")
+    cur.execute("insert into team_season values ('E2024', 'PAN', 'Panathinaikos')")
+
+    # Insert N = 12 qualifying players for E2024 PAN
+    n_players = 12
+    for i in range(1, n_players + 1):
+        pid = f"P{i:03d}"
+        pname = f"Player {i}"
+        cur.execute("insert into player values (?, ?)", (pid, pname))
+        cur.execute("insert into raw_boxscore_player values ('E2024', 1, ?)", (pid,))
+        cur.execute(
+            "insert into v_player_game values "
+            "('E2024', 1, ?, ?, 'PAN', 1, 1200, 1200, 1200, ?, 5, 3, 1, 2, 15, 4, 1, 8, 50, 0)",
+            (pid, pname, i * 2),
+        )
+
+    adapter = _SqliteCursorAdapter(conn)
+
+    # Small page (limit=3, offset=0)
+    res_small = get_player_stats(
+        adapter, {"season": "E2024", "team": "PAN", "limit": 3, "offset": 0}
+    )
+    assert res_small["total_available"] == n_players
+    assert res_small["row_count"] == 3
+    assert res_small["truncated"] is True
+    assert res_small["next_offset"] == 3
+
+    # Middle page (limit=3, offset=3)
+    res_mid = get_player_stats(adapter, {"season": "E2024", "team": "PAN", "limit": 3, "offset": 3})
+    assert res_mid["total_available"] == n_players
+    assert res_mid["row_count"] == 3
+    assert res_mid["truncated"] is True
+    assert res_mid["next_offset"] == 6
+
+    # Maximum page (limit=200, offset=0)
+    res_max = get_player_stats(
+        adapter, {"season": "E2024", "team": "PAN", "limit": 200, "offset": 0}
+    )
+    assert res_max["total_available"] == n_players
+    assert res_max["row_count"] == n_players
+    assert res_max["truncated"] is False
+    assert "next_offset" not in res_max
+
+    # Empty out-of-range page (limit=5, offset=50)
+    res_empty = get_player_stats(
+        adapter, {"season": "E2024", "team": "PAN", "limit": 5, "offset": 50}
+    )
+    assert res_empty["total_available"] == n_players
+    assert res_empty["row_count"] == 0
+    assert res_empty["rows"] == []
+    assert res_empty["truncated"] is False
+    assert "next_offset" not in res_empty
+
+    # Empty population (min_seconds=999999)
+    res_none = get_player_stats(
+        adapter, {"season": "E2024", "team": "PAN", "min_seconds": 999999, "limit": 50}
+    )
+    assert res_none["total_available"] == 0
+    assert res_none["row_count"] == 0
+    assert res_none["rows"] == []
+    assert res_none["truncated"] is False
+    assert "next_offset" not in res_none
+
+
+def test_lineup_stats_pagination_reports_exact_totals_across_all_page_ranges():
+    """Exact lineup count N is reported without a second v_possession scan."""
+    conn = sqlite3.connect(":memory:")
+    cur = conn.cursor()
+    cur.execute("create table raw_game (season_code text, gamecode integer)")
+    cur.execute("create table team_season (season_code text, team_code text, display_name text)")
+    cur.execute("create table player (player_id text, display_name text)")
+    cur.execute(
+        "create table lineup (lineup_id text primary key, team_code text, "
+        "player_id_1 text, player_id_2 text, player_id_3 text, player_id_4 text, player_id_5 text)"
+    )
+    cur.execute("create table v_lineup_player (lineup_id text, team_code text, player_id text)")
+    cur.execute(
+        "create table v_possession ("
+        "season_code text, gamecode integer, possession_index integer, "
+        "offense_team_code text, defense_team_code text, "
+        "offense_lineup_id text, defense_lineup_id text, "
+        "points_scored integer, excluded_by_default integer)"
+    )
+
+    cur.execute("insert into raw_game values ('E2024', 1)")
+    cur.execute("insert into team_season values ('E2024', 'PRS', 'Paris Basketball')")
+
+    # Insert N = 8 distinct lineups for PRS, each with 30 possessions (clearing min_possessions=25)
+    n_lineups = 8
+    cur.execute("insert into player values ('P_DEF', 'Defender')")
+    cur.execute(
+        "insert into lineup values ('L_DEF', 'DEF', 'P_DEF', 'P_DEF', 'P_DEF', 'P_DEF', 'P_DEF')"
+    )
+    for i in range(1, n_lineups + 1):
+        lid = f"L_PRS_{i}"
+        pid = f"P_{i}"
+        cur.execute("insert into player values (?, ?)", (pid, f"Player {i}"))
+        cur.execute(
+            "insert into lineup values (?, 'PRS', ?, ?, ?, ?, ?)",
+            (lid, pid, pid, pid, pid, pid),
+        )
+        cur.execute("insert into v_lineup_player values (?, 'PRS', ?)", (lid, pid))
+        for p_idx in range(30):
+            cur.execute(
+                "insert into v_possession values ('E2024', 1, ?, 'PRS', 'DEF', ?, 'L_DEF', 2, 0)",
+                (p_idx, lid),
+            )
+
+    adapter = _SqliteCursorAdapter(conn)
+
+    # Small page (limit=2, offset=0)
+    res_small = get_lineup_stats(
+        adapter,
+        {"season": "E2024", "team": "PRS", "min_possessions": 25, "limit": 2, "offset": 0},
+    )
+    assert res_small["total_available"] == n_lineups
+    assert res_small["row_count"] == 2
+    assert res_small["truncated"] is True
+    assert res_small["next_offset"] == 2
+
+    # Middle page (limit=2, offset=2)
+    res_mid = get_lineup_stats(
+        adapter,
+        {"season": "E2024", "team": "PRS", "min_possessions": 25, "limit": 2, "offset": 2},
+    )
+    assert res_mid["total_available"] == n_lineups
+    assert res_mid["row_count"] == 2
+    assert res_mid["truncated"] is True
+    assert res_mid["next_offset"] == 4
+
+    # Maximum page (limit=200, offset=0)
+    res_max = get_lineup_stats(
+        adapter,
+        {"season": "E2024", "team": "PRS", "min_possessions": 25, "limit": 200, "offset": 0},
+    )
+    assert res_max["total_available"] == n_lineups
+    assert res_max["row_count"] == n_lineups
+    assert res_max["truncated"] is False
+    assert "next_offset" not in res_max
+
+    # Empty out-of-range page (limit=5, offset=50)
+    res_empty = get_lineup_stats(
+        adapter,
+        {"season": "E2024", "team": "PRS", "min_possessions": 25, "limit": 5, "offset": 50},
+    )
+    assert res_empty["total_available"] == n_lineups
+    assert res_empty["row_count"] == 0
+    assert res_empty["rows"] == []
+    assert res_empty["truncated"] is False
+    assert "next_offset" not in res_empty
+
+    # Empty population (min_possessions=999999)
+    res_none = get_lineup_stats(
+        adapter, {"season": "E2024", "team": "PRS", "min_possessions": 999999, "limit": 50}
+    )
+    assert res_none["total_available"] == 0
+    assert res_none["row_count"] == 0
+    assert res_none["rows"] == []
+    assert res_none["truncated"] is False
+    assert "next_offset" not in res_none
