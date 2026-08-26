@@ -179,10 +179,105 @@ def test_an_ambiguous_player_name_lists_the_candidates_and_never_guesses():
     with pytest.raises(AmbiguousNameError) as failure:
         resolve_player(cursor, "E2024", "Williams")
     message = str(failure.value)
-    assert "P001" in message and "P002" in message
+    assert message == (
+        "'Williams' matches 2 players in E2024: "
+        "P001 (WILLIAMS, TREVION), P002 (WILLIAMS, LORENZO). "
+        "Pass one of these player ids."
+    )
 
 
 def test_an_unknown_player_is_refused():
     cursor = FakeCursor([[], []])
     with pytest.raises(UnknownPlayerError):
         resolve_player(cursor, "E2024", "Nobody")
+
+
+def test_ambiguous_player_400_rows_is_under_1000_utf8_bytes_deterministic_and_states_omitted():
+    rows = [(f"P{i:04d}", f"PLAYER, {i:04d}") for i in range(1, 401)]
+    cursor = FakeCursor([[], rows])
+
+    with pytest.raises(AmbiguousNameError) as failure:
+        resolve_player(cursor, "E2024", "a")
+
+    message = str(failure.value)
+    encoded = message.encode("utf-8")
+    assert len(encoded) < 1000
+
+    # Prefix checks
+    assert message.startswith("'a' matches 400 players in E2024: P0001 (PLAYER, 0001)")
+    assert "Pass one of these player ids." in message
+
+    # Deterministic order verification
+    p1_idx = message.index("P0001")
+    p2_idx = message.index("P0002")
+    p3_idx = message.index("P0003")
+    assert p1_idx < p2_idx < p3_idx
+
+    # Check exact omitted count
+    # Count how many P0xxx IDs appear in the message
+    import re
+
+    displayed_ids = re.findall(r"P\d{4}", message)
+    displayed_count = len(displayed_ids)
+    assert displayed_count > 0
+    assert displayed_count < 400
+    omitted = 400 - displayed_count
+    assert f"and {omitted} more" in message
+
+
+def test_ambiguous_player_oversized_input_and_display_names_cannot_break_byte_bound():
+    oversized_candidate = "a" * 2500
+    oversized_rows = [(f"P{i:04d}", "A" * 3000) for i in range(1, 100)]
+    cursor = FakeCursor([[], oversized_rows])
+
+    with pytest.raises(AmbiguousNameError) as failure:
+        resolve_player(cursor, "E2024", oversized_candidate)
+
+    message = str(failure.value)
+    encoded = message.encode("utf-8")
+    assert len(encoded) < 1000
+    assert "..." in message
+    assert "Pass one of these player ids." in message
+
+
+def test_ambiguous_team_400_rows_and_oversized_stay_bounded_and_deterministic():
+    rows = [(f"T{i:03d}", f"Team Name {i:03d}") for i in range(1, 401)]
+    cursor = FakeCursor([[], rows])
+
+    with pytest.raises(AmbiguousNameError) as failure:
+        resolve_team(cursor, "E2024", "Team")
+
+    message = str(failure.value)
+    encoded = message.encode("utf-8")
+    assert len(encoded) < 1000
+    assert message.startswith("'Team' matches 400 teams in E2024: T001 (Team Name 001)")
+    assert "Pass one of the three-letter codes." in message
+
+    import re
+
+    displayed_codes = re.findall(r"T\d{3}", message)
+    displayed_count = len(displayed_codes)
+    omitted = 400 - displayed_count
+    assert f"and {omitted} more" in message
+
+    # Oversized team candidate and names
+    oversized_cursor = FakeCursor([[], [(f"T{i:03d}", "B" * 2000) for i in range(1, 50)]])
+    with pytest.raises(AmbiguousNameError) as failure_over:
+        resolve_team(oversized_cursor, "E2024", "x" * 2000)
+    assert len(str(failure_over.value).encode("utf-8")) < 1000
+
+
+def test_sql_orders_player_by_display_name_then_id_and_team_by_code():
+    cursor = FakeCursor([[], []])
+    with pytest.raises(UnknownPlayerError):
+        resolve_player(cursor, "E2024", "williams")
+    player_sql = cursor.calls[1][0].lower()
+    assert "order by p.display_name, b.player_id" in player_sql
+
+    cursor_team = FakeCursor([[], []])
+    with pytest.raises(UnknownTeamError):
+        resolve_team(cursor_team, "E2024", "pan")
+    team_exact_sql = cursor_team.calls[0][0].lower()
+    assert "order by team_code" in team_exact_sql
+    team_name_sql = cursor_team.calls[1][0].lower()
+    assert "order by team_code" in team_name_sql
