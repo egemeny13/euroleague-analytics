@@ -125,8 +125,8 @@ python -m venv .venv
 ```
 
 The response cache is not committed — one season is 53 MB. The default run needs
-no network and no database. On 2026-08-23 the reconciled working tree passed
-648 offline tests; live, network, full-season, and local-database checks remain
+no network and no database. On 2026-08-27 the reconciled working tree passed
+852 offline tests; live, network, full-season, and local-database checks remain
 excluded from that claim.
 The gates
 that read the live warehouse are excluded from it and opted into explicitly:
@@ -158,7 +158,7 @@ To use it from Claude Desktop, add to `claude_desktop_config.json`:
   "mcpServers": {
     "euroleague": {
       "command": "python",
-      "args": ["E:/dev/euroleague-analytics/scripts/mcp_server.py"]
+      "args": ["/path/to/euroleague-analytics/scripts/mcp_server.py"]
     }
   }
 }
