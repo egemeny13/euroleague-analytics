@@ -255,18 +255,19 @@ That work needs no new instrument. This one produces the windows.
 
 ---
 
-## Consequence for the warehouse, which needs a decision
+## Production reconciliation status
 
 The counter now produces 47,829 E2024 and 59,482 E2025 possessions; the
-production tables hold 47,831 and 59,483, and `src/euroleague/compaction.py`
-pins those older figures with their fingerprints. **Nothing in production was
-changed by this session.** Bringing the warehouse into line means rebuilding the
-derived layer for both seasons and refreshing those pinned counts and
-fingerprints, which is a production write and a separate approval.
+production tables held 47,831 and 59,483 when this investigation completed.
+**Nothing in production was changed by the original Order 9 session.**
 
-Until that rebuild, the code and the database disagree by three possessions and
-two quarantine flags, and the `warehouse`-marked gates encode the database's
-current state, which remains accurate for what is stored.
+A read-only remeasurement on 2026-08-26 found that E2024 had since been
+reconciled by another production path: it now holds 47,829 possessions, games
+29 and 270 are no longer quarantined, and its six derived fingerprints match
+the corrected complete-season build. E2025 remained at 59,483 possessions;
+game 344 alone held 161 instead of 160. The owner approved a derived-only,
+one-game E2025/344 replacement, with the actual write still protected by the
+repository's immediately-before-write approval gate.
 
 ---
 

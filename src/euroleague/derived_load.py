@@ -639,6 +639,88 @@ def _load_one_attached_game(
     return counts
 
 
+def replace_derived_games(
+    connection: Any,
+    events: tuple[GameEventRow, ...],
+    remaining: RemainingDerivedRows,
+    season_code: str,
+    *,
+    gamecodes: Sequence[int],
+) -> dict[str, int]:
+    """Replace only named existing games from an already-complete season build.
+
+    The caller builds and validates the complete season before invoking this
+    function. This function narrows only the database write. Each named game is
+    staged before its stored rows are deleted, then deleted and reinserted in
+    one transaction using the same parent-first ordering as the live writer.
+
+    Raw rows and applied-source markers are deliberately outside this path: it
+    is for a derived-rule correction over unchanged immutable source bytes.
+    """
+    _assert_season_code(season_code)
+    _assert_remaining_scope(remaining, season_code)
+    invalid_events = {row.season_code for row in events if row.season_code != season_code}
+    if invalid_events:
+        raise SeasonScopeError(
+            f"Season scope mismatch: expected {season_code}; "
+            f"received event rows for {sorted(invalid_events)}."
+        )
+
+    selected = _normalise_gamecodes(gamecodes)
+    if not selected:
+        return {
+            "lineup": 0,
+            "lineup_stint": 0,
+            "game_event": 0,
+            "game_event_attached": 0,
+            "player_game_minutes": 0,
+            "game_quality": 0,
+            "possession": 0,
+        }
+
+    selected_set = set(selected)
+    selected_events = tuple(row for row in events if row.gamecode in selected_set)
+    selected_remaining = select_remaining_games(remaining, selected)
+    event_games = {row.gamecode for row in selected_events}
+    remaining_games = _remaining_gamecodes(selected_remaining)
+    if event_games != selected_set or remaining_games != selected_set:
+        raise SeasonScopeError(
+            f"Selected replacement games {selected} require complete event and derived rows; "
+            f"received events for {sorted(event_games)} and derived rows for "
+            f"{sorted(remaining_games)}."
+        )
+
+    attached_events = attach_game_event_references(
+        selected_events,
+        selected_remaining.event_attachments,
+    )
+    totals = {
+        "lineup": 0,
+        "lineup_stint": 0,
+        "game_event": 0,
+        "game_event_attached": 0,
+        "player_game_minutes": 0,
+        "game_quality": 0,
+        "possession": 0,
+    }
+    for gamecode in selected:
+        game_events = tuple(row for row in attached_events if row.gamecode == gamecode)
+        game_rows = select_remaining_games(selected_remaining, [gamecode])
+        counts = _load_one_attached_game(
+            connection,
+            game_events,
+            game_rows,
+            season_code,
+            gamecode,
+            replace=True,
+        )
+        for target, count in counts.items():
+            totals[target] += count
+        totals["game_event_attached"] += len(game_events)
+
+    return totals
+
+
 def load_derived_rows(
     connection: Any,
     dimensions: DimensionRows,

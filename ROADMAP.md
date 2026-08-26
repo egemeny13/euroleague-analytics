@@ -630,3 +630,11 @@ possession - moving E2024 from 314 to 316 games inside the gate with no game
 regressing in either season. The gate, its tolerance and every quarantine are
 unchanged; evidence is in `docs/POSSESSION_RESIDUAL_REPORT.md`. Orders 10-11 are post-release expansion and
 may be postponed without weakening the E2026 launch claim.
+
+**Order 9 production reconciliation, 2026-08-26.** A read-only audit found
+E2024 already at the corrected 47,829-possession state, including the two
+quarantine removals. E2025 alone remained stale at 59,483: game 344 held one
+extra derived possession. The owner approved a targeted derived-only rebuild
+for that game and explicitly kept the 11 structural no-anomaly games under the
+existing conservative possession gate. The live transaction remains subject
+to the immediately-before-write approval rule.

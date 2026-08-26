@@ -97,10 +97,10 @@ LIMIT 1;
       <tool name="el_get_team_stats">Rank all E2024 teams by offensive rating.</tool>
     </tools_required>
     <must_disclose>
-      The default population excludes 24 games. Lineup samples remain noisy
+      The default population excludes 22 games. Lineup samples remain noisy
       even above the stated 150-possession bar. A possession that straddles a
       substitution is credited to the lineup on court when it started; the
-      all-E2024 measured rate is 2,917 of 47,831 possessions (6.10%).
+      all-E2024 measured rate is 2,917 of 47,829 possessions (6.10%).
     </must_disclose>
     <notes>
       This catches failures to apply the minimum after both lineup sides are
@@ -198,7 +198,7 @@ ORDER BY o.is_on DESC;
     </tools_required>
     <must_disclose>
       Minutes are corrected, while points are the official box score. The
-      default population excludes 24 games. On/off is team context, not an
+      default population excludes 22 games. On/off is team context, not an
       estimate of individual value, and the off split includes games he did
       not play. The substitution-straddle convention and 6.10% all-E2024 rate
       must accompany the lineup-based split.
@@ -267,7 +267,7 @@ LIMIT 1;
     <must_disclose>
       The caller supplied both thresholds: 120 seconds and 3 points. No built-in
       clutch definition was used. The sample is only 31 possessions and is
-      noisy. The default population excludes 24 games.
+      noisy. The default population excludes 22 games.
     </must_disclose>
     <notes>
       This catches hard-coded clutch definitions, filters applied to possession
@@ -338,7 +338,7 @@ ORDER BY utc_date, gamecode;
     <must_disclose>
       The team profiles use exact reconstructed possessions and official box
       score counting statistics. Defensive rating uses the opponent's
-      possession denominator. The season comparison excludes 24 games by
+      possession denominator. The season comparison excludes 22 games by
       default; all three listed meetings are non-quarantined. The winner of each
       meeting is derived from the official final score, not from the source
       schedule's winner field, which names the season champion in every row.
@@ -474,7 +474,7 @@ LIMIT 1;
       The 726 points are official box score points; 1,112.2 minutes are
       corrected reconstruction minutes. The per-100 denominator is
       Panathinaikos team possessions while Nunn appeared, not player usage.
-      The default population excludes 24 games.
+      The default population excludes 22 games.
     </must_disclose>
     <notes>
       This directly tests the Phase 7 participation fix: positive official
@@ -542,12 +542,12 @@ GROUP BY g.gamecode, g.utc_date, g.home_team_code, g.home_score,
     ]]></ground_truth_sql>
     <tools_required>
       <tool name="el_describe_warehouse">Confirm E2024 coverage and exclusions.</tool>
-      <tool name="el_find_games">Page through all 306 default-covered games and find the maximum combined score.</tool>
+      <tool name="el_find_games">Page through all 308 default-covered games and find the maximum combined score.</tool>
       <tool name="el_get_game"><![CDATA[Call with {"season":"E2024","gamecode":185}.]]></tool>
       <tool name="el_get_play_by_play">For game 185 and period 4, call separately for 2FGM, 3FGM and FTM and count Real Madrid events.</tool>
     </tools_required>
     <must_disclose>
-      The search population excluded 24 quarantined games. Game 185 itself is
+      The search population excluded 22 quarantined games. Game 185 itself is
       not quarantined. Possessions are exact and the rating is per 100. Event
       rows must remain in ingest_index order; markertime and numberofplay are
       not valid sort keys.
@@ -557,7 +557,7 @@ GROUP BY g.gamecode, g.utc_date, g.home_team_code, g.home_score,
       possession and event tools. The zero made threes is deliberately hard to
       guess from a 116-point final.
     </notes>
-    <tool_verification status="passed">The live stdio MCP server paged all 306 included games, found game 185, and reproduced its efficiency and fourth-quarter scoring mix.</tool_verification>
+    <tool_verification status="passed">The live stdio MCP server paged all 308 included games, found game 185, and reproduced its efficiency and fourth-quarter scoring mix.</tool_verification>
   </evaluation>
 
   <evaluation id="8" shape="season-total-with-exclusion-disclosure">
@@ -568,9 +568,9 @@ GROUP BY g.gamecode, g.utc_date, g.home_team_code, g.home_score,
       possession pace?
     </question>
     <expected_answer>
-      The default-covered population contains 306 games, 44,301 exact
-      possessions and 50,968 points credited to those possessions. Of the
-      possessions, 2,687 straddled a substitution (6.07%). ALBA Berlin (BER)
+      The default-covered population contains 308 games, 44,577 exact
+      possessions and 51,296 points credited to those possessions. Of the
+      possessions, 2,710 straddled a substitution (6.08%). ALBA Berlin (BER)
       had the highest one-team pace: 2,412 possessions in 32 included games,
       or 75.38 possessions per game.
     </expected_answer>
@@ -621,10 +621,10 @@ CROSS JOIN pace;
       <tool name="el_get_team_stats">Rank all teams by possessions_per_game.</tool>
     </tools_required>
     <must_disclose>
-      Exactly 24 of 330 E2024 games are excluded by default, leaving 306. An
+      Exactly 22 of 330 E2024 games are excluded by default, leaving 308. An
       answer giving the totals without that exclusion count is wrong. The
       straddle convention credits the whole possession to the lineup on court
-      when it started. The 6.07% rate is for the default-covered population;
+      when it started. The 6.08% rate is for the default-covered population;
       the all-games published rate is 6.10%.
     </must_disclose>
     <notes>
@@ -632,7 +632,7 @@ CROSS JOIN pace;
       possessions as though one game possession were a shared row and catches
       pace answers that double the one-team figure.
     </notes>
-    <tool_verification status="passed">The live stdio MCP server reproduced all season totals, the 24-game exclusion, the straddle count and ALBA's pace. An initial evaluator mismatch was confirmed to be only JSON numeric-string typing.</tool_verification>
+    <tool_verification status="passed">The live stdio MCP server reproduced all season totals, the 22-game exclusion, the straddle count and ALBA's pace.</tool_verification>
   </evaluation>
 
   <evaluation id="9" shape="player-lineup-and-on-off-chain">
@@ -645,10 +645,10 @@ CROSS JOIN pace;
       The best qualifying lineup was 3b9da9d95beb1c909213b98e708fb229: Shane
       Larkin, Jordan Nwora, Ercan Osmani, Vincent Poirier and Darius Thompson.
       It scored 94 points on 74 possessions (127.03 per 100) and allowed 79 on
-      76 (103.95 per 100), net +23.08. With Larkin on court, Efes scored 1,531
-      in 1,276 possessions and allowed 1,410 in 1,259: ratings 119.98 offense,
-      111.99 defense, +7.99 net. Off court, Efes scored 1,682 in 1,443 and
-      allowed 1,683 in 1,467: ratings 116.56 offense, 114.72 defense, +1.84 net.
+      76 (103.95 per 100), net +23.08. With Larkin on court, Efes scored 1,590
+      in 1,319 possessions and allowed 1,444 in 1,300: ratings 120.55 offense,
+      111.08 defense, +9.47 net. Off court, Efes scored 1,720 in 1,469 and
+      allowed 1,714 in 1,493: ratings 117.09 offense, 114.80 defense, +2.28 net.
     </expected_answer>
     <ground_truth_sql><![CDATA[
 WITH target AS (
@@ -760,7 +760,7 @@ ORDER BY o.is_on DESC;
       <tool name="el_get_player_on_off"><![CDATA[Call with {"season":"E2024","player":"LARKIN, SHANE","team":"IST"}.]]></tool>
     </tools_required>
     <must_disclose>
-      The default population excludes 24 games. The qualifying lineup has only
+      The default population excludes 22 games. The qualifying lineup has only
       74 offensive possessions, so it needs a small-sample warning. Lineup and
       on/off results use the possession-start straddle convention and its 6.10%
       all-E2024 measured rate. On/off is team context, not Larkin's individual
@@ -837,7 +837,7 @@ ORDER BY s.ingest_index;
       <tool name="el_get_play_by_play">For game 220, fetch 2FGM, 3FGM and FTM rows, merge them only by ingest_index, and take the final five.</tool>
     </tools_required>
     <must_disclose>
-      The discovery population excludes 24 quarantined games, and game 220 is
+      The discovery population excludes 22 quarantined games, and game 220 is
       not quarantined. Source order is ingest_index only. The two Sloukas free
       throws share a clock reading and must remain in API array order; sorting
       by markertime or numberofplay is wrong.

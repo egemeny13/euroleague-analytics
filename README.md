@@ -15,12 +15,12 @@ scheduled games, zero played games, and 203 archived and loaded preseason roster
 rows. Ten read-only MCP tools run over seven security-invoker views, and ten
 published evaluations are re-earned by live gates.
 
-Production currently holds 47,831 E2024 and 59,483 E2025 derived possessions.
-The Order 9 counter fix produces 47,829 and 59,482 respectively: three phantom
-possessions are removed across 732 games, with no game regressing. Applying
-those corrected counts and two E2024 quarantine changes to production requires
-a separately approved derived-layer rebuild; until then, the live warehouse
-truthfully reports the older persisted state.
+Production currently holds the corrected 47,829 E2024 possessions and the old
+59,483 E2025 possessions. The Order 9 counter fix produces 59,482 for E2025:
+three phantom possessions are removed across 732 games, with no game
+regressing. A read-only 2026-08-26 audit found E2024 already reconciled and
+proved E2025 game 344 is the only remaining production difference. Its
+derived-only, one-game replacement remains separately approval-gated.
 
 The free-tier hot window is decided: **E2024, E2025 and E2026**. The 2026-08-18
 compaction confirmed that a complete 380-game E2026 projects to 427,991,775

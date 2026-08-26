@@ -37,6 +37,7 @@ is binding — the decision is only approved with it.
 | 22 | Attach derived event references on first insert | Approved and implemented 2026-08-19 — zero `game_event` updates in both full-season database gates |
 | 23 | Public Data API view access | Approved and implemented 2026-08-24 — no warehouse view is public |
 | 24 | Pre-season roster identity and registration grain | Approved 2026-08-24 — source-native registrations; no invented player-ID mapping |
+| 25 | Structural possession residuals | Approved 2026-08-26 — keep the conservative gate; no structural adjustment |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -1290,6 +1291,40 @@ one of them.
   migration `20260824122346`, and workflow runs `32729184062` and `32729399393`
   completed that gate; the detailed evidence is in
   `docs/PRESEASON_ROSTER_INGESTION_REPORT.md`.
+
+---
+
+## 25. Structural possession residuals do not weaken the conservative gate
+
+Keep the existing possession gate and its two-possession tolerance unchanged.
+The 11 failing games with no located anomalous site remain quarantined; period
+boundaries, first/last-possession parity, and lawfully retained possessions are
+not subtracted or otherwise normalised before comparing the two team totals.
+
+**Why.** Order 9 proved that those 11 games can fail the symmetry check without
+an event-stream anomaly. Modelling the three structural components would
+recover coverage, but it would replace a deliberately conservative mechanical
+test with a second set of rules that must themselves be correct. The owner chose
+the safer launch posture: disclose and exclude those games until separate
+evidence justifies a narrower gate.
+
+**Conditions.**
+
+- The tolerance remains 2 and all current `possession_gate` quarantines remain
+  effective unless their independently counted totals actually move inside it.
+- The structural decomposition remains diagnostic only; it never creates,
+  deletes, or reassigns a possession.
+- Any future proposal to recover the 11 games is a new decision with complete
+  E2024/E2025/E2026 measurements and a test-first rule change.
+
+**Provenance.**
+
+- Basis: MIXED. The 11-game population and its decomposition are measured;
+  choosing maximum conservatism over additional coverage is an owner judgment.
+- Evidence: `docs/POSSESSION_RESIDUAL_REPORT.md` and the complete two-season
+  diagnostic gates.
+- Approved: the owner, 2026-08-26, together with the targeted E2025 game 344
+  derived-only production reconciliation design.
 
 ---
 

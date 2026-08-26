@@ -35,9 +35,10 @@ PAGE_BYTES = 8_192
 COMPACTED_TABLE = "game_event"
 MOVED_SEASON = "E2025"
 
-# E2024's ten content fingerprints, captured read-only on 2026-08-16 and
-# published in section 7 of the plan. "E2024 must not move" is checked against
-# these. They are hashes of row *content* in key order, so they do not depend on
+# E2024's ten content fingerprints. Raw values were captured read-only on
+# 2026-08-16; derived values were refreshed read-only on 2026-08-26 after the
+# approved Order 9 rule reached production. "E2024 must not move" is checked
+# against these. They are hashes of row *content* in key order, so they do not depend on
 # where a row physically sits - which is exactly why moving rows cannot change
 # them, and why a change would mean something other than the move happened.
 E2024_BASELINE: dict[str, tuple[int, str]] = {
@@ -46,11 +47,11 @@ E2024_BASELINE: dict[str, tuple[int, str]] = {
     "raw_shot": (51_193, "7eb905723f2626f32d9f7c364d95d085"),
     "raw_boxscore_player": (7_863, "986a2671f24298557a86d6111cc63fe8"),
     "raw_boxscore_team": (1_320, "30ddfdfa405dee9650247635711b5908"),
-    "game_event": (176_483, "0a30f9b352103df5ea31781128988fff"),
+    "game_event": (176_483, "6efb53d2d053abbd634145b8bb655ceb"),
     "lineup_stint": (13_927, "5643117a3abf966ccc6e9f63efbdc18a"),
     "player_game_minutes": (7_863, "89897157cf4e918165f7527e8dc42b81"),
-    "possession": (47_831, "acbb7c860d399fc53d03a0688b6b1178"),
-    "game_quality": (330, "deb43192aa5da8507b9759a99809af45"),
+    "possession": (47_829, "670595518dbe73679e6e09e42b71af7f"),
+    "game_quality": (330, "051207411ad379769325e5f9485b1925"),
 }
 
 # E2025's row counts from the same capture. Row counts only: the plan did not
