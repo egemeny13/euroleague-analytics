@@ -266,8 +266,13 @@ reconciled by another production path: it now holds 47,829 possessions, games
 29 and 270 are no longer quarantined, and its six derived fingerprints match
 the corrected complete-season build. E2025 remained at 59,483 possessions;
 game 344 alone held 161 instead of 160. The owner approved a derived-only,
-one-game E2025/344 replacement, with the actual write still protected by the
-repository's immediately-before-write approval gate.
+one-game E2025/344 replacement and separately approved the write immediately
+before execution. The attended transaction completed on 2026-08-26: it
+atomically replaced 638 `game_event` rows and 160 possession rows, taking E2025
+to 59,482 possessions. Raw rows, E2024, lineup, lineup stints, player-game
+minutes, and game quality retained their exact pre-write fingerprints. The two
+expected E2025 fingerprints are now `23c2544836c9b427a7be8430a1ee702b`
+(`game_event`) and `b0a2360f2504a1e4e33b03ec2d293ea4` (`possession`).
 
 ---
 

@@ -637,4 +637,7 @@ quarantine removals. E2025 alone remained stale at 59,483: game 344 held one
 extra derived possession. The owner approved a targeted derived-only rebuild
 for that game and explicitly kept the 11 structural no-anomaly games under the
 existing conservative possession gate. The live transaction remains subject
-to the immediately-before-write approval rule.
+to the immediately-before-write approval rule; the owner gave that separate
+approval and the transaction completed on 2026-08-26. E2025 game 344 now has
+160 possessions, the season has 59,482, and all protected fingerprints and
+gates passed. Order 9 is fully reconciled in production.

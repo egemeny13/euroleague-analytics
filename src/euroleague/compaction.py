@@ -66,26 +66,23 @@ E2025_BASELINE_COUNTS: dict[str, int] = {
     "game_event": 222_976,
     "lineup_stint": 17_790,
     "player_game_minutes": 9_540,
-    "possession": 59_483,
+    "possession": 59_482,
     "game_quality": 402,
 }
 
-# E2025's content fingerprints, captured 2026-08-18 after the pilot moved 2,000
-# of its `game_event` rows. The plan published no E2025 checksums, so this is
-# the first record of them, and it is deliberately honest about its timing: it
-# is a baseline for steps 3 onward, and it cannot prove anything about the state
-# before the pilot ran. What protects the pilot's own 2,000 rows is that the
-# statement which moved them wrote each row's existing value back over itself.
+# E2025's raw and four unchanged derived fingerprints were captured 2026-08-18
+# after the compaction pilot. `game_event` and `possession` were refreshed
+# read-only on 2026-08-26 after the approved Order 9 game 344 reconciliation.
 E2025_BASELINE: dict[str, tuple[int, str]] = {
     "raw_game": (402, "b46eb1342f15a03578fcbcff6e9900e1"),
     "raw_event": (222_976, "2a47f5c93746ba5edb419edfb2f6d7fe"),
     "raw_shot": (64_137, "3c701196fc4e0f0c93bd23dadf53c693"),
     "raw_boxscore_player": (9_540, "110608ac93b854c6172b8ac7924a5c69"),
     "raw_boxscore_team": (1_608, "6da594c87af498c8065488db18a5f2e0"),
-    "game_event": (222_976, "239ec26d95ffdd4e354c6ad9c15db8ef"),
+    "game_event": (222_976, "23c2544836c9b427a7be8430a1ee702b"),
     "lineup_stint": (17_790, "32ab77663e26ea8008d821b1f603326f"),
     "player_game_minutes": (9_540, "81606d5aa9ab6f014afd9c1936cba809"),
-    "possession": (59_483, "15e5e7e0f7a1b04bc04323cefd66c01a"),
+    "possession": (59_482, "b0a2360f2504a1e4e33b03ec2d293ea4"),
     "game_quality": (402, "ebe44c90defa90e56b050c548f3d90d7"),
 }
 

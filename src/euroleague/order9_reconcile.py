@@ -26,6 +26,15 @@ ORDER9_E2025_BEFORE_BASELINE: dict[str, TableFingerprint] = {
     "possession": TableFingerprint(59_483, "15e5e7e0f7a1b04bc04323cefd66c01a"),
 }
 
+ORDER9_E2025_AFTER_BASELINE: dict[str, TableFingerprint] = {
+    "lineup": TableFingerprint(7_281, "fabfb8b61192e2efffe7c865cbbf9a44"),
+    "lineup_stint": TableFingerprint(17_790, "32ab77663e26ea8008d821b1f603326f"),
+    "game_event": TableFingerprint(222_976, "23c2544836c9b427a7be8430a1ee702b"),
+    "player_game_minutes": TableFingerprint(9_540, "81606d5aa9ab6f014afd9c1936cba809"),
+    "game_quality": TableFingerprint(402, "ebe44c90defa90e56b050c548f3d90d7"),
+    "possession": TableFingerprint(59_482, "b0a2360f2504a1e4e33b03ec2d293ea4"),
+}
+
 _UNCHANGED_E2025_DERIVED = (
     "lineup",
     "lineup_stint",
@@ -47,6 +56,16 @@ def assert_expected_prewrite_state(*, derived_2024: Snapshot, derived_2025: Snap
     """Refuse the one-time write if production moved after its read-only audit."""
     _assert_same("E2024 production pre-write", ORDER9_E2024_DERIVED_BASELINE, derived_2024)
     _assert_same("E2025 production pre-write", ORDER9_E2025_BEFORE_BASELINE, derived_2025)
+
+
+def production_reconciliation_state(*, derived_2024: Snapshot, derived_2025: Snapshot) -> str:
+    """Classify the exact audited production state, refusing every third state."""
+    _assert_same("E2024 production", ORDER9_E2024_DERIVED_BASELINE, derived_2024)
+    if derived_2025 == ORDER9_E2025_BEFORE_BASELINE:
+        return "pending"
+    if derived_2025 == ORDER9_E2025_AFTER_BASELINE:
+        return "complete"
+    raise AssertionError("Order 9 production is neither pending nor complete")
 
 
 def assert_reconciliation_transition(

@@ -37,6 +37,7 @@ from euroleague.gate import (
 from euroleague.order9_reconcile import (
     assert_expected_prewrite_state,
     assert_reconciliation_transition,
+    production_reconciliation_state,
 )
 
 SEASON_CODE = "E2025"
@@ -108,6 +109,24 @@ def _assert_preflight(connection: Any):
     return baseline
 
 
+def _read_only_state(connection: Any):
+    baseline = _read_baseline(connection)
+    state = production_reconciliation_state(
+        derived_2024=baseline["derived_2024"],
+        derived_2025=baseline["derived_2025"],
+    )
+    possessions, excluded, reasons = _target_state(connection)
+    expected_possessions = (
+        EXPECTED_BEFORE_POSSESSIONS if state == "pending" else EXPECTED_AFTER_POSSESSIONS
+    )
+    if (possessions, excluded, reasons) != (expected_possessions, False, ()):
+        raise AssertionError(
+            f"Unexpected {SEASON_CODE}/{GAMECODE} {state} state: "
+            f"possessions={possessions}, excluded={excluded}, reasons={list(reasons)}"
+        )
+    return baseline, state
+
+
 def _assert_postwrite(connection: Any, before) -> dict[str, Any]:
     assert_phase5_reconciles(connection, SEASON_CODE)
     possessions, excluded, reasons = _target_state(connection)
@@ -162,13 +181,13 @@ def main(argv: list[str] | None = None) -> int:
                 with connection.transaction():
                     with connection.cursor() as cursor:
                         cursor.execute("SET TRANSACTION READ ONLY")
-                    before = _assert_preflight(connection)
+                    observed, state = _read_only_state(connection)
                 print(
-                    f"READ-ONLY PREFLIGHT PASSED: {SEASON_CODE} has "
-                    f"{complete.played_games} complete cached games; game {GAMECODE} has "
-                    f"{EXPECTED_BEFORE_POSSESSIONS} stored possessions."
+                    f"READ-ONLY {state.upper()} STATE PASSED: {SEASON_CODE} has "
+                    f"{complete.played_games} complete cached games; game {GAMECODE} is {state}; "
+                    f"the season has {observed['derived_2025']['possession'].count:,} possessions."
                 )
-                _print_snapshot("E2025 derived before:", before["derived_2025"])
+                _print_snapshot("E2025 derived:", observed["derived_2025"])
                 return 0
 
             with connection.transaction():

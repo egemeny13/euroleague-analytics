@@ -26,6 +26,7 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
         raw = warehouse_snapshot(connection, SEASON)
         base = assert_phase5_base_reconciles(connection, SEASON)
         derived = assert_phase5_reconciles(connection, SEASON)
+        fingerprints = derived_snapshot(connection, SEASON)
 
     assert {table: fingerprint.count for table, fingerprint in raw.items()} == {
         "raw_api_response": 1_207,
@@ -41,7 +42,7 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
         "team": 20,
         "team_season": 20,
         "game_event": 222_976,
-        "possession": 59_483,
+        "possession": 59_482,
     }
     assert derived == {
         "lineup": 7_281,
@@ -49,7 +50,7 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
         "game_event": 222_976,
         "player_game_minutes": 9_540,
         "game_quality": 402,
-        "possession": 59_483,
+        "possession": 59_482,
         "attribution_issues": 16,
         "raw_minute_mismatches": 99,
         "corrected_minute_mismatches": 14,
@@ -70,6 +71,14 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
             263,
             384,
         ),
+    }
+    assert fingerprints == {
+        "lineup": TableFingerprint(7_281, "fabfb8b61192e2efffe7c865cbbf9a44"),
+        "lineup_stint": TableFingerprint(17_790, "32ab77663e26ea8008d821b1f603326f"),
+        "game_event": TableFingerprint(222_976, "23c2544836c9b427a7be8430a1ee702b"),
+        "player_game_minutes": TableFingerprint(9_540, "81606d5aa9ab6f014afd9c1936cba809"),
+        "game_quality": TableFingerprint(402, "ebe44c90defa90e56b050c548f3d90d7"),
+        "possession": TableFingerprint(59_482, "b0a2360f2504a1e4e33b03ec2d293ea4"),
     }
 
 

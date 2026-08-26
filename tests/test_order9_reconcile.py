@@ -5,9 +5,11 @@ import pytest
 from euroleague.gate import TableFingerprint
 from euroleague.order9_reconcile import (
     ORDER9_E2024_DERIVED_BASELINE,
+    ORDER9_E2025_AFTER_BASELINE,
     ORDER9_E2025_BEFORE_BASELINE,
     assert_expected_prewrite_state,
     assert_reconciliation_transition,
+    production_reconciliation_state,
 )
 
 
@@ -109,6 +111,34 @@ def test_order9_prewrite_state_rejects_external_drift() -> None:
 
     with pytest.raises(AssertionError, match=r"E2025 production pre-write.*possession"):
         assert_expected_prewrite_state(
+            derived_2024=ORDER9_E2024_DERIVED_BASELINE,
+            derived_2025=changed,
+        )
+
+
+def test_order9_production_state_distinguishes_pending_from_complete() -> None:
+    assert (
+        production_reconciliation_state(
+            derived_2024=ORDER9_E2024_DERIVED_BASELINE,
+            derived_2025=ORDER9_E2025_BEFORE_BASELINE,
+        )
+        == "pending"
+    )
+    assert (
+        production_reconciliation_state(
+            derived_2024=ORDER9_E2024_DERIVED_BASELINE,
+            derived_2025=ORDER9_E2025_AFTER_BASELINE,
+        )
+        == "complete"
+    )
+
+
+def test_order9_production_state_rejects_an_unknown_intermediate_state() -> None:
+    changed = dict(ORDER9_E2025_AFTER_BASELINE)
+    changed["possession"] = TableFingerprint(59_481, "unknown")
+
+    with pytest.raises(AssertionError, match="neither pending nor complete"):
+        production_reconciliation_state(
             derived_2024=ORDER9_E2024_DERIVED_BASELINE,
             derived_2025=changed,
         )
