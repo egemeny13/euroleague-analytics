@@ -27,7 +27,7 @@ goals:
   010-requery-view-timings: {status: completed}
   011-roadmap-matches-reality: {status: completed}
   012-on-off-season-scope: {status: completed, priority: high}
-  013-redact-database-url-errors: {status: in_progress, priority: high}
+  013-redact-database-url-errors: {status: completed, priority: high}
   014-exact-pagination-totals: {status: not_started, priority: high}
   015-strict-boolean-arguments: {status: not_started, priority: high}
   016-stable-pagination-order: {status: not_started}
