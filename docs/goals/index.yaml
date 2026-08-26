@@ -37,4 +37,4 @@ goals:
   020-redact-env-example-project: {status: completed}
   021-readme-current-claims: {status: completed}
   022-python-version-guard: {status: completed, depends_on: [021-readme-current-claims]}
-  023-tester-reporting-route: {status: in_progress, depends_on: [020-redact-env-example-project]}
+  023-tester-reporting-route: {status: completed, depends_on: [020-redact-env-example-project]}
