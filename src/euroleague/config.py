@@ -91,6 +91,10 @@ class TransactionPoolerError(ValueError):
     """Raised when a connection string points at the pooler in transaction mode."""
 
 
+class UnqualifiedPoolerUserError(ValueError):
+    """Raised when a connection string to the pooler uses a username without project ref."""
+
+
 @dataclass(frozen=True)
 class DatabaseSettings:
     """A parsed PostgreSQL connection string.
@@ -161,11 +165,20 @@ class DatabaseSettings:
                 f"is the string labelled 'Session pooler'."
             )
 
+        user = parsed.username or "postgres"
+        if host.endswith(_POOLER_DOMAIN) and "." not in user:
+            raise UnqualifiedPoolerUserError(
+                f"Database username {user!r} is missing the Supabase project reference. "
+                f"The pooler requires the username to be in the format 'postgres.<project-ref>'. "
+                f"Copy the connection string from the Supabase dashboard under "
+                f"Project Settings, Database, Connection pooling."
+            )
+
         return cls(
             host=host,
             port=port,
             database=(parsed.path or "/postgres").lstrip("/") or "postgres",
-            user=parsed.username or "postgres",
+            user=user,
             _password=parsed.password or "",
         )
 

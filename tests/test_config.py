@@ -18,6 +18,7 @@ from euroleague.config import (
     DirectHostError,
     StorageSettings,
     TransactionPoolerError,
+    UnqualifiedPoolerUserError,
     load_env_file,
 )
 
@@ -53,6 +54,25 @@ def test_the_transaction_pooler_rejection_explains_the_failure_and_the_fix() -> 
     assert "prepared statement" in message.lower()
     assert "5432" in message
     assert "session" in message.lower()
+
+
+def test_the_unqualified_pooler_username_is_rejected() -> None:
+    bare_user_url = (
+        "postgresql://postgres:secret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
+    )
+    with pytest.raises(UnqualifiedPoolerUserError) as raised:
+        DatabaseSettings.from_url(bare_user_url)
+    message = str(raised.value)
+    assert "postgres.<project-ref>" in message
+    assert "secret" not in message
+    assert bare_user_url not in message
+
+
+def test_non_pooler_host_accepts_unqualified_username() -> None:
+    local_url = "postgresql://postgres:secret@localhost:5432/postgres"
+    settings = DatabaseSettings.from_url(local_url)
+    assert settings.user == "postgres"
+    assert settings.host == "localhost"
 
 
 def test_the_direct_supabase_host_is_rejected() -> None:
@@ -247,6 +267,14 @@ SENTINEL_USER = "sentinel_user"
             ),
             TransactionPoolerError,
             "5432",
+        ),
+        (
+            (
+                f"postgresql://{SENTINEL_USER}:{SENTINEL_PASSWORD}"
+                "@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
+            ),
+            UnqualifiedPoolerUserError,
+            "postgres.<project-ref>",
         ),
         (
             "",
