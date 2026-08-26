@@ -1,7 +1,8 @@
-"""Tests asserting CI workflow pytest invocation preserves marker exclusions."""
+"""Tests asserting CI workflow pytest invocation and repository hygiene."""
 
 from __future__ import annotations
 
+import re
 import tomllib
 from pathlib import Path
 
@@ -57,3 +58,10 @@ def test_ci_command_excludes_network_marker() -> None:
         # Bare pytest inherits addopts which contains 'not network'
         addopts = _load_pyproject_addopts()
         assert "not network" in addopts
+
+
+def test_env_example_contains_no_supabase_project_reference() -> None:
+    """Break caught: .env.example names a real Supabase project reference."""
+    text = Path(".env.example").read_text(encoding="utf-8")
+    refs = re.findall(r"\b[a-z]{20}\b", text)
+    assert refs == [], f"Found project reference(s) in .env.example: {refs}"
