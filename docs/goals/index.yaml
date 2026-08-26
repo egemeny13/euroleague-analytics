@@ -35,6 +35,6 @@ goals:
   018-pooler-username-validation: {status: completed, priority: high}
   019-settlement-rebuild-docstring: {status: completed}
   020-redact-env-example-project: {status: completed}
-  021-readme-current-claims: {status: not_started}
+  021-readme-current-claims: {status: in_progress}
   022-python-version-guard: {status: not_started, depends_on: [021-readme-current-claims]}
   023-tester-reporting-route: {status: not_started, depends_on: [020-redact-env-example-project]}
