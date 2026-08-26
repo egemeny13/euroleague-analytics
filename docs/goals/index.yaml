@@ -32,7 +32,7 @@ goals:
   015-strict-boolean-arguments: {status: completed, priority: high}
   016-stable-pagination-order: {status: completed}
   017-bounded-name-ambiguity: {status: completed}
-  018-pooler-username-validation: {status: not_started, priority: high}
+  018-pooler-username-validation: {status: in_progress, priority: high}
   019-settlement-rebuild-docstring: {status: not_started}
   020-redact-env-example-project: {status: not_started}
   021-readme-current-claims: {status: not_started}
