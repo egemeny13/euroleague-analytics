@@ -29,6 +29,6 @@ goals:
   012-on-off-season-scope: {status: completed, priority: high}
   013-redact-database-url-errors: {status: completed, priority: high}
   014-exact-pagination-totals: {status: completed, priority: high}
-  015-strict-boolean-arguments: {status: in_progress, priority: high}
+  015-strict-boolean-arguments: {status: completed, priority: high}
   016-stable-pagination-order: {status: not_started}
   017-bounded-name-ambiguity: {status: not_started}
