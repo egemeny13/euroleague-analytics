@@ -829,7 +829,14 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
     cursor.execute(
         f"""
         with player_lineups as (
-            select lineup_id, team_code from v_lineup_player where player_id = %s
+            select lp.lineup_id, lp.team_code
+            from v_lineup_player lp
+            where lp.player_id = %s
+              and exists (
+                  select 1 from v_possession p
+                  where p.season_code = %s{quarantine}
+                    and (p.offense_lineup_id = lp.lineup_id or p.defense_lineup_id = lp.lineup_id)
+              )
         ),
         his_teams as (
             select distinct team_code from player_lineups{team_filter}
@@ -870,7 +877,7 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
         join defense d on d.team_code = o.team_code and d.is_on_court = o.is_on_court
         order by o.is_on_court desc
         """,
-        (player_id, *team_params, season_code, season_code),
+        (player_id, season_code, *team_params, season_code, season_code),
     )
     rows = _rows(cursor)
 
