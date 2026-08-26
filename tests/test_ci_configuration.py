@@ -65,3 +65,26 @@ def test_env_example_contains_no_supabase_project_reference() -> None:
     text = Path(".env.example").read_text(encoding="utf-8")
     refs = re.findall(r"\b[a-z]{20}\b", text)
     assert refs == [], f"Found project reference(s) in .env.example: {refs}"
+
+
+def test_tester_reporting_route_files_exist_and_prompt_for_required_fields() -> None:
+    """Break caught: reporting route files are missing or do not ask for key fields."""
+    contributing_path = Path("CONTRIBUTING.md")
+    assert contributing_path.is_file(), "CONTRIBUTING.md is missing"
+    contributing_text = contributing_path.read_text(encoding="utf-8")
+    assert "GitHub" in contributing_text
+    assert "el_describe_warehouse" in contributing_text
+
+    template_dir = Path(".github") / "ISSUE_TEMPLATE"
+    assert template_dir.is_dir(), ".github/ISSUE_TEMPLATE directory is missing"
+    template_files = (
+        list(template_dir.glob("*.md"))
+        + list(template_dir.glob("*.yaml"))
+        + list(template_dir.glob("*.yml"))
+    )
+    assert len(template_files) >= 1, "No issue templates found under .github/ISSUE_TEMPLATE"
+
+    combined_template_text = "\n".join(f.read_text(encoding="utf-8") for f in template_files)
+    assert "season" in combined_template_text.lower()
+    assert "raw" in combined_template_text.lower() or "corrected" in combined_template_text.lower()
+    assert "minutes" in combined_template_text.lower()
