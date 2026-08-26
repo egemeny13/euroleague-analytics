@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from euroleague.config import DatabaseSettings
 from euroleague.live import LiveRunSummary
 from euroleague.step_summary import (
     append_step_summary,
@@ -100,6 +101,29 @@ def test_summaries_never_carry_credentials() -> None:
         assert "password" not in block.lower()
         assert fake_conn_str not in block
         assert fake_service_key not in block
+
+
+def test_failure_summaries_never_carry_credentials_from_malformed_url() -> None:
+    """A hostless database URL error passed to failure formatters must not leak
+    credentials or the URL."""
+    sentinel_password = "S3cr3t-P4ssw0rd!"
+    hostless_url = f"postgresql://postgres:{sentinel_password}@:5432/postgres"
+
+    failure: ValueError | None = None
+    try:
+        DatabaseSettings.from_url(hostless_url)
+    except ValueError as error:
+        failure = error
+
+    assert failure is not None, "Expected from_url to raise ValueError for hostless URL"
+
+    for block in (
+        format_fetch_summary("E2026", [], failure=failure),
+        format_live_pipeline_summary("E2026", None, failure=failure),
+        format_settlement_summary("E2026", None, failure=failure),
+    ):
+        assert sentinel_password not in block
+        assert hostless_url not in block
 
 
 def test_workflow_steps_all_carry_if_always() -> None:

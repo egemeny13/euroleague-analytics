@@ -144,7 +144,10 @@ class DatabaseSettings:
             )
 
         if not host:
-            raise ValueError(f"No host in the connection string {url!r}.")
+            raise ValueError(
+                "No host in the database connection string. Copy the connection string "
+                "from the Supabase dashboard under Project Settings, Database."
+            )
 
         port = parsed.port or 5432
         if host.endswith(_POOLER_DOMAIN) and port == _TRANSACTION_MODE_PORT:

@@ -198,3 +198,81 @@ def test_storage_settings_read_the_same_env_file_without_printing_it(tmp_path: P
     assert settings.project_url == "https://project.supabase.co"
     assert settings.bucket == "private-bucket"
     assert settings.service_key() == "service-secret"
+
+
+SENTINEL_PASSWORD = "S3cr3t-P4ssw0rd!"
+SENTINEL_USER = "sentinel_user"
+
+
+@pytest.mark.parametrize(
+    ("invalid_url", "expected_exception", "correction_keyword"),
+    [
+        (
+            f"postgresql://{SENTINEL_USER}:{SENTINEL_PASSWORD}@:5432/postgres",
+            ValueError,
+            "Supabase dashboard",
+        ),
+        (
+            f"postgresql://{SENTINEL_USER}:{SENTINEL_PASSWORD}@/postgres",
+            ValueError,
+            "Supabase dashboard",
+        ),
+        (
+            f"postgresql://{SENTINEL_USER}:{SENTINEL_PASSWORD}@",
+            ValueError,
+            "Supabase dashboard",
+        ),
+        (
+            f"https://{SENTINEL_USER}:{SENTINEL_PASSWORD}@example.com/db",
+            ValueError,
+            "postgresql://",
+        ),
+        (
+            f"mysql://{SENTINEL_USER}:{SENTINEL_PASSWORD}@localhost:3306/db",
+            ValueError,
+            "postgresql://",
+        ),
+        (
+            (
+                f"postgresql://{SENTINEL_USER}:{SENTINEL_PASSWORD}"
+                "@db.pctiewdpstnwcutrvegu.supabase.co:5432/postgres"
+            ),
+            DirectHostError,
+            "pooler",
+        ),
+        (
+            (
+                f"postgresql://{SENTINEL_USER}:{SENTINEL_PASSWORD}"
+                "@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
+            ),
+            TransactionPoolerError,
+            "5432",
+        ),
+        (
+            "",
+            ValueError,
+            ".env",
+        ),
+        (
+            "   ",
+            ValueError,
+            ".env",
+        ),
+    ],
+)
+def test_invalid_urls_never_expose_credentials_or_raw_url_and_provide_guidance(
+    invalid_url: str,
+    expected_exception: type[Exception],
+    correction_keyword: str,
+) -> None:
+    """Invalid database URLs must never interpolate raw connection strings or secrets,
+    and must provide actionable guidance."""
+    with pytest.raises(expected_exception) as exc_info:
+        DatabaseSettings.from_url(invalid_url)
+
+    message = str(exc_info.value)
+    if SENTINEL_PASSWORD in invalid_url:
+        assert SENTINEL_PASSWORD not in message
+    if invalid_url.strip():
+        assert invalid_url not in message
+    assert correction_keyword.lower() in message.lower()
