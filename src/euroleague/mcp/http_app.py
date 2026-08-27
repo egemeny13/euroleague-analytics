@@ -108,9 +108,7 @@ class IntrospectionTokenVerifier(TokenVerifier):
                 )
                 raw_scope = claims.get("scope") or claims.get("scopes") or []
                 scopes = (
-                    raw_scope.split()
-                    if isinstance(raw_scope, str)
-                    else [str(s) for s in raw_scope]
+                    raw_scope.split() if isinstance(raw_scope, str) else [str(s) for s in raw_scope]
                 )
                 client_id_val = (
                     claims.get("client_id")
@@ -156,7 +154,9 @@ class IntrospectionTokenVerifier(TokenVerifier):
                             if isinstance(raw_scope, str)
                             else [str(s) for s in raw_scope]
                         )
-                        client_id_val = data.get("client_id") or data.get("sub") or ANONYMOUS_SUBJECT
+                        client_id_val = (
+                            data.get("client_id") or data.get("sub") or ANONYMOUS_SUBJECT
+                        )
                         exp_val = data.get("exp")
                         expires_at = (
                             int(exp_val)
