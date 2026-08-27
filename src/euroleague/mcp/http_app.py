@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -37,11 +39,23 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from euroleague.mcp.identity import SERVER_INFO, SERVER_INSTRUCTIONS
+from euroleague.mcp.logging_setup import LOGGER_NAME
 from euroleague.mcp.protocol import Tool
 from euroleague.mcp.ratelimit import RateLimitExceeded, RequestCap
 from euroleague.mcp.tools import build_registry
 
 ANONYMOUS_SUBJECT = "anonymous"
+
+_LOGGER = logging.getLogger(LOGGER_NAME)
+
+
+def _call_record(tool_name: str, outcome: str, started: float) -> dict[str, Any]:
+    """The operational facts about one tool call, and nothing about its content."""
+    return {
+        "tool": tool_name,
+        "outcome": outcome,
+        "ms": round((time.monotonic() - started) * 1000),
+    }
 
 
 def caller_subject() -> str:
@@ -164,11 +178,18 @@ def build_app(
         # A tool that fails is a TOOL error, not a protocol error: the model is
         # meant to read the message and try something else. Same rule as
         # protocol.py, and it must stay the same on both transports.
+        #
+        # Only the tool name, outcome and duration are logged. The arguments
+        # name the players and teams a tester was asking about, and the payload
+        # is large; neither belongs in an operational record.
+        started = time.monotonic()
         try:
             payload = await anyio.to_thread.run_sync(lambda: tool.handler(arguments))
         except Exception as failure:
+            _LOGGER.exception("tool_call", extra=_call_record(tool.name, "error", started))
             return _tool_error(str(failure))
 
+        _LOGGER.info("tool_call", extra=_call_record(tool.name, "ok", started))
         return types.CallToolResult(
             content=[types.TextContent(type="text", text=json.dumps(payload, **_JSON))],
             structuredContent=payload,

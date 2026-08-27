@@ -9,12 +9,18 @@ misconfigured. This was found by a smoke test, not by reading the code.
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import pytest
 from starlette.testclient import TestClient
 
-from euroleague.mcp.http_app import ANONYMOUS_SUBJECT, build_app, caller_subject
+from euroleague.mcp.http_app import (
+    ANONYMOUS_SUBJECT,
+    _call_record,
+    build_app,
+    caller_subject,
+)
 from euroleague.mcp.ratelimit import RequestCap
 
 HOST = "testserver"
@@ -84,3 +90,19 @@ def test_an_unidentified_caller_falls_back_to_one_shared_bucket() -> None:
     """Outside a request there is no token, and an unknown caller must not get its own
     allowance - that would let the cap be sidestepped by not authenticating."""
     assert caller_subject() == ANONYMOUS_SUBJECT
+
+
+def test_a_logged_tool_call_records_no_arguments_and_no_payload() -> None:
+    """The arguments name the players and teams a tester asked about.
+
+    Logging them would turn an operational record into a record of what each
+    person was researching, which is not what it is for.
+    """
+    record = _call_record("el_get_game", "ok", time.monotonic())
+    assert set(record) == {"tool", "outcome", "ms"}
+    assert record["tool"] == "el_get_game"
+    assert record["outcome"] == "ok"
+
+
+def test_a_logged_tool_call_reports_a_non_negative_duration() -> None:
+    assert _call_record("el_get_game", "ok", time.monotonic())["ms"] >= 0
