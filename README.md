@@ -175,6 +175,9 @@ and whether minutes are raw or corrected. That last one is enforced rather than
 remembered: the response builder refuses to return a minute-derived value that
 does not declare its basis.
 
+The hosted server, and the owner steps that stand it up, are documented in
+[`docs/OWNER_SETUP.md`](docs/OWNER_SETUP.md).
+
 ## The evaluations
 
 [`evaluation.xml`](evaluation.xml) holds ten questions of the kind this warehouse
