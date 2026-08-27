@@ -21,7 +21,7 @@ import os
 import psycopg
 import pytest
 
-from euroleague.config import DatabaseSettings
+from euroleague.config import DatabaseSettings, load_env_file
 
 pytestmark = pytest.mark.warehouse
 
@@ -45,7 +45,7 @@ DIRECT_TABLES = ("season_progress", "team_season")
 
 def _reader_connection() -> psycopg.Connection:
     """Connect as the read-only role, skipping when its URL is not configured."""
-    url = os.environ.get(READER_URL_ENV_VAR)
+    url = os.environ.get(READER_URL_ENV_VAR) or load_env_file().get(READER_URL_ENV_VAR)
     if not url:
         pytest.skip(
             f"{READER_URL_ENV_VAR} is not set, so the reader role cannot be exercised. "
