@@ -38,6 +38,7 @@ is binding — the decision is only approved with it.
 | 23 | Public Data API view access | Approved and implemented 2026-08-24 — no warehouse view is public |
 | 24 | Pre-season roster identity and registration grain | Approved 2026-08-24 — source-native registrations; no invented player-ID mapping |
 | 25 | Structural possession residuals | Approved 2026-08-26 — keep the conservative gate; no structural adjustment |
+| 26 | An HTTP transport alongside stdio | Approved 2026-08-27 — hosted and OAuth-authenticated; stdio unchanged and still the local default |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -71,6 +72,12 @@ Item 24 closes Block D's roster schema decision. The owner approved Option A on
 2026-08-24 from `docs/PRESEASON_ROSTER_SCHEMA_DECISION_BRIEF.md` after the full
 E2026 pre-season roster and the available E2024/E2025 pages were compared with
 production player identities.
+
+Item 26 was raised on 2026-08-27, when the owner asked to give a small group of
+outside testers access to the warehouse. It is the second decision in this file
+that overrides a rule in `CLAUDE.md`; see the contradictions section at the end.
+The design it comes from is
+`docs/superpowers/specs/2026-08-27-hosted-mcp-server-design.md`.
 
 ---
 
@@ -1328,6 +1335,63 @@ evidence justifies a narrower gate.
 
 ---
 
+## 26. The MCP server gains an HTTP transport, and stdio keeps working
+
+Serve the same ten tools over StreamableHTTP from a single hosted container,
+authenticated as an OAuth 2.1 resource server against an external identity
+provider, in addition to the existing stdio transport. stdio remains the local
+default and is unchanged.
+
+**Why.** Sharing the stdio server with anyone means sharing the warehouse
+owner's database credential, which can drop every table in a free-tier project
+with no point-in-time restore. `mcp/db.py` makes the *server* unable to write;
+it does nothing about the *credential the server was given*. A hosted server
+holds the only credential, and testers hold none.
+
+**Why the client forced OAuth.** Claude Desktop's connector flow always performs
+OAuth dynamic client registration and has no bearer-token fallback. Claude Code
+does accept a static bearer token. The choice of client, not the choice of
+hosting, is what makes OAuth mandatory here.
+
+**Why the dependency argument in `protocol.py` does not carry over.**
+`protocol.py:8-11` rejects the official MCP SDK because it triples a dependency
+tree for a server every user installs locally. That reasoning holds for local
+installs and does not transfer to one container built once. Hand-rolling
+StreamableHTTP and OAuth 2.1 instead would place conformance to a moving
+specification into code this project's owner cannot read, which is the worse
+trade. The SDK is therefore scoped to `requirements-http.txt`; a local stdio
+user never installs it.
+
+**Conditions.**
+
+- The HTTP transport must publish a tool list byte-identical to the stdio
+  transport, including the `readOnlyHint` annotation, enforced by test. That
+  annotation is a default on the `Tool` dataclass in `protocol.py`, which the
+  SDK path does not use, so it can be lost silently.
+- `protocol.py`, `scripts/mcp_server.py` and `ReadOnlyConnectionManager` are not
+  modified. The Order 7c latency evidence was measured through them and must
+  remain valid.
+- The hosted server connects as a role that cannot write. The read-only
+  guarantee must live in the database, not only in our code.
+- Concurrency is a new failure mode. `ReadOnlyConnectionManager` holds one
+  connection and is documented as aligned with the *serial* stdio process; the
+  HTTP path requires its own pool, or two simultaneous callers share one cursor
+  with no error anywhere.
+- Statement and request timeouts, and a per-subject request cap, ship with the
+  transport rather than after it.
+
+**Provenance.**
+
+- Basis: MIXED. The client's OAuth requirement, the SDK's support for an
+  external authorization server, and the hosting costs are verified. Preferring
+  a hosted server over distributing a read-only credential is an owner judgment.
+- Evidence: `docs/superpowers/specs/2026-08-27-hosted-mcp-server-design.md`,
+  including its section 13 audit against an external MCP production-readiness
+  checklist.
+- Approved: the owner, 2026-08-27.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```
@@ -1409,6 +1473,16 @@ No other disagreement was found between Decisions 1-19 and `CLAUDE.md`,
 `AGENTS.md` contains only a pointer to `CLAUDE.md` and introduces no competing
 project rule. No previously unnoticed contradiction remains after the two stale
 roadmap statements above are corrected.
+
+### Decision 26 versus `CLAUDE.md` — found 2026-08-27, after the S16 sweep
+
+- Decision 26 says the MCP server gains an HTTP transport, served from a hosted
+  container, alongside stdio.
+- `CLAUDE.md` said: "Transport: `stdio` for local use."
+- Decision 26 is later and wins under `CLAUDE.md`'s own precedence rule. Unlike
+  the Decision 18 override above, `CLAUDE.md` was amended in the same commit
+  rather than left to disagree, so the two files now agree and this entry
+  records the change rather than a standing conflict.
 
 ### Decisions whose justification depends on goals, audience, or budget
 

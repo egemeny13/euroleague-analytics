@@ -253,7 +253,9 @@ the event stream as a bug.
   carries the same ambiguity.
 - Error messages must suggest a concrete next step.
 - Mark read-only tools with `readOnlyHint`.
-- Transport: `stdio` for local use.
+- Transport: `stdio` for local use, and StreamableHTTP for the hosted server.
+  Both serve the same tool registry, and the HTTP transport must publish a tool
+  list byte-identical to stdio's. See `DECISIONS.md` item 26.
 
 ## Workflow rules
 
