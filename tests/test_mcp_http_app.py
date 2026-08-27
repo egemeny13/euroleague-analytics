@@ -14,7 +14,8 @@ from typing import Any
 import pytest
 from starlette.testclient import TestClient
 
-from euroleague.mcp.http_app import build_app
+from euroleague.mcp.http_app import ANONYMOUS_SUBJECT, build_app, caller_subject
+from euroleague.mcp.ratelimit import RequestCap
 
 HOST = "testserver"
 
@@ -73,3 +74,13 @@ def test_health_needs_no_authentication(path: str) -> None:
     """A platform health check cannot present a token, so this route must stay open."""
     with TestClient(build_app(_runner, allowed_hosts=[HOST])) as client:
         assert client.get(path).status_code == 200
+
+
+def test_the_app_accepts_a_request_cap() -> None:
+    assert build_app(_runner, allowed_hosts=[HOST], cap=RequestCap()) is not None
+
+
+def test_an_unidentified_caller_falls_back_to_one_shared_bucket() -> None:
+    """Outside a request there is no token, and an unknown caller must not get its own
+    allowance - that would let the cap be sidestepped by not authenticating."""
+    assert caller_subject() == ANONYMOUS_SUBJECT

@@ -38,7 +38,30 @@ from starlette.routing import Route
 
 from euroleague.mcp.identity import SERVER_INFO, SERVER_INSTRUCTIONS
 from euroleague.mcp.protocol import Tool
+from euroleague.mcp.ratelimit import RateLimitExceeded, RequestCap
 from euroleague.mcp.tools import build_registry
+
+ANONYMOUS_SUBJECT = "anonymous"
+
+
+def caller_subject() -> str:
+    """Who to count a call against: the authenticated client, or a shared bucket.
+
+    Falling back to one shared bucket is deliberate. If an unidentified caller
+    got its own allowance, the cap could be sidestepped entirely by not
+    authenticating - which is exactly the caller we would most want to slow
+    down.
+    """
+    try:
+        from mcp.server.auth.middleware.auth_context import get_access_token
+
+        token = get_access_token()
+    except Exception:
+        return ANONYMOUS_SUBJECT
+    if token is None:
+        return ANONYMOUS_SUBJECT
+    return token.client_id or ANONYMOUS_SUBJECT
+
 
 # Matches the stdio server's framing in protocol.py, which serialises every tool
 # payload the same way. Two transports must not disagree about encoding.
@@ -100,6 +123,7 @@ def build_app(
     verifier: Any = None,
     auth_settings: Any = None,
     allowed_hosts: list[str] | None = None,
+    cap: RequestCap | None = None,
 ) -> Any:
     """Assemble the ASGI application serving the ten tools over StreamableHTTP.
 
@@ -120,6 +144,15 @@ def build_app(
         if tool is None:
             available = ", ".join(sorted(registry)) or "none"
             return _tool_error(f"Unknown tool {params.name!r}. Available tools: {available}.")
+
+        # Checked before any work is done, and reported as a tool error so the
+        # model reads "wait a moment" and can act on it, rather than seeing a
+        # broken request it cannot interpret.
+        if cap is not None:
+            try:
+                cap.check(caller_subject())
+            except RateLimitExceeded as refused:
+                return _tool_error(str(refused))
 
         arguments = dict(params.arguments or {})
         missing = [name for name in tool.input_schema.get("required", []) if name not in arguments]
