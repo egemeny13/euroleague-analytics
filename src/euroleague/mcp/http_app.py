@@ -49,13 +49,23 @@ ANONYMOUS_SUBJECT = "anonymous"
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
 
-def _call_record(tool_name: str, outcome: str, started: float) -> dict[str, Any]:
-    """The operational facts about one tool call, and nothing about its content."""
-    return {
+def _call_record(
+    tool_name: str, outcome: str, started: float, error_type: str | None = None
+) -> dict[str, Any]:
+    """The operational facts about one tool call, and nothing about its content.
+
+    `error_type` is a class name such as "ValueError", never a message. Query
+    error messages quote the caller's arguments back at them, so the message
+    belongs in the reply to the caller and not in an operational log.
+    """
+    record: dict[str, Any] = {
         "tool": tool_name,
         "outcome": outcome,
         "ms": round((time.monotonic() - started) * 1000),
     }
+    if error_type is not None:
+        record["error_type"] = error_type
+    return record
 
 
 def caller_subject() -> str:
@@ -179,14 +189,22 @@ def build_app(
         # meant to read the message and try something else. Same rule as
         # protocol.py, and it must stay the same on both transports.
         #
-        # Only the tool name, outcome and duration are logged. The arguments
-        # name the players and teams a tester was asking about, and the payload
-        # is large; neither belongs in an operational record.
+        # Only the tool name, outcome, duration and exception TYPE are logged.
+        #
+        # WHY NOT THE EXCEPTION MESSAGE OR TRACEBACK. Query errors embed the
+        # caller's own arguments - `queries.py:207` raises "must be true or
+        # false, not {value!r}" - so logging the message would record the
+        # players and teams a tester was asking about, which is exactly what
+        # this log is not for. The full message still reaches the caller, who
+        # asked the question and already knows what they asked.
         started = time.monotonic()
         try:
             payload = await anyio.to_thread.run_sync(lambda: tool.handler(arguments))
         except Exception as failure:
-            _LOGGER.exception("tool_call", extra=_call_record(tool.name, "error", started))
+            _LOGGER.error(
+                "tool_call",
+                extra=_call_record(tool.name, "error", started, type(failure).__name__),
+            )
             return _tool_error(str(failure))
 
         _LOGGER.info("tool_call", extra=_call_record(tool.name, "ok", started))

@@ -106,3 +106,19 @@ def test_a_logged_tool_call_records_no_arguments_and_no_payload() -> None:
 
 def test_a_logged_tool_call_reports_a_non_negative_duration() -> None:
     assert _call_record("el_get_game", "ok", time.monotonic())["ms"] >= 0
+
+
+def test_a_failed_call_logs_the_exception_type_and_not_its_message() -> None:
+    """Query errors quote the caller's arguments back at them.
+
+    `queries.py` raises messages like "must be true or false, not {value!r}",
+    so logging the message would record what a tester was asking about. The
+    class name says what went wrong without saying what was asked.
+    """
+    record = _call_record("el_get_game", "error", time.monotonic(), "ValueError")
+    assert record["error_type"] == "ValueError"
+    assert set(record) == {"tool", "outcome", "ms", "error_type"}
+
+
+def test_a_successful_call_records_no_error_type() -> None:
+    assert "error_type" not in _call_record("el_get_game", "ok", time.monotonic())
