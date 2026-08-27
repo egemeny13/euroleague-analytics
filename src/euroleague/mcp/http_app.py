@@ -32,7 +32,10 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 import anyio
+import httpx2
 import mcp.types as types
+from mcp.server.auth.provider import AccessToken, TokenVerifier
+from mcp.server.auth.settings import AuthSettings
 from mcp.server.lowlevel import Server
 from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import JSONResponse
@@ -45,6 +48,131 @@ from euroleague.mcp.ratelimit import RateLimitExceeded, RequestCap
 from euroleague.mcp.tools import build_registry
 
 ANONYMOUS_SUBJECT = "anonymous"
+
+AUTH_VARIABLES = (
+    "MCP_ISSUER_URL",
+    "MCP_RESOURCE_URL",
+    "MCP_INTROSPECTION_URL",
+    "MCP_CLIENT_ID",
+    "MCP_CLIENT_SECRET",
+)
+
+
+class IntrospectionTokenVerifier(TokenVerifier):
+    """Verifies Bearer tokens against an RFC 7662 OAuth 2.0 token introspection endpoint."""
+
+    def __init__(
+        self,
+        introspection_url: str,
+        client_id: str,
+        client_secret: str,
+        resource_url: str | None = None,
+        timeout_seconds: float = 10.0,
+    ) -> None:
+        self.introspection_url = introspection_url
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.resource_url = resource_url
+        self.timeout_seconds = timeout_seconds
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        """Query the introspection endpoint to validate the presented token.
+
+        Never raises on introspection failure or network error; returns None so
+        the auth middleware can issue a clean 401.
+        """
+        try:
+            async with httpx2.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.post(
+                    self.introspection_url,
+                    data={"token": token, "token_type_hint": "access_token"},
+                    auth=(self.client_id, self.client_secret),
+                    headers={"Accept": "application/json"},
+                )
+                if response.status_code != 200:
+                    return None
+                data = response.json()
+        except Exception:
+            return None
+
+        if not isinstance(data, dict) or not data.get("active"):
+            return None
+
+        # Parse scopes: RFC 7662 specifies a space-delimited string
+        raw_scope = data.get("scope") or data.get("scopes") or []
+        if isinstance(raw_scope, str):
+            scopes = raw_scope.split()
+        elif isinstance(raw_scope, list):
+            scopes = [str(s) for s in raw_scope]
+        else:
+            scopes = []
+
+        client_id_val = data.get("client_id") or data.get("sub") or ANONYMOUS_SUBJECT
+        exp_val = data.get("exp")
+        expires_at = (
+            int(exp_val) if exp_val is not None and isinstance(exp_val, (int, float)) else None
+        )
+        sub_val = data.get("sub")
+        subject = str(sub_val) if sub_val is not None else None
+
+        return AccessToken(
+            token=token,
+            client_id=str(client_id_val),
+            scopes=scopes,
+            expires_at=expires_at,
+            resource=self.resource_url,
+            subject=subject,
+            claims=data,
+        )
+
+
+def auth_from_env(values: Mapping[str, str]) -> tuple[TokenVerifier, AuthSettings]:
+    """Build the token verifier and auth settings, or refuse to start.
+
+    There is deliberately no unauthenticated mode. A server that quietly starts
+    without auth because a variable was mistyped is the worst outcome available,
+    and it looks exactly like a working server.
+    """
+    missing = [name for name in AUTH_VARIABLES if not values.get(name)]
+    if missing:
+        raise ValueError(
+            f"Cannot start the HTTP server: missing {', '.join(missing)}. "
+            f"Set them in the environment or in .env; see .env.example for the shape. "
+            f"The server has no unauthenticated mode."
+        )
+
+    verifier = IntrospectionTokenVerifier(
+        introspection_url=values["MCP_INTROSPECTION_URL"],
+        client_id=values["MCP_CLIENT_ID"],
+        client_secret=values["MCP_CLIENT_SECRET"],
+        resource_url=values["MCP_RESOURCE_URL"],
+    )
+    settings = AuthSettings(
+        issuer_url=values["MCP_ISSUER_URL"],  # type: ignore[arg-type]
+        resource_server_url=values["MCP_RESOURCE_URL"],  # type: ignore[arg-type]
+    )
+    return verifier, settings
+
+
+def determine_allowed_hosts(env: Mapping[str, str]) -> list[str] | None:
+    """Extract allowed hosts for DNS rebinding protection from environment.
+
+    Derives from MCP_ALLOWED_HOSTS if set, otherwise from the hostname in MCP_RESOURCE_URL.
+    """
+    from urllib.parse import urlparse
+
+    allowed_env = env.get("MCP_ALLOWED_HOSTS")
+    if allowed_env:
+        return [h.strip() for h in allowed_env.split(",") if h.strip()]
+    resource_url = env.get("MCP_RESOURCE_URL", "")
+    if resource_url:
+        parsed = urlparse(resource_url)
+        if parsed.netloc:
+            if parsed.hostname and parsed.hostname != parsed.netloc:
+                return [parsed.netloc, parsed.hostname]
+            return [parsed.netloc]
+    return None
+
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
