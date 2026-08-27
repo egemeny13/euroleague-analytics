@@ -59,7 +59,9 @@ AUTH_VARIABLES = (
 
 
 class IntrospectionTokenVerifier(TokenVerifier):
-    """Verifies Bearer tokens against an RFC 7662 OAuth 2.0 token introspection endpoint."""
+    """Verifies Bearer tokens against an RFC 7662 OAuth 2.0 token introspection endpoint,
+    an OIDC userinfo endpoint, or JWT JWKS.
+    """
 
     def __init__(
         self,
@@ -67,20 +69,76 @@ class IntrospectionTokenVerifier(TokenVerifier):
         client_id: str,
         client_secret: str,
         resource_url: str | None = None,
+        issuer_url: str | None = None,
         timeout_seconds: float = 10.0,
     ) -> None:
         self.introspection_url = introspection_url
         self.client_id = client_id
         self.client_secret = client_secret
         self.resource_url = resource_url
+        self.issuer_url = issuer_url
         self.timeout_seconds = timeout_seconds
+        self._jwks_client = None
+        if issuer_url:
+            try:
+                import jwt
+
+                jwks_url = f"{issuer_url.rstrip('/')}/.well-known/jwks.json"
+                self._jwks_client = jwt.PyJWKClient(jwks_url)
+            except Exception:
+                self._jwks_client = None
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        """Query the introspection endpoint to validate the presented token.
+        """Query JWT JWKS, introspection endpoint, or userinfo to validate token.
 
         Never raises on introspection failure or network error; returns None so
         the auth middleware can issue a clean 401.
         """
+        # 1. Try JWT verification if it looks like a JWT
+        if self._jwks_client is not None and token.count(".") == 2:
+            try:
+                import jwt
+
+                signing_key = self._jwks_client.get_signing_key_from_jwt(token)
+                claims = jwt.decode(
+                    token,
+                    signing_key.key,
+                    algorithms=["RS256"],
+                    options={"verify_aud": False},
+                )
+                raw_scope = claims.get("scope") or claims.get("scopes") or []
+                scopes = (
+                    raw_scope.split()
+                    if isinstance(raw_scope, str)
+                    else [str(s) for s in raw_scope]
+                )
+                client_id_val = (
+                    claims.get("client_id")
+                    or claims.get("azp")
+                    or claims.get("sub")
+                    or ANONYMOUS_SUBJECT
+                )
+                exp_val = claims.get("exp")
+                expires_at = (
+                    int(exp_val)
+                    if exp_val is not None and isinstance(exp_val, (int, float))
+                    else None
+                )
+                sub_val = claims.get("sub")
+                subject = str(sub_val) if sub_val is not None else None
+                return AccessToken(
+                    token=token,
+                    client_id=str(client_id_val),
+                    scopes=scopes,
+                    expires_at=expires_at,
+                    resource=self.resource_url,
+                    subject=subject,
+                    claims=claims,
+                )
+            except Exception:
+                pass
+
+        # 2. Try RFC 7662 POST introspection
         try:
             async with httpx2.AsyncClient(timeout=self.timeout_seconds) as client:
                 response = await client.post(
@@ -89,41 +147,61 @@ class IntrospectionTokenVerifier(TokenVerifier):
                     auth=(self.client_id, self.client_secret),
                     headers={"Accept": "application/json"},
                 )
-                if response.status_code != 200:
-                    return None
-                data = response.json()
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, dict) and data.get("active"):
+                        raw_scope = data.get("scope") or data.get("scopes") or []
+                        scopes = (
+                            raw_scope.split()
+                            if isinstance(raw_scope, str)
+                            else [str(s) for s in raw_scope]
+                        )
+                        client_id_val = data.get("client_id") or data.get("sub") or ANONYMOUS_SUBJECT
+                        exp_val = data.get("exp")
+                        expires_at = (
+                            int(exp_val)
+                            if exp_val is not None and isinstance(exp_val, (int, float))
+                            else None
+                        )
+                        sub_val = data.get("sub")
+                        subject = str(sub_val) if sub_val is not None else None
+                        return AccessToken(
+                            token=token,
+                            client_id=str(client_id_val),
+                            scopes=scopes,
+                            expires_at=expires_at,
+                            resource=self.resource_url,
+                            subject=subject,
+                            claims=data,
+                        )
         except Exception:
-            return None
+            pass
 
-        if not isinstance(data, dict) or not data.get("active"):
-            return None
+        # 3. Try OIDC /userinfo endpoint
+        if self.issuer_url:
+            try:
+                userinfo_url = f"{self.issuer_url.rstrip('/')}/userinfo"
+                async with httpx2.AsyncClient(timeout=self.timeout_seconds) as client:
+                    response = await client.get(
+                        userinfo_url,
+                        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                    )
+                    if response.status_code == 200:
+                        data = response.json()
+                        if isinstance(data, dict) and data.get("sub"):
+                            sub_val = data.get("sub")
+                            return AccessToken(
+                                token=token,
+                                client_id=str(sub_val),
+                                scopes=[],
+                                resource=self.resource_url,
+                                subject=str(sub_val),
+                                claims=data,
+                            )
+            except Exception:
+                pass
 
-        # Parse scopes: RFC 7662 specifies a space-delimited string
-        raw_scope = data.get("scope") or data.get("scopes") or []
-        if isinstance(raw_scope, str):
-            scopes = raw_scope.split()
-        elif isinstance(raw_scope, list):
-            scopes = [str(s) for s in raw_scope]
-        else:
-            scopes = []
-
-        client_id_val = data.get("client_id") or data.get("sub") or ANONYMOUS_SUBJECT
-        exp_val = data.get("exp")
-        expires_at = (
-            int(exp_val) if exp_val is not None and isinstance(exp_val, (int, float)) else None
-        )
-        sub_val = data.get("sub")
-        subject = str(sub_val) if sub_val is not None else None
-
-        return AccessToken(
-            token=token,
-            client_id=str(client_id_val),
-            scopes=scopes,
-            expires_at=expires_at,
-            resource=self.resource_url,
-            subject=subject,
-            claims=data,
-        )
+        return None
 
 
 def auth_from_env(values: Mapping[str, str]) -> tuple[TokenVerifier, AuthSettings]:
@@ -146,6 +224,7 @@ def auth_from_env(values: Mapping[str, str]) -> tuple[TokenVerifier, AuthSetting
         client_id=values["MCP_CLIENT_ID"],
         client_secret=values["MCP_CLIENT_SECRET"],
         resource_url=values["MCP_RESOURCE_URL"],
+        issuer_url=values["MCP_ISSUER_URL"],
     )
     settings = AuthSettings(
         issuer_url=values["MCP_ISSUER_URL"],  # type: ignore[arg-type]
