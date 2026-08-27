@@ -18,7 +18,30 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0010_game_source_state` | Adds private per-game provenance for the exact Boxscore, PlaybyPlay, and Points checksums successfully applied to warehouse rows. Reconciled with the equivalent pre-existing production table on 2026-08-23; no unprovable historical marker was inserted. |
 | `0011_public_view_security` | Makes all seven warehouse views `security_invoker` and revokes every `anon` and `authenticated` view privilege. Applied on 2026-08-23 UTC after a PostgreSQL 17.11 up/down/up rehearsal and full-result fingerprint comparison. |
 | `0012_roster_registration` | Adds the private source-native pre-season registration table approved by Decision 24. Applied on 2026-08-24 as Supabase migration version `20260824122346` after a PostgreSQL 17.6 up/down/up/down rehearsal. |
-| `0013_readonly_role` | Adds `el_reader`, the login role the hosted MCP server connects as: `select` on the seven views and the twelve base tables they read, and nothing else. Creates no table and no view. The migration sets **no password**; the owner sets it separately so it never enters version control. Approved by Decision 26. |
+| `0013_readonly_role` | Adds `el_reader`, the login role the hosted MCP server connects as: `select` on the seven views and the twelve base tables they read, and nothing else. Creates no table and no view. The migration sets **no password**; the owner sets it separately so it never enters version control. Approved by Decision 26. Rehearsed 2026-08-27 — see below. **Not yet applied to production.** |
+
+## The 0013 rehearsal, 2026-08-27
+
+`scripts/migration_gate.py` ran the full up/down/up/down cycle including
+`0013_readonly_role` against a disposable local PostgreSQL, and passed: 19 tables
+created, removed and recreated identically. The `down` succeeding is itself the
+evidence that the revoke list is complete, because PostgreSQL refuses to drop a
+role that still holds a privilege.
+
+The role was then exercised for real. With every migration applied and a
+throwaway password set, `tests/test_readonly_role.py` passed all 14 tests
+connected as `el_reader`: all seven `security_invoker` views readable,
+`season_progress` and `team_season` readable, and `insert`, `update`, `delete`,
+`create table` and a read of the ungranted `lineup_stint` each refused with
+`InsufficientPrivilege`. That measures the security-invoker reasoning in the
+migration's header rather than only asserting it.
+
+**Two limits on this evidence, stated rather than glossed.** The instance was
+**PostgreSQL 16.2**, not the 17.x production runs, because that is what the
+disposable server bundled; role and grant semantics are unchanged between them,
+but this was not a like-for-like version rehearsal. And the database was
+**empty**, so the reads returned no rows — the tests prove the grants resolve,
+not that any query returns correct data.
 
 The committed migration set and production both define nineteen tables. See
 `docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md` for the rehearsal, drift
