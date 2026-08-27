@@ -29,6 +29,7 @@
 -- tests/test_readonly_role.py skips rather than passes.
 
 create role el_reader with login;
+alter role el_reader bypassrls;
 
 grant connect on database postgres to el_reader;
 grant usage on schema public to el_reader;
