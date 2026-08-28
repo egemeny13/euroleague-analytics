@@ -19,6 +19,10 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0011_public_view_security` | Makes all seven warehouse views `security_invoker` and revokes every `anon` and `authenticated` view privilege. Applied on 2026-08-23 UTC after a PostgreSQL 17.11 up/down/up rehearsal and full-result fingerprint comparison. |
 | `0012_roster_registration` | Adds the private source-native pre-season registration table approved by Decision 24. Applied on 2026-08-24 as Supabase migration version `20260824122346` after a PostgreSQL 17.6 up/down/up/down rehearsal. |
 | `0013_readonly_role` | Adds `el_reader`, the login role the hosted MCP server connects as: `select` on the seven views and the twelve base tables they read, and nothing else. Creates no table and no view. The migration sets **no password**; the owner sets it separately so it never enters version control. Approved by Decision 26. Rehearsed 2026-08-27 — see below. **Not yet applied to production.** |
+| `0014_game_officials_view` | Rebuilds `v_game_officials` as its own relation so the referee fields the MCP server exposes come from one place. **Not yet applied to production.** |
+| `0015_roster_biography` | Adds `birth_date`, `passport_name` and `passport_surname` to `roster_registration`, nullable, with trimmed-value checks on the two names. Approved by Decision 28's priority set. **Not yet applied to production.** |
+| `0016_mcp_row_budget` | Adds the durable per-subject daily row budget: a policy table, a daily aggregate, a 31-day ledger expired on every insert, and the insert-only `el_usage_writer` role. `el_reader` gains no privilege. **Not yet applied to production.** |
+| `0017_person_game_link` | Adds `person_game_link`, the within-game observed bridge between the v2 person namespace and the game-source player namespace, plus the security_invoker coverage view `v_person_game_link_coverage`. A foreign key to `raw_boxscore_player` makes a constructed player id fail to insert. Approved by Decision 27. **Not yet applied to production, and the backfill has not been run** - both sit behind Decision 28's storage gate. |
 
 ## The 0013 rehearsal, 2026-08-27
 

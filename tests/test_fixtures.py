@@ -128,3 +128,18 @@ def test_manifest_is_valid_json_with_the_expected_top_level_keys(manifest_path: 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     for key in ("season_code", "source", "selected_by", "games"):
         assert key in manifest
+
+
+def test_the_v2_game_stats_fixtures_match_their_recorded_checksums(
+    manifest: dict, fixture_games_root: Path
+) -> None:
+    """A v2 body may not drift from the archived response it was copied from.
+
+    Recorded outside `games[].sha256` on purpose: those keys are the v1 per-game
+    endpoints that drive the fetch loop and the archive's completeness
+    accounting, and GameStats is neither of those things.
+    """
+    for gamecode, expected in manifest["game_stats"]["sha256"].items():
+        path = fixture_games_root / SEASON_CODE / "GameStats" / f"{gamecode}.json"
+        assert path.exists(), f"Fixture missing: {path}"
+        assert sha256_of_bytes(path.read_bytes()) == expected

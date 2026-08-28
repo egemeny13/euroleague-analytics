@@ -340,5 +340,15 @@
       ]
     }
   },
-  "schedule_sha256": "968d1377cbf6aad71eca8628b26cc09a9ed020d90066906a83e958bda164fbac"
+  "schedule_sha256": "968d1377cbf6aad71eca8628b26cc09a9ed020d90066906a83e958bda164fbac",
+  "game_stats": {
+    "endpoint": "/v2/competitions/E/seasons/{seasonCode}/games/{gameCode}/stats",
+    "source": "Byte-identical bodies archived by exploration/measure_person_code_bridge.py on 2026-08-28 under exploration/cache/person_bridge/, where each file is named for the SHA-256 of its own body.",
+    "why_these_games": "The only three sampled games that also hold a Boxscore fixture, which is what lets the person-game link be tested offline against both namespaces at once.",
+    "sha256": {
+      "1": "a06dc8abb35108c933b959838701589bafc47ffd31c1f6bc392f3e84014679bc",
+      "169": "16caa5ac273d69a9b7e73aaf01a8bc458893a952bb1b219ff2b27bb87e2d4101",
+      "209": "afc3182c466a76b1f4ec10bda2eadb26d766d491d71313c90fef313c77b9c2ee"
+    }
+  }
 }
