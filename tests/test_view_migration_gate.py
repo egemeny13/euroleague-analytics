@@ -128,3 +128,12 @@ def test_new_view_gate_runs_from_an_absent_or_already_applied_state(
 
     assert first_run.directions == ["up", "down", "up"]
     assert repeat_run.directions == ["down", "up", "down", "up"]
+
+
+def test_0014_game_officials_view_migration_sql_is_valid() -> None:
+    gate = _load_gate_module()
+    migrations_root = Path(__file__).resolve().parent.parent / "migrations"
+    up_sql = (migrations_root / "0014_game_officials_view.up.sql").read_text(encoding="utf-8")
+    down_sql = (migrations_root / "0014_game_officials_view.down.sql").read_text(encoding="utf-8")
+    gate.validate_view_only_sql(up_sql, "up", "v_game")
+    gate.validate_view_only_sql(down_sql, "down", "v_game")

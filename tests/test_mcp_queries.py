@@ -1196,3 +1196,108 @@ def test_tied_pagination_edge_cases_and_probes():
     assert oob_res["rows"] == []
     assert oob_res["total_available"] == 4
     assert oob_res["row_count"] == 0
+
+
+def test_get_game_returns_officiating_crew():
+    team_row = (
+        "PAN",
+        "BER",
+        True,
+        80,
+        75,
+        25,
+        50,
+        8,
+        20,
+        14,
+        18,
+        10,
+        25,
+        20,
+        7,
+        12,
+        18,
+        70,
+        70,
+        0.58,
+        0.1714,
+        0.2857,
+        0.36,
+        114.29,
+        107.14,
+        False,
+        [],
+    )
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (
+                [
+                    "team_code",
+                    "opponent_team_code",
+                    "is_home",
+                    "points",
+                    "opponent_points",
+                    "field_goals_made",
+                    "field_goals_attempted",
+                    "three_pointers_made",
+                    "three_pointers_attempted",
+                    "free_throws_made",
+                    "free_throws_attempted",
+                    "offensive_rebounds",
+                    "defensive_rebounds",
+                    "assists",
+                    "steals",
+                    "turnovers",
+                    "fouls_commited",
+                    "possessions",
+                    "opponent_possessions",
+                    "effective_fg_pct",
+                    "turnover_rate",
+                    "offensive_rebound_rate",
+                    "free_throw_rate",
+                    "offensive_rating",
+                    "defensive_rating",
+                    "excluded_by_default",
+                    "quarantine_reasons",
+                ],
+                [team_row, team_row],
+            ),
+            (
+                [
+                    "referee_1_code",
+                    "referee_1_name",
+                    "referee_2_code",
+                    "referee_2_name",
+                    "referee_3_code",
+                    "referee_3_name",
+                    "referee_4_code",
+                    "referee_4_name",
+                ],
+                [
+                    (
+                        "P001",
+                        "GARCIA, JUAN",
+                        "P002",
+                        "ROCHA, FERNANDO",
+                        "P003",
+                        "KOLJENSIC, MILOS",
+                        None,
+                        None,
+                    )
+                ],
+            ),
+            (["scheduled_games", "last_loaded_at", "games"], [(330, None, 330)]),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+
+    response = get_game(cursor, {"season": "E2024", "gamecode": 1})
+
+    assert "officials" in response
+    assert response["officials"] == [
+        {"code": "P001", "name": "GARCIA, JUAN"},
+        {"code": "P002", "name": "ROCHA, FERNANDO"},
+        {"code": "P003", "name": "KOLJENSIC, MILOS"},
+    ]

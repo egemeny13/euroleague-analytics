@@ -179,7 +179,8 @@ def build_registry(
                 "offensive and defensive rating per 100 possessions. Possessions are "
                 "counted from the event stream, never estimated from a box score formula. "
                 "Defensive rating uses the opponent's possessions as its denominator. "
-                "Get the gamecode from el_find_games."
+                "The officiating crew is the published assignment, not derived by this "
+                "project. Get the gamecode from el_find_games."
             ),
             input_schema=_schema(
                 {

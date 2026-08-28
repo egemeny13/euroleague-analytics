@@ -531,7 +531,25 @@ def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
             f"quarantine when quoting any number from it."
         )
 
-    return build_response(
+    cursor.execute(
+        "select referee_1_code, referee_1_name, "
+        "referee_2_code, referee_2_name, "
+        "referee_3_code, referee_3_name, "
+        "referee_4_code, referee_4_name "
+        "from v_game where season_code = %s and gamecode = %s",
+        (season_code, gamecode),
+    )
+    game_rows = _rows(cursor)
+    officials: list[dict[str, str]] = []
+    if game_rows:
+        game_row = game_rows[0]
+        for index in range(1, 5):
+            code = game_row.get(f"referee_{index}_code")
+            name = game_row.get(f"referee_{index}_name")
+            if code is not None or name is not None:
+                officials.append({"code": code, "name": name})
+
+    response = build_response(
         rows=rows,
         coverage=game_coverage(cursor, season_code),
         excluded=exclusions_for(cursor, season_code, include_quarantined),
@@ -541,6 +559,8 @@ def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
             FREE_THROW_CAVEAT,
         ],
     )
+    response["officials"] = officials
+    return response
 
 
 # Clutch is a FILTER on two possession columns, never a hard-coded threshold and
