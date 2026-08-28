@@ -31,7 +31,7 @@ def _registry() -> dict:
     return build_registry(runner)
 
 
-def test_all_ten_tools_are_published() -> None:
+def test_all_eleven_tools_are_published() -> None:
     names = [tool["name"] for tool in published_tools(_registry())]
     assert sorted(names) == sorted(TOOL_NAMES)
 

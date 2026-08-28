@@ -104,7 +104,7 @@ def test_constructing_manager_and_registry_does_not_open_database_connection() -
     registry = build_registry(manager.run)
 
     assert factory.call_count == 0
-    assert len(registry) == 10
+    assert len(registry) == 11
     assert "el_get_possessions" in registry
 
 

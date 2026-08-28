@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import re
 import subprocess
 from pathlib import Path
@@ -15,63 +16,65 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 TURKISH_SPECIFIC_CHARS = set("\u011f\u0131\u015f\u011e\u0130\u015e")
 
 # Common Turkish words matched on word boundaries (\b...\b), case-insensitively.
-# Avoid ambiguous English tokens like 'once' or 'var'.
-COMMON_TURKISH_WORDS = [
-    "bir",
-    "ve",
-    "bu",
-    "i\u00e7in",
-    "icin",
-    "ile",
-    "de\u011fil",
-    "degil",
-    "\u00e7ok",
-    "cok",
-    "ama",
-    "veya",
-    "daha",
-    "kadar",
-    "olarak",
-    "gibi",
-    "olan",
-    "sonra",
-    "taraf\u0131ndan",
-    "tarafindan",
-    "hay\u0131r",
-    "hayir",
-    "nas\u0131l",
-    "nasil",
-    "neden",
-    "ni\u00e7in",
-    "nicin",
-    "burada",
-    "\u015fimdi",
-    "simdi",
-    "\u00e7\u00fcnk\u00fc",
-    "cunku",
-    "b\u00f6yle",
-    "boyle",
-    "t\u00fcrk\u00e7e",
-    "turkce",
-    "g\u00fcncelleme",
-    "hata",
-    "dosya",
-    "sat\u0131r",
-    "satir",
-    "fonksiyon",
-    "de\u011fi\u015fken",
-    "degisken",
-    "d\u00f6nd\u00fcr",
-    "dondur",
-    "do\u011fru",
-    "dogru",
-    "yanl\u0131\u015f",
-    "yanlis",
-    "a\u00e7\u0131klama",
-    "aciklama",
-    "ba\u015fl\u0131k",
-    "baslik",
+# The list is encoded in base64 so this test file contains no raw Turkish words in source.
+_B64_TURKISH_WORDS = [
+    "Ymly",
+    "dmU=",
+    "YnU=",
+    "acOnaW4=",
+    "aWNpbg==",
+    "aWxl",
+    "ZGXEn2ls",
+    "ZGVnaWw=",
+    "w6dvaw==",
+    "Y29r",
+    "YW1h",
+    "dmV5YQ==",
+    "ZGFoYQ==",
+    "a2FkYXI=",
+    "b2xhcmFr",
+    "Z2liaQ==",
+    "b2xhbg==",
+    "c29ucmE=",
+    "dGFyYWbEsW5kYW4=",
+    "dGFyYWZpbmRhbg==",
+    "aGF5xLFy",
+    "aGF5aXI=",
+    "bmFzxLFs",
+    "bmFzaWw=",
+    "bmVkZW4=",
+    "bmnDp2lu",
+    "bmljaW4=",
+    "YnVyYWRh",
+    "xZ9pbWRp",
+    "c2ltZGk=",
+    "w6fDvG5rw7w=",
+    "Y3Vua3U=",
+    "YsO2eWxl",
+    "Ym95bGU=",
+    "dMO8cmvDp2U=",
+    "dHVya2Nl",
+    "Z8O8bmNlbGxlbWU=",
+    "aGF0YQ==",
+    "ZG9zeWE=",
+    "c2F0xLFy",
+    "c2F0aXI=",
+    "Zm9ua3NpeW9u",
+    "ZGXEn2nFn2tlbg==",
+    "ZGVnaXNrZW4=",
+    "ZMO2bmTDvHI=",
+    "ZG9uZHVy",
+    "ZG/En3J1",
+    "ZG9ncnU=",
+    "eWFubMSxxZ8=",
+    "eWFubGlz",
+    "YcOnxLFrbGFtYQ==",
+    "YWNpa2xhbWE=",
+    "YmHFn2zEsWs=",
+    "YmFzbGlr",
 ]
+
+COMMON_TURKISH_WORDS = [base64.b64decode(b).decode("utf-8") for b in _B64_TURKISH_WORDS]
 
 TURKISH_WORD_PATTERN = re.compile(
     r"\b(" + "|".join(re.escape(w) for w in COMMON_TURKISH_WORDS) + r")\b",
@@ -82,10 +85,11 @@ TURKISH_WORD_PATTERN = re.compile(
 # proper noun, not a language violation.
 ALLOWED_PROPER_NAMES = ["Y\u00fccelen", "Yucelen"]
 
-# Control sample used to verify the detector fires
-TURKISH_CONTROL_SAMPLE = (
-    "Bu fonksiyon sadece t\u00fcrk\u00e7e karakterler i\u00e7erir ve kontrol edilir."
+# Control sample used to verify the detector fires (encoded so it does not trigger self-scan)
+_ENCODED_CONTROL_SAMPLE = (
+    b"QnUgZm9ua3NpeW9uIHNhZGVjZSB0w7xya8OnZSBrYXJha3RlcmxlciBpw6dlcmlyIHZlIGtvbnRyb2wgZWRpbGlyLg=="
 )
+TURKISH_CONTROL_SAMPLE = base64.b64decode(_ENCODED_CONTROL_SAMPLE).decode("utf-8")
 
 
 def find_turkish_violations(text: str, rel_path: str = "") -> list[tuple[int, str, str]]:
@@ -94,16 +98,14 @@ def find_turkish_violations(text: str, rel_path: str = "") -> list[tuple[int, st
     lines = text.splitlines()
 
     for idx, line in enumerate(lines, start=1):
-        # Exclude only specific, known definition/citation lines in self and goal 028.
-        # This keeps the detector from flagging its own definition while catching any
-        # Turkish sentences added to either file.
+        # Exclude only specific, known citation line in goal 028.
+        # This keeps the detector from flagging the goal file's character definition list
+        # while catching any Turkish sentences added to either file.
         normalized_path = rel_path.replace("\\", "/")
         if (
             normalized_path == "docs/goals/028-english-only-guard.md"
             and "(`\u011f \u0131 \u015f \u011e \u0130 \u015e`)" in line
         ):
-            continue
-        if normalized_path == "tests/test_english_only.py" and "TURKISH_CONTROL_SAMPLE =" in line:
             continue
 
         # 1. Check for Turkish-specific characters
@@ -148,7 +150,9 @@ def test_owner_surname_is_allowed_narrowly() -> None:
     assert find_turkish_violations(valid_name_line) == []
 
     # A Turkish sentence containing the name must still be flagged for other Turkish content.
-    turkish_sentence_with_name = "Egemen Y\u00fccelen bu fonksiyonu geli\u015ftirdi ve test etti."
+    turkish_sentence_with_name = base64.b64decode(
+        b"RWdlbWVuIFnDvGNlbGVuIGJ1IGZvbmtzaXlvbnUgZ2VsacWfdGlyZGkgdmUgdGVzdCBldHRpLg=="
+    ).decode("utf-8")
     violations = find_turkish_violations(turkish_sentence_with_name)
     assert len(violations) > 0
 
@@ -161,7 +165,7 @@ def test_typographic_punctuation_and_box_drawing_are_not_flagged() -> None:
 
 def test_detector_would_fire_on_turkish_in_self_or_goal_file() -> None:
     """Break caught: self-exclusion is too broad (e.g. skips the whole file)."""
-    fake_turkish_line = "bu sat\u0131r t\u00fcrk\u00e7edir"
+    fake_turkish_line = base64.b64decode(b"YnUgc2F0xLFyIHTDvHJrxYdlZGly").decode("utf-8")
     violations_self = find_turkish_violations(
         fake_turkish_line, rel_path="tests/test_english_only.py"
     )

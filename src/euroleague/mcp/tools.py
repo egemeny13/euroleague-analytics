@@ -18,6 +18,7 @@ TOOL_NAMES: tuple[str, ...] = (
     "el_describe_warehouse",
     "el_find_games",
     "el_get_game",
+    "el_get_boxscore",
     "el_get_team_stats",
     "el_get_player_stats",
     "el_get_lineup_stats",
@@ -198,6 +199,40 @@ def build_registry(
                 required=["season", "gamecode"],
             ),
             query=queries.get_game,
+        ),
+        tool(
+            name="el_get_boxscore",
+            title="Single game player box score",
+            description=(
+                "A single game's full player box score for both teams alongside team totals: "
+                "points, field goals, three pointers, free throws, offensive/defensive/total "
+                "rebounds, assists, steals, turnovers, blocks, fouls, valuation, and plus-minus. "
+                "Counting statistics are the official published euroleague.net box score, "
+                "never aggregated from events. Minutes are reported according to minutes_basis "
+                "(default 'corrected'). Get the gamecode from el_find_games."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "gamecode": {
+                        "type": "integer",
+                        "description": "The gamecode, unique within a season. From el_find_games.",
+                    },
+                    "minutes_basis": {
+                        "type": "string",
+                        "enum": ["corrected", "raw", "official"],
+                        "default": "corrected",
+                        "description": (
+                            "Which minutes reconstruction to return. 'corrected' (default) "
+                            "applies the substitution duration correction. 'raw' uses "
+                            "unadjusted source timestamps. 'official' uses the minutes published "
+                            "in the official box score."
+                        ),
+                    },
+                },
+                required=["season", "gamecode"],
+            ),
+            query=queries.get_boxscore,
         ),
         tool(
             name="el_get_team_stats",

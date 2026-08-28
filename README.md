@@ -12,7 +12,7 @@ live-season workflow released and exercised, and opening-week proof date-gated
 until the first E2026 game.** Core phases 0-8, live-season Blocks A-E, production
 security hardening, and the attended release checks are complete. E2026 has 380
 scheduled games, zero played games, and 203 archived and loaded preseason roster
-rows. Ten read-only MCP tools run over seven security-invoker views, and ten
+rows. Eleven read-only MCP tools run over seven security-invoker views, and ten
 published evaluations are re-earned by live gates.
 
 Production holds the corrected 47,829 E2024 and 59,482 E2025 possessions. The

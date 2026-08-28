@@ -563,6 +563,79 @@ def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     return response
 
 
+def get_boxscore(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """A single game's official player box score for both teams, plus team totals."""
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
+    season_code = resolve_season(cursor, arguments["season"])
+    gamecode = int(arguments["gamecode"])
+
+    minutes_basis = arguments.get("minutes_basis", "corrected")
+    if minutes_basis not in ("corrected", "raw", "official"):
+        raise ValueError(
+            f"minutes_basis must be 'corrected', 'raw' or 'official', got "
+            f"{minutes_basis!r}. 'corrected' is the project default."
+        )
+    seconds_column = {
+        "corrected": "seconds_corrected",
+        "raw": "seconds_raw",
+        "official": "seconds_official",
+    }[minutes_basis]
+
+    cursor.execute(
+        "select team_code, opponent_team_code, is_home, points, opponent_points, "
+        "field_goals_made, field_goals_attempted, three_pointers_made, "
+        "three_pointers_attempted, free_throws_made, free_throws_attempted, "
+        "offensive_rebounds, defensive_rebounds, total_rebounds, "
+        "assists, steals, turnovers, fouls_commited, fouls_received, "
+        "excluded_by_default, quarantine_reasons "
+        "from v_team_game where season_code = %s and gamecode = %s order by is_home desc",
+        (season_code, gamecode),
+    )
+    team_rows = _rows(cursor)
+    if not team_rows:
+        raise ValueError(
+            f"No game {gamecode} in {season_code}. Call el_find_games to list the "
+            f"gamecodes in this season."
+        )
+    if team_rows[0]["excluded_by_default"] and not include_quarantined:
+        reasons = ", ".join(team_rows[0]["quarantine_reasons"])
+        raise ValueError(
+            f"Game {gamecode} in {season_code} is quarantined ({reasons}) and excluded by "
+            f"default. Pass include_quarantined=true to see it, and disclose the "
+            f"quarantine when quoting any number from it."
+        )
+
+    cursor.execute(
+        "select team_code, player_id, player_name, is_starter, is_playing, "
+        f"round({seconds_column}::numeric / 60.0, 1) as minutes, "
+        "points, field_goals_made, field_goals_attempted, "
+        "three_pointers_made, three_pointers_attempted, "
+        "free_throws_made, free_throws_attempted, "
+        "offensive_rebounds, defensive_rebounds, total_rebounds, "
+        "assists, steals, turnovers, blocks_favour, blocks_against, "
+        "fouls_commited, fouls_received, valuation, plus_minus "
+        "from v_player_game "
+        "where season_code = %s and gamecode = %s "
+        "order by team_code, is_starter desc, minutes desc nulls last, "
+        "points desc nulls last, player_id",
+        (season_code, gamecode),
+    )
+    player_rows = _rows(cursor)
+
+    response = build_response(
+        rows=player_rows,
+        coverage=game_coverage(cursor, season_code),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        minutes_basis=minutes_basis,
+        caveats=[
+            "Counting statistics are the official euroleague.net box score, not "
+            "recounted from events.",
+        ],
+    )
+    response["teams"] = team_rows
+    return response
+
+
 # Clutch is a FILTER on two possession columns, never a hard-coded threshold and
 # never a pre-computed table (DECISIONS.md item 6). These two arguments are how a
 # caller states their own definition; there is no default, because privileging one

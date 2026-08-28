@@ -41,7 +41,7 @@ def test_healthz_reports_status_version_and_tool_count() -> None:
     body = response.json()
     assert body["status"] == "ok"
     assert body["name"] == "euroleague-analytics"
-    assert body["tools"] == 10
+    assert body["tools"] == 11
     assert body["version"]
 
 

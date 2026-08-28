@@ -264,7 +264,7 @@ later migration should scope the action to `possession_index`.
 
 ### Phase 7 — the MCP server. Complete.
 
-Ten read-only `el_` tools now expose warehouse coverage, games, team and player
+Eleven read-only `el_` tools now expose warehouse coverage, games, team and player
 statistics, lineups, on/off splits, possessions, source-ordered play by play, and shot data
 with coordinates (`el_get_shot_data`). They aggregate through seven versioned views; no table
 or external dependency was added. Counting statistics come from the official box score, while
