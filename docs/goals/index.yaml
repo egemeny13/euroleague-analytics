@@ -42,5 +42,5 @@ goals:
   025-v2-rate-limit-backoff: {status: completed, priority: high}
   026-expose-game-officials: {status: completed}
   027-season-code-meaning: {status: completed, priority: high}
-  028-english-only-guard: {status: not_started, priority: high}
+  028-english-only-guard: {status: completed, priority: high}
   029-single-game-boxscore-tool: {status: not_started}
