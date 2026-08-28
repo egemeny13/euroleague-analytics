@@ -38,3 +38,9 @@ goals:
   021-readme-current-claims: {status: completed}
   022-python-version-guard: {status: completed, depends_on: [021-readme-current-claims]}
   023-tester-reporting-route: {status: completed, depends_on: [020-redact-env-example-project]}
+  024-v1-not-found-body-guard: {status: completed, priority: high}
+  025-v2-rate-limit-backoff: {status: not_started, priority: high}
+  026-expose-game-officials: {status: not_started}
+  027-season-code-meaning: {status: not_started, priority: high}
+  028-english-only-guard: {status: not_started, priority: high}
+  029-single-game-boxscore-tool: {status: not_started}

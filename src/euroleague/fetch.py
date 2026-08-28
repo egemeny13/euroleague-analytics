@@ -12,7 +12,7 @@ from email.utils import parsedate_to_datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Protocol
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import requests
 
@@ -20,6 +20,35 @@ from euroleague.cache import ENDPOINTS, ResponseCache
 from euroleague.roster import parse_roster_bytes
 
 DEFAULT_CACHE_ROOT = Path(__file__).resolve().parents[2] / "exploration" / "cache"
+
+# exploration/API_INVENTORY.md section 1a: legacy v1 endpoint requests for
+# non-existent resources return HTTP 200 with an identical 975-byte HTML body
+# titled "Not found | EuroLeague Live Stats".
+V1_NOT_FOUND_SHA256 = "cf69913ae9c9cc686e82126b3ac4caaf7bd03005ce575fbb1caaff9c59b3bf8c"
+
+
+def _is_v1_host(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.hostname == "live.euroleague.net" or parsed.netloc == "live.euroleague.net"
+
+
+def _is_html(body: bytes) -> bool:
+    stripped = body.lstrip()
+    if stripped.startswith(b"\xef\xbb\xbf"):
+        stripped = stripped[3:].lstrip()
+    lower_prefix = stripped[:256].lower()
+    return (
+        lower_prefix.startswith((b"<!doctype", b"<html", b"<!--", b"<head", b"<body"))
+        or b"<html" in lower_prefix
+    )
+
+
+def _is_v1_not_found(url: str, body: bytes) -> bool:
+    if not _is_v1_host(url):
+        return False
+    if sha256(body).hexdigest() == V1_NOT_FOUND_SHA256:
+        return True
+    return _is_html(body)
 
 
 class ResponseLike(Protocol):
@@ -235,12 +264,15 @@ class ArchiveFetcher:
                     continue
                 return None
             self._next_request_at = self.monotonic() + self.request_interval_seconds
+            status_code = response.status_code
+            if status_code == 200 and _is_v1_not_found(url, response.content):
+                status_code = 404
             observation = FetchObservation(
                 season_code=season_code,
                 gamecode=gamecode,
                 endpoint=endpoint,
                 url=url,
-                http_status=response.status_code,
+                http_status=status_code,
                 fetched_at=self.utc_now().astimezone(UTC),
                 duration_ms=round((self.monotonic() - request_started_at) * 1000),
                 body=response.content,
