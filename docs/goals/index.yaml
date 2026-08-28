@@ -45,6 +45,6 @@ goals:
   028-english-only-guard: {status: completed, priority: high}
   029-single-game-boxscore-tool: {status: completed}
   030-roster-biography-fields: {status: completed, priority: high}
-  031-person-game-link: {status: in_progress, depends_on: [030-roster-biography-fields]}
+  031-person-game-link: {status: blocked, depends_on: [030-roster-biography-fields], reason: "contract defect: no archived v2 game-stats fixture or verified statistical-line field map"}
   032-bulk-extraction-budget: {status: not_started, priority: high}
   033-refuse-sweep-shaped-queries: {status: not_started, priority: high}
