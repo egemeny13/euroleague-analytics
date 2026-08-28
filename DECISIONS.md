@@ -1403,8 +1403,18 @@ line and the jersey number. A person who cannot be paired stays unpaired and is
 counted. The `P`-prefix convention is stored as a **check with a published
 agreement rate**, never as the rule that produces a link.
 
-Decision 24's prohibition stands unchanged: `source_person_code` is still not
-parsed, still not prefixed in code, and still not joined to `player` by name.
+Decision 24's prohibition stands unchanged: no `player_id` value may originate
+from string surgery, and `source_person_code` is still not joined to `player` by
+name.
+
+**What the prohibition covers, stated precisely, because an implementer read it
+as a contradiction and stopped.** It forbids a constructed string from *becoming*
+an identifier. It does not forbid constructing one as a comparison operand.
+Writing `player_id = "P" + code` manufactures a fact about a person the box score
+never named; evaluating `observed_player_id == "P" + code` measures a hypothesis
+against evidence already in hand, discards the string, and keeps only a boolean.
+The test is whether deleting the expression would change any stored `player_id` —
+for the check, it would not.
 
 **Why.** Decision 24 refused to bridge the namespaces because the only available
 evidence was a season-wide snapshot, where the sole candidate rule was a string
