@@ -25,6 +25,9 @@ from euroleague.mcp.resolve import resolve_player, resolve_season, resolve_team
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
+# Goal 033's measured table shows that a full event extraction needs about 1,998
+# calls; 2,000 rows is ten pages at the 200-row cap and beyond honest paging.
+MAX_PAGINATION_OFFSET = 2_000
 
 
 class Cursor(Protocol):
@@ -41,6 +44,22 @@ def clamp_limit(requested: int | None) -> int:
     if requested < 1:
         raise ValueError(f"limit must be 1 or more, got {requested}. Maximum is {MAX_LIMIT}.")
     return min(int(requested), MAX_LIMIT)
+
+
+def validate_offset(requested: int | None) -> int:
+    """Keep page walks shallow enough to remain a focused analyst query.
+
+    Unlike clamp_limit, this refuses rather than trims. Silently clamping a deep
+    offset back to the maximum would serve the wrong page and look like data.
+    """
+    offset = max(int(requested or 0), 0)
+    if offset > MAX_PAGINATION_OFFSET:
+        raise ValueError(
+            f"offset {offset:,} exceeds the maximum {MAX_PAGINATION_OFFSET:,}. "
+            "Narrow by team, player, game, date, or another filter, then page within "
+            "that focused result."
+        )
+    return offset
 
 
 def _rows(cursor: Cursor) -> list[dict[str, Any]]:
@@ -342,7 +361,7 @@ def get_shot_data(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     only_with_real_coordinates = _boolean(arguments, "only_with_real_coordinates", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s"]
     params: list[Any] = [season_code]
@@ -438,7 +457,7 @@ def find_games(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s"]
     params: list[Any] = [season_code]
@@ -747,7 +766,7 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         "official": "seconds_official",
     }[minutes_basis]
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s", "seconds_official > 0"]
     params: list[Any] = [season_code]
@@ -873,7 +892,7 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
     minimum = int(arguments.get("min_possessions", 25))
 
     quarantine = _quarantine_clause(include_quarantined)
@@ -1040,7 +1059,7 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
     aggregate = _boolean(arguments, "aggregate", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s"]
     params: list[Any] = [season_code]
@@ -1127,7 +1146,7 @@ def get_play_by_play(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     season_code = resolve_season(cursor, arguments["season"])
     gamecode = int(arguments["gamecode"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s", "gamecode = %s"]
     params: list[Any] = [season_code, gamecode]

@@ -58,8 +58,18 @@ _OFFSET = {
     "type": "integer",
     "description": (
         "Rows to skip, for paging through a large result. Use next_offset from the "
-        "previous response."
+        f"previous response. Offsets over {queries.MAX_PAGINATION_OFFSET:,} are refused; "
+        "narrow the query before paging further."
     ),
+}
+
+# The two largest surfaces, and the arguments that turn a sweep into a question.
+# For el_get_play_by_play the published schema already requires gamecode, and both
+# transports check that first; this entry is the backstop for any caller path that
+# reaches a handler directly.
+_BULK_NARROWING_ARGUMENTS = {
+    "el_get_play_by_play": ("gamecode",),
+    "el_get_shot_data": ("gamecode", "team", "player", "period", "made", "shot_type"),
 }
 
 
@@ -80,6 +90,32 @@ def _validate_booleans(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
             queries._boolean(arguments, name)
 
 
+def _validate_pagination_depth(schema: dict[str, Any], arguments: dict[str, Any]) -> None:
+    """Reject deep pages before a tool runner can acquire a database connection."""
+    if "offset" in schema.get("properties", {}):
+        queries.validate_offset(arguments.get("offset"))
+
+
+def _has_narrowing_value(arguments: dict[str, Any], name: str) -> bool:
+    """Treat false as a valid Boolean filter but reject absent or blank values."""
+    value = arguments.get(name)
+    return value is not None and (not isinstance(value, str) or bool(value.strip()))
+
+
+def _validate_bulk_narrowing(tool_name: str, arguments: dict[str, Any]) -> None:
+    """Keep the two largest surfaces focused before a database runner is selected."""
+    narrowing_arguments = _BULK_NARROWING_ARGUMENTS.get(tool_name)
+    if narrowing_arguments is None:
+        return
+    if any(_has_narrowing_value(arguments, name) for name in narrowing_arguments):
+        return
+    names = ", ".join(narrowing_arguments)
+    raise ValueError(
+        f"{tool_name} needs at least one narrowing argument: {names}. "
+        "Narrow the query, then page within that focused result."
+    )
+
+
 def build_registry(
     runner: Callable[
         [Callable[[Any, dict[str, Any]], dict[str, Any]], dict[str, Any]], dict[str, Any]
@@ -87,9 +123,13 @@ def build_registry(
 ) -> dict[str, Tool]:
     """Bind each query function to the supplied query runner."""
 
-    def bind(query: Callable[[Any, dict], dict], schema: dict[str, Any]) -> Callable[[dict], dict]:
+    def bind(
+        tool_name: str, query: Callable[[Any, dict], dict], schema: dict[str, Any]
+    ) -> Callable[[dict], dict]:
         def handler(arguments: dict[str, Any]) -> dict[str, Any]:
             _validate_booleans(schema, arguments)
+            _validate_pagination_depth(schema, arguments)
+            _validate_bulk_narrowing(tool_name, arguments)
             return runner(query, arguments)
 
         return handler
@@ -106,7 +146,7 @@ def build_registry(
             title=title,
             description=description,
             input_schema=input_schema,
-            handler=bind(query, input_schema),
+            handler=bind(name, query, input_schema),
         )
 
     tools = [
@@ -457,8 +497,9 @@ def build_registry(
                 "event belongs to. Rows come back in source order by ingest_index, which "
                 "is the only trustworthy ordering this data has - do not re-sort them. "
                 "Use it to see what actually happened in a stretch of a game rather than "
-                "a summary of it. Paginate with from_index or offset; a full game is "
-                "roughly 450 to 700 events."
+                "a summary of it. Always narrow this tool with gamecode from el_find_games, "
+                "then paginate with from_index or offset; a full game is roughly 450 to "
+                "700 events."
             ),
             input_schema=_schema(
                 {
@@ -505,7 +546,8 @@ def build_registry(
                 "free throws with no coordinates and never serves that sentinel as a "
                 "location. Shot type comes from the event action code, never from distance "
                 "or coordinate geometry. The response distinguishes no matching shots from "
-                "a season with no coordinate coverage."
+                "a season with no coordinate coverage. Always narrow this tool with at least "
+                "one of gamecode, team, player, period, made, or shot_type before paging."
             ),
             input_schema=_schema(
                 {

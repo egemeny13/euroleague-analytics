@@ -21,6 +21,8 @@ from euroleague.mcp.http_app import (
 )
 from euroleague.mcp.tools import TOOL_NAMES, build_registry
 
+EXPECTED_TOOL_LIST_FINGERPRINT = "8f8d090aa8f9c592dba84077aa67cb76b839ec8aae9af666681417a05885ec39"
+
 
 def _registry() -> dict:
     """The real ten tools, bound to a runner that is never called."""
@@ -66,6 +68,11 @@ def test_fingerprint_is_stable_across_calls() -> None:
     assert tool_fingerprint(published_tools(_registry())) == tool_fingerprint(
         published_tools(_registry())
     )
+
+
+def test_tool_list_fingerprint_matches_the_versioned_registry_contract() -> None:
+    """Break caught: a tool description or schema changes without its fingerprint update."""
+    assert tool_fingerprint(published_tools(_registry())) == EXPECTED_TOOL_LIST_FINGERPRINT
 
 
 def test_fingerprint_changes_when_an_annotation_is_lost() -> None:
