@@ -46,3 +46,5 @@ goals:
   029-single-game-boxscore-tool: {status: completed}
   030-roster-biography-fields: {status: not_started, priority: high}
   031-person-game-link: {status: not_started, depends_on: [030-roster-biography-fields]}
+  032-bulk-extraction-budget: {status: not_started, priority: high}
+  033-refuse-sweep-shaped-queries: {status: not_started, priority: high}
