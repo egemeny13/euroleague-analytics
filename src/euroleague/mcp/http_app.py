@@ -27,6 +27,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import time
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -45,6 +46,7 @@ from euroleague.mcp.identity import SERVER_INFO, SERVER_INSTRUCTIONS
 from euroleague.mcp.logging_setup import LOGGER_NAME
 from euroleague.mcp.protocol import Tool
 from euroleague.mcp.ratelimit import RateLimitExceeded, RequestCap
+from euroleague.mcp.row_budget import DailyRowBudget, postgres_usage_store_from_env
 from euroleague.mcp.tools import build_registry
 
 ANONYMOUS_SUBJECT = "anonymous"
@@ -55,6 +57,7 @@ AUTH_VARIABLES = (
     "MCP_INTROSPECTION_URL",
     "MCP_CLIENT_ID",
     "MCP_CLIENT_SECRET",
+    "MCP_USAGE_DATABASE_URL",
 )
 
 
@@ -348,6 +351,16 @@ def sdk_tools_as_wire(registry: Mapping[str, Tool]) -> list[dict[str, Any]]:
     return [tool.model_dump(by_alias=True, exclude_none=True) for tool in sdk_tools(registry)]
 
 
+def run_with_row_budget(
+    row_budget: Any,
+    subject: str,
+    handler: Callable[[dict[str, Any]], dict[str, Any]],
+    arguments: dict[str, Any],
+) -> dict[str, Any]:
+    """Run a handler through the caller's durable row budget."""
+    return row_budget.run(subject, lambda: handler(arguments))
+
+
 def build_app(
     runner: Callable[[Callable[[Any, dict[str, Any]], dict[str, Any]], dict[str, Any]], dict],
     *,
@@ -355,6 +368,7 @@ def build_app(
     auth_settings: Any = None,
     allowed_hosts: list[str] | None = None,
     cap: RequestCap | None = None,
+    row_budget: Any = None,
 ) -> Any:
     """Assemble the ASGI application serving the ten tools over StreamableHTTP.
 
@@ -366,6 +380,8 @@ def build_app(
     """
     registry = build_registry(runner)
     tools = sdk_tools(registry)
+    if row_budget is None and auth_settings is not None:
+        row_budget = DailyRowBudget(postgres_usage_store_from_env(dict(os.environ)))
 
     async def on_list_tools(context: Any, params: Any) -> types.ListToolsResult:
         return types.ListToolsResult(tools=tools)
@@ -406,7 +422,17 @@ def build_app(
         # asked the question and already knows what they asked.
         started = time.monotonic()
         try:
-            payload = await anyio.to_thread.run_sync(lambda: tool.handler(arguments))
+            if row_budget is None:
+                payload = await anyio.to_thread.run_sync(lambda: tool.handler(arguments))
+            else:
+                payload = await anyio.to_thread.run_sync(
+                    lambda: run_with_row_budget(
+                        row_budget,
+                        caller_subject(),
+                        tool.handler,
+                        arguments,
+                    )
+                )
         except Exception as failure:
             _LOGGER.error(
                 "tool_call",

@@ -20,6 +20,7 @@ from euroleague.mcp.http_app import (
     build_app,
     determine_allowed_hosts,
 )
+from euroleague.mcp.row_budget import DailyRowBudget, InMemoryUsageStore
 
 COMPLETE = {
     "MCP_ISSUER_URL": "https://example-idp.com",
@@ -27,6 +28,7 @@ COMPLETE = {
     "MCP_INTROSPECTION_URL": "https://example-idp.com/oauth2/introspect",
     "MCP_CLIENT_ID": "client-abc",
     "MCP_CLIENT_SECRET": "shhh",
+    "MCP_USAGE_DATABASE_URL": "postgresql://el_usage_writer:writer-secret@example.com:5432/postgres",
 }
 
 
@@ -45,6 +47,15 @@ def test_each_missing_variable_is_named_in_the_error(missing: str) -> None:
     with pytest.raises(ValueError) as raised:
         auth_from_env(values)
     assert missing in str(raised.value)
+
+
+def test_the_usage_writer_identity_is_required_at_hosted_server_startup() -> None:
+    values = {key: value for key, value in COMPLETE.items() if key != "MCP_USAGE_DATABASE_URL"}
+
+    with pytest.raises(ValueError) as raised:
+        auth_from_env(values)
+
+    assert "MCP_USAGE_DATABASE_URL" in str(raised.value)
 
 
 def test_an_empty_environment_never_yields_an_unauthenticated_server() -> None:
@@ -178,6 +189,7 @@ def test_app_with_auth_rejects_unauthenticated_request() -> None:
         verifier=verifier,
         auth_settings=settings,
         allowed_hosts=["testserver"],
+        row_budget=DailyRowBudget(InMemoryUsageStore()),
     )
     with TestClient(app) as client:
         response = client.post(
@@ -196,6 +208,7 @@ def test_app_with_auth_accepts_valid_token() -> None:
         verifier=verifier,
         auth_settings=settings,
         allowed_hosts=["testserver"],
+        row_budget=DailyRowBudget(InMemoryUsageStore()),
     )
     fake_response = httpx2.Response(
         200,

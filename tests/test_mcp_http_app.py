@@ -15,11 +15,14 @@ from typing import Any
 import pytest
 from starlette.testclient import TestClient
 
+import euroleague.mcp.http_app as http_app
 from euroleague.mcp.http_app import (
     ANONYMOUS_SUBJECT,
     _call_record,
+    auth_from_env,
     build_app,
     caller_subject,
+    run_with_row_budget,
 )
 from euroleague.mcp.ratelimit import RequestCap
 
@@ -122,3 +125,51 @@ def test_a_failed_call_logs_the_exception_type_and_not_its_message() -> None:
 
 def test_a_successful_call_records_no_error_type() -> None:
     assert "error_type" not in _call_record("el_get_game", "ok", time.monotonic())
+
+
+def test_the_http_tool_path_charges_the_callers_row_budget_after_the_query() -> None:
+    calls: list[str] = []
+
+    class Budget:
+        def run(self, subject: str, query: Any) -> dict[str, Any]:
+            calls.append(subject)
+            response = query()
+            response["row_budget"] = {"remaining_rows": 49_999}
+            return response
+
+    response = run_with_row_budget(
+        Budget(),
+        "client-123",
+        lambda arguments: {"row_count": 1, "arguments": arguments},
+        {"season": "E2024"},
+    )
+
+    assert calls == ["client-123"]
+    assert response["arguments"] == {"season": "E2024"}
+    assert response["row_budget"]["remaining_rows"] == 49_999
+
+
+def test_an_authenticated_http_server_builds_a_durable_row_budget_from_its_identity_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sentinel = object()
+    seen: list[object] = []
+
+    def configured_store(values: object) -> object:
+        seen.append(values)
+        return sentinel
+
+    monkeypatch.setattr(http_app, "postgres_usage_store_from_env", configured_store)
+
+    _, auth_settings = auth_from_env(
+        {
+            "MCP_ISSUER_URL": "https://issuer.example.com",
+            "MCP_RESOURCE_URL": "https://warehouse.example.com/mcp",
+            "MCP_INTROSPECTION_URL": "https://issuer.example.com/introspect",
+            "MCP_CLIENT_ID": "client-id",
+            "MCP_CLIENT_SECRET": "client-secret",
+            "MCP_USAGE_DATABASE_URL": "postgresql://el_usage_writer:writer-secret@example.com:5432/postgres",
+        }
+    )
+    assert build_app(_runner, allowed_hosts=[HOST], auth_settings=auth_settings) is not None
+    assert seen
