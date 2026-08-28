@@ -103,11 +103,15 @@ class PostgresUsageStore:
             connection = self.connection_factory()
             try:
                 with connection.cursor() as cursor:
+                    # Migration 0018. The writer holds EXECUTE on this function
+                    # and no privilege at all on mcp_row_usage, so it can neither
+                    # read the ledger nor write it by any other route. Writing
+                    # the table directly with `insert ... returning` needs SELECT
+                    # on the returned columns, which is why that shape failed in
+                    # production and why this one replaced it.
                     cursor.execute(
-                        "insert into public.mcp_row_usage "
-                        "(operation_id, subject, usage_date, operation, row_delta) "
-                        "values (%s, %s, %s, %s, %s) "
-                        "returning daily_row_limit, remaining_rows",
+                        "select daily_limit, remaining from "
+                        "public.record_mcp_row_usage(%s, %s, %s, %s, %s)",
                         (uuid4(), subject, usage_date, operation, row_delta),
                     )
                     daily_limit, remaining_rows = cursor.fetchone()

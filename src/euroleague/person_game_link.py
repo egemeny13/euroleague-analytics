@@ -344,3 +344,75 @@ def summarise_person_game_links(
         unpaired_game_players=sum(len(result.unpaired_game_players) for result in results),
         coach_people=sum(len(result.coach_people) for result in results),
     )
+
+
+_LINK_COLUMNS = (
+    "season_code",
+    "gamecode",
+    "source_person_code",
+    "player_id",
+    "jersey_number",
+    "line_signature",
+    "prefix_agrees",
+)
+
+
+def load_person_game_links(connection: Any, results: list[PersonGameLinkResult]) -> dict[str, int]:
+    """Atomically replace the links for exactly the games in `results`.
+
+    In plain language: the games handed in are rebuilt from scratch. Their old
+    rows are deleted and the new ones inserted inside one transaction, so a
+    reader never sees a half-replaced game and a re-run cannot leave a previous
+    run's rows behind.
+
+    The games are staged separately from the links on purpose. A game that
+    linked nobody produces no link rows, and deleting only what the link rows
+    mention would leave that game's previous rows in place - a stale link that
+    the current evidence no longer supports.
+    """
+    columns = ", ".join(_LINK_COLUMNS)
+    with connection.transaction(), connection.cursor() as cursor:
+        cursor.execute(
+            "CREATE TEMPORARY TABLE stage_person_game_link "
+            "(LIKE person_game_link INCLUDING DEFAULTS) ON COMMIT DROP"
+        )
+        cursor.execute(
+            "CREATE TEMPORARY TABLE stage_person_game_link_game "
+            "(season_code text NOT NULL, gamecode integer NOT NULL) ON COMMIT DROP"
+        )
+
+        with cursor.copy(
+            "COPY stage_person_game_link_game (season_code, gamecode) FROM STDIN"
+        ) as copy:
+            for result in results:
+                copy.write_row((result.season_code, result.gamecode))
+
+        with cursor.copy(f"COPY stage_person_game_link ({columns}) FROM STDIN") as copy:
+            for result in results:
+                for link in result.links:
+                    copy.write_row(
+                        (
+                            link.season_code,
+                            link.gamecode,
+                            link.source_person_code,
+                            link.player_id,
+                            link.jersey_number,
+                            link.line_signature,
+                            link.prefix_agrees,
+                        )
+                    )
+
+        cursor.execute(
+            "DELETE FROM person_game_link target "
+            "USING stage_person_game_link_game staged "
+            "WHERE target.season_code = staged.season_code "
+            "  AND target.gamecode = staged.gamecode"
+        )
+        cursor.execute(
+            f"INSERT INTO person_game_link ({columns}) SELECT {columns} FROM stage_person_game_link"
+        )
+
+    return {
+        "person_game_link": sum(len(result.links) for result in results),
+        "games": len(results),
+    }

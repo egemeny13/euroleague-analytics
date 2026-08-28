@@ -104,7 +104,7 @@ def test_the_usage_ledger_indexes_the_column_its_expiry_scans() -> None:
     )
 
 
-def test_the_persistent_writer_uses_insert_returning_without_reading_the_usage_table() -> None:
+def test_the_persistent_writer_records_through_the_function_without_touching_the_table() -> None:
     statements: list[str] = []
 
     class Cursor:
@@ -134,9 +134,13 @@ def test_the_persistent_writer_uses_insert_returning_without_reading_the_usage_t
     assert state.daily_limit == 50_000
     assert state.remaining_rows == 49_800
     assert len(statements) == 1
-    assert statements[0].lstrip().lower().startswith("insert into public.mcp_row_usage")
-    assert "returning daily_row_limit, remaining_rows" in statements[0].lower()
-    assert "select" not in statements[0].lower()
+    lowered = statements[0].lower()
+    # Migration 0018: the security-definer function is the only write path, and
+    # the writer holds no privilege on the table itself. An `insert ... returning`
+    # here would need SELECT on the returned columns and is what broke production.
+    assert "public.record_mcp_row_usage(" in lowered
+    assert "insert into public.mcp_row_usage" not in lowered
+    assert "returning" not in lowered
 
 
 def test_the_usage_writer_refuses_the_readers_connection_string() -> None:

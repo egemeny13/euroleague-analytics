@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ from euroleague.person_game_link import (
     GamePlayerEvidence,
     build_person_game_links,
     game_players_from_boxscore,
+    load_person_game_links,
     summarise_person_game_links,
 )
 
@@ -292,3 +294,77 @@ def test_the_coverage_view_is_security_invoker_and_reversible() -> None:
     assert "with (security_invoker = true)" in MIGRATION_UP
     assert "drop view public.v_person_game_link_coverage" in MIGRATION_DOWN
     assert "drop table public.person_game_link" in MIGRATION_DOWN
+
+
+class _Cursor:
+    def __init__(self, connection) -> None:
+        self.connection = connection
+
+    def __enter__(self) -> _Cursor:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        pass
+
+    def execute(self, query: str, params: object = None) -> None:
+        self.connection.executions.append((query, params))
+
+    @contextmanager
+    def copy(self, statement: str):
+        table = statement.split()[1]
+        rows: list[tuple] = []
+        self.connection.copied[table] = rows
+
+        class _Copy:
+            @staticmethod
+            def write_row(row: tuple) -> None:
+                rows.append(row)
+
+        yield _Copy()
+
+
+class _Connection:
+    def __init__(self) -> None:
+        self.executions: list[tuple[str, object]] = []
+        self.copied: dict[str, list[tuple]] = {}
+        self.transactions = 0
+
+    def cursor(self) -> _Cursor:
+        return _Cursor(self)
+
+    @contextmanager
+    def transaction(self):
+        self.transactions += 1
+        yield
+
+
+def test_the_loader_replaces_exactly_the_games_it_was_given_in_one_transaction() -> None:
+    """Break caught: a reload leaves a previous run's links for the same game behind."""
+    results = [_links(gamecode) for gamecode in LINKED_GAMES]
+    connection = _Connection()
+
+    counts = load_person_game_links(connection, results)
+
+    assert counts == {"person_game_link": 72, "games": 3}
+    assert connection.transactions == 1
+    assert len(connection.copied["stage_person_game_link"]) == 72
+    assert sorted(connection.copied["stage_person_game_link_game"]) == [
+        ("E2024", 1),
+        ("E2024", 169),
+        ("E2024", 209),
+    ]
+    sql = "\n".join(query for query, _params in connection.executions)
+    assert "DELETE FROM person_game_link" in sql
+    assert "INSERT INTO person_game_link" in sql
+
+
+def test_a_game_that_linked_nobody_still_clears_its_old_rows() -> None:
+    """Break caught: a game whose links all vanish keeps serving the previous run's."""
+    empty = build_person_game_links("E2024", 1, {"local": {}, "road": {}}, ())
+    connection = _Connection()
+
+    counts = load_person_game_links(connection, [empty])
+
+    assert counts == {"person_game_link": 0, "games": 1}
+    assert connection.copied["stage_person_game_link"] == []
+    assert connection.copied["stage_person_game_link_game"] == [("E2024", 1)]
