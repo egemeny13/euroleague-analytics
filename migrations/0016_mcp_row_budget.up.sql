@@ -29,6 +29,13 @@ create table public.mcp_row_usage (
     created_at timestamptz not null default current_timestamp
 );
 
+-- The trigger expires this ledger by usage_date on every single insert, and the
+-- ledger is the one table here that grows with call volume: two rows per tool
+-- call, so at the 120-calls-per-minute cap the 31-day window holds roughly ten
+-- million rows. Without this index that expiry is a sequential scan performed
+-- once per tool call.
+create index mcp_row_usage_usage_date_idx on public.mcp_row_usage (usage_date);
+
 comment on table public.mcp_row_budget_policy is
     'Per-subject daily row limits. Subjects without a row use the documented 50000-row default.';
 comment on table public.mcp_row_daily_budget is

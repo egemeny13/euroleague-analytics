@@ -95,6 +95,15 @@ def test_the_migration_uses_an_expiring_aggregate_and_an_insert_only_writer_role
     assert "grant insert on table public.mcp_row_usage to el_reader" not in migration
 
 
+def test_the_usage_ledger_indexes_the_column_its_expiry_scans() -> None:
+    migration = Path("migrations/0016_mcp_row_budget.up.sql").read_text(encoding="utf-8").lower()
+
+    assert (
+        "create index mcp_row_usage_usage_date_idx on public.mcp_row_usage (usage_date)"
+        in migration
+    )
+
+
 def test_the_persistent_writer_uses_insert_returning_without_reading_the_usage_table() -> None:
     statements: list[str] = []
 
