@@ -697,3 +697,36 @@ def test_v2_response_is_not_subjected_to_v1_html_guard(tmp_path) -> None:
 
     assert schedule == {"data": [{"gameCode": 1, "played": False}], "total": 1}
     assert [entry["http_status"] for entry in read_log(tmp_path)] == [200]
+
+
+def test_429_without_retry_after_uses_exponential_backoff(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport(
+        [
+            StubResponse(429, {}, b'{"error": "rate limited"}'),
+            StubResponse(429, {}, b'{"error": "rate limited"}'),
+            StubResponse(200, {}, b"recovered"),
+        ]
+    )
+    fake_time = FakeTime()
+
+    summary = make_fetcher(tmp_path, transport, fake_time).fetch_season("E2025")
+
+    assert len(transport.calls) == 3
+    assert fake_time.sleeps == [9.0, 10.0]
+    assert summary.fetched_files == 1
+    assert (tmp_path / "E2025" / "Points" / "7.json").read_bytes() == b"recovered"
+
+
+def test_429_exhausted_retries_raises_fetch_error(tmp_path) -> None:
+    from euroleague.fetch import FetchError
+
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport([StubResponse(429, {}, b'{"error": "rate limited"}')] * 6)
+    fake_time = FakeTime()
+    fetcher = make_fetcher(tmp_path, transport, fake_time)
+
+    with pytest.raises(FetchError, match="429"):
+        fetcher.fetch_season("E2025")
+
+    assert not (tmp_path / "E2025" / "Points" / "7.json").exists()

@@ -280,10 +280,19 @@ class ArchiveFetcher:
             self._append_fetch_log(observation)
             if observation.http_status == 200:
                 return observation
-            if observation.http_status == 429 and attempt < self.max_retries:
-                retry_after = response.headers.get("Retry-After", "")
-                self._defer_next_request(self._retry_after_seconds(retry_after))
-                continue
+            if observation.http_status == 429:
+                if attempt < self.max_retries:
+                    retry_after = response.headers.get("Retry-After", "")
+                    retry_seconds = self._retry_after_seconds(retry_after)
+                    if retry_seconds > 0.0:
+                        self._defer_next_request(retry_seconds)
+                    else:
+                        backoff_seconds = min(5.0 * (2 ** (attempt - 1)), 60.0)
+                        self._defer_next_request(backoff_seconds)
+                    continue
+                raise FetchError(
+                    f"Rate limit exceeded (HTTP 429) requesting {url}; retry budget exhausted."
+                )
             if 500 <= observation.http_status < 600 and attempt < self.max_retries:
                 backoff_seconds = min(5.0 * (2 ** (attempt - 1)), 60.0)
                 self._defer_next_request(backoff_seconds)
