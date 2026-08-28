@@ -137,6 +137,13 @@ def _roster_url(season_code: str) -> str:
     return f"https://api-live.euroleague.net/v2/competitions/E/seasons/{season_code}/people?{query}"
 
 
+def _game_stats_url(season_code: str, gamecode: int) -> str:
+    return (
+        "https://api-live.euroleague.net/v2/competitions/E/"
+        f"seasons/{season_code}/games/{gamecode}/stats"
+    )
+
+
 def _write_exact(path: Path, body: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f"{path.name}.part")
@@ -363,6 +370,27 @@ class ArchiveFetcher:
         else:
             self._cache_successful_observation(observation, path, game_response=False)
         parse_roster_bytes(path.read_bytes(), season_code)
+        return observation
+
+    def fetch_game_stats(self, season_code: str, gamecode: int) -> FetchObservation:
+        """Fetch, cache, then archive one v2 game stats response before parsing it."""
+        observation = self._request_with_retry(
+            season_code=season_code,
+            gamecode=gamecode,
+            endpoint="GameStats",
+            url=_game_stats_url(season_code, gamecode),
+        )
+        if observation is None or observation.http_status != 200:
+            status = "no response" if observation is None else f"HTTP {observation.http_status}"
+            raise FetchError(
+                f"Could not fetch v2 stats for {season_code} game {gamecode}: {status}. "
+                "Keep the existing cache and retry later."
+            )
+        self._cache_successful_observation(
+            observation,
+            self.cache.game_stats_path(season_code, gamecode),
+            game_response=True,
+        )
         return observation
 
     def _cache_successful_observation(

@@ -55,10 +55,41 @@ coach pseudo-identifiers `CO_A`, `CO_B`, `AC_A`, `AC_B`. Belinelli's
 three-character code `BCN` maps to `PBCN`, which is the legacy case Decision 24
 worried about.
 
-**None of that licenses prepending `P` in code.** 1,724 agreements are evidence
-of a convention exactly as Decision 24's 203 were; the number is larger and the
-epistemology is identical. The convention becomes a **published check with a
-rate**, never the mechanism.
+**None of that licenses prepending `P` to produce a link.** 1,724 agreements are
+evidence of a convention exactly as Decision 24's 203 were; the number is larger
+and the epistemology is identical. The convention becomes a **published check
+with a rate**, never the mechanism.
+
+### The one distinction this goal turns on, stated concretely
+
+An earlier version of this file was contradictory: it demanded an agreement
+boolean and also said the parser must never form `"P" + code`. Codex stopped on
+that and was right to. Here is the line.
+
+**Forbidden — this manufactures an identifier the game source never supplied:**
+
+```python
+player_id = "P" + source_person_code        # NO. Creates an ID from a guess.
+```
+
+**Required — this measures a hypothesis against an ID that was already
+observed, and creates nothing:**
+
+```python
+player_id = observed_player_id_from_this_game   # the link, from co-occurrence
+prefix_agrees = observed_player_id == "P" + source_person_code   # the check
+```
+
+The difference is what the string is *for*. In the first, the constructed string
+becomes an identifier and is stored as one — that is what Decision 24 forbids,
+because it asserts a fact about a person the box score never named. In the
+second, the constructed string is a **predicate evaluated against evidence** and
+is discarded; only its truth value is stored. Deleting the whole check would not
+change a single `player_id` in the table, which is the test of whether it is the
+mechanism or an observation about the mechanism.
+
+If the check is ever removed, the link table is still complete and correct — it
+just stops being able to report that the convention held.
 
 ## Acceptance criteria
 
@@ -92,9 +123,11 @@ rate**, never the mechanism.
 ## Constraints (hard rules)
 
 - **Test before code.**
-- **Never parse, prefix, or cast a player ID.** This goal exists to satisfy that
-  rule, not to bend it. If an implementation reaches for `"P" + code`, it is
-  wrong even when the result would be correct.
+- **Never construct a player ID.** No `player_id` value may originate from
+  string surgery; every one must come from a game the person was observed in.
+  Forming `"P" + code` **as a comparison operand** for the agreement check is
+  explicitly permitted — see the distinction above — because the constructed
+  string is discarded and only its truth value is kept.
 - **Do not apply any migration to production, and do not run the backfill.** Both
   are attended steps behind Decision 28's storage gate, which requires a staging
   measurement of this table's real size before it is created. Write it, test it

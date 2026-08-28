@@ -82,6 +82,10 @@ class ResponseCache:
         """Where the season-level v2 roster response lives."""
         return self.root / season_code / "roster.json"
 
+    def game_stats_path(self, season_code: str, gamecode: int) -> Path:
+        """Where one v2 game-stats response lives."""
+        return self.root / season_code / "GameStats" / f"{gamecode}.json"
+
     def read_schedule_bytes(self, season_code: str) -> bytes:
         """Read the exact cached schedule bytes without any network fallback."""
         path = self.schedule_path(season_code)

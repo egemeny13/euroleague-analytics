@@ -37,6 +37,26 @@ times three narrow fields is negligible against the ceiling, and Decision 28
 admits it explicitly in its priority set at under 0.5 MB. It simply was never in
 the schema.
 
+**How often the fields are actually present, measured 2026-08-28** from the
+byte-preserved recon bodies under `exploration/cache/roster_probes/`, whose
+checksums are the ones recorded in `exploration/ROSTER_ENDPOINT_FINDINGS.md` and
+in the fixture provenance table:
+
+| Season | Player registrations (`type == "J"`) | `birthDate` null | `passportName` null | `passportSurname` null |
+|---|---:|---:|---:|---:|
+| E2024 | 326 | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) |
+| E2025 | 292 | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) |
+| E2026 | 203 | 0 (0.0%) | 0 (0.0%) | 0 (0.0%) |
+
+**What that does not establish.** The E2024 and E2025 bodies returned exactly 500
+rows, which is the endpoint's default page size, so both are truncated first
+pages rather than complete seasons — Decision 24 records E2025 as holding 1,055
+registrations in total. Only the E2026 snapshot (204 of 204) is complete. The
+measurement therefore covers 821 player registrations across three seasons and
+says nothing about the rows past each default page. The columns stay nullable
+regardless: a 0% null rate over a partial population is a reason to expect
+populated data, never a reason to require it.
+
 **Why it matters.** Age is the single most-asked biographical question about a
 basketball player, and today the server cannot answer it at all. Height and
 weight are already stored and already unreachable for the same underlying reason
@@ -57,9 +77,14 @@ makes sure the data is there when that link exists.
 - [ ] All three columns are nullable, and a test covers a source record that
   omits them — do not assume every person carries all three
 - [ ] Strings are trimmed on ingest, like every other string field
-- [ ] The **null rate per season is measured and reported** in the closing note.
-  A field that is null for most rows is a different feature from one that is
-  populated, and the difference must be known rather than discovered later
+- [ ] ~~The null rate per season is measured and reported in the closing note.~~
+  **Withdrawn 2026-08-28 — this criterion was misplaced and is already
+  satisfied.** It asked the implementer to measure something the implementer
+  cannot see: the worktree holds only three-row fixture projections, and the
+  full season bodies live in a cache the implementer is correctly denied. Codex
+  stopped on this and was right to. The measurement is recorded in the section
+  above; do not attempt to reproduce it, and do not treat its absence as a
+  blocker
 - [ ] Existing `roster_registration` columns, constraints and the primary key are
   unchanged, asserted by the existing roster tests staying green
 - [ ] Both Ruff checks and the default offline suite exit 0

@@ -201,6 +201,20 @@ def test_incomplete_roster_page_is_cached_before_validation_refuses_it(tmp_path)
     assert (tmp_path / "E2026" / "roster.json").read_bytes() == body
 
 
+def test_game_stats_fetch_is_cached_before_its_archive_callback(tmp_path) -> None:
+    body = b'{"local":{"players":[]},"road":{"players":[]}}'
+    observations = []
+    transport = RecordingTransport([StubResponse(200, {}, body)])
+    fetcher = make_fetcher(tmp_path, transport, successful_observation=observations.append)
+
+    observation = fetcher.fetch_game_stats("E2025", 17)
+
+    assert (tmp_path / "E2025" / "GameStats" / "17.json").read_bytes() == body
+    assert transport.calls[0][0].endswith("/seasons/E2025/games/17/stats")
+    assert observation.endpoint == "GameStats"
+    assert observations == [observation]
+
+
 def _roster_bytes(rows: list[dict]) -> bytes:
     return json.dumps({"data": rows, "total": len(rows)}).encode("utf-8")
 
