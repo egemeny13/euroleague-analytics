@@ -73,11 +73,7 @@ def build_person_game_links(
             source_person_code = _trim(person.get("code"))
             jersey_number = _trim(player.get("dorsal"))
             stats = entry.get("stats")
-            if (
-                source_person_code is None
-                or jersey_number is None
-                or not isinstance(stats, dict)
-            ):
+            if source_person_code is None or jersey_number is None or not isinstance(stats, dict):
                 unpaired_source_people += 1
                 continue
             matches = candidates.get((jersey_number, _stat_signature(stats)), [])
