@@ -23,8 +23,37 @@ instead.
 ## Context / why
 
 Goal 032 bounds **how much** a caller can take. This goal bounds **how** they
-can ask, which is the cheaper and less annoying of the two controls because it
-costs an honest analyst nothing.
+can ask.
+
+**Measured first, because the obvious rationale for this goal is wrong.** It is
+tempting to say refusing sweeps slows an extractor down. It barely does. The
+binding constraints are the 120-calls-per-minute cap and the 200-row page, and
+`game_event`'s 399,459 rows need about 2,000 calls however they are sliced:
+
+| | Calls | Time |
+|---|---:|---:|
+| Today, walking the offset | 1,998 | 16.6 min |
+| With this goal, narrowed per game | 2,196 | 18.3 min |
+
+**A 9.9% increase.** This goal is not a speed bump and must not be prioritised as
+one. Goal 032's row budget is the entire defence: at 50,000 rows per subject per
+day the same extraction takes **8 days instead of 17 minutes**, 691 times slower.
+
+**Ship 032 first.** This goal is worth doing for three other reasons, all real
+and none of them "it slows extraction down":
+
+1. **It removes the slowest queries the server runs.** Deep offsets scan and
+   discard; refusing them protects the Supabase compute budget, which is the
+   free-tier resource actually at risk.
+2. **It makes the shape legible.** An extractor forced to narrow produces a
+   pattern that goal 032's usage history can recognise. Offset-walking looks the
+   same as ordinary paging.
+3. **It costs an honest analyst nothing**, which is why it is worth having even
+   at a 10% effect on an attacker.
+
+Bandwidth, for completeness, is not the risk anyone should be defending against:
+a full extraction of the event stream is roughly 100 MB, which at Fly's
+$0.02 per GB is **$0.002**.
 
 The distinguishing feature of extraction is that it does not narrow. An analyst
 asks about a team, a player, a date range, a phase. A scraper asks for
@@ -43,11 +72,10 @@ the model at call time. A refusal that says "narrow by team, player or date
 range, then page within that" keeps an honest caller productive and stops a
 sweep. A bare "denied" wastes the model's turn and teaches it nothing.
 
-**Honest limit, stated rather than glossed.** A determined caller can defeat
-this by iterating filters instead of offsets — season by season, team by team.
-That is exactly why goal 032 exists alongside it: this goal raises the cost and
-makes the shape obvious; the row budget is what actually bounds the total.
-Neither is sufficient alone and the pair should be shipped together.
+**Honest limit, stated rather than glossed.** A determined caller defeats this by
+iterating filters instead of offsets — season by season, team by team — at a cost
+of about 10% more calls, as measured above. This goal is a hygiene and cost
+control, not a barrier. Without goal 032 it stops nobody.
 
 ## Acceptance criteria
 
