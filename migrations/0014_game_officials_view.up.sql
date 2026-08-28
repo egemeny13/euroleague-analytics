@@ -26,7 +26,13 @@
 -- four officials - absent slots are null and callers must drop them rather than
 -- report a nameless fourth referee.
 
-create view v_game_officials with (security_invoker = true) as
+-- RECONCILED 2026-08-28, as migration 0013 was and for the same reason: the view
+-- was found in production, security_invoker set, granted to el_reader, with a
+-- definition and comment identical to this one, and no ledger entry. `create or
+-- replace` confirms that state rather than colliding with it, and it cannot
+-- silently accept a differently shaped view: PostgreSQL refuses to drop or
+-- reorder a column through a replace.
+create or replace view v_game_officials with (security_invoker = true) as
 select
     g.season_code,
     g.gamecode,

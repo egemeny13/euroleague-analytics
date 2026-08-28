@@ -28,7 +28,19 @@
 -- version control. Until they do, the role exists but cannot log in, and
 -- tests/test_readonly_role.py skips rather than passes.
 
-create role el_reader with login;
+-- RECONCILED 2026-08-28. The role was found already present in production,
+-- with exactly the grant set below and no others, while the migration ledger had
+-- no record of this file. Same situation and same remedy as migration 0010: the
+-- canonical migration becomes idempotent so that it reproduces the intended end
+-- state on a fresh database and confirms it on the drifted one. The grants and
+-- revokes beneath are idempotent already.
+do $$
+begin
+    if not exists (select 1 from pg_roles where rolname = 'el_reader') then
+        create role el_reader with login;
+    end if;
+end
+$$;
 alter role el_reader bypassrls;
 
 grant connect on database postgres to el_reader;
