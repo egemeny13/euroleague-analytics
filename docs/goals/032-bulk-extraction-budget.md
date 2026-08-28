@@ -58,10 +58,13 @@ Measured consequences, from this repository and the live deployment on
 - [ ] The budget is **persisted**, so a container restart, a redeploy, or a
   second machine does not reset it. In-memory counting is the defect being fixed,
   not the mechanism
-- [ ] Writing the counter does **not** widen `el_reader`. That role stays
-  read-only, asserted by the existing `tests/test_readonly_role.py`. Use a
-  separate least-privilege identity with `insert` on the usage table and nothing
-  else
+- [ ] Writing the counter does **not** widen `el_reader`. Use a separate
+  least-privilege identity with `insert` on the usage table and nothing else.
+  **Do not try to verify this with `tests/test_readonly_role.py`** — it is marked
+  `warehouse`, opens a real connection, and is deselected from the default suite,
+  so it cannot run in a worktree without credentials. Verify it the way you can:
+  assert that the migration grants `el_reader` nothing new, and that the write
+  path uses a different configured identity
 - [ ] Exceeding the budget returns a **tool error naming a concrete next step** -
   when the budget resets and how to narrow the query - not an empty result and
   not a protocol error
@@ -69,8 +72,20 @@ Measured consequences, from this repository and the live deployment on
   see the boundary before hitting it rather than after
 - [ ] The budget is configurable per subject, with a documented default. A
   default that blocks ordinary analysis is a worse failure than the one being
-  fixed: derive it from what a real pilot session actually consumed and state
-  that number in the closing note
+  fixed. **Do not try to derive it from real usage** — pilot usage lives in Fly's
+  logs, which a worktree cannot reach. Use **50,000 rows per subject per day** as
+  the default, from the arithmetic below, and leave it configurable so the owner
+  can move it once real usage is known:
+
+  | | |
+  |---|---|
+  | Full event stream | 399,459 rows |
+  | At 50,000 rows/day | **8 days** to extract, against 17 minutes today |
+  | A heavy analysis session | a few thousand rows across tens of calls |
+
+  The gap between an honest session and the budget is roughly an order of
+  magnitude, which is the property that matters: generous for analysis, useless
+  for extraction.
 - [ ] A test proves the budget survives a simulated restart
 - [ ] The anonymous subject keeps sharing one bucket, matching the deliberate
   reasoning in `caller_subject()` — not authenticating must never buy a larger

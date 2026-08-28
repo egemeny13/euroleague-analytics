@@ -90,8 +90,12 @@ control, not a barrier. Without goal 032 it stops nobody.
   model rather than as a code comment, so the model complies before being refused
 - [ ] Existing legitimate query shapes keep working, asserted by the existing MCP
   query tests staying green
-- [ ] The refusal thresholds are named constants with a comment giving the reason
-  and the measurement behind the number, not bare literals
+- [ ] The refusal thresholds are named constants with a comment giving the reason,
+  not bare literals. **Do not try to measure the numbers yourself** — the
+  measurement is above and the values are given here: refuse an `offset` beyond
+  **2,000**, which is ten pages at the 200-row cap and past any depth an honest
+  paged read reaches, while a full extraction needs about 1,998 calls. Cite this
+  goal's table in the comment
 - [ ] The tool-list fingerprint is updated in the same commit, and the stdio and
   HTTP transports still publish a byte-identical list
 - [ ] Both Ruff checks and the default offline suite exit 0
