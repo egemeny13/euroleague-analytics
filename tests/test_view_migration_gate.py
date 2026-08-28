@@ -135,5 +135,5 @@ def test_0014_game_officials_view_migration_sql_is_valid() -> None:
     migrations_root = Path(__file__).resolve().parent.parent / "migrations"
     up_sql = (migrations_root / "0014_game_officials_view.up.sql").read_text(encoding="utf-8")
     down_sql = (migrations_root / "0014_game_officials_view.down.sql").read_text(encoding="utf-8")
-    gate.validate_view_only_sql(up_sql, "up", "v_game")
-    gate.validate_view_only_sql(down_sql, "down", "v_game")
+    gate.validate_view_only_sql(up_sql, "up", "v_game_officials")
+    gate.validate_view_only_sql(down_sql, "down", "v_game_officials")

@@ -531,12 +531,16 @@ def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
             f"quarantine when quoting any number from it."
         )
 
+    # v_game_officials, not v_game. The crew lives in its own narrow view because
+    # appending columns to v_game turned out to be irreversible: PostgreSQL
+    # cannot drop a view's columns by replacement, and five views depend on
+    # v_game. See migrations/0014_game_officials_view.up.sql.
     cursor.execute(
         "select referee_1_code, referee_1_name, "
         "referee_2_code, referee_2_name, "
         "referee_3_code, referee_3_name, "
         "referee_4_code, referee_4_name "
-        "from v_game where season_code = %s and gamecode = %s",
+        "from v_game_officials where season_code = %s and gamecode = %s",
         (season_code, gamecode),
     )
     game_rows = _rows(cursor)
