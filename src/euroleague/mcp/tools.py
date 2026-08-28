@@ -39,7 +39,11 @@ _INCLUDE_QUARANTINED = {
 
 _SEASON = {
     "type": "string",
-    "description": "Season code such as E2024. Call el_describe_warehouse to see which are loaded.",
+    "description": (
+        "Season code such as E2024. E<YYYY> identifies the season ending in spring <YYYY> "
+        "(for example, E2024 is the 2023-24 season). Call el_describe_warehouse to see "
+        "which seasons are loaded."
+    ),
 }
 
 _LIMIT = {
@@ -112,12 +116,13 @@ def build_registry(
                 "Call this FIRST. Reports which seasons are loaded, how many games each "
                 "holds, whether each is complete, in progress, or of unknown completeness, "
                 "the date range covered, which games are excluded by default and "
-                "why, and the teams in each season. Counting statistics served by the "
-                "other tools are the official euroleague.net box score; possessions, "
-                "pace, lineups, on/off and every per-100 rate are this project's own "
-                "reconstruction from play-by-play events. Shot-coordinate availability "
-                "is reported by season. Use this before assuming any season, team or "
-                "coordinate coverage is available."
+                "why, and the teams in each season. Season codes follow the E<YYYY> convention "
+                "for the season ending in spring <YYYY> (for example, E2024 is the 2023-24 "
+                "season). Counting statistics served by the other tools are the official "
+                "euroleague.net box score; possessions, pace, lineups, on/off and every "
+                "per-100 rate are this project's own reconstruction from play-by-play "
+                "events. Shot-coordinate availability is reported by season. Use this before "
+                "assuming any season, team or coordinate coverage is available."
             ),
             input_schema=_schema({}),
             query=queries.describe_warehouse,
