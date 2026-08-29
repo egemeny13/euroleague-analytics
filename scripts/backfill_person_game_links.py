@@ -9,6 +9,22 @@ For every played E2024 and E2025 game, the script reads the v2 GameStats body
 from ``ResponseCache.game_stats_path`` when present. Only a missing file is
 fetched, and ``ArchiveFetcher.fetch_game_stats`` caches and archives that exact
 response before this script parses the bytes back from disk.
+
+The two sides of the comparison are not symmetrical, deliberately. The v2 line is
+read from the archived response body. The v1 line is rebuilt from the warehouse
+columns of `raw_boxscore_player`, not from the archived v1 Boxscore body, because
+the warehouse is what every downstream query actually reads. The consequence is
+worth stating: if the parser that filled `raw_boxscore_player` were wrong, this
+pairing would inherit that error rather than detect it. What rules that out is
+`tests/test_person_game_link.py`, which runs the same comparison against both
+archived bodies for three games and finds 1,368 field agreements and zero
+mismatches.
+
+The connection is autocommit and each game is loaded on its own, so a run that
+dies partway leaves the games it finished linked and the rest not, with no marker
+saying where it stopped. That is safe rather than tidy: `load_person_game_links`
+replaces a game's rows wholesale inside one transaction, so re-running the script
+from the beginning repairs a partial run rather than duplicating it.
 """
 
 from __future__ import annotations
