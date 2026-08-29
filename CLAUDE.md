@@ -271,6 +271,30 @@ the event stream as a bug.
 - **Never grant yourself an exemption from a roadmap gate.** If a gate must be
   relaxed, stop and ask, and record who decided and when.
 
+## Branches and pull requests
+
+**Work on a branch. Merge to `master` through a pull request. Never push to
+`master` directly.**
+
+**`master` is a deploy trigger, not just a default branch.**
+`.github/workflows/fly-deploy.yml` runs `flyctl deploy` on every push to `main`
+or `master`. A merge is therefore a production release: it restarts the hosted
+MCP server and interrupts anyone connected to it. That single fact is what turns
+branch discipline here from tidiness into a safety rule.
+
+- **Name the branch for the work**, not for the person or the day:
+  `fix/possession-residual`, `docs/auth0-configuration`.
+- **Merge deliberately, and pick the moment.** Never merge while somebody is
+  testing the live server, mid-settlement, or during a live-season window.
+  Ask before merging if you cannot see who is connected.
+- **A branch that has grown past a few dozen commits is a review failure, not an
+  achievement.** Open the pull request while it can still be read.
+- **A pull request states what it changes and what it leaves unproven.** The same
+  standard as everything else here: no claim without its measurement, and every
+  gap named rather than omitted.
+- The queue in `docs/goals/index.yaml` sets `base: master`; that is the merge
+  target, not a licence to commit straight to it.
+
 ## Challenging these rules
 
 These rules were written from measurements, and some of those measurements were
