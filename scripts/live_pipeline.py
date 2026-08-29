@@ -32,6 +32,7 @@ from euroleague.config import DatabaseSettings, live_runtime_settings
 from euroleague.fetch import DEFAULT_CACHE_ROOT
 from euroleague.live import run_live_pipeline
 from euroleague.step_summary import append_step_summary, format_live_pipeline_summary
+from euroleague.storage_watch import format_storage_summary, read_budgets
 
 LIVE_SEASON = "E2026"
 
@@ -75,6 +76,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     cache = ResponseCache(args.cache_root)
+    budgets = None
+    budget_error = "not reached"
 
     try:
         if args.live:
@@ -110,6 +113,15 @@ def main(argv: list[str] | None = None) -> int:
                     summary = run_live_pipeline(connection, consumer_cache, args.season)
             else:
                 summary = run_live_pipeline(connection, cache, args.season)
+
+            # Read the budgets while the connection is still open. This is
+            # reporting, not a gate: a failure here must never cost the night's
+            # games, so it is caught and noted rather than raised.
+            try:
+                budgets = read_budgets(connection)
+            except Exception as budget_failure:
+                budgets = None
+                budget_error = f"{type(budget_failure).__name__}: {budget_failure}"
     except Exception as failure:
         # The message, never the settings object: a traceback carrying a
         # connection string would land in a public log.
@@ -118,6 +130,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     append_step_summary(format_live_pipeline_summary(args.season, summary))
+    if budgets is not None:
+        append_step_summary(format_storage_summary(*budgets))
+        print(
+            f"storage: database={budgets[0].used_bytes:,} bytes "
+            f"({budgets[0].level}), archive={budgets[1].used_bytes:,} bytes"
+        )
+    else:
+        append_step_summary(f"### 💾 Storage budgets\n\nNot measured: `{budget_error}`\n")
     print(summary.as_log_line())
     return 0
 
