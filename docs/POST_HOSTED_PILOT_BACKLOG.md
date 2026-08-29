@@ -24,7 +24,12 @@ Initial live testing by the owner confirmed:
 
 ### Item 2: Shot Spatial Query Latency Optimization
 - **Observed Behavior:** Multi-filter shot queries (`el_get_shots`) experienced noticeable latency on the hosted server.
-- **Proposed Enhancement:** Profile `v_shot_data` query execution plans with `EXPLAIN ANALYZE` for player/team filtered queries and evaluate composite indexing on underlying `(season_code, player_code)` / `(season_code, team_code)` in `game_event` and `raw_shot`.
+- **Measured Profiles (2026-08-29 against production):**
+  - Single game (`season_code = 'E2024'`, `gamecode = 1`): PostgreSQL execution **12.86 ms** (wall clock 84.67 ms).
+  - Player query (`season_code = 'E2024'`, `player_id = 'P006590'`): PostgreSQL execution **121.85 ms** (wall clock 188.07 ms).
+  - Team query (`season_code = 'E2024'`, `team_code = 'TEL'`): PostgreSQL execution **2,420.99 ms** (wall clock 2,586.79 ms).
+- **Bottleneck Analysis:** Team filtering currently scans `game_event_playtype_idx` on `(season_code, playtype)` and loops across 2,861 events to join `raw_shot` and filter team in memory.
+- **Proposed Enhancement:** Add a composite index `(season_code, team_code, playtype)` on `game_event` or optimize `v_shot_data` query paths in Phase B.
 
 ### Item 3: Season Code Disambiguation in Tool Descriptions
 - **Observed Behavior:** LLMs can confuse EuroLeague calendar years with season codes (e.g., `E2024` represents the 2023–24 season ending in Berlin; `E2025` represents the 2024–25 season ending in Abu Dhabi).
