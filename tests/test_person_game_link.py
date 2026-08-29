@@ -451,3 +451,54 @@ def test_conflicts_are_reported_in_a_stable_order() -> None:
     ]
     conflicts = find_person_game_link_conflicts(results)
     assert [conflict.identifier for conflict in conflicts] == ["a", "b"]
+
+
+CONFLICT_MIGRATION_UP = (
+    Path("migrations/0019_person_game_link_conflict_view.up.sql")
+    .read_text(encoding="utf-8")
+    .lower()
+)
+CONFLICT_MIGRATION_DOWN = (
+    Path("migrations/0019_person_game_link_conflict_view.down.sql")
+    .read_text(encoding="utf-8")
+    .lower()
+)
+
+
+def test_the_conflict_view_names_the_same_two_kinds_the_parser_does() -> None:
+    """Break caught: SQL and Python drift apart and one reports a kind the other cannot."""
+    assert f"'{PERSON_CLAIMS_MANY_PLAYERS}'" in CONFLICT_MIGRATION_UP
+    assert f"'{PLAYER_CLAIMS_MANY_PEOPLE}'" in CONFLICT_MIGRATION_UP
+
+
+def test_the_conflict_view_checks_both_directions() -> None:
+    """Break caught: only one direction is checked and the other contradiction hides."""
+    assert "count(distinct player_id) > 1" in CONFLICT_MIGRATION_UP
+    assert "count(distinct source_person_code) > 1" in CONFLICT_MIGRATION_UP
+
+
+def test_the_conflict_view_is_security_invoker_and_private() -> None:
+    """Break caught: a new view runs with its owner's privileges or reaches the public roles."""
+    assert "with (security_invoker = true)" in CONFLICT_MIGRATION_UP
+    assert (
+        "grant select on table public.v_person_game_link_conflict to el_reader"
+        in CONFLICT_MIGRATION_UP
+    )
+    assert (
+        "revoke all on table public.v_person_game_link_conflict from anon, authenticated"
+        in CONFLICT_MIGRATION_UP
+    )
+    for privilege in ("insert", "update", "delete", "all"):
+        assert (
+            f"grant {privilege} on table public.v_person_game_link_conflict"
+            not in CONFLICT_MIGRATION_UP
+        )
+
+
+def test_the_conflict_view_is_reversible() -> None:
+    """Break caught: the down migration leaves the view or its grants behind."""
+    assert "drop view public.v_person_game_link_conflict" in CONFLICT_MIGRATION_DOWN
+    assert (
+        "revoke all on table public.v_person_game_link_conflict from el_reader"
+        in CONFLICT_MIGRATION_DOWN
+    )
