@@ -641,3 +641,13 @@ to the immediately-before-write approval rule; the owner gave that separate
 approval and the transaction completed on 2026-08-26. E2025 game 344 now has
 160 possessions, the season has 59,482, and all protected fingerprints and
 gates passed. Order 9 is fully reconciled in production.
+
+**Person-game link backfill, 2026-08-29.** Decision 27's observed bridge was
+built for both loaded seasons: 17,333 links across 732 games, 461 person codes
+against 461 player ids in a perfect bijection with zero cross-game
+contradictions, and a `P`-prefix agreement rate of 1.000000 in both seasons. The
+convention remains an observation, not a mechanism; Decision 24's prohibition is
+unchanged. Seventy of 17,403 box score rows are unlinked, of which twelve belong
+to players who took the floor and are unexplained. Evidence is in
+`docs/PERSON_GAME_LINK_BACKFILL_REPORT.md`.
+
