@@ -43,6 +43,7 @@ def test_stale_strings_are_absent_from_documentation() -> None:
 
     # Stale claim 3: old Desktop path in README
     assert "C:/Users/PC/Desktop/euroleague-analytics" not in readme_content
+    assert "E:/dev/euroleague-analytics" not in readme_content
 
 
 def test_roadmap_contains_live_season_blocks_and_production_measurements() -> None:

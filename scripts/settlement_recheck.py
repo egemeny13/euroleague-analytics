@@ -27,11 +27,12 @@ green when it works. It goes red only when a rebuild fails, and then it names
 the game that failed and the games repaired before it, because those two sets
 need different follow-up.
 
-WHY ONLY THE LIVE SEASON IS EVER REBUILT. The rebuild deliberately leaves
-`raw_shot` alone, because the live pipeline that loads E2026 never writes it.
-That is true for this season and false for the seasons loaded in full, so the
-season refusal a few lines into `main` is not only about request budget - it is
-what keeps the rebuild pointed at the data it is correct for.
+WHY ONLY THE LIVE SEASON IS EVER REBUILT. The rebuild replaces `raw_shot`
+with the rest of the game's raw and derived rows in one transaction. The
+season refusal a few lines into `main` is about request budget: Decision 7's
+condition is about one future season, and re-checking finished seasons would
+cost thousands of requests to answer a question that historical responses cannot
+answer.
 """
 
 from __future__ import annotations

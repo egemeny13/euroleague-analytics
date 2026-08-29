@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import date, datetime
 from hashlib import sha256
 from pathlib import Path
 
@@ -38,6 +38,9 @@ def _entry(
             "code": person_code,
             "name": name,
             "country": {"code": " SRB ", "name": "Serbia"},
+            "birthDate": " 1989-11-02T00:00:00 ",
+            "passportName": " TIBOR ",
+            "passportSurname": " PLEISS ",
             "height": 193,
             "weight": 87,
         },
@@ -83,7 +86,24 @@ def test_parser_keeps_source_order_filters_staff_and_never_invents_player_ids() 
     assert snapshot.registrations[0].jersey_number == "4"
     assert snapshot.registrations[0].position_name == "Guard"
     assert snapshot.registrations[0].country_code == "SRB"
+    assert snapshot.registrations[0].birth_date == date(1989, 11, 2)
+    assert snapshot.registrations[0].passport_name == "TIBOR"
+    assert snapshot.registrations[0].passport_surname == "PLEISS"
     assert snapshot.registrations[0].start_at == datetime(2026, 8, 12, 8, 28, 42, 527000)
+
+
+def test_parser_keeps_biography_fields_from_archived_roster_fixture() -> None:
+    """Break caught: roster biography present in archived source bytes is discarded."""
+    source_rows = json.loads(
+        Path("tests/fixtures/roster_people_pan_e2024.json").read_text(encoding="utf-8")
+    )
+    pleiss = next(row for row in source_rows if row["person"]["code"] == "LHK")
+
+    registration = parse_roster_bytes(_body(pleiss), "E2024").registrations[0]
+
+    assert registration.birth_date == date(1989, 11, 2)
+    assert registration.passport_name == "TIBOR"
+    assert registration.passport_surname == "PLEISS"
 
 
 def test_parser_preserves_active_status_and_optional_absence() -> None:
@@ -91,6 +111,9 @@ def test_parser_preserves_active_status_and_optional_absence() -> None:
     entry["person"]["country"] = None
     entry["person"]["height"] = None
     entry["person"]["weight"] = None
+    entry["person"].pop("birthDate", None)
+    entry["person"].pop("passportName", None)
+    entry["person"].pop("passportSurname", None)
     entry["endDate"] = None
     entry["dorsal"] = ""
     entry["position"] = None
@@ -102,6 +125,9 @@ def test_parser_preserves_active_status_and_optional_absence() -> None:
     assert registration.country_code is None
     assert registration.height_cm is None
     assert registration.weight_kg is None
+    assert registration.birth_date is None
+    assert registration.passport_name is None
+    assert registration.passport_surname is None
     assert registration.end_at is None
     assert registration.jersey_number is None
     assert registration.position_code is None
@@ -356,3 +382,32 @@ def test_migration_contract_keeps_roster_private_and_source_native() -> None:
     assert "revoke all on table roster_registration from anon, authenticated" in up.lower()
     assert "references player" not in up.lower()
     assert "drop table if exists roster_registration" in down.lower()
+
+
+def test_roster_biography_migration_adds_and_removes_only_nullable_source_fields() -> None:
+    """Break caught: biography storage changes existing roster schema or invents precision."""
+    up = Path("migrations/0015_roster_biography.up.sql").read_text(encoding="utf-8")
+    down = Path("migrations/0015_roster_biography.down.sql").read_text(encoding="utf-8")
+    compact_up = " ".join(up.lower().split())
+    compact_down = " ".join(down.lower().split())
+
+    assert "alter table roster_registration" in compact_up
+    assert "add column birth_date date" in compact_up
+    assert "add column passport_name text" in compact_up
+    assert "add column passport_surname text" in compact_up
+    assert "birth_date date not null" not in compact_up
+    assert "passport_name text not null" not in compact_up
+    assert "passport_surname text not null" not in compact_up
+    assert (
+        "passport_name is null or (passport_name = btrim(passport_name) and passport_name <> '')"
+        in compact_up
+    )
+    assert (
+        "passport_surname is null or (passport_surname = btrim(passport_surname) "
+        "and passport_surname <> '')" in compact_up
+    )
+    assert compact_down.count("drop column") == 3
+    assert "drop column birth_date" in compact_down
+    assert "drop column passport_name" in compact_down
+    assert "drop column passport_surname" in compact_down
+    assert "drop table" not in compact_down

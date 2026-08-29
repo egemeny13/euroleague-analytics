@@ -18,6 +18,7 @@ TOOL_NAMES: tuple[str, ...] = (
     "el_describe_warehouse",
     "el_find_games",
     "el_get_game",
+    "el_get_boxscore",
     "el_get_team_stats",
     "el_get_player_stats",
     "el_get_lineup_stats",
@@ -39,7 +40,11 @@ _INCLUDE_QUARANTINED = {
 
 _SEASON = {
     "type": "string",
-    "description": "Season code such as E2024. Call el_describe_warehouse to see which are loaded.",
+    "description": (
+        "Season code such as E2024. E<YYYY> identifies the season ending in spring <YYYY> "
+        "(for example, E2024 is the 2023-24 season). Call el_describe_warehouse to see "
+        "which seasons are loaded."
+    ),
 }
 
 _LIMIT = {
@@ -53,8 +58,18 @@ _OFFSET = {
     "type": "integer",
     "description": (
         "Rows to skip, for paging through a large result. Use next_offset from the "
-        "previous response."
+        f"previous response. Offsets over {queries.MAX_PAGINATION_OFFSET:,} are refused; "
+        "narrow the query before paging further."
     ),
+}
+
+# The two largest surfaces, and the arguments that turn a sweep into a question.
+# For el_get_play_by_play the published schema already requires gamecode, and both
+# transports check that first; this entry is the backstop for any caller path that
+# reaches a handler directly.
+_BULK_NARROWING_ARGUMENTS = {
+    "el_get_play_by_play": ("gamecode",),
+    "el_get_shot_data": ("gamecode", "team", "player", "period", "made", "shot_type"),
 }
 
 
@@ -75,6 +90,32 @@ def _validate_booleans(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
             queries._boolean(arguments, name)
 
 
+def _validate_pagination_depth(schema: dict[str, Any], arguments: dict[str, Any]) -> None:
+    """Reject deep pages before a tool runner can acquire a database connection."""
+    if "offset" in schema.get("properties", {}):
+        queries.validate_offset(arguments.get("offset"))
+
+
+def _has_narrowing_value(arguments: dict[str, Any], name: str) -> bool:
+    """Treat false as a valid Boolean filter but reject absent or blank values."""
+    value = arguments.get(name)
+    return value is not None and (not isinstance(value, str) or bool(value.strip()))
+
+
+def _validate_bulk_narrowing(tool_name: str, arguments: dict[str, Any]) -> None:
+    """Keep the two largest surfaces focused before a database runner is selected."""
+    narrowing_arguments = _BULK_NARROWING_ARGUMENTS.get(tool_name)
+    if narrowing_arguments is None:
+        return
+    if any(_has_narrowing_value(arguments, name) for name in narrowing_arguments):
+        return
+    names = ", ".join(narrowing_arguments)
+    raise ValueError(
+        f"{tool_name} needs at least one narrowing argument: {names}. "
+        "Narrow the query, then page within that focused result."
+    )
+
+
 def build_registry(
     runner: Callable[
         [Callable[[Any, dict[str, Any]], dict[str, Any]], dict[str, Any]], dict[str, Any]
@@ -82,9 +123,13 @@ def build_registry(
 ) -> dict[str, Tool]:
     """Bind each query function to the supplied query runner."""
 
-    def bind(query: Callable[[Any, dict], dict], schema: dict[str, Any]) -> Callable[[dict], dict]:
+    def bind(
+        tool_name: str, query: Callable[[Any, dict], dict], schema: dict[str, Any]
+    ) -> Callable[[dict], dict]:
         def handler(arguments: dict[str, Any]) -> dict[str, Any]:
             _validate_booleans(schema, arguments)
+            _validate_pagination_depth(schema, arguments)
+            _validate_bulk_narrowing(tool_name, arguments)
             return runner(query, arguments)
 
         return handler
@@ -101,7 +146,7 @@ def build_registry(
             title=title,
             description=description,
             input_schema=input_schema,
-            handler=bind(query, input_schema),
+            handler=bind(name, query, input_schema),
         )
 
     tools = [
@@ -112,12 +157,13 @@ def build_registry(
                 "Call this FIRST. Reports which seasons are loaded, how many games each "
                 "holds, whether each is complete, in progress, or of unknown completeness, "
                 "the date range covered, which games are excluded by default and "
-                "why, and the teams in each season. Counting statistics served by the "
-                "other tools are the official euroleague.net box score; possessions, "
-                "pace, lineups, on/off and every per-100 rate are this project's own "
-                "reconstruction from play-by-play events. Shot-coordinate availability "
-                "is reported by season. Use this before assuming any season, team or "
-                "coordinate coverage is available."
+                "why, and the teams in each season. Season codes follow the E<YYYY> convention "
+                "for the season ending in spring <YYYY> (for example, E2024 is the 2023-24 "
+                "season). Counting statistics served by the other tools are the official "
+                "euroleague.net box score; possessions, pace, lineups, on/off and every "
+                "per-100 rate are this project's own reconstruction from play-by-play "
+                "events. Shot-coordinate availability is reported by season. Use this before "
+                "assuming any season, team or coordinate coverage is available."
             ),
             input_schema=_schema({}),
             query=queries.describe_warehouse,
@@ -179,7 +225,8 @@ def build_registry(
                 "offensive and defensive rating per 100 possessions. Possessions are "
                 "counted from the event stream, never estimated from a box score formula. "
                 "Defensive rating uses the opponent's possessions as its denominator. "
-                "Get the gamecode from el_find_games."
+                "The officiating crew is the published assignment, not derived by this "
+                "project. Get the gamecode from el_find_games."
             ),
             input_schema=_schema(
                 {
@@ -192,6 +239,40 @@ def build_registry(
                 required=["season", "gamecode"],
             ),
             query=queries.get_game,
+        ),
+        tool(
+            name="el_get_boxscore",
+            title="Single game player box score",
+            description=(
+                "A single game's full player box score for both teams alongside team totals: "
+                "points, field goals, three pointers, free throws, offensive/defensive/total "
+                "rebounds, assists, steals, turnovers, blocks, fouls, valuation, and plus-minus. "
+                "Counting statistics are the official published euroleague.net box score, "
+                "never aggregated from events. Minutes are reported according to minutes_basis "
+                "(default 'corrected'). Get the gamecode from el_find_games."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "gamecode": {
+                        "type": "integer",
+                        "description": "The gamecode, unique within a season. From el_find_games.",
+                    },
+                    "minutes_basis": {
+                        "type": "string",
+                        "enum": ["corrected", "raw", "official"],
+                        "default": "corrected",
+                        "description": (
+                            "Which minutes reconstruction to return. 'corrected' (default) "
+                            "applies the substitution duration correction. 'raw' uses "
+                            "unadjusted source timestamps. 'official' uses the minutes published "
+                            "in the official box score."
+                        ),
+                    },
+                },
+                required=["season", "gamecode"],
+            ),
+            query=queries.get_boxscore,
         ),
         tool(
             name="el_get_team_stats",
@@ -416,8 +497,9 @@ def build_registry(
                 "event belongs to. Rows come back in source order by ingest_index, which "
                 "is the only trustworthy ordering this data has - do not re-sort them. "
                 "Use it to see what actually happened in a stretch of a game rather than "
-                "a summary of it. Paginate with from_index or offset; a full game is "
-                "roughly 450 to 700 events."
+                "a summary of it. Always narrow this tool with gamecode from el_find_games, "
+                "then paginate with from_index or offset; a full game is roughly 450 to "
+                "700 events."
             ),
             input_schema=_schema(
                 {
@@ -464,7 +546,8 @@ def build_registry(
                 "free throws with no coordinates and never serves that sentinel as a "
                 "location. Shot type comes from the event action code, never from distance "
                 "or coordinate geometry. The response distinguishes no matching shots from "
-                "a season with no coordinate coverage."
+                "a season with no coordinate coverage. Always narrow this tool with at least "
+                "one of gamecode, team, player, period, made, or shot_type before paging."
             ),
             input_schema=_schema(
                 {

@@ -201,6 +201,20 @@ def test_incomplete_roster_page_is_cached_before_validation_refuses_it(tmp_path)
     assert (tmp_path / "E2026" / "roster.json").read_bytes() == body
 
 
+def test_game_stats_fetch_is_cached_before_its_archive_callback(tmp_path) -> None:
+    body = b'{"local":{"players":[]},"road":{"players":[]}}'
+    observations = []
+    transport = RecordingTransport([StubResponse(200, {}, body)])
+    fetcher = make_fetcher(tmp_path, transport, successful_observation=observations.append)
+
+    observation = fetcher.fetch_game_stats("E2025", 17)
+
+    assert (tmp_path / "E2025" / "GameStats" / "17.json").read_bytes() == body
+    assert transport.calls[0][0].endswith("/seasons/E2025/games/17/stats")
+    assert observation.endpoint == "GameStats"
+    assert observations == [observation]
+
+
 def _roster_bytes(rows: list[dict]) -> bytes:
     return json.dumps({"data": rows, "total": len(rows)}).encode("utf-8")
 
@@ -581,3 +595,152 @@ def test_zero_played_summary_names_380_scheduled_and_zero_game_responses(tmp_pat
         0,
         0,
     )
+
+
+V1_NOT_FOUND_BODY = (
+    b"\xef\xbb\xbf<!DOCTYPE html>\r\n"
+    b"<html>\r\n"
+    b"<head>\r\n"
+    b"    <title>Not found | EuroLeague Live Stats</title>\r\n"
+    b'\t<meta charset="utf-8" />\r\n'
+    b'    <meta name="viewport" content="width=device-width, initial-scale=1">\r\n'
+    b"    <link href='https://fonts.googleapis.com/css?family=Lato' "
+    b"rel='stylesheet' type='text/css'>\r\n"
+    b'    <link rel="stylesheet" '
+    b'href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"/>\r\n'
+    b"</head>\r\n"
+    b'<body style="background-color:rgb(51, 51, 51);'
+    b"font-family: lato,'helvetica neue', helvetica, arial, sans-serif;"
+    b'color:rgb(200, 200, 200);text-align:center;padding-top: 100px;font-size:1.5em;">\r\n'
+    b'    <img src="../../img/logo_euroleague.png" '
+    b'alt="Basketball Euroleague" width="100" />\r\n'
+    b"    <h1>404</h1>\r\n"
+    b"    <h3>Not found</h3>\r\n"
+    b'    <span style="font-size:0.8em">\r\n'
+    b'        Try&nbsp;&nbsp;<a href="http://www.euroleague.net" '
+    b'alt="Basketball Euroleague Website" style="color:rgb(200, 200, 200);'
+    b'text-decoration:none;">www.euroleague.net</a>\r\n'
+    b"    </span>\r\n"
+    b"</body>\r\n"
+    b"</html>\r\n"
+)
+
+
+def test_v1_not_found_sha256_constant_matches_measured_checksum() -> None:
+    from euroleague.fetch import V1_NOT_FOUND_SHA256
+
+    assert V1_NOT_FOUND_SHA256 == (
+        "cf69913ae9c9cc686e82126b3ac4caaf7bd03005ce575fbb1caaff9c59b3bf8c"
+    )
+    assert sha256(V1_NOT_FOUND_BODY).hexdigest() == V1_NOT_FOUND_SHA256
+
+
+def test_v1_http_200_not_found_body_is_treated_as_404_and_refused(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    archived_observations = []
+    transport = RecordingTransport([StubResponse(200, {}, V1_NOT_FOUND_BODY)])
+    fetcher = make_fetcher(
+        tmp_path,
+        transport,
+        successful_observation=archived_observations.append,
+    )
+
+    summary = fetcher.fetch_season("E2025")
+
+    assert summary.fetched_files == 0
+    assert summary.permanent_missing == 1
+    assert summary.failed_targets == 0
+    assert not (tmp_path / "E2025" / "Points" / "7.json").exists()
+    assert archived_observations == []
+    assert [entry["http_status"] for entry in read_log(tmp_path)] == [404]
+
+    # Directly testing fetch_game_response also returns http_status 404
+    audit_transport = RecordingTransport([StubResponse(200, {}, V1_NOT_FOUND_BODY)])
+    audit_fetcher = make_fetcher(tmp_path, audit_transport)
+    obs = audit_fetcher.fetch_game_response("E2025", "Points", 7)
+    assert obs is not None
+    assert obs.http_status == 404
+
+
+def test_v1_http_200_valid_json_is_cached_and_archived(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    body = b'{"Rows":[{"points":2}]}'
+    archived_observations = []
+    transport = RecordingTransport([StubResponse(200, {}, body)])
+    fetcher = make_fetcher(
+        tmp_path,
+        transport,
+        successful_observation=archived_observations.append,
+    )
+
+    summary = fetcher.fetch_season("E2025")
+
+    assert summary.fetched_files == 1
+    assert summary.permanent_missing == 0
+    assert (tmp_path / "E2025" / "Points" / "7.json").read_bytes() == body
+    assert len(archived_observations) == 1
+    assert archived_observations[0].http_status == 200
+    assert [entry["http_status"] for entry in read_log(tmp_path)] == [200]
+
+
+def test_v1_unrecognised_html_body_is_refused_as_404(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    body = (
+        b"<!DOCTYPE html><html><body>"
+        b"Custom Not Found Page with dynamic timestamp 2026-08-28"
+        b"</body></html>"
+    )
+    transport = RecordingTransport([StubResponse(200, {}, body)])
+    fetcher = make_fetcher(tmp_path, transport)
+
+    summary = fetcher.fetch_season("E2025")
+
+    assert summary.fetched_files == 0
+    assert summary.permanent_missing == 1
+    assert not (tmp_path / "E2025" / "Points" / "7.json").exists()
+    assert [entry["http_status"] for entry in read_log(tmp_path)] == [404]
+
+
+def test_v2_response_is_not_subjected_to_v1_html_guard(tmp_path) -> None:
+    # A v2 schedule request returning body is not modified by the v1 guard
+    body = schedule_bytes([{"gameCode": 1, "played": False}])
+    transport = RecordingTransport([StubResponse(200, {}, body)])
+    fetcher = make_fetcher(tmp_path, transport)
+
+    schedule = fetcher._read_or_fetch_schedule("E2025")
+
+    assert schedule == {"data": [{"gameCode": 1, "played": False}], "total": 1}
+    assert [entry["http_status"] for entry in read_log(tmp_path)] == [200]
+
+
+def test_429_without_retry_after_uses_exponential_backoff(tmp_path) -> None:
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport(
+        [
+            StubResponse(429, {}, b'{"error": "rate limited"}'),
+            StubResponse(429, {}, b'{"error": "rate limited"}'),
+            StubResponse(200, {}, b"recovered"),
+        ]
+    )
+    fake_time = FakeTime()
+
+    summary = make_fetcher(tmp_path, transport, fake_time).fetch_season("E2025")
+
+    assert len(transport.calls) == 3
+    assert fake_time.sleeps == [9.0, 10.0]
+    assert summary.fetched_files == 1
+    assert (tmp_path / "E2025" / "Points" / "7.json").read_bytes() == b"recovered"
+
+
+def test_429_exhausted_retries_raises_fetch_error(tmp_path) -> None:
+    from euroleague.fetch import FetchError
+
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport([StubResponse(429, {}, b'{"error": "rate limited"}')] * 6)
+    fake_time = FakeTime()
+    fetcher = make_fetcher(tmp_path, transport, fake_time)
+
+    with pytest.raises(FetchError, match="429"):
+        fetcher.fetch_season("E2025")
+
+    assert not (tmp_path / "E2025" / "Points" / "7.json").exists()

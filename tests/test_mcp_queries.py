@@ -14,6 +14,7 @@ from euroleague.mcp.queries import (
     clamp_limit,
     describe_warehouse,
     find_games,
+    get_boxscore,
     get_game,
     get_lineup_stats,
     get_play_by_play,
@@ -877,6 +878,7 @@ def test_possessions_aggregate_rejects_strings_and_null():
         (describe_warehouse, {}),
         (find_games, {}),
         (get_game, {"gamecode": 1}),
+        (get_boxscore, {"gamecode": 1}),
         (get_team_stats, {}),
         (get_player_stats, {}),
         (get_lineup_stats, {}),
@@ -898,6 +900,7 @@ def test_direct_query_path_rejects_string_include_quarantined(query_fn, extra_ar
         (describe_warehouse, {}),
         (find_games, {}),
         (get_game, {"gamecode": 1}),
+        (get_boxscore, {"gamecode": 1}),
         (get_team_stats, {}),
         (get_player_stats, {}),
         (get_lineup_stats, {}),
@@ -1196,3 +1199,286 @@ def test_tied_pagination_edge_cases_and_probes():
     assert oob_res["rows"] == []
     assert oob_res["total_available"] == 4
     assert oob_res["row_count"] == 0
+
+
+def test_get_game_returns_officiating_crew():
+    team_row = (
+        "PAN",
+        "BER",
+        True,
+        80,
+        75,
+        25,
+        50,
+        8,
+        20,
+        14,
+        18,
+        10,
+        25,
+        20,
+        7,
+        12,
+        18,
+        70,
+        70,
+        0.58,
+        0.1714,
+        0.2857,
+        0.36,
+        114.29,
+        107.14,
+        False,
+        [],
+    )
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (
+                [
+                    "team_code",
+                    "opponent_team_code",
+                    "is_home",
+                    "points",
+                    "opponent_points",
+                    "field_goals_made",
+                    "field_goals_attempted",
+                    "three_pointers_made",
+                    "three_pointers_attempted",
+                    "free_throws_made",
+                    "free_throws_attempted",
+                    "offensive_rebounds",
+                    "defensive_rebounds",
+                    "assists",
+                    "steals",
+                    "turnovers",
+                    "fouls_commited",
+                    "possessions",
+                    "opponent_possessions",
+                    "effective_fg_pct",
+                    "turnover_rate",
+                    "offensive_rebound_rate",
+                    "free_throw_rate",
+                    "offensive_rating",
+                    "defensive_rating",
+                    "excluded_by_default",
+                    "quarantine_reasons",
+                ],
+                [team_row, team_row],
+            ),
+            (
+                [
+                    "referee_1_code",
+                    "referee_1_name",
+                    "referee_2_code",
+                    "referee_2_name",
+                    "referee_3_code",
+                    "referee_3_name",
+                    "referee_4_code",
+                    "referee_4_name",
+                ],
+                [
+                    (
+                        "P001",
+                        "GARCIA, JUAN",
+                        "P002",
+                        "ROCHA, FERNANDO",
+                        "P003",
+                        "KOLJENSIC, MILOS",
+                        None,
+                        None,
+                    )
+                ],
+            ),
+            (["scheduled_games", "last_loaded_at", "games"], [(330, None, 330)]),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+
+    response = get_game(cursor, {"season": "E2024", "gamecode": 1})
+
+    assert "officials" in response
+    assert response["officials"] == [
+        {"code": "P001", "name": "GARCIA, JUAN"},
+        {"code": "P002", "name": "ROCHA, FERNANDO"},
+        {"code": "P003", "name": "KOLJENSIC, MILOS"},
+    ]
+
+
+def test_get_boxscore_returns_both_teams_and_players():
+    team_row_pan = (
+        "PAN",
+        "BER",
+        True,
+        80,
+        75,
+        25,
+        50,
+        8,
+        20,
+        14,
+        18,
+        10,
+        25,
+        35,
+        20,
+        7,
+        12,
+        18,
+        22,
+        False,
+        [],
+    )
+    team_row_ber = (
+        "BER",
+        "PAN",
+        False,
+        75,
+        80,
+        22,
+        48,
+        7,
+        19,
+        15,
+        20,
+        8,
+        22,
+        30,
+        18,
+        6,
+        14,
+        22,
+        18,
+        False,
+        [],
+    )
+    player_row = (
+        "PAN",
+        "P001",
+        "Sloukas, Kostas",
+        True,
+        True,
+        28.5,
+        15,
+        5,
+        10,
+        3,
+        6,
+        2,
+        2,
+        1,
+        3,
+        4,
+        8,
+        2,
+        1,
+        0,
+        0,
+        2,
+        4,
+        22,
+        +10,
+    )
+
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (
+                [
+                    "team_code",
+                    "opponent_team_code",
+                    "is_home",
+                    "points",
+                    "opponent_points",
+                    "field_goals_made",
+                    "field_goals_attempted",
+                    "three_pointers_made",
+                    "three_pointers_attempted",
+                    "free_throws_made",
+                    "free_throws_attempted",
+                    "offensive_rebounds",
+                    "defensive_rebounds",
+                    "total_rebounds",
+                    "assists",
+                    "steals",
+                    "turnovers",
+                    "fouls_commited",
+                    "fouls_received",
+                    "excluded_by_default",
+                    "quarantine_reasons",
+                ],
+                [team_row_pan, team_row_ber],
+            ),
+            (
+                [
+                    "team_code",
+                    "player_id",
+                    "player_name",
+                    "is_starter",
+                    "is_playing",
+                    "minutes",
+                    "points",
+                    "field_goals_made",
+                    "field_goals_attempted",
+                    "three_pointers_made",
+                    "three_pointers_attempted",
+                    "free_throws_made",
+                    "free_throws_attempted",
+                    "offensive_rebounds",
+                    "defensive_rebounds",
+                    "total_rebounds",
+                    "assists",
+                    "steals",
+                    "turnovers",
+                    "blocks_favour",
+                    "blocks_against",
+                    "fouls_commited",
+                    "fouls_received",
+                    "valuation",
+                    "plus_minus",
+                ],
+                [player_row],
+            ),
+            (["scheduled_games", "last_loaded_at", "games"], [(330, None, 330)]),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+
+    response = get_boxscore(cursor, {"season": "E2024", "gamecode": 1})
+
+    assert "teams" in response
+    assert len(response["teams"]) == 2
+    assert response["teams"][0]["team_code"] == "PAN"
+    assert response["teams"][1]["team_code"] == "BER"
+    assert "rows" in response
+    assert len(response["rows"]) == 1
+    assert response["rows"][0]["player_id"] == "P001"
+    assert response["rows"][0]["minutes"] == 28.5
+    assert response["minutes_basis"]["value"] == "corrected"
+
+
+def test_get_boxscore_unknown_gamecode_raises_with_guidance():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["team_code"], []),
+        ]
+    )
+    with pytest.raises(ValueError, match=r"No game 999 in E2024.*Call el_find_games"):
+        get_boxscore(cursor, {"season": "E2024", "gamecode": 999})
+
+
+def test_get_boxscore_quarantined_game_excluded_by_default():
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (
+                ["team_code", "excluded_by_default", "quarantine_reasons"],
+                [("PAN", True, ["possession_gate"])],
+            ),
+        ]
+    )
+    with pytest.raises(ValueError, match=r"quarantined \(possession_gate\) and excluded"):
+        get_boxscore(cursor, {"season": "E2024", "gamecode": 14})

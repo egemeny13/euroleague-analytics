@@ -96,10 +96,24 @@ def validate_view_only_sql(sql: str, direction: str, view: str) -> None:
     without_comments = re.sub(r"--[^\n]*", "", sql)
     statements = _sql_statements(without_comments)
     target = re.escape(view)
+    # Grants on the target view are part of creating one correctly here, not an
+    # extra. Since migration 0011 every warehouse view must be revoked from
+    # `anon` and `authenticated` and granted to `el_reader`; a Supabase project
+    # grants those two roles ALL privileges on a newly created view by default,
+    # measured on 2026-08-28. A view shipped without these statements is either
+    # unreachable by the hosted server or exposed to the public anon role, so
+    # refusing them would push the security-critical half of the migration
+    # outside the gate rather than keep it inside.
+    privilege_statements = (
+        re.compile(rf"^grant\s+.+\bon\s+(?:table\s+)?(?:public\.)?{target}\b", re.IGNORECASE),
+        re.compile(rf"^revoke\s+.+\bon\s+(?:table\s+)?(?:public\.)?{target}\b", re.IGNORECASE),
+    )
+
     if direction == "up":
         allowed = (
             re.compile(rf"^create\s+(?:or\s+replace\s+)?view\s+{target}\b", re.IGNORECASE),
             re.compile(rf"^comment\s+on\s+view\s+{target}\b", re.IGNORECASE),
+            *privilege_statements,
         )
         required = "create view"
         has_required = any(
@@ -110,6 +124,7 @@ def validate_view_only_sql(sql: str, direction: str, view: str) -> None:
             re.compile(rf"^drop\s+view\s+(?:if\s+exists\s+)?{target}\b", re.IGNORECASE),
             re.compile(rf"^create\s+or\s+replace\s+view\s+{target}\b", re.IGNORECASE),
             re.compile(rf"^comment\s+on\s+view\s+{target}\b", re.IGNORECASE),
+            *privilege_statements,
         )
         required = "drop view or create or replace view"
         has_required = any(

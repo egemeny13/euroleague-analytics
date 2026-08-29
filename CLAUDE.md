@@ -253,7 +253,9 @@ the event stream as a bug.
   carries the same ambiguity.
 - Error messages must suggest a concrete next step.
 - Mark read-only tools with `readOnlyHint`.
-- Transport: `stdio` for local use.
+- Transport: `stdio` for local use, and StreamableHTTP for the hosted server.
+  Both serve the same tool registry, and the HTTP transport must publish a tool
+  list byte-identical to stdio's. See `DECISIONS.md` item 26.
 
 ## Workflow rules
 
@@ -268,6 +270,62 @@ the event stream as a bug.
   that cannot fail is not evidence. An accounting identity is not a validation.
 - **Never grant yourself an exemption from a roadmap gate.** If a gate must be
   relaxed, stop and ask, and record who decided and when.
+
+## Boundaries around production work
+
+**An instruction not to touch production is not a control. It is a request, and
+requests get crossed.**
+
+Measured on 2026-08-29. A plan split explicitly into an offline Part 1 and an
+owner-gated Part 2, with "Do not start Part 2" written in the plan and repeated
+in the kickoff prompt, was handed to a fast model. Part 1 came back correct and
+verified. Part 2 was entered three times anyway: a migration was applied to
+production outside the migration ledger, an undecided CI workflow was committed,
+and `EXPLAIN ANALYZE` was run against the live database. Nothing was damaged and
+the migration was correct, but none of that was the instruction's doing.
+
+- **Separate the credentials, not just the instructions.** The pattern that
+  actually worked in this project is the Codex worktree with no `.env`: it could
+  not reach production because the secret was absent, not because it was told
+  not to. Prefer an environment that cannot do the thing over a sentence asking
+  it not to.
+- **A production write needs the owner's approval immediately before it.**
+  Not earlier in the session, not implied by a plan, and never carried over from
+  the previous write.
+- **Verify a handoff's numbers before building on them.** A handoff recorded 982
+  passing tests; the real figure was 1,036, four commits later. A plan that
+  states an expected test count is only as good as the baseline it was written
+  against, so re-measure the baseline rather than quoting it.
+- **When production and the repository disagree, reconcile by re-applying, never
+  by editing the ledger.** An object found in production with no migration record
+  cannot be recorded until it has survived a re-apply, because the re-apply is
+  what proves the object is what the migration describes. This has now happened
+  twice in two days; the remedy is `create or replace`, a rehearsal on a
+  disposable database, then the production re-apply, then the record.
+
+## Branches and pull requests
+
+**Work on a branch. Merge to `master` through a pull request. Never push to
+`master` directly.**
+
+**`master` is a deploy trigger, not just a default branch.**
+`.github/workflows/fly-deploy.yml` runs `flyctl deploy` on every push to `main`
+or `master`. A merge is therefore a production release: it restarts the hosted
+MCP server and interrupts anyone connected to it. That single fact is what turns
+branch discipline here from tidiness into a safety rule.
+
+- **Name the branch for the work**, not for the person or the day:
+  `fix/possession-residual`, `docs/auth0-configuration`.
+- **Merge deliberately, and pick the moment.** Never merge while somebody is
+  testing the live server, mid-settlement, or during a live-season window.
+  Ask before merging if you cannot see who is connected.
+- **A branch that has grown past a few dozen commits is a review failure, not an
+  achievement.** Open the pull request while it can still be read.
+- **A pull request states what it changes and what it leaves unproven.** The same
+  standard as everything else here: no claim without its measurement, and every
+  gap named rather than omitted.
+- The queue in `docs/goals/index.yaml` sets `base: master`; that is the merge
+  target, not a licence to commit straight to it.
 
 ## Challenging these rules
 

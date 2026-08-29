@@ -6,6 +6,8 @@ from typing import Any
 
 import pytest
 
+from euroleague.mcp.identity import IDENTITY
+from euroleague.mcp.protocol import handle_message
 from euroleague.mcp.tools import TOOL_NAMES, build_registry
 
 
@@ -18,9 +20,9 @@ def registry():
     return build_registry(_null_runner)
 
 
-def test_ten_tools_are_declared():
-    assert len(TOOL_NAMES) == 10
-    assert len(set(TOOL_NAMES)) == 10
+def test_eleven_tools_are_declared():
+    assert len(TOOL_NAMES) == 11
+    assert len(set(TOOL_NAMES)) == 11
 
 
 def test_every_declared_name_starts_with_the_project_prefix():
@@ -31,7 +33,7 @@ def test_every_registered_tool_is_declared(registry):
     assert set(registry) <= set(TOOL_NAMES)
 
 
-def test_all_ten_declared_tools_are_registered(registry):
+def test_all_eleven_declared_tools_are_registered(registry):
     assert set(registry) == set(TOOL_NAMES)
 
 
@@ -103,7 +105,91 @@ def test_registry_allows_literal_booleans_to_reach_runner():
     reg = build_registry(recording_runner)
     for name in TOOL_NAMES:
         tool = reg[name]
-        tool.handler({"include_quarantined": True})
+        arguments: dict[str, Any] = {"include_quarantined": True}
+        if name == "el_get_play_by_play":
+            arguments["gamecode"] = 1
+        if name == "el_get_shot_data":
+            arguments["team"] = "PAN"
+        tool.handler(arguments)
         assert calls[-1][1]["include_quarantined"] is True
-        tool.handler({"include_quarantined": False})
+        arguments["include_quarantined"] = False
+        tool.handler(arguments)
         assert calls[-1][1]["include_quarantined"] is False
+
+
+def test_season_parameter_and_describe_warehouse_clarify_ending_year_convention(registry):
+    """Break caught: a model misinterprets E2024 as 2024-25 instead of the season ending in
+    spring 2024.
+    """
+    for name, tool in registry.items():
+        if "season" in tool.input_schema["properties"]:
+            desc = tool.input_schema["properties"]["season"]["description"]
+            assert "spring" in desc.lower() or "ending in" in desc.lower(), f"{name}.season"
+
+    describe_desc = registry["el_describe_warehouse"].description
+    assert "spring" in describe_desc.lower() or "ending in" in describe_desc.lower()
+
+
+def test_paginated_tools_refuse_deep_offsets_before_the_database_runner():
+    """Break caught: a caller can walk an unfiltered table with deep offsets."""
+    calls = []
+
+    def recording_runner(query: Any, arguments: dict[str, Any]) -> dict[str, Any]:
+        calls.append((query, arguments))
+        return {}
+
+    registry = build_registry(recording_runner)
+    paginated = [tool for tool in registry.values() if "offset" in tool.input_schema["properties"]]
+
+    for tool in paginated:
+        arguments: dict[str, Any] = {"offset": 2001}
+        if tool.name == "el_get_play_by_play":
+            arguments["gamecode"] = 1
+        if tool.name == "el_get_shot_data":
+            arguments["team"] = "PAN"
+        with pytest.raises(ValueError, match=r"(?i)2,000.*narrow"):
+            tool.handler(arguments)
+
+    assert calls == []
+
+
+def test_unnarrowed_shot_data_is_an_actionable_tool_error_not_a_protocol_error():
+    """Break caught: a season-wide shot query looks like an empty or valid result."""
+    calls = []
+
+    def recording_runner(query: Any, arguments: dict[str, Any]) -> dict[str, Any]:
+        calls.append((query, arguments))
+        return {}
+
+    registry = build_registry(recording_runner)
+    reply = handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 33,
+            "method": "tools/call",
+            "params": {"name": "el_get_shot_data", "arguments": {"season": "E2024"}},
+        },
+        registry,
+        IDENTITY,
+    )
+
+    assert "error" not in reply
+    assert reply["result"]["isError"] is True
+    message = reply["result"]["content"][0]["text"]
+    assert "gamecode" in message
+    assert "team" in message
+    assert "player" in message
+    assert calls == []
+
+
+def test_bulk_tool_descriptions_tell_models_to_narrow_before_paging(registry):
+    """Break caught: models learn the restriction only after making a refused call."""
+    for name in ("el_get_play_by_play", "el_get_shot_data"):
+        description = registry[name].description.lower()
+        assert "narrow" in description
+        assert "offset" in description or "paginate" in description
+
+
+def test_play_by_play_still_publishes_gamecode_as_required(registry):
+    """Break caught: narrowing moves into the handler and the schema stops saying it."""
+    assert registry["el_get_play_by_play"].input_schema["required"] == ["season", "gamecode"]

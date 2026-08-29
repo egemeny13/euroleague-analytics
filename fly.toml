@@ -1,0 +1,44 @@
+# fly.toml app configuration file generated for euroleague-analytics-mcp on 2026-08-28T00:16:17+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'euroleague-analytics-mcp'
+primary_region = 'fra'
+
+[build]
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Always on. docs/MCP_CONNECTION_LIFECYCLE_REPORT.md measured 1,612 ms for a
+  # first call against 606 ms warm; scaling to zero makes every question a
+  # first call, and adds container start on top.
+  #
+  # This comment was deleted once already, by flyctl rewriting this file during
+  # a deploy on 2026-08-28. If it disappears again, restore it: the setting is a
+  # measured decision and costs about $2.02 a month.
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  # A FLOOR, not a ceiling. `fly launch` created TWO machines and this line did
+  # not stop it; both ran always-on at $2.02 each until `fly scale count 1` on
+  # 2026-08-28. Machine count lives in `fly scale`, not in this file, so check
+  # `fly scale show` after any launch or clone - and note that the per-subject
+  # rate cap in ratelimit.py is per process, so a second machine silently
+  # doubles every allowance as well as the bill.
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = 'requests'
+    hard_limit = 40
+    soft_limit = 20
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/healthz'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'

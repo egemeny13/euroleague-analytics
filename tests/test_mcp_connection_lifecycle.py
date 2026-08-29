@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -103,7 +104,7 @@ def test_constructing_manager_and_registry_does_not_open_database_connection() -
     registry = build_registry(manager.run)
 
     assert factory.call_count == 0
-    assert len(registry) == 10
+    assert len(registry) == 11
     assert "el_get_possessions" in registry
 
 
@@ -538,3 +539,34 @@ def test_json_rpc_preserves_content_structured_content_and_pure_stdout() -> None
     assert r2["result"]["isError"] is False
     assert r2["result"]["structuredContent"] == {"count": 42, "season": "E2024"}
     assert json.loads(r2["result"]["content"][0]["text"]) == {"count": 42, "season": "E2024"}
+
+
+# --- Requirement 13: Python 3.14 version guard ---
+
+
+def test_mcp_server_entry_point_parses_on_python_39() -> None:
+    """ast.parse on Python 3.9 syntax level proves the file can deliver its own
+    message on older Pythons."""
+    import ast
+
+    path = Path(__file__).resolve().parent.parent / "scripts" / "mcp_server.py"
+    source = path.read_text(encoding="utf-8")
+    parsed = ast.parse(source, feature_version=(3, 9))
+    assert parsed is not None
+
+
+def test_check_python_version_returns_message_for_older_versions() -> None:
+    mcp_server = _load_entry_point()
+    msg = mcp_server.check_python_version((3, 13, 0))
+    assert msg is not None
+    assert "3.14" in msg
+    assert "SyntaxError" in msg
+
+
+def test_check_python_version_returns_none_for_current_and_compatible_versions() -> None:
+    import sys
+
+    mcp_server = _load_entry_point()
+    assert mcp_server.check_python_version(sys.version_info) is None
+    assert mcp_server.check_python_version((3, 14, 0)) is None
+    assert mcp_server.check_python_version((3, 15, 0)) is None

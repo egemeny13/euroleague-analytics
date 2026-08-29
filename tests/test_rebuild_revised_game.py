@@ -444,6 +444,7 @@ def test_the_build_reads_the_whole_season_while_the_write_names_one_game(
     # tables included - a count silently dropped on the floor is a rebuild
     # whose log line understates what it wrote.
     assert set(summary.counts) == {table.removeprefix("stage_") for table in STAGED_COLUMNS}
+    assert "raw_shot" in summary.counts
     for table in STAGED_COLUMNS:
         assert summary.counts[table.removeprefix("stage_")] == len(connection.copied[table])
 

@@ -18,6 +18,36 @@ MCP — see `DECISIONS.md` item 10 for why this rather than the Supabase CLI.
 | `0010_game_source_state` | Adds private per-game provenance for the exact Boxscore, PlaybyPlay, and Points checksums successfully applied to warehouse rows. Reconciled with the equivalent pre-existing production table on 2026-08-23; no unprovable historical marker was inserted. |
 | `0011_public_view_security` | Makes all seven warehouse views `security_invoker` and revokes every `anon` and `authenticated` view privilege. Applied on 2026-08-23 UTC after a PostgreSQL 17.11 up/down/up rehearsal and full-result fingerprint comparison. |
 | `0012_roster_registration` | Adds the private source-native pre-season registration table approved by Decision 24. Applied on 2026-08-24 as Supabase migration version `20260824122346` after a PostgreSQL 17.6 up/down/up/down rehearsal. |
+| `0013_readonly_role` | Adds `el_reader`, the login role the hosted MCP server connects as: `select` on the seven views and the twelve base tables they read, and nothing else. Creates no table and no view. The migration sets **no password**; the owner sets it separately so it never enters version control. Approved by Decision 26. Rehearsed 2026-08-27 — see below. Applied on 2026-08-28 as `20260828203524`, after the full up/down/up/down gate on a disposable PostgreSQL 17.6. |
+| `0014_game_officials_view` | Rebuilds `v_game_officials` as its own relation so the referee fields the MCP server exposes come from one place. Applied on 2026-08-28 as `20260828203624`, after the full up/down/up/down gate on a disposable PostgreSQL 17.6. |
+| `0015_roster_biography` | Adds `birth_date`, `passport_name` and `passport_surname` to `roster_registration`, nullable, with trimmed-value checks on the two names. Approved by Decision 28's priority set. Applied on 2026-08-28 as `20260828203648`, after the full up/down/up/down gate on a disposable PostgreSQL 17.6. |
+| `0016_mcp_row_budget` | Adds the durable per-subject daily row budget: a policy table, a daily aggregate, a 31-day ledger expired on every insert, and the insert-only `el_usage_writer` role. `el_reader` gains no privilege. Applied on 2026-08-28 as `20260828203741`, after the full up/down/up/down gate on a disposable PostgreSQL 17.6. |
+| `0017_person_game_link` | Adds `person_game_link`, the within-game observed bridge between the v2 person namespace and the game-source player namespace, plus the security_invoker coverage view `v_person_game_link_coverage`. A foreign key to `raw_boxscore_player` makes a constructed player id fail to insert. Approved by Decision 27. Applied on 2026-08-28 as `20260828203828`, after the full up/down/up/down gate on a disposable PostgreSQL 17.6. The backfill ran on 2026-08-29 with separate owner approval, writing 17,333 links across 732 games; the table measured 3,448,832 bytes, 198.98 bytes per row against the 271 the staging gate projected. See `docs/PERSON_GAME_LINK_BACKFILL_REPORT.md`. |
+| `0018_mcp_row_usage_writer_function` | Repair. Adds `record_mcp_row_usage`, a security-definer function that becomes the only write path into `mcp_row_usage`, and withdraws `el_usage_writer`'s direct `insert` grant and policy. 0016's grant could not serve `insert ... returning`, which needs SELECT on every column it returns, so every hosted tool call failed with `permission denied for table mcp_row_usage`. The role ends with strictly less privilege than 0016 gave it. Applied on 2026-08-28 as `20260828210038`. |
+| `0019_person_game_link_conflict_view` | Adds `v_person_game_link_conflict`, a security_invoker view that reports every place two link observations disagree about one identity: a person code seen against more than one player id, or a player id seen against more than one person code. Migration 0017 constrains that within one game, which is as far as a table constraint reaches; this covers the space between games. Empty is the healthy state. Reconciled with production drift on 2026-08-29 - the view was applied out of band and the ledger had no record of it - so the up migration uses `create or replace` and was re-applied before being recorded, as `20260829101520`. The re-apply left the view definition md5 unchanged at `282dd5d5`, `security_invoker=true` intact and the grant set byte-identical, which is what established that the drift was a bookkeeping gap and not a shape difference. |
+
+## The 0013 rehearsal, 2026-08-27
+
+`scripts/migration_gate.py` ran the full up/down/up/down cycle including
+`0013_readonly_role` against a disposable local PostgreSQL, and passed: 19 tables
+created, removed and recreated identically. The `down` succeeding is itself the
+evidence that the revoke list is complete, because PostgreSQL refuses to drop a
+role that still holds a privilege.
+
+The role was then exercised for real. With every migration applied and a
+throwaway password set, `tests/test_readonly_role.py` passed all 14 tests
+connected as `el_reader`: all seven `security_invoker` views readable,
+`season_progress` and `team_season` readable, and `insert`, `update`, `delete`,
+`create table` and a read of the ungranted `lineup_stint` each refused with
+`InsufficientPrivilege`. That measures the security-invoker reasoning in the
+migration's header rather than only asserting it.
+
+**Two limits on this evidence, stated rather than glossed.** The instance was
+**PostgreSQL 16.2**, not the 17.x production runs, because that is what the
+disposable server bundled; role and grant semantics are unchanged between them,
+but this was not a like-for-like version rehearsal. And the database was
+**empty**, so the reads returned no rows — the tests prove the grants resolve,
+not that any query returns correct data.
 
 The committed migration set and production both define nineteen tables. See
 `docs/PRODUCTION_MIGRATIONS_AND_PROGRESS_REPORT.md` for the rehearsal, drift

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from euroleague.cache import ResponseCache, sha256_of_bytes
@@ -38,6 +38,9 @@ class RosterRegistration:
     team_display_name: str
     source_person_code: str
     display_name: str
+    birth_date: date | None
+    passport_name: str | None
+    passport_surname: str | None
     role_code: str
     active: bool
     start_at: datetime
@@ -97,6 +100,11 @@ def _source_timestamp(value: Any, field: str, *, required: bool) -> datetime | N
             "The measured source timestamps are timezone-free; stop before changing semantics."
         )
     return parsed
+
+
+def _source_date(value: Any, field: str) -> date | None:
+    timestamp = _source_timestamp(value, field, required=False)
+    return timestamp.date() if timestamp is not None else None
 
 
 def parse_roster_bytes(body: bytes, expected_season: str) -> RosterSnapshot:
@@ -204,6 +212,11 @@ def parse_roster_bytes(body: bytes, expected_season: str) -> RosterSnapshot:
                 display_name=_required_text(
                     person.get("name"), f"data[{source_array_index}].person.name"
                 ),
+                birth_date=_source_date(
+                    person.get("birthDate"), f"data[{source_array_index}].person.birthDate"
+                ),
+                passport_name=_trim(person.get("passportName")),
+                passport_surname=_trim(person.get("passportSurname")),
                 role_code=role_code,
                 active=active,
                 start_at=_source_timestamp(
@@ -243,6 +256,9 @@ _STAGE_COLUMNS = (
     "team_code",
     "source_person_code",
     "display_name",
+    "birth_date",
+    "passport_name",
+    "passport_surname",
     "role_code",
     "active",
     "start_at",
@@ -269,6 +285,9 @@ def _stage_row(registration: RosterRegistration, response_id: int) -> tuple[Any,
         registration.team_code,
         registration.source_person_code,
         registration.display_name,
+        registration.birth_date,
+        registration.passport_name,
+        registration.passport_surname,
         registration.role_code,
         registration.active,
         registration.start_at,

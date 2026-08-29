@@ -12,7 +12,7 @@ from email.utils import parsedate_to_datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Protocol
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import requests
 
@@ -20,6 +20,35 @@ from euroleague.cache import ENDPOINTS, ResponseCache
 from euroleague.roster import parse_roster_bytes
 
 DEFAULT_CACHE_ROOT = Path(__file__).resolve().parents[2] / "exploration" / "cache"
+
+# exploration/API_INVENTORY.md section 1a: legacy v1 endpoint requests for
+# non-existent resources return HTTP 200 with an identical 975-byte HTML body
+# titled "Not found | EuroLeague Live Stats".
+V1_NOT_FOUND_SHA256 = "cf69913ae9c9cc686e82126b3ac4caaf7bd03005ce575fbb1caaff9c59b3bf8c"
+
+
+def _is_v1_host(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.hostname == "live.euroleague.net" or parsed.netloc == "live.euroleague.net"
+
+
+def _is_html(body: bytes) -> bool:
+    stripped = body.lstrip()
+    if stripped.startswith(b"\xef\xbb\xbf"):
+        stripped = stripped[3:].lstrip()
+    lower_prefix = stripped[:256].lower()
+    return (
+        lower_prefix.startswith((b"<!doctype", b"<html", b"<!--", b"<head", b"<body"))
+        or b"<html" in lower_prefix
+    )
+
+
+def _is_v1_not_found(url: str, body: bytes) -> bool:
+    if not _is_v1_host(url):
+        return False
+    if sha256(body).hexdigest() == V1_NOT_FOUND_SHA256:
+        return True
+    return _is_html(body)
 
 
 class ResponseLike(Protocol):
@@ -106,6 +135,13 @@ def _roster_url(season_code: str) -> str:
     # in one exact response while the parser still rejects any future overflow.
     query = urlencode({"limit": 2000})
     return f"https://api-live.euroleague.net/v2/competitions/E/seasons/{season_code}/people?{query}"
+
+
+def _game_stats_url(season_code: str, gamecode: int) -> str:
+    return (
+        "https://api-live.euroleague.net/v2/competitions/E/"
+        f"seasons/{season_code}/games/{gamecode}/stats"
+    )
 
 
 def _write_exact(path: Path, body: bytes) -> None:
@@ -235,12 +271,15 @@ class ArchiveFetcher:
                     continue
                 return None
             self._next_request_at = self.monotonic() + self.request_interval_seconds
+            status_code = response.status_code
+            if status_code == 200 and _is_v1_not_found(url, response.content):
+                status_code = 404
             observation = FetchObservation(
                 season_code=season_code,
                 gamecode=gamecode,
                 endpoint=endpoint,
                 url=url,
-                http_status=response.status_code,
+                http_status=status_code,
                 fetched_at=self.utc_now().astimezone(UTC),
                 duration_ms=round((self.monotonic() - request_started_at) * 1000),
                 body=response.content,
@@ -248,10 +287,19 @@ class ArchiveFetcher:
             self._append_fetch_log(observation)
             if observation.http_status == 200:
                 return observation
-            if observation.http_status == 429 and attempt < self.max_retries:
-                retry_after = response.headers.get("Retry-After", "")
-                self._defer_next_request(self._retry_after_seconds(retry_after))
-                continue
+            if observation.http_status == 429:
+                if attempt < self.max_retries:
+                    retry_after = response.headers.get("Retry-After", "")
+                    retry_seconds = self._retry_after_seconds(retry_after)
+                    if retry_seconds > 0.0:
+                        self._defer_next_request(retry_seconds)
+                    else:
+                        backoff_seconds = min(5.0 * (2 ** (attempt - 1)), 60.0)
+                        self._defer_next_request(backoff_seconds)
+                    continue
+                raise FetchError(
+                    f"Rate limit exceeded (HTTP 429) requesting {url}; retry budget exhausted."
+                )
             if 500 <= observation.http_status < 600 and attempt < self.max_retries:
                 backoff_seconds = min(5.0 * (2 ** (attempt - 1)), 60.0)
                 self._defer_next_request(backoff_seconds)
@@ -322,6 +370,27 @@ class ArchiveFetcher:
         else:
             self._cache_successful_observation(observation, path, game_response=False)
         parse_roster_bytes(path.read_bytes(), season_code)
+        return observation
+
+    def fetch_game_stats(self, season_code: str, gamecode: int) -> FetchObservation:
+        """Fetch, cache, then archive one v2 game stats response before parsing it."""
+        observation = self._request_with_retry(
+            season_code=season_code,
+            gamecode=gamecode,
+            endpoint="GameStats",
+            url=_game_stats_url(season_code, gamecode),
+        )
+        if observation is None or observation.http_status != 200:
+            status = "no response" if observation is None else f"HTTP {observation.http_status}"
+            raise FetchError(
+                f"Could not fetch v2 stats for {season_code} game {gamecode}: {status}. "
+                "Keep the existing cache and retry later."
+            )
+        self._cache_successful_observation(
+            observation,
+            self.cache.game_stats_path(season_code, gamecode),
+            game_response=True,
+        )
         return observation
 
     def _cache_successful_observation(

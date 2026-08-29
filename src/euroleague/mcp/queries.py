@@ -25,6 +25,9 @@ from euroleague.mcp.resolve import resolve_player, resolve_season, resolve_team
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
+# Goal 033's measured table shows that a full event extraction needs about 1,998
+# calls; 2,000 rows is ten pages at the 200-row cap and beyond honest paging.
+MAX_PAGINATION_OFFSET = 2_000
 
 
 class Cursor(Protocol):
@@ -41,6 +44,22 @@ def clamp_limit(requested: int | None) -> int:
     if requested < 1:
         raise ValueError(f"limit must be 1 or more, got {requested}. Maximum is {MAX_LIMIT}.")
     return min(int(requested), MAX_LIMIT)
+
+
+def validate_offset(requested: int | None) -> int:
+    """Keep page walks shallow enough to remain a focused analyst query.
+
+    Unlike clamp_limit, this refuses rather than trims. Silently clamping a deep
+    offset back to the maximum would serve the wrong page and look like data.
+    """
+    offset = max(int(requested or 0), 0)
+    if offset > MAX_PAGINATION_OFFSET:
+        raise ValueError(
+            f"offset {offset:,} exceeds the maximum {MAX_PAGINATION_OFFSET:,}. "
+            "Narrow by team, player, game, date, or another filter, then page within "
+            "that focused result."
+        )
+    return offset
 
 
 def _rows(cursor: Cursor) -> list[dict[str, Any]]:
@@ -342,7 +361,7 @@ def get_shot_data(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     only_with_real_coordinates = _boolean(arguments, "only_with_real_coordinates", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s"]
     params: list[Any] = [season_code]
@@ -438,7 +457,7 @@ def find_games(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s"]
     params: list[Any] = [season_code]
@@ -531,7 +550,29 @@ def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
             f"quarantine when quoting any number from it."
         )
 
-    return build_response(
+    # v_game_officials, not v_game. The crew lives in its own narrow view because
+    # appending columns to v_game turned out to be irreversible: PostgreSQL
+    # cannot drop a view's columns by replacement, and five views depend on
+    # v_game. See migrations/0014_game_officials_view.up.sql.
+    cursor.execute(
+        "select referee_1_code, referee_1_name, "
+        "referee_2_code, referee_2_name, "
+        "referee_3_code, referee_3_name, "
+        "referee_4_code, referee_4_name "
+        "from v_game_officials where season_code = %s and gamecode = %s",
+        (season_code, gamecode),
+    )
+    game_rows = _rows(cursor)
+    officials: list[dict[str, str]] = []
+    if game_rows:
+        game_row = game_rows[0]
+        for index in range(1, 5):
+            code = game_row.get(f"referee_{index}_code")
+            name = game_row.get(f"referee_{index}_name")
+            if code is not None or name is not None:
+                officials.append({"code": code, "name": name})
+
+    response = build_response(
         rows=rows,
         coverage=game_coverage(cursor, season_code),
         excluded=exclusions_for(cursor, season_code, include_quarantined),
@@ -541,6 +582,81 @@ def get_game(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
             FREE_THROW_CAVEAT,
         ],
     )
+    response["officials"] = officials
+    return response
+
+
+def get_boxscore(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """A single game's official player box score for both teams, plus team totals."""
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
+    season_code = resolve_season(cursor, arguments["season"])
+    gamecode = int(arguments["gamecode"])
+
+    minutes_basis = arguments.get("minutes_basis", "corrected")
+    if minutes_basis not in ("corrected", "raw", "official"):
+        raise ValueError(
+            f"minutes_basis must be 'corrected', 'raw' or 'official', got "
+            f"{minutes_basis!r}. 'corrected' is the project default."
+        )
+    seconds_column = {
+        "corrected": "seconds_corrected",
+        "raw": "seconds_raw",
+        "official": "seconds_official",
+    }[minutes_basis]
+
+    cursor.execute(
+        "select team_code, opponent_team_code, is_home, points, opponent_points, "
+        "field_goals_made, field_goals_attempted, three_pointers_made, "
+        "three_pointers_attempted, free_throws_made, free_throws_attempted, "
+        "offensive_rebounds, defensive_rebounds, total_rebounds, "
+        "assists, steals, turnovers, fouls_commited, fouls_received, "
+        "excluded_by_default, quarantine_reasons "
+        "from v_team_game where season_code = %s and gamecode = %s order by is_home desc",
+        (season_code, gamecode),
+    )
+    team_rows = _rows(cursor)
+    if not team_rows:
+        raise ValueError(
+            f"No game {gamecode} in {season_code}. Call el_find_games to list the "
+            f"gamecodes in this season."
+        )
+    if team_rows[0]["excluded_by_default"] and not include_quarantined:
+        reasons = ", ".join(team_rows[0]["quarantine_reasons"])
+        raise ValueError(
+            f"Game {gamecode} in {season_code} is quarantined ({reasons}) and excluded by "
+            f"default. Pass include_quarantined=true to see it, and disclose the "
+            f"quarantine when quoting any number from it."
+        )
+
+    cursor.execute(
+        "select team_code, player_id, player_name, is_starter, is_playing, "
+        f"round({seconds_column}::numeric / 60.0, 1) as minutes, "
+        "points, field_goals_made, field_goals_attempted, "
+        "three_pointers_made, three_pointers_attempted, "
+        "free_throws_made, free_throws_attempted, "
+        "offensive_rebounds, defensive_rebounds, total_rebounds, "
+        "assists, steals, turnovers, blocks_favour, blocks_against, "
+        "fouls_commited, fouls_received, valuation, plus_minus "
+        "from v_player_game "
+        "where season_code = %s and gamecode = %s "
+        "order by team_code, is_starter desc, minutes desc nulls last, "
+        "points desc nulls last, player_id",
+        (season_code, gamecode),
+    )
+    player_rows = _rows(cursor)
+
+    response = build_response(
+        rows=player_rows,
+        coverage=game_coverage(cursor, season_code),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        minutes_basis=minutes_basis,
+        caveats=[
+            "Counting statistics are the official euroleague.net box score, not "
+            "recounted from events.",
+        ],
+    )
+    response["teams"] = team_rows
+    return response
 
 
 # Clutch is a FILTER on two possession columns, never a hard-coded threshold and
@@ -650,7 +766,7 @@ def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
         "official": "seconds_official",
     }[minutes_basis]
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s", "seconds_official > 0"]
     params: list[Any] = [season_code]
@@ -776,7 +892,7 @@ def get_lineup_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
     minimum = int(arguments.get("min_possessions", 25))
 
     quarantine = _quarantine_clause(include_quarantined)
@@ -943,7 +1059,7 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
     aggregate = _boolean(arguments, "aggregate", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s"]
     params: list[Any] = [season_code]
@@ -1030,7 +1146,7 @@ def get_play_by_play(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     season_code = resolve_season(cursor, arguments["season"])
     gamecode = int(arguments["gamecode"])
     limit = clamp_limit(arguments.get("limit"))
-    offset = max(int(arguments.get("offset", 0)), 0)
+    offset = validate_offset(arguments.get("offset"))
 
     conditions = ["season_code = %s", "gamecode = %s"]
     params: list[Any] = [season_code, gamecode]

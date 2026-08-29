@@ -32,9 +32,19 @@ goals:
   015-strict-boolean-arguments: {status: completed, priority: high}
   016-stable-pagination-order: {status: completed}
   017-bounded-name-ambiguity: {status: completed}
-  018-pooler-username-validation: {status: not_started, priority: high}
-  019-settlement-rebuild-docstring: {status: not_started}
-  020-redact-env-example-project: {status: not_started}
-  021-readme-current-claims: {status: not_started}
-  022-python-version-guard: {status: not_started, depends_on: [021-readme-current-claims]}
-  023-tester-reporting-route: {status: not_started, depends_on: [020-redact-env-example-project]}
+  018-pooler-username-validation: {status: completed, priority: high}
+  019-settlement-rebuild-docstring: {status: completed}
+  020-redact-env-example-project: {status: completed}
+  021-readme-current-claims: {status: completed}
+  022-python-version-guard: {status: completed, depends_on: [021-readme-current-claims]}
+  023-tester-reporting-route: {status: completed, depends_on: [020-redact-env-example-project]}
+  024-v1-not-found-body-guard: {status: completed, priority: high}
+  025-v2-rate-limit-backoff: {status: completed, priority: high}
+  026-expose-game-officials: {status: completed}
+  027-season-code-meaning: {status: completed, priority: high}
+  028-english-only-guard: {status: completed, priority: high}
+  029-single-game-boxscore-tool: {status: completed}
+  030-roster-biography-fields: {status: completed, priority: high}
+  031-person-game-link: {status: completed, depends_on: [030-roster-biography-fields]}
+  032-bulk-extraction-budget: {status: completed, priority: high}
+  033-refuse-sweep-shaped-queries: {status: completed, depends_on: [032-bulk-extraction-budget]}

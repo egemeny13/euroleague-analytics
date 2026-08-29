@@ -38,6 +38,7 @@ is binding — the decision is only approved with it.
 | 23 | Public Data API view access | Approved and implemented 2026-08-24 — no warehouse view is public |
 | 24 | Pre-season roster identity and registration grain | Approved 2026-08-24 — source-native registrations; no invented player-ID mapping |
 | 25 | Structural possession residuals | Approved 2026-08-26 — keep the conservative gate; no structural adjustment |
+| 26 | An HTTP transport alongside stdio | Approved 2026-08-27 — hosted and OAuth-authenticated; stdio unchanged and still the local default |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -71,6 +72,12 @@ Item 24 closes Block D's roster schema decision. The owner approved Option A on
 2026-08-24 from `docs/PRESEASON_ROSTER_SCHEMA_DECISION_BRIEF.md` after the full
 E2026 pre-season roster and the available E2024/E2025 pages were compared with
 production player identities.
+
+Item 26 was raised on 2026-08-27, when the owner asked to give a small group of
+outside testers access to the warehouse. It is the second decision in this file
+that overrides a rule in `CLAUDE.md`; see the contradictions section at the end.
+The design it comes from is
+`docs/superpowers/specs/2026-08-27-hosted-mcp-server-design.md`.
 
 ---
 
@@ -1328,6 +1335,319 @@ evidence justifies a narrower gate.
 
 ---
 
+## 26. The MCP server gains an HTTP transport, and stdio keeps working
+
+Serve the same ten tools over StreamableHTTP from a single hosted container,
+authenticated as an OAuth 2.1 resource server against an external identity
+provider, in addition to the existing stdio transport. stdio remains the local
+default and is unchanged.
+
+**Why.** Sharing the stdio server with anyone means sharing the warehouse
+owner's database credential, which can drop every table in a free-tier project
+with no point-in-time restore. `mcp/db.py` makes the *server* unable to write;
+it does nothing about the *credential the server was given*. A hosted server
+holds the only credential, and testers hold none.
+
+**Why the client forced OAuth.** Claude Desktop's connector flow always performs
+OAuth dynamic client registration and has no bearer-token fallback. Claude Code
+does accept a static bearer token. The choice of client, not the choice of
+hosting, is what makes OAuth mandatory here.
+
+**Why the dependency argument in `protocol.py` does not carry over.**
+`protocol.py:8-11` rejects the official MCP SDK because it triples a dependency
+tree for a server every user installs locally. That reasoning holds for local
+installs and does not transfer to one container built once. Hand-rolling
+StreamableHTTP and OAuth 2.1 instead would place conformance to a moving
+specification into code this project's owner cannot read, which is the worse
+trade. The SDK is therefore scoped to `requirements-http.txt`; a local stdio
+user never installs it.
+
+**Conditions.**
+
+- The HTTP transport must publish a tool list byte-identical to the stdio
+  transport, including the `readOnlyHint` annotation, enforced by test. That
+  annotation is a default on the `Tool` dataclass in `protocol.py`, which the
+  SDK path does not use, so it can be lost silently.
+- `protocol.py`, `scripts/mcp_server.py` and `ReadOnlyConnectionManager` are not
+  modified. The Order 7c latency evidence was measured through them and must
+  remain valid.
+- The hosted server connects as a role that cannot write. The read-only
+  guarantee must live in the database, not only in our code.
+- Concurrency is a new failure mode. `ReadOnlyConnectionManager` holds one
+  connection and is documented as aligned with the *serial* stdio process; the
+  HTTP path requires its own pool, or two simultaneous callers share one cursor
+  with no error anywhere.
+- Statement and request timeouts, and a per-subject request cap, ship with the
+  transport rather than after it.
+
+**Provenance.**
+
+- Basis: MIXED. The client's OAuth requirement, the SDK's support for an
+  external authorization server, and the hosting costs are verified. Preferring
+  a hosted server over distributing a read-only credential is an owner judgment.
+- Evidence: `docs/superpowers/specs/2026-08-27-hosted-mcp-server-design.md`,
+  including its section 13 audit against an external MCP production-readiness
+  checklist.
+- Approved: the owner, 2026-08-27.
+
+---
+
+## 27. The person namespace is linked to the game namespace by observation, never by construction
+
+Amends Decision 24. Build `person_game_link` at game grain, writing one row per
+person paired across the two sources **inside a single game**, using the v2
+endpoint `/v2/competitions/{c}/seasons/{s}/games/{gameCode}/stats`, which reports
+the v2 person object and the official statistical line for every player on that
+game's sheet. Pair on what both sources publish for that game — the statistical
+line and the jersey number. A person who cannot be paired stays unpaired and is
+counted. The `P`-prefix convention is stored as a **check with a published
+agreement rate**, never as the rule that produces a link.
+
+Decision 24's prohibition stands unchanged: no `player_id` value may originate
+from string surgery, and `source_person_code` is still not joined to `player` by
+name.
+
+**What the prohibition covers, stated precisely, because an implementer read it
+as a contradiction and stopped.** It forbids a constructed string from *becoming*
+an identifier. It does not forbid constructing one as a comparison operand.
+Writing `player_id = "P" + code` manufactures a fact about a person the box score
+never named; evaluating `observed_player_id == "P" + code` measures a hypothesis
+against evidence already in hand, discards the string, and keeps only a boolean.
+The test is whether deleting the expression would change any stored `player_id` —
+for the check, it would not.
+
+**Why.** Decision 24 refused to bridge the namespaces because the only available
+evidence was a season-wide snapshot, where the sole candidate rule was a string
+convention, and applying it to a player who has never appeared in a box score
+would manufacture an identifier the game source never provided. That reasoning is
+correct and is not overturned here. What changed is the availability of an
+endpoint that reports both identities **for the same person in the same game**,
+which turns the pairing from an inference into an observation. An observed
+pairing manufactures nothing.
+
+**The measurement.** 80 games sampled at even intervals across E2024 and E2025;
+game-side IDs read from `game_event`, not re-fetched. 1,903 v2 person
+appearances: **0** matched a warehouse player ID directly, **1,724** matched
+after prepending `P`, **179** matched by neither, and **35** warehouse IDs had no
+v2 person. Both residuals are fully explained: every one of the 179 played zero
+seconds and therefore generates no event, verified across all 80 games by reading
+`stats.timePlayed`; all 35 are the coach and bench pseudo-identifiers `CO_A`
+(15), `CO_B` (18), `AC_A` (1) and `AC_B` (1). The legacy short codes behave
+identically — Belinelli's v2 code is `BCN` and his player ID is `PBCN`.
+
+**Conditions.**
+
+- The link is written from within-game co-occurrence. A validation test asserts
+  no link row was produced by string construction, and fails if one was.
+- Per-season pairing coverage and the `P`-prefix agreement rate are published
+  alongside any tool that uses the link. A falling agreement rate is a finding,
+  not a silent repair.
+- A person who has never appeared in a game stays unlinked. Biography for such a
+  person is served without statistics rather than attached to a guessed ID.
+- The `/games/{gameCode}/stats` response is cached and archived with its checksum
+  before parsing, in the same order as every other response, and re-fetches are
+  versioned audits rather than overwrites.
+- The v2 host rate-limits. Backfill obeys goal 025's backoff and does not
+  pre-throttle to a guessed budget.
+- **The storage projection is measured before the table is created, not after.**
+  See Decision 28.
+
+**Provenance.**
+
+- Basis: MIXED. The 1,903-appearance match counts, the zero-minute explanation of
+  the 179, the coach pseudo-IDs, and the legacy-code case are measured. Choosing
+  to store an observed link rather than leave the roster inert is a decision.
+- Evidence: `exploration/API_INVENTORY.md` section 5,
+  `docs/PERSON_CODE_LINK_DECISION_BRIEF.md`, and the cached bodies plus
+  `_bridge_measurement.json` under `exploration/cache/person_bridge/`. The
+  instrument is `exploration/measure_person_code_bridge.py`.
+- Blind spots, stated: 80 of 732 loaded games, sampled by interval rather than at
+  random; nothing measured for E2026 or EuroCup; and by construction the method
+  says nothing about people who have never played.
+- Alternatives considered: leave `roster_registration` inert (rejected because it
+  gives up the largest available capability and keeps a populated table
+  unreachable), or prepend `P` in the parser (rejected because 1,724 agreements
+  are evidence of a convention exactly as Decision 24's 203 were, and the
+  epistemology is unchanged by the larger number).
+- Approved: Egemen Yücelen on 2026-08-28, choosing Option A of the brief.
+
+---
+
+## 28. The hot window is E2024, E2025 and E2026, and compaction precedes the live season
+
+The PostgreSQL hot window holds exactly three seasons: E2024, E2025 and E2026.
+Earlier seasons are not loaded. **A storage compaction runs before E2026 begins
+loading**, and the additional data authorised by Decision 27 is admitted only in
+the priority set below.
+
+**Why compaction is part of the decision and not an afterthought.** Measured
+2026-08-28, the database is **329,542,803 bytes** — 42.5 MB larger than the
+287,076,529 recorded on 2026-08-19 in `docs/STORAGE_COMPACTION_RESULT.md`, with
+49,294 dead tuples in `game_event` (12.3% of live rows) and 12,480 in
+`possession`. Projecting E2026 at the measured 359,504.6 bytes per game and at
+E2025's actual 402 games — not the 380 the earlier report assumed, since E2026
+fields the same 20 teams — gives **474,063,652 bytes before any new data**, only
+5.9 MB below the 480,000,000 stop rule. Adding Decision 27's priority set takes
+the projection to **483,023,644**, which **breaches the stop rule**.
+
+Compaction is what makes the window fit. Two components, measured to different
+standards and reported separately rather than summed into one confident number:
+
+- **Heap, measured.** Summing each table's dead-tuple share of its own heap gives
+  **14,670,197 bytes** — 11.1 MB in `game_event`, 2.3 MB in `possession`,
+  0.7 MB in `lineup_stint`, the rest smaller. This is a floor: it counts dead
+  rows only, and not free space left in pages by earlier vacuums.
+- **Indexes, inferred, not measured.** `pgstattuple` is available on the server
+  but not installed, and installing it is a schema change nobody has approved, so
+  index bloat could not be measured directly. The reference point is that
+  `docs/STORAGE_COMPACTION_RESULT.md` recorded `game_event`'s seven indexes at
+  34,717,696 bytes immediately after a rebuild; they are now **51,437,568**, an
+  excess of 16.7 MB. Other tables' indexes total a further 62.7 MB and their
+  bloat is unknown.
+
+Total plausible recovery is therefore **roughly 31 to 40 MB**, giving a
+post-compaction projection between **443 MB and 452 MB — 88.6% to 90.3% of the
+ceiling, and 28 to 37 MB below the stop rule.** The window fits across that whole
+range, which is why the range is quoted rather than a point estimate.
+
+**What caused the 42.5 MB of growth is now known.** `game_event` has taken
+14,628,788 UPDATEs against 400,041 live rows, of which only 12,562 were HOT. The
+only code in the repository that updates `game_event` is `compaction.py`'s own
+row-move (`UPDATE ... SET season_code = season_code`), the technique
+`STORAGE_COMPACTION_RESULT.md` section 3b introduced. The ingestion and derived
+paths never update the table, so Decision 22 is not violated. The derived tables
+(`possession`, `lineup_stint`, `player_game_minutes`) each show roughly seven
+times their live rows in cumulative inserts with matching deletes, which is the
+rebuild-and-reinsert pattern working as designed. **Both mechanisms leave dead
+tuples that only a full rewrite returns to the operating system**, so regrowth
+after compaction is expected and recurring, not a defect to hunt.
+
+**The priority set admitted.** `person_game_link` (~5.9 MB), the roster biography
+columns (<0.5 MB), the venue, referee and club directories (~0.9 MB), club season
+statistics (~40 KB), and the Storage object metadata the new archived bodies
+create (~1.8 MB).
+
+**Excluded, and why.** The global `/v2/people` directory, 17,275 people at about
+6.9 MB. It is overwhelmingly historical people the warehouse cannot link to a
+game, and admitting it would consume a fifth of the recovered headroom for rows
+nothing can currently query. The season-scoped roster already covers everyone who
+plays.
+
+**Conditions.**
+
+- **Only the 14.7 MB heap figure is measured. The rest is inferred.** The
+  compaction plan of 2026-08-18 was argued carefully and was wrong in three
+  places, each caught by measuring after every step rather than trusting the
+  argument. The same discipline applies: measure after each step, and stop at the
+  480,000,000 rule.
+- **Compaction is recurring, not one-off.** Its own row-move generates the dead
+  tuples that regrow the database, and every derived rebuild adds more. Budget
+  for running it before each season loads, rather than treating regrowth as a
+  surprise.
+- Before `person_game_link` is created, load one complete season into a staging
+  table with its real primary key and measure it with `pg_total_relation_size`.
+  The 220 bytes per row used above is `raw_boxscore_player`'s measured rate
+  applied to a different table, which is an estimate, not a measurement.
+- The archive is unaffected by all of this. Archived bodies live in Supabase
+  Storage against a separate 1 GB budget; the new endpoint costs a measured 5,596
+  gzipped bytes per game, or 6.2 MB for 1,112 games.
+- Re-measure before adding EuroCup or any fourth season. This decision authorises
+  three seasons, not a policy of unlimited growth.
+
+**Provenance.**
+
+- Basis: MIXED. Current database size, per-table sizes, dead-tuple counts, the
+  per-game rate, and the gzipped archive cost are measured. The 40 MB recovery
+  and the per-row cost of a table that does not exist are projections, labelled
+  as such above.
+- Evidence: `docs/STORAGE_COMPACTION_RESULT.md`,
+  `docs/STORAGE_HOT_WINDOW_DECISION_BRIEF.md`, and the 2026-08-28 read-only
+  measurement recorded in this item.
+- Alternatives considered: Supabase Pro at $25/month, which removes the
+  constraint entirely and was rejected as 2.5 to 5 times the stated budget; and
+  migrating to Turso's 5 GB free tier, rejected because libSQL is SQLite and the
+  read-only role, RLS and `security_invoker` views that keep database credentials
+  out of every user's hands have no equivalent there.
+- Approved: Egemen Yücelen on 2026-08-28.
+
+---
+
+## 29. The hosted connector uses one shared public client, not dynamic registration
+
+Claude connects to the hosted MCP server through a single first-party Auth0
+application of type **Native** — a public client, PKCE, no client secret. Its
+client id is distributed with the server URL and may be published. **Dynamic
+Client Registration is not the connection mechanism.**
+
+**What forced this, measured rather than argued.** Connecting by URL alone means
+Dynamic Client Registration: the client registers itself, so there is nothing to
+type. That is how every other MCP connector behaves and it was the owner's
+requirement. It failed on 2026-08-29 with
+
+```
+{"statusCode":403,"error":"Forbidden",
+ "message":"You reached the limit of entities of this type for this tenant.",
+ "errorCode":"too_many_entities"}
+```
+
+**The tenant caps applications at ten, and every connector add consumes one.**
+Six of the ten were dead `tpc_` clients left behind by six "Add connector"
+attempts. The owner could connect and the next person could not, because the
+owner's registration took the last slot. Deleting the dead clients buys a few
+more attempts; it does not change the arithmetic. Eight to ten testers, each
+re-adding a connector at least once, exceeds the cap on its own.
+
+**Why a shared public client is the right shape and not a compromise.** A public
+client's id is not a credential — OAuth expects it to be embedded in distributed
+application code and readable by anyone. So one client serves every user, no
+registration happens, and the cap is never approached again regardless of how
+many people connect. This is also what makes the pilot and a public launch the
+same configuration: the client id that eight testers use today is the client id
+that goes in the README later, with no migration.
+
+**The application type matters and the first attempt had it wrong.** The
+application was registered as a Regular Web Application, which Auth0 treats as a
+confidential client and which therefore demands a client secret at the token
+endpoint. Claude Desktop runs on the user's machine and cannot hold a secret; it
+would have been distributed in plain text to every tester, which is a secret in
+name only. Changing the type to Native makes it a public client authenticating
+with PKCE, which is what OAuth 2.1 and the MCP specification already require.
+
+**Conditions.**
+
+- **This decision governs how a client is identified, and nothing else.** Who may
+  sign in is still the post-login Action's allowlist. The two are separate stages
+  and neither substitutes for the other.
+- **Under the API's per-app authorization policy a first-party application is not
+  automatically authorised.** `EuroLeague MCP (Claude)` sat at 0/1 permissions
+  while six dynamically registered clients sat at 1/1, and the connection failed
+  for exactly that reason. Any replacement client must be granted user-delegated
+  access on the API explicitly.
+- **Dynamic Client Registration should be turned off once the shared client is
+  proven.** Leaving it on lets a stray connector consume application slots again
+  and removes the second gate this decision creates.
+- **The tenant is labelled DEVELOPMENT.** Auth0 does not intend development
+  tenants to carry production traffic. This decision makes the client mechanism
+  scale; it does not make the tenant a production tenant. That remains open and
+  must be settled before a public opening, not discovered during one.
+
+**Provenance.**
+
+- Basis: MEASURED for the failure and the cap — the 403 response, the ten
+  applications observed in the dashboard, and the per-app authorisation states
+  were all read directly on 2026-08-29. JUDGEMENT for preferring a shared public
+  client over a paid plan that would raise the cap.
+- Evidence: `docs/AUTH0_CONFIGURATION.md`.
+- Alternatives considered: enabling third-party default permissions and keeping
+  DCR, rejected because it opens client registration to anyone while leaving the
+  untested Action as the only control; deleting dead clients periodically,
+  rejected because it recurs and risks deleting a live client; and upgrading the
+  Auth0 plan, deferred as a cost decision that belongs with the public-launch
+  discussion.
+- Approved: Egemen Yücelen on 2026-08-29.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```
@@ -1409,6 +1729,16 @@ No other disagreement was found between Decisions 1-19 and `CLAUDE.md`,
 `AGENTS.md` contains only a pointer to `CLAUDE.md` and introduces no competing
 project rule. No previously unnoticed contradiction remains after the two stale
 roadmap statements above are corrected.
+
+### Decision 26 versus `CLAUDE.md` — found 2026-08-27, after the S16 sweep
+
+- Decision 26 says the MCP server gains an HTTP transport, served from a hosted
+  container, alongside stdio.
+- `CLAUDE.md` said: "Transport: `stdio` for local use."
+- Decision 26 is later and wins under `CLAUDE.md`'s own precedence rule. Unlike
+  the Decision 18 override above, `CLAUDE.md` was amended in the same commit
+  rather than left to disagree, so the two files now agree and this entry
+  records the change rather than a standing conflict.
 
 ### Decisions whose justification depends on goals, audience, or budget
 

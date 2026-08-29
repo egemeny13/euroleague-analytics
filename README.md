@@ -12,7 +12,7 @@ live-season workflow released and exercised, and opening-week proof date-gated
 until the first E2026 game.** Core phases 0-8, live-season Blocks A-E, production
 security hardening, and the attended release checks are complete. E2026 has 380
 scheduled games, zero played games, and 203 archived and loaded preseason roster
-rows. Ten read-only MCP tools run over seven security-invoker views, and ten
+rows. Eleven read-only MCP tools run over seven security-invoker views, and ten
 published evaluations are re-earned by live gates.
 
 Production holds the corrected 47,829 E2024 and 59,482 E2025 possessions. The
@@ -117,6 +117,10 @@ the archived response without a test failing.
 
 ## Development
 
+Python >= 3.14 is required (`pyproject.toml` declares `requires-python = ">=3.14"`).
+Older Python interpreters cannot parse Python 3.14 exception syntax (PEP 758)
+and will raise a `SyntaxError` during import.
+
 ```sh
 python -m venv .venv
 .venv/Scripts/pip install -r requirements-dev.txt   # Linux/macOS: .venv/bin/pip
@@ -125,8 +129,8 @@ python -m venv .venv
 ```
 
 The response cache is not committed — one season is 53 MB. The default run needs
-no network and no database. On 2026-08-23 the reconciled working tree passed
-648 offline tests; live, network, full-season, and local-database checks remain
+no network and no database. On 2026-08-27 the reconciled working tree passed
+852 offline tests; live, network, full-season, and local-database checks remain
 excluded from that claim.
 The gates
 that read the live warehouse are excluded from it and opted into explicitly:
@@ -158,7 +162,7 @@ To use it from Claude Desktop, add to `claude_desktop_config.json`:
   "mcpServers": {
     "euroleague": {
       "command": "python",
-      "args": ["E:/dev/euroleague-analytics/scripts/mcp_server.py"]
+      "args": ["/path/to/euroleague-analytics/scripts/mcp_server.py"]
     }
   }
 }
@@ -170,6 +174,9 @@ which games are excluded. Every response states its coverage, its exclusions,
 and whether minutes are raw or corrected. That last one is enforced rather than
 remembered: the response builder refuses to return a minute-derived value that
 does not declare its basis.
+
+The hosted server, and the owner steps that stand it up, are documented in
+[`docs/OWNER_SETUP.md`](docs/OWNER_SETUP.md).
 
 ## The evaluations
 

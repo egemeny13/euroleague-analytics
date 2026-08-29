@@ -1,5 +1,11 @@
 # Development dependencies. Installing this file installs the runtime ones too.
 -r requirements.txt
 
+# The hosted server's tree. Deliberately NOT in requirements.txt: a person who
+# only runs the stdio server keeps the light install protocol.py argues for.
+# Anyone running the tests needs it, because the transport-parity tests import
+# the SDK and would otherwise fail on import rather than prove anything.
+-r requirements-http.txt
+
 pytest==9.1.1
 ruff==0.16.2
