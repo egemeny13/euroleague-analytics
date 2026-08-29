@@ -346,6 +346,92 @@ def summarise_person_game_links(
     )
 
 
+# What a contradiction is. The two identifier namespaces are supposed to stand in
+# a one-to-one relationship: one person is one player. Migration 0017 enforces
+# that within a single game, which is as far as a table constraint can reach.
+# These two kinds name the ways the relationship can break *between* games, which
+# is where nothing else is watching.
+PERSON_CLAIMS_MANY_PLAYERS = "person_claims_many_players"
+PLAYER_CLAIMS_MANY_PEOPLE = "player_claims_many_people"
+
+
+@dataclass(frozen=True)
+class PersonGameLinkConflict:
+    """One identifier that two observations disagree about.
+
+    `identifier` is the side that appeared more than once, `counterparts` are the
+    distinct values it was observed against, and `seasons` are the seasons those
+    observations came from.
+    """
+
+    kind: str
+    identifier: str
+    counterparts: tuple[str, ...]
+    seasons: tuple[str, ...]
+
+
+def _conflicts_one_way(
+    observations: dict[str, dict[str, set[str]]], kind: str
+) -> list[PersonGameLinkConflict]:
+    """Report every identifier observed against more than one counterpart."""
+    conflicts = []
+    for identifier in sorted(observations):
+        counterparts = observations[identifier]
+        if len(counterparts) < 2:
+            continue
+        seasons: set[str] = set()
+        for observed_seasons in counterparts.values():
+            seasons |= observed_seasons
+        conflicts.append(
+            PersonGameLinkConflict(
+                kind=kind,
+                identifier=identifier,
+                counterparts=tuple(sorted(counterparts)),
+                seasons=tuple(sorted(seasons)),
+            )
+        )
+    return conflicts
+
+
+def find_person_game_link_conflicts(
+    results: list[PersonGameLinkResult],
+) -> tuple[PersonGameLinkConflict, ...]:
+    """Report every place two observations disagree about one person's identity.
+
+    In plain language: each link says "in this game, this person and this player
+    were the same". Read together, those statements must not contradict each
+    other - one person code must never be observed as two different players, and
+    one player must never be observed as two different people. This function
+    returns every contradiction it finds; an empty result is the healthy state.
+
+    The check runs across everything it is given rather than season by season,
+    because a person keeps the same player id from one season to the next. A
+    contradiction that only becomes visible when both seasons are read together
+    is still a contradiction.
+
+    WHAT THIS DOES NOT DETECT. It compares observations against each other, not
+    against the source. If every game paired the same person with the same wrong
+    player, this function reports nothing. It catches inconsistency, which is not
+    the same as correctness, and no mechanical check available here catches the
+    second one.
+    """
+    by_person: dict[str, dict[str, set[str]]] = {}
+    by_player: dict[str, dict[str, set[str]]] = {}
+    for result in results:
+        for link in result.links:
+            by_person.setdefault(link.source_person_code, {}).setdefault(link.player_id, set()).add(
+                link.season_code
+            )
+            by_player.setdefault(link.player_id, {}).setdefault(link.source_person_code, set()).add(
+                link.season_code
+            )
+
+    return tuple(
+        _conflicts_one_way(by_person, PERSON_CLAIMS_MANY_PLAYERS)
+        + _conflicts_one_way(by_player, PLAYER_CLAIMS_MANY_PEOPLE)
+    )
+
+
 _LINK_COLUMNS = (
     "season_code",
     "gamecode",

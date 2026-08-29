@@ -18,9 +18,14 @@ from typing import Any
 import pytest
 
 from euroleague.person_game_link import (
+    PERSON_CLAIMS_MANY_PLAYERS,
+    PLAYER_CLAIMS_MANY_PEOPLE,
     STATISTICAL_FIELD_MAP,
     GamePlayerEvidence,
+    PersonGameLink,
+    PersonGameLinkResult,
     build_person_game_links,
+    find_person_game_link_conflicts,
     game_players_from_boxscore,
     load_person_game_links,
     summarise_person_game_links,
@@ -368,3 +373,81 @@ def test_a_game_that_linked_nobody_still_clears_its_old_rows() -> None:
     assert counts == {"person_game_link": 0, "games": 1}
     assert connection.copied["stage_person_game_link"] == []
     assert connection.copied["stage_person_game_link_game"] == [("E2024", 1)]
+
+
+def _link(season_code: str, gamecode: int, person_code: str, player_id: str) -> PersonGameLink:
+    """One synthetic link, for contradictions no real game has ever produced."""
+    return PersonGameLink(
+        season_code=season_code,
+        gamecode=gamecode,
+        source_person_code=person_code,
+        player_id=player_id,
+        jersey_number="7",
+        line_signature="[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]",
+        prefix_agrees=player_id == f"P{person_code}",
+    )
+
+
+def _result(season_code: str, gamecode: int, links: tuple[PersonGameLink, ...]):
+    return PersonGameLinkResult(
+        season_code=season_code,
+        gamecode=gamecode,
+        links=links,
+        unpaired_source_people=(),
+        unpaired_game_players=(),
+        coach_people=(),
+    )
+
+
+def test_the_real_seasons_hold_no_identity_contradiction() -> None:
+    """Break caught: the bijection is assumed rather than checked."""
+    results = [_links(gamecode) for gamecode in LINKED_GAMES]
+    assert find_person_game_link_conflicts(results) == ()
+
+
+def test_one_person_observed_as_two_players_is_a_conflict() -> None:
+    """Break caught: a person code drifts onto a second player id and nothing objects."""
+    results = [
+        _result("E2024", 1, (_link("E2024", 1, "006590", "P006590"),)),
+        _result("E2024", 2, (_link("E2024", 2, "006590", "P009999"),)),
+    ]
+    conflicts = find_person_game_link_conflicts(results)
+    assert len(conflicts) == 1
+    assert conflicts[0].kind == PERSON_CLAIMS_MANY_PLAYERS
+    assert conflicts[0].identifier == "006590"
+    assert conflicts[0].counterparts == ("P006590", "P009999")
+    assert conflicts[0].seasons == ("E2024",)
+
+
+def test_one_player_observed_as_two_people_is_a_conflict() -> None:
+    """Break caught: two person codes collapse onto one player id across games."""
+    results = [
+        _result("E2024", 1, (_link("E2024", 1, "006590", "P006590"),)),
+        _result("E2024", 2, (_link("E2024", 2, "007777", "P006590"),)),
+    ]
+    conflicts = find_person_game_link_conflicts(results)
+    assert len(conflicts) == 1
+    assert conflicts[0].kind == PLAYER_CLAIMS_MANY_PEOPLE
+    assert conflicts[0].identifier == "P006590"
+    assert conflicts[0].counterparts == ("006590", "007777")
+
+
+def test_a_contradiction_only_visible_across_seasons_is_still_reported() -> None:
+    """Break caught: the check runs per season and misses a person who changed id."""
+    results = [
+        _result("E2024", 1, (_link("E2024", 1, "006590", "P006590"),)),
+        _result("E2025", 1, (_link("E2025", 1, "006590", "P009999"),)),
+    ]
+    conflicts = find_person_game_link_conflicts(results)
+    assert len(conflicts) == 1
+    assert conflicts[0].seasons == ("E2024", "E2025")
+
+
+def test_conflicts_are_reported_in_a_stable_order() -> None:
+    """Break caught: the report reorders between runs and a diff becomes unreadable."""
+    results = [
+        _result("E2024", 1, (_link("E2024", 1, "b", "P1"), _link("E2024", 1, "a", "P2"))),
+        _result("E2024", 2, (_link("E2024", 2, "b", "P3"), _link("E2024", 2, "a", "P4"))),
+    ]
+    conflicts = find_person_game_link_conflicts(results)
+    assert [conflict.identifier for conflict in conflicts] == ["a", "b"]
