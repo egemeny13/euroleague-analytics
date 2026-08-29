@@ -66,9 +66,25 @@ Two independent things decide whether somebody reaches the warehouse:
    allowlist. It was installed because "Disable Sign Ups" does not exist for
    social connections and the promoted connection is social.
 
-**The Action has never been exercised.** Until somebody outside the allowlist is
-observed being refused, the second control is unverified, and therefore the
-access state of this server is unknown. This is tracked as O-1 in
+**The Action was inspected on 2026-08-29 and is correctly wired.** Read directly
+from the dashboard:
+
+- It sits in the Post Login trigger: `Start (User Logged In)` -> `Invite-only
+  access` -> `Complete (Token Issued)`, with the flow reporting "All changes are
+  live".
+- The Action itself reports "Action is up to date" with Deploy disabled, so the
+  deployed version is the version shown.
+- Its logic denies in two places: an unverified email, and an email absent from
+  the `ALLOWED` array.
+- `ALLOWED` contains exactly one address, the owner's.
+
+**That is a reading, not an observation, and the difference matters.** Correct
+code in the right trigger is strong evidence, but it does not establish that the
+binding applies to this connection in practice, nor that a runtime error in the
+Action cannot cause it to be skipped. The remaining check is to observe a person
+outside the list being refused, then observe the same person admitted after being
+added. The second half matters as much as the first: it is what the allowlist is
+trusted on when eight to ten testers are added. Tracked as O-1 in
 `docs/superpowers/plans/2026-08-29-pre-announcement-hardening.md`.
 
 **A finding that makes O-1 sharper.** Read in `src/euroleague/mcp/http_app.py` on
