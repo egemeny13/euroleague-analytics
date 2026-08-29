@@ -18,8 +18,23 @@
 --
 -- The two `kind` values are the same strings the parser uses, in
 -- `src/euroleague/person_game_link.py`. A test asserts they still match.
+--
+-- WHY `create or replace` RATHER THAN `create`. The view was found already
+-- present in production on 2026-08-29 while the migration ledger held no record
+-- of it, the same drift migrations 0010, 0013 and 0014 were reconciled through.
+-- It cannot be recorded without first surviving a re-apply, and a replace is
+-- what makes that re-apply meaningful: PostgreSQL confirms an identical view and
+-- still refuses a differently shaped one, because it will not drop or reorder a
+-- view column through a replace.
+--
+-- A replace, specifically, and never a drop-and-recreate. Two measured facts
+-- make that the only safe form. A replace that omits the option list silently
+-- resets `security_invoker` to NULL, so the option below is restated rather than
+-- assumed. And dropping a view re-applies Supabase's default privileges, which
+-- would hand `anon` and `authenticated` a fresh set of grants on the way back
+-- in; a replace never drops, so the revoke below stays true.
 
-create view v_person_game_link_conflict
+create or replace view v_person_game_link_conflict
 with (security_invoker = true)
 as
 select
