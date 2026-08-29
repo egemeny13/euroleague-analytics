@@ -29,7 +29,29 @@ Initial live testing by the owner confirmed:
   - Player query (`season_code = 'E2024'`, `player_id = 'P006590'`): PostgreSQL execution **121.85 ms** (wall clock 188.07 ms).
   - Team query (`season_code = 'E2024'`, `team_code = 'TEL'`): PostgreSQL execution **2,420.99 ms** (wall clock 2,586.79 ms).
 - **Bottleneck Analysis:** Team filtering currently scans `game_event_playtype_idx` on `(season_code, playtype)` and loops across 2,861 events to join `raw_shot` and filter team in memory.
-- **Proposed Enhancement:** Add a composite index `(season_code, team_code, playtype)` on `game_event` or optimize `v_shot_data` query paths in Phase B.
+- **Re-measured 2026-08-29, later the same day, and the numbers moved a lot:**
+
+  | Query | PostgreSQL execution | Earlier run the same day |
+  |---|---:|---:|
+  | Single game (`E2024`, gamecode 1) | 34.4 ms | 12.9 ms |
+  | By player (`E2024`, `P006590`) | 464.5 ms | 121.9 ms |
+  | **By team (`E2024`, `TEL`)** | **3,694.6 ms** | 2,421.0 ms |
+
+  **The spread between two runs hours apart is larger than any threshold worth
+  setting, so neither run is a baseline.** Shared Supabase compute varies, and a
+  single measurement of it is an anecdote. Any decision here needs repeated
+  timings, the way Decision 18's view timings were taken.
+
+- **The cause is stable even though the timings are not.** The team query plans
+  as an `Index Scan using game_event_playtype_idx` on `(season_code, playtype)`,
+  then filters team in memory. There is no index that leads with the team.
+- **Proposed Enhancement:** a composite index on `game_event` leading with
+  `(season_code, team_code)`. **Deliberately not applied yet.** `game_event`
+  already carries seven indexes totalling 51 MB, the database sits at
+  335,064,211 bytes of Decision 28's 480,000,000 stop rule, and compaction has
+  not run. Adding an index before compaction spends headroom that has not been
+  recovered yet. Sequence this after compaction, and re-measure before and
+  after rather than assuming the index helps.
 
 ### Item 3: Season Code Disambiguation in Tool Descriptions
 - **Observed Behavior:** LLMs can confuse EuroLeague calendar years with season codes (e.g., `E2024` represents the 2023–24 season ending in Berlin; `E2025` represents the 2024–25 season ending in Abu Dhabi).
