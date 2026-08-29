@@ -111,9 +111,45 @@ leaves two independent gates instead of one: a client must hold the credential
 *and* the person must pass the Action. Auth0's own documentation recommends
 manual registration over DCR for production.
 
-**Status: in progress.** Callback URL alignment, the connector re-add, the DCR
-toggle and the deletion of the three `tpc_` clients are not yet observed
-complete. Do not record this entry as finished until they are.
+**What was actually done, and it was not the plan above.** The owner declined the
+client-credential route and required the connector to work from its URL alone,
+the way every other MCP connector does. That requires DCR, which requires the
+API's third-party default permissions. Both were configured on 2026-08-29:
+
+- The API had **no permissions defined at all** - the Permissions tab read "There
+  are no permissions to display". That is the mechanical cause of the original
+  error: with no permission to grant, no third-party default can be selected, so
+  every dynamically registered client was refused. `read:warehouse`
+  ("Read-only warehouse access") was added.
+- The API's **Application Access Policy** was `Per-app authorization` for both
+  user-delegated and client access, meaning each application had to be authorised
+  individually - which a self-registering client never is.
+- **Default Permissions for third-party applications - User-delegated Access** was
+  changed from `Unauthorized` to **`All`** (includes all existing and future
+  permissions). `Authorized - pick and choose` was tried first and the permission
+  picker did not offer the newly created scope; `All` was taken instead.
+  **Client Access was deliberately left `Unauthorized`.**
+
+**Observed result.** The connector was re-added with the URL alone, no client ID
+and no secret, and connected. **12 tools listed.**
+
+**Why `All` costs nothing here, and what that admits.** The server enforces no
+scope and does not check the token audience, so `All` versus a single named scope
+changes nothing it can act on. That is not a defence of `All`; it is a statement
+that scope is not a control in this system at present. The only difference `All`
+makes is that a permission added to this API in future is granted automatically.
+
+**What this leaves.** Client registration is open by design now. The only control
+over *who* reaches the warehouse is the post-login Action, and it is still
+unverified. Before anything else, confirm the Action is actually attached to the
+Login flow - an Action can exist in the Library without being in the flow, in
+which case it never runs - and then observe a person outside the allowlist being
+refused.
+
+**Not done, and not needed for the URL-only design.** The first-party application
+`EuroLeague MCP (Claude)` was given Claude's callback URL and remains available as
+a fallback. The three `tpc_` clients were not deleted; new ones will appear with
+each connector re-add.
 
 ### 2026-08-29 — Auth0 dashboard login failure, unrelated
 
