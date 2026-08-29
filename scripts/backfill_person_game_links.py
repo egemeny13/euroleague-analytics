@@ -42,6 +42,7 @@ from euroleague.person_game_link import (
     PersonGameLinkResult,
     build_person_game_links,
     game_players_from_boxscore,
+    incomplete_boxscore_players,
     load_person_game_links,
     summarise_person_game_links,
 )
@@ -208,6 +209,7 @@ def _print_season_summary(results: list[PersonGameLinkResult]) -> None:
         print(f"  residual {reason}={reasons[reason]:,}")
     print(f"  residual unpaired_game_players={coverage.unpaired_game_players:,}")
     print(f"  residual coach_people={coverage.coach_people:,}")
+    print(f"  residual incomplete_game_players={coverage.incomplete_game_players:,}")
 
 
 def _settings() -> tuple[DatabaseSettings, StorageSettings]:
@@ -299,6 +301,7 @@ def main(argv: list[str] | None = None) -> int:
                         gamecode,
                         stats,
                         game_players_from_boxscore(boxscore),
+                        incomplete_game_players=incomplete_boxscore_players(boxscore),
                     )
                     load_person_game_links(connection, [result])
                     _assert_database_below_stop_rule(

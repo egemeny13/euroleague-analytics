@@ -61,7 +61,11 @@ STATISTICAL_FIELD_MAP: dict[str, str] = {
 }
 
 # Why a person could not be paired. Every person the parser cannot pair carries
-# one of these and is counted; none is ever silently dropped.
+# one of these and is counted; none is ever silently dropped. The same guarantee
+# holds for box score rows, but through a second function:
+# `incomplete_boxscore_players` names the rows `game_players_from_boxscore`
+# cannot use, because a row with a blank statistic would otherwise be absent from
+# both the evidence and the residual.
 NO_JERSEY_NUMBER = "no_jersey_number"
 NO_STATISTICS = "no_statistics"
 NO_MATCHING_EVIDENCE = "no_matching_evidence"
@@ -140,6 +144,7 @@ class PersonGameLinkResult:
     unpaired_source_people: tuple[UnpairedPerson, ...]
     unpaired_game_players: tuple[str, ...]
     coach_people: tuple[str, ...]
+    incomplete_game_players: tuple[str, ...] = ()
 
     @property
     def prefix_agreement_count(self) -> int:
@@ -160,6 +165,7 @@ class PersonGameLinkCoverage:
     prefix_agreement_rate: float
     unpaired_game_players: int
     coach_people: int
+    incomplete_game_players: int = 0
 
 
 def game_players_from_boxscore(payload: dict[str, Any]) -> tuple[GamePlayerEvidence, ...]:
@@ -187,6 +193,30 @@ def game_players_from_boxscore(payload: dict[str, Any]) -> tuple[GamePlayerEvide
     return tuple(players)
 
 
+def incomplete_boxscore_players(payload: dict[str, Any]) -> tuple[str, ...]:
+    """Name every box score row `game_players_from_boxscore` could not use.
+
+    In plain language: the pairing needs a player's complete official line. A row
+    missing any one of the nineteen statistics cannot be compared against the v2
+    line, so it is not usable evidence. It is still a real row about a real
+    player, and this function names it so it is reported as a residual instead of
+    disappearing. Between them, the two functions account for every row the
+    payload publishes.
+    """
+    incomplete: list[str] = []
+    for team in payload.get("Stats") or []:
+        for player in team.get("PlayersStats") or []:
+            player_id = _trim(player.get("Player_ID"))
+            if player_id is None:
+                continue
+            present = sum(
+                1 for field in STATISTICAL_FIELD_MAP.values() if player.get(field) is not None
+            )
+            if present != len(STATISTICAL_FIELD_MAP):
+                incomplete.append(player_id)
+    return tuple(sorted(incomplete))
+
+
 def _source_line(stats: dict[str, Any]) -> dict[str, int] | None:
     """Project a v2 statistical line onto the Boxscore field names, or refuse."""
     line: dict[str, int] = {}
@@ -210,6 +240,7 @@ def build_person_game_links(
     gamecode: int,
     v2_stats: dict[str, Any],
     game_players: tuple[GamePlayerEvidence, ...] | list[GamePlayerEvidence],
+    incomplete_game_players: tuple[str, ...] = (),
 ) -> PersonGameLinkResult:
     """Pair people only where one game publishes one matching line and jersey number.
 
@@ -308,6 +339,7 @@ def build_person_game_links(
         unpaired_source_people=tuple(unpaired),
         unpaired_game_players=unpaired_game_players,
         coach_people=tuple(coaches),
+        incomplete_game_players=tuple(incomplete_game_players),
     )
 
 
@@ -343,6 +375,7 @@ def summarise_person_game_links(
         prefix_agreement_rate=prefix_agreements / people_linked if people_linked else 0.0,
         unpaired_game_players=sum(len(result.unpaired_game_players) for result in results),
         coach_people=sum(len(result.coach_people) for result in results),
+        incomplete_game_players=sum(len(result.incomplete_game_players) for result in results),
     )
 
 

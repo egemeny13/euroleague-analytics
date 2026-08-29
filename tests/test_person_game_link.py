@@ -27,6 +27,7 @@ from euroleague.person_game_link import (
     build_person_game_links,
     find_person_game_link_conflicts,
     game_players_from_boxscore,
+    incomplete_boxscore_players,
     load_person_game_links,
     summarise_person_game_links,
 )
@@ -502,3 +503,60 @@ def test_the_conflict_view_is_reversible() -> None:
         "revoke all on table public.v_person_game_link_conflict from el_reader"
         in CONFLICT_MIGRATION_DOWN
     )
+
+
+def _trim_for_test(value: Any) -> str | None:
+    """The same trimming the parser applies, restated so the test does not import it."""
+    text = None if value is None else str(value).strip()
+    return text or None
+
+
+def _incomplete_boxscore(gamecode: int) -> dict[str, Any]:
+    """A real box score with one player's points blanked, as the source sometimes does."""
+    payload = copy.deepcopy(_boxscore(gamecode))
+    payload["Stats"][0]["PlayersStats"][0]["Points"] = None
+    return payload
+
+
+def test_the_two_parsers_account_for_every_box_score_row_between_them() -> None:
+    """Break caught: a row with a blank statistic vanishes from both sides of the report."""
+    for gamecode in LINKED_GAMES:
+        payload = _incomplete_boxscore(gamecode)
+        usable = {player.player_id for player in game_players_from_boxscore(payload)}
+        incomplete = set(incomplete_boxscore_players(payload))
+        published = {
+            _trim_for_test(player["Player_ID"])
+            for team in payload["Stats"]
+            for player in team["PlayersStats"]
+            if _trim_for_test(player["Player_ID"])
+        }
+        assert usable | incomplete == published
+        assert usable & incomplete == set()
+
+
+def test_a_row_with_a_blank_statistic_is_named_rather_than_dropped() -> None:
+    """Break caught: an incomplete line is skipped with `continue` and never reported."""
+    payload = _incomplete_boxscore(1)
+    blanked = _trim_for_test(payload["Stats"][0]["PlayersStats"][0]["Player_ID"])
+    assert incomplete_boxscore_players(payload) == (blanked,)
+
+
+def test_a_complete_box_score_reports_no_incomplete_rows() -> None:
+    """Break caught: the new check fires on healthy data and buries the real signal."""
+    for gamecode in LINKED_GAMES:
+        assert incomplete_boxscore_players(_boxscore(gamecode)) == ()
+
+
+def test_incomplete_rows_travel_with_the_result_and_the_coverage() -> None:
+    """Break caught: the count is computed and then dropped before anyone can see it."""
+    payload = _incomplete_boxscore(1)
+    result = build_person_game_links(
+        "E2024",
+        1,
+        _stats(1),
+        game_players_from_boxscore(payload),
+        incomplete_game_players=incomplete_boxscore_players(payload),
+    )
+    assert len(result.incomplete_game_players) == 1
+    coverage = summarise_person_game_links([result])
+    assert coverage.incomplete_game_players == 1
