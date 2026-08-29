@@ -205,10 +205,24 @@ gates who may sign in. Application type governs how a client proves itself at
 the token endpoint; the Action runs after the user authenticates. They are
 separate stages.
 
-**Still open at the end of this session.** Dynamic Client Registration is still
-enabled and the six dead `tpc_` clients still exist; both should be cleared once
-the shared client is observed working. The live connection with the shared
-client had not yet been confirmed when this entry was written.
+**Observed working, by two people.** The owner connected with the shared client
+id and no secret, and a second person — added to the Action's allowlist first —
+connected the same way. The application list was read immediately afterwards and
+still held **exactly ten applications, the same ten**: no new `tpc_` client was
+created. That is the measurement that matters, because it shows the shared client
+is genuinely shared rather than merely working once. The cap is not approached
+again no matter how many people connect.
+
+It also confirms, separately, that adding an address to the Action's `ALLOWED`
+array and deploying it actually admits that person. That is the mechanism the
+whole pilot depends on and it had never been exercised before today.
+
+**Still open.** Dynamic Client Registration is still enabled and the six dead
+`tpc_` clients still exist; both should be cleared. And the negative half of the
+access test is still missing — nobody outside the allowlist has yet been observed
+being refused by the Action. The friend's earlier failure does not count: it was
+a client *registration* error that occurred before the Action ever ran, and it
+therefore says nothing about who the Action admits.
 
 **Not done, and not needed for the URL-only design.** The first-party application
 `EuroLeague MCP (Claude)` was given Claude's callback URL and remains available as
