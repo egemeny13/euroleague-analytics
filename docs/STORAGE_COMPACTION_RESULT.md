@@ -193,3 +193,74 @@ count, and the window must be re-projected if the competition changes it.
 
 `pytest -m "not full_season and not warehouse"` — **348 passed, 79 deselected**.
 `ruff check .` and `ruff format --check .` both clean.
+
+---
+
+## 2026-08-29 — the compaction gate refused, and the work stopped there
+
+**Nothing was lost.** `scripts/compact_storage.py --steps 0` was re-run after the
+failure and reported "Baseline agrees exactly": all ten E2024 fingerprints and
+all ten E2025 row counts unchanged, `game_event` still at 399,459 rows. The
+pilot rewrites rows with their own values and deletes nothing.
+
+**What happened.** Step 1's `VACUUM (ANALYZE)` ran. Step 2's 2,000-row pilot ran
+and **failed its own gate**, so the script refused to run steps 3, 3b or verify:
+
+```
+E2025 currently starts at page 0.
+PASS means every moved row lands below page 0.
+1. highest page any moved row now sits on : 5,787  FAIL (must be < 0)
+   lowest page any moved row now sits on  : 5,736
+   rows moved and found afterwards        : 2,000  PASS
+```
+
+**Why this is not a simple "there is nothing left to recover".** The gate asks
+that moved rows land *below* the page where the moved season starts. That test
+was written on 2026-08-18, when E2025 sat at the back of the file with a hole
+beneath it left by E2024. **E2025 now starts at page 0**, so "below page 0" is
+unsatisfiable by construction: the gate cannot pass in this configuration
+regardless of whether the mechanism would help.
+
+**And one measurement that is not yet explained.** The page census reported
+`E2025 occupies pages 0-10,002` before the pilot and `pages 0-5,787` after it,
+for the same 222,976 rows, having moved only 2,000 of them. Either the census
+means something different from what it appears to mean, or a great deal more
+moved than the pilot moved. **This is not understood, and no further write
+should happen until it is.**
+
+**Cost of the attempt:** the database grew 40,960 bytes, from 335,064,211 to
+335,105,171, which is the pilot's own rewrites. That is the expected cost of the
+technique and the reason Decision 28 records regrowth as a mechanism rather than
+a defect.
+
+### What this means for Decision 28
+
+Decision 28 projects that compaction recovers **31 to 40 MB** and that this is
+what makes the E2024–E2026 hot window fit under the 480,000,000-byte stop rule.
+**That projection now rests on a mechanism that has not been shown to work in
+the current file layout.** The 14.7 MB heap figure was measured; the recovery
+was inferred from the August run, and the August run started from a layout that
+no longer exists.
+
+The decision itself is untouched. What has changed is the confidence in one of
+its conditions, and that is a finding to put in front of the owner rather than
+an exemption to grant. **Per `CLAUDE.md`: a gate is not relaxed without the
+owner deciding, and the decision is recorded with who made it and when.**
+
+### The options, none of them taken
+
+1. **Understand the census discrepancy first.** Cheapest and safest, and nothing
+   else should be attempted before it. Read-only.
+2. **`VACUUM FULL game_event`.** It would genuinely rewrite and shrink the table.
+   It takes an `ACCESS EXCLUSIVE` lock for the whole rewrite, so every query
+   against `game_event` blocks meanwhile, and it needs free space equal to the
+   table. `docs/STORAGE_COMPACTION_PLAN.md` rejected it in August for exactly
+   these reasons; whether that still holds is the owner's call, not an
+   implementation detail.
+3. **Shrink the hot window instead.** Decision 28 already anticipates this: if
+   the projection exceeds the ceiling, every season still goes to the immutable
+   archive and only the PostgreSQL window shrinks. Loading E2026 alongside one
+   prior season rather than two needs no compaction at all.
+4. **Re-measure the projection.** It assumed a recovery that may not be
+   available. The stop-rule question should be re-asked with a recovery of zero
+   before choosing between the options above.

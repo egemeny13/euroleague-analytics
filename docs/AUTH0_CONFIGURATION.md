@@ -217,12 +217,29 @@ It also confirms, separately, that adding an address to the Action's `ALLOWED`
 array and deploying it actually admits that person. That is the mechanism the
 whole pilot depends on and it had never been exercised before today.
 
-**Still open.** Dynamic Client Registration is still enabled and the six dead
-`tpc_` clients still exist; both should be cleared. And the negative half of the
-access test is still missing — nobody outside the allowlist has yet been observed
-being refused by the Action. The friend's earlier failure does not count: it was
-a client *registration* error that occurred before the Action ever ran, and it
-therefore says nothing about who the Action admits.
+**Access control is now observed, not inferred — both halves.** On 2026-08-29:
+
+- A person added to the Action's `ALLOWED` array connected successfully.
+- A person **not** on the list attempted to connect and was **refused**.
+
+That second observation is the one the whole pilot rested on and it had never
+been made before. Until it existed, "only the allowlist can reach this server"
+was a reading of correct-looking code in the right trigger, which is evidence but
+not proof. It is now a measurement. This closes O-1 in
+`docs/superpowers/plans/2026-08-29-pre-announcement-hardening.md`.
+
+**Dynamic Client Registration was turned off** the same day, once the shared
+client was proven. Three consequences, all wanted: no new `tpc_` client is
+created by a connector add, so the ten-application cap is never approached again;
+knowing the URL alone is not enough to connect, since the client id is also
+required, which restores a second gate; and Auth0's own warning on that setting
+no longer applies — it read *"Auth0 supports Open Dynamic Registration, which
+means that **anyone** will be able to create applications in your tenant without
+a token."*
+
+**Still open.** The six dead `tpc_` clients have not been deleted. They are inert
+now that registration is off and nothing uses them, so this is tidiness rather
+than exposure.
 
 **Not done, and not needed for the URL-only design.** The first-party application
 `EuroLeague MCP (Claude)` was given Claude's callback URL and remains available as
