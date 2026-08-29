@@ -651,3 +651,44 @@ unchanged. Seventy of 17,403 box score rows are unlinked, of which twelve belong
 to players who took the floor and are unexplained. Evidence is in
 `docs/PERSON_GAME_LINK_BACKFILL_REPORT.md`.
 
+---
+
+## Phase 2: from private pilot to public. Written 2026-08-29.
+
+**Phase 1 is complete.** The hosted server runs, access control was observed in
+both directions on 2026-08-29 — an allowlisted person admitted, a
+non-allowlisted person refused — and the connector uses one shared public client
+that does not consume the tenant's application cap. Eight to ten testers can be
+invited today.
+
+Two things were deliberately taken off the path:
+
+- **Order 8 is frozen until 2026-09-24.** Live-season evidence cannot exist
+  before games are played. It is not a blocker for anything below; it is a date.
+- **Compaction is retired as a precondition.** Decision 30. The storage watch
+  reports the headroom every night instead.
+
+### The remaining work, in an order that has a reason
+
+The order matters, and it is not the order of difficulty. **P2-4 removes the
+only control currently deciding who reaches the warehouse, so nothing about it
+is safe until P2-2 and P2-3 are settled.**
+
+| | Work | Who | Why it sits here |
+|---|---|---|---|
+| **P2-1** | **Load test the hosted server** | Owner, with a script | Independent of the rest; can happen any time. Fly admits 40 concurrent requests into a pool of 5 connections. The concern is arithmetic, not an observed failure, and it stays that way until somebody measures it. **It needs an authenticated token, which needs an interactive login**, so it cannot be run unattended. The token belongs in an environment variable on the owner's machine and must never be pasted into a chat or a file. |
+| **P2-2** | **Decide the Auth0 tenant** | Owner | `dev-ew0k6i4pmarjvgkn` is labelled DEVELOPMENT and Auth0 does not intend those tenants to carry production traffic. Moving means a new issuer URL, which means redeploying the server with new environment values and rebuilding the API, the application and the Action — essentially redoing the 2026-08-29 Auth0 work. **That cost is the same before or after a public opening; the risk is not.** Decide before. |
+| **P2-3** | **Make the server check the token's audience** | Code | Read on 2026-08-29: `src/euroleague/mcp/http_app.py` validates a bearer token against the tenant's JWKS, introspection endpoint or userinfo, but passes `verify_aud=False` and enforces no scope. **Any valid token from that tenant is accepted.** With an allowlist in front, that is tolerable. Without one, on a tenant anyone can sign up to, it means any token issued by that tenant for any purpose opens the warehouse. This is the reason P2-4 cannot come first. |
+| **P2-4** | **Retire the invite-only Action** | Owner | It must go, or a public server admits nobody. When it goes, the controls that remain are the ones already built: the per-subject daily row budget (goal 032) and the sweep refusal (goal 033), plus Fly's concurrency limits. Those bound *how much* anyone can take; they do not bound *who*. That is the intended trade of going public, and it should be made knowingly. |
+| **P2-5** | **Announce** | Owner | Everything above settled, and the README describing what the server actually is. |
+
+### What Phase 2 does not require
+
+- **Not compaction.** Decision 30.
+- **Not the historical archive.** Seasons E2003–E2022 can keep arriving one
+  manual dispatch at a time through `.github/workflows/historical-archive.yml`
+  and are independent of everything above. They also do not enter the hot window,
+  so they change nothing about what the MCP server can answer.
+- **Not Order 8.** A public opening before 2026-09-24 is possible; it simply
+  cannot claim live-season evidence it does not have yet.
+
