@@ -1,0 +1,69 @@
+# Archive one historical EuroLeague season into the immutable Supabase archive.
+#
+# MANUAL ONLY, AND THAT IS A RULE RATHER THAN AN OMISSION.
+# docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md sets two
+# stop conditions this file enforces:
+#
+#   "Do not turn this into a full historical warehouse load and do not start the
+#    next batch automatically."
+#   "No E2026 workflow was starved or overlapped."
+#
+# The first is why there is no `schedule:` trigger and why the season has no
+# default: somebody has to name a season on purpose. The second is why the
+# concurrency group below is the same string the nightly job uses - GitHub will
+# queue this run behind a live fetch rather than letting two fetchers hit an
+# undocumented public API at once. tests/test_historical_archive_workflow.py
+# asserts both, so neither can be lost to an edit.
+#
+# The run is resumable across machines. It restores whatever is already archived
+# for the season before fetching, so a run that dies at 60% is finished by the
+# next run rather than started again.
+
+name: Historical archive
+
+on:
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Season code to archive, such as E2022. Not E2026 - that is the nightly job's season."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Deliberately the same group as .github/workflows/e2026-live.yml.
+# cancel-in-progress stays false in both: a cancelled live fetch loses that
+# night's games, while a delayed historical batch loses nothing.
+concurrency:
+  group: e2026-live-fetcher
+  cancel-in-progress: false
+
+jobs:
+  archive-season:
+    runs-on: ubuntu-latest
+    # E2023 measured 331 played games at four endpoints and nine seconds between
+    # requests: 3.31 hours. This clears that with room and stays under GitHub's
+    # own six-hour ceiling. A season that needs longer should be split, not
+    # given a bigger number.
+    timeout-minutes: 330
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
+
+      # --archive refuses E2026 itself, so the nightly season cannot be fetched
+      # here even if somebody types it into the dispatch box.
+      - name: Restore, fetch and archive the season
+        run: python scripts/fetch_archive.py "${{ inputs.season }}" --archive --cache-root .archive-cache
