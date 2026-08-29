@@ -162,6 +162,54 @@ Login flow - an Action can exist in the Library without being in the flow, in
 which case it never runs - and then observe a person outside the allowlist being
 refused.
 
+### 2026-08-29 — URL-only hit a tenant cap, and the design changed again
+
+**Symptom.** A second person adding the connector was refused before any login:
+
+> Couldn't register with Euroleague MCP's sign-in service.
+
+**Cause, measured.** A probe of the registration endpoint returned:
+
+```
+HTTP 403
+{"statusCode":403,"error":"Forbidden",
+ "message":"You reached the limit of entities of this type for this tenant.",
+ "errorCode":"too_many_entities"}
+```
+
+The tenant caps applications at ten and held exactly ten, six of them dead
+`tpc_` clients from six connector attempts. The dashboard confirms it:
+"This tenant reached its available applications and SSO Integrations limit."
+The owner had connected because their registration took the last slot.
+
+**Why deleting clients was abandoned as the fix.** It buys a few attempts and
+then recurs, and there is no reliable way to tell a live `tpc_` client from a
+dead one. Eight to ten testers, each re-adding once, exceeds the cap by itself.
+
+**The design now.** Decision 29. One shared first-party application,
+`EuroLeague MCP (Claude)` (`xc7tUVTYYK77nIG2Dp5brRU976MwiSlI`), changed from
+Regular Web Application to **Native** so it is a public client using PKCE with
+no client secret. Testers receive the URL and the client id; the client id is
+not a credential and may be published.
+
+**Two things that had to be fixed for it to work at all:**
+
+- The API had **no permissions defined**, so no default and no per-app grant
+  could reference anything. `read:warehouse` was added.
+- Under the API's per-app authorization policy, the first-party application was
+  **not** authorised: it sat at 0/1 permissions granted while six dynamically
+  registered clients sat at 1/1. It was granted user-delegated access explicitly.
+
+**What did not change, and was checked rather than assumed.** The Action still
+gates who may sign in. Application type governs how a client proves itself at
+the token endpoint; the Action runs after the user authenticates. They are
+separate stages.
+
+**Still open at the end of this session.** Dynamic Client Registration is still
+enabled and the six dead `tpc_` clients still exist; both should be cleared once
+the shared client is observed working. The live connection with the shared
+client had not yet been confirmed when this entry was written.
+
 **Not done, and not needed for the URL-only design.** The first-party application
 `EuroLeague MCP (Claude)` was given Claude's callback URL and remains available as
 a fallback. The three `tpc_` clients were not deleted; new ones will appear with

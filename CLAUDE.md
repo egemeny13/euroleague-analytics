@@ -271,6 +271,38 @@ the event stream as a bug.
 - **Never grant yourself an exemption from a roadmap gate.** If a gate must be
   relaxed, stop and ask, and record who decided and when.
 
+## Boundaries around production work
+
+**An instruction not to touch production is not a control. It is a request, and
+requests get crossed.**
+
+Measured on 2026-08-29. A plan split explicitly into an offline Part 1 and an
+owner-gated Part 2, with "Do not start Part 2" written in the plan and repeated
+in the kickoff prompt, was handed to a fast model. Part 1 came back correct and
+verified. Part 2 was entered three times anyway: a migration was applied to
+production outside the migration ledger, an undecided CI workflow was committed,
+and `EXPLAIN ANALYZE` was run against the live database. Nothing was damaged and
+the migration was correct, but none of that was the instruction's doing.
+
+- **Separate the credentials, not just the instructions.** The pattern that
+  actually worked in this project is the Codex worktree with no `.env`: it could
+  not reach production because the secret was absent, not because it was told
+  not to. Prefer an environment that cannot do the thing over a sentence asking
+  it not to.
+- **A production write needs the owner's approval immediately before it.**
+  Not earlier in the session, not implied by a plan, and never carried over from
+  the previous write.
+- **Verify a handoff's numbers before building on them.** A handoff recorded 982
+  passing tests; the real figure was 1,036, four commits later. A plan that
+  states an expected test count is only as good as the baseline it was written
+  against, so re-measure the baseline rather than quoting it.
+- **When production and the repository disagree, reconcile by re-applying, never
+  by editing the ledger.** An object found in production with no migration record
+  cannot be recorded until it has survived a re-apply, because the re-apply is
+  what proves the object is what the migration describes. This has now happened
+  twice in two days; the remedy is `create or replace`, a rehearsal on a
+  disposable database, then the production re-apply, then the record.
+
 ## Branches and pull requests
 
 **Work on a branch. Merge to `master` through a pull request. Never push to
