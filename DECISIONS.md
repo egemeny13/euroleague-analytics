@@ -1722,6 +1722,98 @@ approaches slowly and in public rather than arriving as a failure.
 
 ---
 
+## 31. The historical backfill runs unattended, and the restore gate moves into the job
+
+The historical archive plan
+(`docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md`) sets a
+stop condition in as many words: "**do not start the next batch automatically**".
+`.github/workflows/historical-archive.yml` has no `schedule:` trigger and no
+default season because of that sentence, and
+`tests/test_historical_archive_workflow.py` asserts both so the shape cannot be
+lost to an edit. **That condition is relaxed.**
+`.github/workflows/historical-archive-chain.yml` now chooses a season and
+archives it on a schedule, without anybody naming it.
+
+**Why.** Arithmetic, not preference. Nineteen seasons remain — E2021 back to
+E2003, 4,559 played games measured by Decision 8 — at three endpoints and the
+9.94 s cadence measured twice, on E2022 and E2023. That is **about 37.8 hours of
+fetching**, and the manual workflow turns it into somebody typing a season code
+every two hours for two and a half days. The owner judged the supervision not
+worth its cost at this point in the calendar, and the calendar is the reason:
+E2026 has 380 games scheduled and **zero played**, so the live season this whole
+concurrency arrangement protects has nothing at risk this week.
+
+**What the human was actually doing, and what replaces it.** Not choosing — the
+order was never in question. Noticing. Three mechanisms notice instead:
+
+- **`scripts/next_archive_season.py` refuses to guess.** It picks the newest
+  season whose archived schedule lacks any of the three game endpoints for any
+  played game. It compares **gamecodes, not counts**, because the right number of
+  the wrong games is exactly the break `assert_complete_played_cache` was written
+  to catch on the cache side. If it cannot read the archive it returns nothing,
+  and nothing is fetched.
+- **`scripts/verify_archive_season.py` runs the plan's step 4 gate inside the same
+  job that fetched.** Before this it was run by hand afterwards — for E2022 it was
+  run some hours later — which is precisely the step that stops happening once
+  nobody is watching. It restores the season from Storage with
+  `allow_bootstrap=False`, verifies every object against its own checksum,
+  requires the exact played gamecodes, and cross-checks the byte totals
+  PostgreSQL and Storage recorded independently.
+- **The cron leaves the nightly job a clear window.** GitHub cancels a *pending*
+  run when a newer one joins the concurrency group, so a chain run queueing after
+  03:43 UTC would not delay the live run, it would cancel it. No chain run starts
+  between 00:00 and 06:00 UTC, and `tests/test_archive_chain_workflow.py` fails if
+  a cron hour is added inside that window.
+
+**What this gives up, stated rather than implied.**
+
+- **A wrong season now gets fetched before anybody sees it.** The chooser is code
+  and code has bugs; the manual workflow's protection was a person reading the
+  season code before pressing the button. The tests are the whole replacement.
+- **A season that cannot be finished stalls the chain and repeats.** The chooser
+  never marks anything complete and never skips, so an unfinishable season is
+  picked again on every run and fails the gate again. This is deliberate — a
+  stalled chain in plain sight beats a chain that moves on quietly — but it means
+  a red run every two hours until somebody looks. Each retry is cheap, because
+  the fetcher never re-requests a permanent 404.
+- **The plan's "actual figures replace the estimate before the next batch starts"
+  is no longer true of the *report*.** The gate still runs per season, but the
+  written per-season report now lags the fetching instead of gating it. The
+  projection in `docs/HISTORICAL_ARCHIVE_E2022_REPORT.md` §6 rests on two adjacent
+  seasons and is not re-derived per batch by the chain.
+- **Endpoint availability before E2022 is unmeasured.** If an older season does
+  not serve one of the three endpoints, it will fail the gate rather than archive
+  a partial season. That is the safe direction, but it is a discovery this design
+  makes at 4 a.m. rather than under supervision.
+
+**What is unchanged.** One fetcher at a time, enforced by the shared
+`e2026-live-fetcher` concurrency group rather than by instruction. `--archive`
+still refuses E2026. `permissions: contents: read`, so the unattended workflow
+cannot write to the repository. The manual workflow still exists and is still
+manual, for when the chain has gone wrong and one named season is wanted.
+
+**When to switch it off.** When the chooser reports nothing left, or before E2026
+plays its first game — whichever comes first. The workflow prints the first case
+in its own log. The second is a date nobody has set yet, and it is the owner's to
+set.
+
+**Provenance.**
+
+- Basis: MEASURED for the 37.8-hour projection, the 9.94 s cadence and the
+  E2026 zero-games-played state; JUDGEMENT for trading supervision against it.
+- Evidence: `docs/HISTORICAL_ARCHIVE_E2022_REPORT.md` §1 and §6,
+  `docs/HISTORICAL_ARCHIVE_E2023_REPORT.md` §1, Decision 8's season census,
+  `tests/test_archive_chain.py` and `tests/test_archive_chain_workflow.py`.
+- Alternatives considered: leaving it manual, which was rejected on the
+  arithmetic above; driving the dispatches from the owner's laptop overnight,
+  which was rejected because it depends on a terminal staying open and puts the
+  schedule outside the repository; and one long job archiving several seasons in
+  sequence, which does not fit GitHub's six-hour ceiling.
+- Approved: Egemen Yücelen on 2026-08-29, after being shown the stop condition it
+  overrides, the ~37.8-hour figure, and the recommendation against it.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

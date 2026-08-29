@@ -3,8 +3,15 @@
 The plan this implements
 (`docs/superpowers/plans/2026-08-23-09-historical-archive-expansion.md`) sets two
 stop conditions that are not advice: never overlap the live-season fetcher, and
-never start the next batch automatically. Both are enforced by the workflow file
-rather than by remembering, and these tests are what keep them enforced.
+never start the next batch automatically.
+
+**The second one no longer holds for the repository as a whole.** Egemen Yücelen
+relaxed it on 2026-08-29, recorded as DECISIONS.md item 31, and
+`.github/workflows/historical-archive-chain.yml` now starts batches on a
+schedule. These tests still hold *this* workflow to it, because the manual entry
+point is what a person reaches for when the chain has gone wrong and they want
+one named season and nothing else. The chain's own guarantees are tested in
+`tests/test_archive_chain_workflow.py`; the first stop condition binds both.
 
 The workflows are asserted as text rather than parsed, matching how this
 repository already checks `ci.yml` and every migration. It needs no YAML
