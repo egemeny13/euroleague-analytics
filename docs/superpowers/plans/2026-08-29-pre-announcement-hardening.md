@@ -909,15 +909,63 @@ All five tasks are done when:
 - No file under `migrations/` has been applied anywhere, no production connection
   was opened, and no network call to the EuroLeague API was made.
 
-Then stop and hand back for review. **Do not proceed to Part 2.**
+Then stop and hand back for review. Part 2 begins only after that review, and you
+enter it as a guide, never as an operator — see the protocol below.
 
 ---
 
-# Part 2 — Owner-gated items
+# Part 2 — Owner-gated items, which you talk the owner through
 
-**These are not for the implementing model.** Each one either writes to
-production, changes who can reach the server, or needs a person who is not the
-owner. They are listed so the plan is complete, in the order they matter.
+Each item below either writes to production, changes who can reach the server, or
+needs a person who is not the owner. **You never execute any of them. The owner
+does, at their own keyboard, after you have explained what is about to happen.**
+
+## How to guide
+
+The owner directs this project and **cannot read Python or SQL**. They will not
+catch a mistake by reading your code, and they have said so explicitly. So for
+each item, in this order:
+
+1. **Say what the item is for, in plain language.** No jargon, no code in the
+   explanation. If a sentence needs a database term to make sense, define the
+   term in the same sentence.
+2. **Say what could go wrong and how bad it would be.** Name the worst realistic
+   outcome, not the average one. An owner who does not know the downside cannot
+   consent to it.
+3. **Give exactly one command at a time**, in a copyable block, and say which
+   window it goes in (a terminal in `E:\dev\euroleague-analytics`, the Fly
+   dashboard, the Auth0 dashboard, a browser).
+4. **Say what a good result looks like and what a bad result looks like**, in
+   concrete terms — the actual number, the actual message. "It should work" is
+   not an acceptance criterion.
+5. **Wait for the owner to paste back what they saw.** Do not assume a step
+   succeeded, and do not offer the next command until you have read the output of
+   the last one.
+6. **Name the stop condition before the step, not after.** If the output is
+   outside what you predicted, stop and say so rather than improvising a fix on
+   a live system.
+
+## Rules that hold for every item in Part 2
+
+- **A production write needs the owner's approval immediately before it**, not
+  earlier in the conversation and not implied by the plan. Approval for one write
+  is not approval for the next.
+- **Rehearse before you write.** Any migration is exercised on a disposable
+  database through `scripts/migration_gate.py` first. This is how migrations 0012
+  through 0018 were done and it is not optional.
+- **Measure after every step and compare against the number you predicted.** If
+  the two disagree, that is the finding — report it, do not average it away.
+- **You may run read-only commands yourself when the owner asks you to**, such as
+  a size query or a row count. You may never run a write, a migration, a deploy,
+  or anything that changes access.
+- **Written artefacts stay in English** — every report, comment and commit
+  message, per the Global Constraints. The conversation with the owner can be in
+  whatever language they are writing to you in.
+- **If an item ends in a decision rather than a task, present the trade-off and
+  stop.** Recommend one option and say why, then let the owner choose. Do not
+  choose for them and do not proceed until they have.
+
+The items are listed in the order they matter.
 
 ### O-1. Test the Auth0 Action — blocks giving anyone access
 
