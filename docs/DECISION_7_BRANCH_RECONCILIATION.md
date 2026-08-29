@@ -5,7 +5,8 @@
 **Merge base:** `44d9b5a8242ab57744a96a05d9e1105d4f6a59f4`
 **Outcome:** Reconciled into the newer implementation without merging or cherry-picking.
 **Production writes:** None.
-**Remote branch deletion:** Not performed; it remains an explicit owner action.
+**Remote branch deletion:** Not performed at the time; it remained an explicit
+owner action. See the closing note at the end of this file.
 
 ## Why a merge was rejected
 
@@ -117,3 +118,24 @@ No unique commit is unexplained.
 
 Those database and production blind spots belong to the next attended migration
 session. They are not grounds for deleting the remote branch before review.
+
+---
+
+## Closing note, 2026-08-29
+
+The single reason this branch still existed was the line above stating that its
+measured database evidence remained readable on the remote. That evidence was
+two files that existed nowhere else:
+
+- `docs/DECISION_7_REBUILD_REPORT.md`
+- `docs/DECISION_7_AUTOMATION_DECISION_BRIEF.md`
+
+**Both are now preserved on `master` under `docs/superseded/`**, each carrying a
+banner saying plainly that it describes the superseded implementation and not
+current behaviour — the manual-default rebuild policy it documents was
+explicitly not adopted.
+
+With the evidence preserved, the branch holds nothing that is not either ported
+into `master` or recorded here. Deleting it loses nothing. That deletion is
+still the owner's call, and this note exists so whoever makes it can see what
+was checked first.
