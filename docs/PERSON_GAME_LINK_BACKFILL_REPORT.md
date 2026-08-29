@@ -24,7 +24,57 @@ The backfill populated the `person_game_link` table across both loaded seasons u
 
 - **Unlinked box score rows:** 70 of 17,403 total box score rows (0.40%) were not linked:
   - 58 rows had `is_playing = false` (did not play).
-  - 12 rows had `is_playing = true` (players who took the floor). These 12 playing rows are unexplained and remain open work rather than closed.
+  - 12 rows had `is_playing = true` (players who took the floor). **Explained on 2026-08-29; see below.**
+
+### Why the twelve playing rows did not link
+
+The pairing key is the jersey number plus all nineteen official statistics. Those
+twelve failed because **the two official sources publish different numbers for the
+same player in the same game.** Every one of them was refused with
+`no_matching_evidence` — the key built from the v2 line matched no box score row.
+
+Counted across the affected players, the fields that disagree are:
+
+| Field | Players affected |
+|---|---:|
+| `Plusminus` | 11 |
+| `Valuation` | 6 |
+| `Turnovers` | 2 |
+| `Steals` | 2 |
+| `DefensiveRebounds` / `TotalRebounds` | 1 / 1 |
+| `FieldGoalsAttempted2` | 1 |
+
+Examples, read from the archived v2 body against the warehouse row:
+
+```
+E2024 g283 jersey 22  P007639: Plusminus        v2=0    warehouse=6
+E2024 g283 jersey 20  P005460: Plusminus        v2=15   warehouse=0
+E2024 g18  jersey 22  P009849: Turnovers        v2=2    warehouse=3, Valuation v2=0  warehouse=-1
+E2024 g35  jersey 12  P004866: DefensiveRebounds v2=2   warehouse=4, Valuation v2=22 warehouse=24
+```
+
+**Eight of the twelve are in one game, E2024 gamecode 283**, where only 8 of 24
+box score rows linked at all and almost every failure is plus/minus. That game's
+v2 plus/minus is wrong in a way that is not a simple zeroing: some values are
+absent and at least one is attached to the wrong player.
+
+**What this establishes, and what it does not.** It establishes that the residual
+measures disagreement between two official sources, not a weakness in the linker.
+The linker never made a wrong link: the 461-to-461 bijection held and the conflict
+view returns zero rows, so its strictness did the job it was there for. It does
+**not** establish which source is right. Nothing here says the warehouse figure is
+correct and the v2 figure wrong, and no check available in this repository can
+settle that.
+
+**An open question this raises, deliberately not acted on.** `Valuation` is a
+formula over the other eighteen fields, so it carries no independent identifying
+information and can only add failure modes; `Plusminus` is the field the two
+sources demonstrably disagree on most. Dropping either from the key would likely
+recover most of the twelve — and would also weaken the key, since fewer fields
+means a higher chance of a false pair. Whether that trade is worth making is a
+decision that needs a measurement first: rebuild the links across both seasons
+without those fields and check whether the bijection and the zero-conflict result
+still hold. If they do not, the idea is dead. That measurement has not been run.
 - **Incomplete statistical lines:** 0 box score rows had an incomplete statistical line.
 
 ## 4. Storage

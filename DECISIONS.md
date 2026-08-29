@@ -1572,6 +1572,82 @@ plays.
 
 ---
 
+## 29. The hosted connector uses one shared public client, not dynamic registration
+
+Claude connects to the hosted MCP server through a single first-party Auth0
+application of type **Native** — a public client, PKCE, no client secret. Its
+client id is distributed with the server URL and may be published. **Dynamic
+Client Registration is not the connection mechanism.**
+
+**What forced this, measured rather than argued.** Connecting by URL alone means
+Dynamic Client Registration: the client registers itself, so there is nothing to
+type. That is how every other MCP connector behaves and it was the owner's
+requirement. It failed on 2026-08-29 with
+
+```
+{"statusCode":403,"error":"Forbidden",
+ "message":"You reached the limit of entities of this type for this tenant.",
+ "errorCode":"too_many_entities"}
+```
+
+**The tenant caps applications at ten, and every connector add consumes one.**
+Six of the ten were dead `tpc_` clients left behind by six "Add connector"
+attempts. The owner could connect and the next person could not, because the
+owner's registration took the last slot. Deleting the dead clients buys a few
+more attempts; it does not change the arithmetic. Eight to ten testers, each
+re-adding a connector at least once, exceeds the cap on its own.
+
+**Why a shared public client is the right shape and not a compromise.** A public
+client's id is not a credential — OAuth expects it to be embedded in distributed
+application code and readable by anyone. So one client serves every user, no
+registration happens, and the cap is never approached again regardless of how
+many people connect. This is also what makes the pilot and a public launch the
+same configuration: the client id that eight testers use today is the client id
+that goes in the README later, with no migration.
+
+**The application type matters and the first attempt had it wrong.** The
+application was registered as a Regular Web Application, which Auth0 treats as a
+confidential client and which therefore demands a client secret at the token
+endpoint. Claude Desktop runs on the user's machine and cannot hold a secret; it
+would have been distributed in plain text to every tester, which is a secret in
+name only. Changing the type to Native makes it a public client authenticating
+with PKCE, which is what OAuth 2.1 and the MCP specification already require.
+
+**Conditions.**
+
+- **This decision governs how a client is identified, and nothing else.** Who may
+  sign in is still the post-login Action's allowlist. The two are separate stages
+  and neither substitutes for the other.
+- **Under the API's per-app authorization policy a first-party application is not
+  automatically authorised.** `EuroLeague MCP (Claude)` sat at 0/1 permissions
+  while six dynamically registered clients sat at 1/1, and the connection failed
+  for exactly that reason. Any replacement client must be granted user-delegated
+  access on the API explicitly.
+- **Dynamic Client Registration should be turned off once the shared client is
+  proven.** Leaving it on lets a stray connector consume application slots again
+  and removes the second gate this decision creates.
+- **The tenant is labelled DEVELOPMENT.** Auth0 does not intend development
+  tenants to carry production traffic. This decision makes the client mechanism
+  scale; it does not make the tenant a production tenant. That remains open and
+  must be settled before a public opening, not discovered during one.
+
+**Provenance.**
+
+- Basis: MEASURED for the failure and the cap — the 403 response, the ten
+  applications observed in the dashboard, and the per-app authorisation states
+  were all read directly on 2026-08-29. JUDGEMENT for preferring a shared public
+  client over a paid plan that would raise the cap.
+- Evidence: `docs/AUTH0_CONFIGURATION.md`.
+- Alternatives considered: enabling third-party default permissions and keeping
+  DCR, rejected because it opens client registration to anyone while leaving the
+  untested Action as the only control; deleting dead clients periodically,
+  rejected because it recurs and risks deleting a live client; and upgrading the
+  Auth0 plan, deferred as a cost decision that belongs with the public-launch
+  discussion.
+- Approved: Egemen Yücelen on 2026-08-29.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```
