@@ -1475,6 +1475,13 @@ identically — Belinelli's v2 code is `BCN` and his player ID is `PBCN`.
 
 ## 28. The hot window is E2024, E2025 and E2026, and compaction precedes the live season
 
+> **Amended by Decision 30 on 2026-08-29.** The compaction precondition below is
+> **withdrawn**: the pilot failed its own gate and the recovery this item projects
+> rests on a mechanism whose file layout no longer exists. The hot window and the
+> 480,000,000-byte stop rule are unchanged; what replaces compaction is the
+> nightly storage watch. Read this item for the measurements, and Decision 30 for
+> what is actually done.
+
 The PostgreSQL hot window holds exactly three seasons: E2024, E2025 and E2026.
 Earlier seasons are not loaded. **A storage compaction runs before E2026 begins
 loading**, and the additional data authorised by Decision 27 is admitted only in
@@ -1644,6 +1651,73 @@ with PKCE, which is what OAuth 2.1 and the MCP specification already require.
   rejected because it recurs and risks deleting a live client; and upgrading the
   Auth0 plan, deferred as a cost decision that belongs with the public-launch
   discussion.
+- Approved: Egemen Yücelen on 2026-08-29.
+
+---
+
+## 30. Compaction is retired as a precondition; the storage watch replaces it
+
+Decision 28 made a storage compaction the thing that lets three seasons fit:
+"**A storage compaction runs before E2026 begins loading**". **That condition is
+withdrawn.** No compaction runs before E2026, and the hot window is governed
+instead by a measurement reported on every nightly run.
+
+**Why, measured rather than argued.** The compaction was attempted on
+2026-08-29 and **stopped at its own gate**. Step 2's 2,000-row pilot requires
+moved rows to land below the page where the moved season starts; E2025 now
+starts at page 0, so the gate cannot pass by construction. Nothing after step 2
+ran, and a re-run of the read-only baseline confirmed every fingerprint and row
+count unchanged.
+
+That is not the same as "there is nothing left to recover", and the difference
+is the point: **the 31-40 MB recovery Decision 28 relies on was inferred from an
+August run whose file layout no longer exists.** A condition resting on an
+unproven mechanism is not a condition.
+
+**Why retiring it is the right answer rather than fixing it.** Decision 28
+already records that compaction's own row-move is an `UPDATE`, and that every
+derived rebuild deletes and reinserts. Both leave dead tuples. **Compaction
+creates the conditions for the next compaction**; it is a treadmill that buys
+time rather than a fix that ends. And the owner's stated direction is Supabase
+Pro with every season loaded, which removes the constraint entirely. Spending
+sessions on a recurring workaround pointed away from that destination is the
+wrong trade.
+
+**What governs the window instead.** `src/euroleague/storage_watch.py` reports
+both budgets on every nightly run and converts the headroom into the number that
+is actually actionable — how many more games fit. Measured 2026-08-29: the
+database at 337,300,627 bytes, 67.5% of the ceiling, **about 396 more games** of
+headroom. E2026 loads over a season, not in a night, so this is a figure that
+approaches slowly and in public rather than arriving as a failure.
+
+**Conditions.**
+
+- **This retires compaction as a *precondition*, not as a tool.**
+  `scripts/compact_storage.py` and its gates stay. If a future layout makes the
+  pilot pass, running it is a normal choice.
+- **The fallback when the watch reaches its warning is a decision, not an
+  automatic action.** Two are available and both are acceptable: move to a paid
+  tier, or shrink the hot window and leave a season in the archive, which loses
+  no data because the archive holds every season regardless.
+- **The stop rule itself is unchanged.** 480,000,000 bytes still halts a write
+  where writes happen. This decision changes what is done *before* the season,
+  not what happens at the limit.
+- **One measurement from the attempt is still unexplained and is not licence to
+  ignore it.** The page census read `E2025 occupies pages 0-10,002` before the
+  pilot and `0-5,787` after it, for the same 222,976 rows with only 2,000 moved.
+  No further compaction write should happen until that is understood.
+
+**Provenance.**
+
+- Basis: MEASURED for the gate failure and the current headroom; JUDGEMENT for
+  preferring the watch and an eventual paid tier over a recurring workaround.
+- Evidence: `docs/STORAGE_COMPACTION_RESULT.md` closing section,
+  `src/euroleague/storage_watch.py`, and `tests/test_storage_watch.py`.
+- Alternatives considered: `VACUUM FULL`, which genuinely shrinks but takes an
+  `ACCESS EXCLUSIVE` lock over `game_event` for the whole rewrite and needs free
+  space equal to the table, rejected in August for those reasons and not
+  re-argued here; and understanding the census discrepancy first, which remains
+  the only sanctioned next step if compaction is ever revisited.
 - Approved: Egemen Yücelen on 2026-08-29.
 
 ---

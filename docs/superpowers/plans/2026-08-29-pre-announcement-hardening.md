@@ -920,13 +920,13 @@ enter it as a guide, never as an operator — see the protocol below.
 |---|---|
 | **O-1** Test the Auth0 Action | **Done.** An allowlisted person was admitted; a non-allowlisted person was refused. Both halves observed. |
 | **O-2** Apply migration 0019 | **Done.** Re-applied and recorded as `20260829101520`; the conflict view returns zero rows. |
-| **O-3** Storage compaction | **Blocked, and the block is a finding.** The pilot failed its own gate, so nothing after step 2 ran and nothing was lost. See `docs/STORAGE_COMPACTION_RESULT.md`. Decision 28's recovery projection is now in question. |
+| **O-3** Storage compaction | **Retired, not deferred.** The pilot failed its own gate; nothing after step 2 ran and nothing was lost. Decision 30 withdraws compaction as a precondition and puts the nightly storage watch in its place. See `docs/STORAGE_COMPACTION_RESULT.md`. |
 | **O-4** Reconcile the branch with `master` | **Done.** PRs #16 and #17 merged; the first automated Fly deploy ran green. Seventeen branches reduced to three. |
 | **O-5** Decide `fly-deploy.yml` | **Done by merging it.** Every push to `master` now deploys, including documentation-only pushes. Worth a `paths-ignore` later; not urgent. |
-| **O-6** Load test | **Not done, and not doable unattended.** A meaningful test needs an authenticated token, and obtaining one means completing an interactive login. The HTTP layer could be hammered on its 401 path, but that never reaches the connection pool, which is the whole concern. This needs a person with a session. |
+| **O-6** Load test | **Not done; carried into Phase 2 as P2-1.** A meaningful test needs an authenticated token, and obtaining one means completing an interactive login. The HTTP layer could be hammered on its 401 path, but that never reaches the connection pool, which is the whole concern. See ROADMAP's Phase 2 section. |
 | **O-7** Shot query latency | **Measured, index deferred.** Team-filtered query at 3,694.6 ms server-side, but two runs hours apart differed by more than any threshold worth setting. Sequenced after compaction. |
 | **O-8** The twelve unexplained residuals | **Explained.** The two official sources disagree, mostly `Plusminus` and `Valuation`. Recorded in `docs/PERSON_GAME_LINK_BACKFILL_REPORT.md`. |
-| **O-9** Order 8, E2026 opening week | **Date-gated.** Earliest 2026-09-24. Unchanged. |
+| **O-9** Order 8, E2026 opening week | **Frozen until 2026-09-24 by owner decision.** It is a date, not a blocker; Phase 2 does not wait on it. |
 
 The guidance below is kept because the remaining items still need it.
 
