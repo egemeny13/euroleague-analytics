@@ -65,6 +65,15 @@ def _parser() -> argparse.ArgumentParser:
         help="restore and archive E2026 through the configured private Supabase project",
     )
     parser.add_argument(
+        "--archive",
+        action="store_true",
+        help=(
+            "restore one historical season from the private archive, fetch what is "
+            "still missing, and archive each new response; the archive, not the "
+            "local disk, is what makes the run resumable"
+        ),
+    )
+    parser.add_argument(
         "--require-fresh-schedule",
         action="store_true",
         help="fail rather than derive targets from a cached schedule after a refresh failure",
@@ -79,9 +88,32 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.live and args.archive:
+        print(
+            "--live and --archive both archive to Supabase; choose one. --live is the "
+            "nightly E2026 path, --archive is for one historical season.",
+            file=sys.stderr,
+        )
+        return 2
     if args.live and args.seasons != ["E2026"]:
         print("--live currently supports exactly one season: E2026.", file=sys.stderr)
         return 2
+    if args.archive:
+        # One season per run, deliberately. The plan this serves bounds each batch
+        # so that actual bytes and elapsed time replace the estimate before the
+        # next one starts, and a multi-season run would also outlast the job.
+        if len(args.seasons) != 1:
+            print("--archive takes exactly one season per run.", file=sys.stderr)
+            return 2
+        # E2026 belongs to the nightly job. Fetching it here would put two
+        # fetchers on the same season even when the concurrency group holds.
+        if args.seasons == ["E2026"]:
+            print(
+                "--archive is for historical seasons; E2026 is the live season and "
+                "belongs to the nightly --live job.",
+                file=sys.stderr,
+            )
+            return 2
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT})
 
@@ -114,6 +146,56 @@ def main(argv: list[str] | None = None) -> int:
 
                 summaries = fetch_seasons(
                     args.seasons,
+                    fetcher_factory=fetcher_factory,
+                    between_seasons=time.sleep,
+                )
+        elif args.archive:
+            # One historical season, archived as it is fetched.
+            #
+            # WHY THE RESTORE COMES FIRST, and it is the whole point of this mode.
+            # The fetcher decides what to request by looking at what is already on
+            # disk. On an ephemeral runner there is no disk, so without this the
+            # run would re-request a season it has already archived and would
+            # outlast its own job doing it. Restoring first makes the archive -
+            # not the machine - the thing that remembers, which is what lets a run
+            # that died halfway be finished by a different runner tomorrow.
+            #
+            # allow_bootstrap because a season nobody has touched has no archive
+            # entries yet, and that is the ordinary first run rather than an error.
+            database_settings, storage_settings = live_runtime_settings(os.environ)
+            season_code = args.seasons[0]
+            with psycopg.connect(database_settings.url(), autocommit=True) as connection:
+                storage = SupabaseStorage(storage_settings)
+                storage.ensure_private_bucket()
+                restored = restore_current_season_cache(
+                    connection,
+                    ResponseCache(args.cache_root),
+                    storage,
+                    season_code,
+                    allow_bootstrap=True,
+                )
+                print(
+                    f"{season_code}: restored {restored.restored_responses} archived responses "
+                    f"into the cache before fetching."
+                    if not restored.bootstrap_required
+                    else f"{season_code}: nothing archived yet; this is a first run."
+                )
+
+                def fetcher_factory(_season_code: str) -> ArchiveFetcher:
+                    return ArchiveFetcher(
+                        transport=session,
+                        cache_root=args.cache_root,
+                        fetch_log_path=args.fetch_log,
+                        timeout_seconds=args.timeout_seconds,
+                        successful_observation=lambda observation: archive_successful_observation(
+                            connection, storage, observation
+                        ),
+                        require_fresh_schedule=args.require_fresh_schedule,
+                        include_roster=args.include_roster,
+                    )
+
+                summaries = fetch_seasons(
+                    [season_code],
                     fetcher_factory=fetcher_factory,
                     between_seasons=time.sleep,
                 )
