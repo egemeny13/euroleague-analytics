@@ -16,7 +16,7 @@ The backfill populated the `person_game_link` table across both loaded seasons u
 ## 2. What the result establishes
 
 - **Bijection:** 461 distinct person codes map to 461 distinct player IDs across the two seasons in a perfect one-to-one bijection.
-- **Cross-game contradictions:** 0. No person code was observed paired with multiple player IDs, and no player ID was observed paired with multiple person codes.
+- **Cross-game contradictions:** 0. No person code was observed paired with multiple player IDs, and no player ID was observed paired with multiple person codes. Following application of Migration 0019 on 2026-08-29, `SELECT count(*) FROM v_person_game_link_conflict` returns 0.
 - **Prefix agreement rate:** 1.000000 in both seasons (17,333 of 17,333 links agreed with `player_id == "P" + person_code`).
 - **Convention vs. mechanism:** The prefix agreement is now a measurement over 17,333 observations rather than the earlier 80-game sample. This measurement does **not** promote the prefix convention into a mechanism: Decision 24's prohibition against constructing player IDs from person codes and Decision 27's observation-only rule remain unchanged.
 
