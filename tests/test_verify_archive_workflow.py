@@ -18,9 +18,8 @@ import re
 from pathlib import Path
 
 WORKFLOW = Path(".github/workflows/verify-archive-season.yml")
+CI_WORKFLOW = Path(".github/workflows/ci.yml")
 
-CHECKOUT = "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5"
-SETUP_PYTHON = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6"
 PRODUCTION_SECRETS = (
     "DATABASE_URL",
     "SUPABASE_URL",
@@ -31,6 +30,31 @@ PRODUCTION_SECRETS = (
 def _text() -> str:
     """Read the workflow; a missing file is itself the clearest test failure."""
     return WORKFLOW.read_text(encoding="utf-8")
+
+
+def _pinned_in_ci(action: str) -> str:
+    """Return the `action@sha` reference that ci.yml pins for `action`.
+
+    WHY THIS READS CI RATHER THAN REPEATING A LITERAL. What matters here is that
+    the restore gate uses the same pinned action as the rest of the repository,
+    not which commit that happens to be this month. A literal copied into this
+    file asserts the second thing while appearing to assert the first, and it
+    fails whenever a dependency update moves every workflow together correctly -
+    which is exactly what the actions/checkout v5 to v7 bump did on 2026-08-30.
+
+    The pattern still demands a 40 character commit SHA, so ci.yml sliding back
+    to a mutable tag such as `@v7` fails here rather than quietly lowering the
+    bar for both files at once.
+
+    WHAT THIS DOES NOT PROVE. It compares the `owner/action@sha` reference only,
+    not the trailing `# v7.0.1` comment. A workflow carrying the right SHA under
+    a misleading version comment passes; the SHA is the mechanism and the comment
+    is a label. It also says nothing about what the action's code does.
+    """
+    text = CI_WORKFLOW.read_text(encoding="utf-8")
+    match = re.search(rf"uses: ({re.escape(action)}@[0-9a-f]{{40}})", text)
+    assert match, f"ci.yml does not pin {action} to a commit SHA."
+    return match.group(1)
 
 
 def _step(text: str, name: str) -> str:
@@ -58,9 +82,9 @@ def test_the_restore_gate_uses_the_hardened_action_setup() -> None:
     text = _text()
 
     assert re.search(r"^permissions:\s*\n\s{2}contents: read$", text, re.MULTILINE)
-    assert f"uses: {CHECKOUT}" in text
+    assert f"uses: {_pinned_in_ci('actions/checkout')}" in text
     assert "persist-credentials: false" in text
-    assert f"uses: {SETUP_PYTHON}" in text
+    assert f"uses: {_pinned_in_ci('actions/setup-python')}" in text
 
 
 def test_only_the_verifier_receives_production_credentials() -> None:
