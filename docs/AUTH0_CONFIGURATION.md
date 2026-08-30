@@ -286,8 +286,8 @@ this tenant. Path 3 is deleted; `test_the_userinfo_fallback_is_gone` asserts no
 GET follows a refused introspection. Refusals are logged at WARNING with a reason
 that carries no claim values, and the 401 sent to the client says nothing.
 
-**Why this does not break the connector, established from this file rather than
-from an experiment.** The audience a token carries is the API's Identifier in
+**Why this does not break the connector, first established from configuration
+and now observed with a real token.** The audience a token carries is the API's Identifier in
 Auth0. The identifier is quoted verbatim in the 2026-08-29 entry above, in
 Auth0's own error message:
 
@@ -308,19 +308,24 @@ GET /.well-known/oauth-protected-resource/mcp
 They match. The issuer matches after normalising the trailing slash Auth0 adds to
 `iss`, which the code does on both sides.
 
-**The scope is deliberately NOT required, and this file is the reason.** Section 5
-records `read:warehouse` being created because the API had no permissions at all.
-**That is evidence the permission exists, not evidence that an issued token
-carries it** — which depends on what the connector requests, and this server's
-discovery document advertises no scope for it to request. `MCP_REQUIRED_SCOPE`
-therefore defaults to empty. Turn it on only after observing a real token that
-carries the scope; `scripts/check_hosted_token.py` prints exactly that, from a
-token held in an environment variable and never written anywhere.
+**The scope remains optional in production, but its token shape is now
+observed.** During the attended R-7 load test on 2026-08-30,
+`scripts/check_hosted_token.py` read a real process-local token. It carried both
+audiences the tenant issues here — the MCP resource and the tenant's `/userinfo`
+endpoint — the expected issuer with Auth0's trailing slash, and scopes `openid`
+and `read:warehouse`. The deployed audience rule accepted it. No token, subject,
+email or other personal claim was written to the result.
 
-**Observation still owed.** No real token has been through the new code. Both
-conclusions above are drawn from published strings and a recorded error message.
-This entry is therefore **not finished** by this file's own standard: an entry
-with no observation is not finished.
+That observation closes the lockout uncertainty recorded above: setting
+`MCP_REQUIRED_SCOPE=read:warehouse` would accept the observed token shape. It
+does not itself authorise that production configuration change, so the deployed
+value remains empty until the owner chooses to enable it.
+
+**Temporary Device Authorization grant.** The Native application's Device Code
+grant was enabled so the attended harness could obtain its process-local token.
+It was not needed by the normal connector and the owner was asked to disable it
+after the test. This file must not claim it is disabled until the dashboard has
+been checked again.
 
 **What this does not change.** Who may obtain a token. That is still decided
 entirely by the post-login Action, and `All` remains the third-party default

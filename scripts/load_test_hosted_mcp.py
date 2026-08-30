@@ -14,7 +14,7 @@ import json
 import os
 import platform
 import sys
-from contextlib import AsyncExitStack
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -25,8 +25,6 @@ import httpx2
 import requests
 from check_hosted_token import discovery
 from check_hosted_token import main as check_hosted_claims
-from mcp import ClientSession
-from mcp.client.streamable_http import streamable_http_client
 
 from euroleague.measure_hosted_load import (
     DEFAULT_CONCURRENCY_LEVELS,
@@ -35,6 +33,7 @@ from euroleague.measure_hosted_load import (
     DEFAULT_WAVE_COUNT,
     DeviceAuthorizationError,
     obtain_device_token,
+    parse_sse_jsonrpc,
     run_load_suite,
 )
 
@@ -45,6 +44,8 @@ DEFAULT_CLIENT_ID = "xc7tUVTYYK77nIG2Dp5brRU976MwiSlI"
 DEFAULT_TOOL = "el_get_lineup_stats"
 DEFAULT_ARGUMENTS = {"season": "E2024", "min_possessions": 25, "limit": 50}
 TOKEN_VARIABLE = "EL_MCP_TOKEN"
+SESSION_HEADER = "Mcp-Session-Id"
+PROTOCOL_HEADER = "Mcp-Protocol-Version"
 
 
 class HostedToolError(RuntimeError):
@@ -52,50 +53,104 @@ class HostedToolError(RuntimeError):
 
 
 class HostedWorker:
-    """One independently initialised Streamable HTTP session."""
+    """One stateful MCP session without an optional persistent GET stream."""
 
-    def __init__(self, stack: AsyncExitStack, session: ClientSession) -> None:
-        self._stack = stack
-        self._session = session
+    def __init__(
+        self,
+        *,
+        client: httpx2.AsyncClient,
+        endpoint: str,
+        session_id: str,
+        protocol_version: str,
+    ) -> None:
+        self._client = client
+        self._endpoint = endpoint
+        self._headers = {
+            SESSION_HEADER: session_id,
+            PROTOCOL_HEADER: protocol_version,
+        }
+        self._request_id = 1
 
     @classmethod
     async def open(cls, *, endpoint: str, credential: str) -> HostedWorker:
-        stack = AsyncExitStack()
+        client = httpx2.AsyncClient(
+            headers={
+                "Authorization": f"Bearer {credential}",
+                "Accept": "application/json, text/event-stream",
+            },
+            follow_redirects=True,
+            timeout=30.0,
+        )
         try:
-            client = await stack.enter_async_context(
-                httpx2.AsyncClient(
-                    headers={"Authorization": f"Bearer {credential}"},
-                    follow_redirects=True,
-                    timeout=30.0,
-                )
+            response = await client.post(
+                endpoint,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-11-25",
+                        "capabilities": {},
+                        "clientInfo": {"name": "r7-load-test", "version": "1.0"},
+                    },
+                },
             )
-            read_stream, write_stream = await stack.enter_async_context(
-                streamable_http_client(endpoint, http_client=client)
+            response.raise_for_status()
+            reply = parse_sse_jsonrpc(response.text)
+            result = reply.get("result")
+            session_id = response.headers.get(SESSION_HEADER, "")
+            if not isinstance(result, dict) or not session_id:
+                raise RuntimeError("MCP initialize response omitted its result or session id.")
+            protocol_version = result.get("protocolVersion")
+            if not isinstance(protocol_version, str) or not protocol_version:
+                raise RuntimeError("MCP initialize response omitted its protocol version.")
+
+            worker = cls(
+                client=client,
+                endpoint=endpoint,
+                session_id=session_id,
+                protocol_version=protocol_version,
             )
-            session = await stack.enter_async_context(
-                ClientSession(read_stream, write_stream, read_timeout_seconds=30.0)
+            initialized = await client.post(
+                endpoint,
+                headers=worker._headers,
+                json={"jsonrpc": "2.0", "method": "notifications/initialized"},
             )
-            await session.initialize()
-            return cls(stack, session)
+            initialized.raise_for_status()
+            return worker
         except Exception:
-            await stack.aclose()
+            await client.aclose()
             raise
 
-    async def call(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        result = await self._session.call_tool(
-            tool_name,
-            dict(arguments),
-            read_timeout_seconds=30.0,
+    async def call(self) -> dict[str, Any]:
+        self._request_id += 1
+        response = await self._client.post(
+            self._endpoint,
+            headers=self._headers,
+            json={
+                "jsonrpc": "2.0",
+                "id": self._request_id,
+                "method": "tools/call",
+                "params": {"name": DEFAULT_TOOL, "arguments": dict(DEFAULT_ARGUMENTS)},
+            },
         )
-        if getattr(result, "is_error", True):
+        response.raise_for_status()
+        reply = parse_sse_jsonrpc(response.text)
+        if reply.get("id") != self._request_id or "error" in reply:
             raise HostedToolError
-        payload = getattr(result, "structured_content", None)
+        result = reply.get("result")
+        if not isinstance(result, dict) or result.get("isError", True):
+            raise HostedToolError
+        payload = result.get("structuredContent")
         if not isinstance(payload, dict):
             raise HostedToolError
         return payload
 
     async def close(self) -> None:
-        await self._stack.aclose()
+        try:
+            await self._client.delete(self._endpoint, headers=self._headers)
+        finally:
+            await self._client.aclose()
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -141,6 +196,12 @@ def _health(server: str) -> dict[str, Any]:
     return payload
 
 
+async def _close_workers(workers: list[HostedWorker]) -> None:
+    for worker in workers:
+        with suppress(Exception):
+            await worker.close()
+
+
 async def _open_workers(endpoint: str, credential: str, count: int) -> list[HostedWorker]:
     workers: list[HostedWorker] = []
     try:
@@ -150,7 +211,7 @@ async def _open_workers(endpoint: str, credential: str, count: int) -> list[Host
                 print(f"Prepared {index + 1}/{count} independent MCP sessions.")
         return workers
     except Exception:
-        await asyncio.gather(*(worker.close() for worker in workers), return_exceptions=True)
+        await _close_workers(workers)
         raise
 
 
@@ -165,10 +226,7 @@ async def _measure(
     endpoint = f"{server}/mcp"
     workers = await _open_workers(endpoint, credential, max(levels))
     try:
-        calls = [
-            (lambda worker=worker: worker.call(DEFAULT_TOOL, DEFAULT_ARGUMENTS))
-            for worker in workers
-        ]
+        calls = [worker.call for worker in workers]
         report = await run_load_suite(
             calls,
             levels=levels,
@@ -178,7 +236,7 @@ async def _measure(
         )
         return report.to_dict()
     finally:
-        await asyncio.gather(*(worker.close() for worker in workers), return_exceptions=True)
+        await _close_workers(workers)
 
 
 def main(argv: list[str] | None = None) -> int:

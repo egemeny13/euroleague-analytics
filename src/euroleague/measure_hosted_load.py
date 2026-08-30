@@ -36,6 +36,28 @@ class DeviceAuthorizationError(RuntimeError):
     """An attended Auth0 device login could not produce an access token."""
 
 
+def parse_sse_jsonrpc(body: str) -> dict[str, Any]:
+    """Return the JSON-RPC object carried by an HTTP or SSE response body."""
+    normalized = body.replace("\r\n", "\n").strip()
+    if normalized.startswith("{"):
+        payload = json.loads(normalized)
+        if isinstance(payload, dict):
+            return payload
+
+    for event in normalized.split("\n\n"):
+        data = "\n".join(
+            line.removeprefix("data:").lstrip()
+            for line in event.splitlines()
+            if line.startswith("data:")
+        )
+        if not data:
+            continue
+        payload = json.loads(data)
+        if isinstance(payload, dict) and payload.get("jsonrpc") == "2.0":
+            return payload
+    raise ValueError("MCP response carried no JSON-RPC object.")
+
+
 @dataclass(frozen=True)
 class CallMeasurement:
     duration_ms: float

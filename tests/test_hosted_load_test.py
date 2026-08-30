@@ -24,10 +24,29 @@ from euroleague.measure_hosted_load import (
     DEFAULT_RATE_LIMIT,
     DEFAULT_WARMUP_CONCURRENCY,
     DeviceAuthorizationError,
+    parse_sse_jsonrpc,
     response_fingerprint,
     run_load_suite,
     run_wave,
 )
+
+
+def test_sse_parser_returns_the_jsonrpc_message() -> None:
+    body = 'event: message\r\ndata: {"jsonrpc":"2.0","id":7,"result":{"ok":true}}\r\n\r\n'
+
+    assert parse_sse_jsonrpc(body) == {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {"ok": True},
+    }
+
+
+def test_hosted_harness_does_not_spend_fly_request_slots_on_persistent_gets() -> None:
+    """Break caught: 40 SDK SSE readers leave no Fly slot for a tool POST."""
+    source = Path("scripts/load_test_hosted_mcp.py").read_text(encoding="utf-8")
+
+    assert "streamable_http_client" not in source
+    assert "Mcp-Session-Id" in source
 
 
 class FakeResponse:
