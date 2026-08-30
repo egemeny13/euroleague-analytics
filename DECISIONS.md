@@ -2000,6 +2000,63 @@ the separate manual workflow still earns its maintenance cost.
 
 ---
 
+## 36. An interrupted archive run is resumed, not refused
+
+`restore_current_season_cache` served two callers that ask it the same question
+and mean opposite things by the answer. The archive gate asks whether a season is
+complete, so an archive missing responses is the answer and must raise. A fetcher
+asks what is already archived so it can request the remainder, and for it a
+missing response is the ordinary state of a season somebody is halfway through.
+Both got the gate's answer.
+
+**What that cost, measured.** The scheduled chain run at 2026-08-30T18:55Z began
+E2017 with, in its own log, "nothing archived yet (0 objects)". It archived the
+schedule and was cancelled before a single game response. The run at 19:37Z then
+died in the restore with `Season E2017 archive index cannot restore its played
+cache: missing current Boxscore game 1, ...` through `Points game 223`, and every
+later run would have died in the same place. E2016 back to E2003 - fifteen
+seasons - were unreachable behind a season that could not be finished, twenty-five
+days before the first E2026 game.
+
+**The nightly live job carried the identical fault.** `scripts/fetch_archive.py`
+makes the same call for E2026 with the same arguments. It had not fired only
+because no nightly run had yet been interrupted, and the workflow's own
+concurrency comments describe cancellation as a routine outcome.
+
+**The fetcher now restores through `restore_for_resume`.** It tolerates a season
+nobody has started and a season an interrupted run left half archived, and it
+prints how many played-game responses are still absent so that a run finishing
+somebody else's work does not look like a run with nothing to do. The gate,
+`scripts/live_pipeline.py` and `scripts/settlement_recheck.py` keep the strict
+defaults and are unchanged.
+
+**The tolerance is narrow, deliberately.** Only *missing* entries are tolerated.
+*Extra* and *duplicate* current entries still raise in both modes, because those
+describe an index that disagrees with itself about which version is current, and
+no amount of fetching repairs that. Combining the tolerant mode with a consumer
+snapshot is refused outright: a partial snapshot keeps its stability promise and
+breaks its completeness one, and the consumer cannot tell which it received.
+
+**What is established.** Seven tests, `tests/test_archive_restore.py` and
+`tests/test_fetch.py`. They cover the exact E2017 shape (schedule archived, no
+game responses), a partly archived season, an untouched season, the two refusals
+that survive the tolerance, the snapshot refusal, and that the entry point cannot
+reach the strict function at all. Suite: 1,190 passing before, 1,197 after.
+
+**What is not established.** No test here opens a database, a socket or a Storage
+bucket. None of this proves E2017 actually completes against the live EuroLeague
+API, that the responses the cancelled run archived are the ones it recorded, or
+that the restore gate then passes. That is established by the chain run itself,
+and only by it.
+
+**Condition.** This tolerance is safe because `scripts/verify_archive_season.py`
+runs the completeness check in the same job, immediately after the fetch. If the
+gate is ever moved out of that job, made non-blocking, or allowed to be skipped,
+the fetcher's tolerance loses its counterweight and this decision must be
+re-taken rather than inherited.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

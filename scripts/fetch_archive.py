@@ -12,9 +12,10 @@ import psycopg
 import requests
 
 from euroleague.archive import (
+    RestoreSummary,
     SupabaseStorage,
     archive_successful_observation,
-    restore_current_season_cache,
+    restore_for_resume,
 )
 from euroleague.cache import ResponseCache
 from euroleague.config import live_runtime_settings
@@ -87,6 +88,27 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _restore_report(season_code: str, restored: RestoreSummary) -> str:
+    """Say what came out of the archive, and what the fetch still has to supply.
+
+    The absent count is printed rather than kept internal because it is the only
+    signal in the log that a run is finishing somebody else's work. A run that
+    silently resumes looks identical to a run that had nothing to do.
+    """
+    if restored.bootstrap_required:
+        return f"{season_code}: nothing archived yet; this is a first run."
+    if restored.missing_responses:
+        return (
+            f"{season_code}: restored {restored.restored_responses:,} archived responses "
+            f"into the cache; {restored.missing_responses:,} played-game responses are not "
+            "archived yet and this run will fetch them."
+        )
+    return (
+        f"{season_code}: restored {restored.restored_responses:,} archived responses "
+        "into the cache before fetching."
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     # Before anything else. A season code from a workflow_dispatch box reaches
@@ -133,12 +155,21 @@ def main(argv: list[str] | None = None) -> int:
             with psycopg.connect(database_settings.url(), autocommit=True) as connection:
                 storage = SupabaseStorage(storage_settings)
                 storage.ensure_private_bucket()
-                restore_current_season_cache(
-                    connection,
-                    ResponseCache(args.cache_root),
-                    storage,
-                    "E2026",
-                    allow_bootstrap=True,
+                # Resume rather than gate. A nightly run that is cancelled or
+                # times out leaves E2026 archived as far as it got, and the next
+                # run has to be able to continue from there. Asking for a
+                # complete archive here would refuse to start for exactly the
+                # reason the run exists.
+                print(
+                    _restore_report(
+                        "E2026",
+                        restore_for_resume(
+                            connection,
+                            ResponseCache(args.cache_root),
+                            storage,
+                            "E2026",
+                        ),
+                    )
                 )
 
                 def fetcher_factory(_season_code: str) -> ArchiveFetcher:
@@ -170,26 +201,23 @@ def main(argv: list[str] | None = None) -> int:
             # not the machine - the thing that remembers, which is what lets a run
             # that died halfway be finished by a different runner tomorrow.
             #
-            # allow_bootstrap because a season nobody has touched has no archive
-            # entries yet, and that is the ordinary first run rather than an error.
+            # Resume, not gate. A season nobody has touched has no archive
+            # entries yet, and a season an interrupted run left half archived has
+            # some but not all; both are ordinary states for a fetcher to start
+            # from, and neither is damage. The completeness question belongs to
+            # scripts/verify_archive_season.py, which runs after this.
             database_settings, storage_settings = live_runtime_settings(os.environ)
             season_code = args.seasons[0]
             with psycopg.connect(database_settings.url(), autocommit=True) as connection:
                 storage = SupabaseStorage(storage_settings)
                 storage.ensure_private_bucket()
-                restored = restore_current_season_cache(
+                restored = restore_for_resume(
                     connection,
                     ResponseCache(args.cache_root),
                     storage,
                     season_code,
-                    allow_bootstrap=True,
                 )
-                print(
-                    f"{season_code}: restored {restored.restored_responses} archived responses "
-                    f"into the cache before fetching."
-                    if not restored.bootstrap_required
-                    else f"{season_code}: nothing archived yet; this is a first run."
-                )
+                print(_restore_report(season_code, restored))
 
                 def fetcher_factory(_season_code: str) -> ArchiveFetcher:
                     return ArchiveFetcher(
