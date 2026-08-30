@@ -16,6 +16,7 @@ from euroleague.archive import (
     IncompleteSeasonCache,
     assert_complete_played_cache,
     restore_current_season_cache,
+    restore_for_resume,
 )
 from euroleague.cache import ResponseCache
 
@@ -368,3 +369,97 @@ def test_restore_never_records_a_fetch_observation(tmp_path):
     restore_current_season_cache(connection, ResponseCache(tmp_path), archive_storage, SEASON)
 
     assert connection.executed_insert_into_raw_api_fetch is False
+
+
+def test_resume_restores_a_schedule_only_archive_instead_of_refusing(tmp_path):
+    """Break caught: an interrupted archive run can never be finished by a later one.
+
+    This is the exact shape the historical chain stalled on. The scheduled run at
+    2026-08-30T18:55Z began E2017 with nothing archived, wrote the schedule, and
+    was cancelled before a single game response. Every run after it died in the
+    restore with `missing current Boxscore game 1, ...`, so E2016 back to E2003
+    were unreachable while the season that blocked them stayed half archived.
+
+    WHAT THIS DOES NOT PROVE. That the fetcher then requests exactly the absent
+    games, that the source API still serves them, or that the upload succeeds.
+    It proves the restore hands back a usable cache and says what is absent.
+    """
+    connection, archive_storage = archived_season(played=(7, 9))
+    connection.rows = connection.rows[:1]
+    cache = ResponseCache(tmp_path)
+
+    summary = restore_for_resume(connection, cache, archive_storage, SEASON)
+
+    assert summary.restored_responses == 1
+    assert summary.missing_responses == 6
+    assert summary.bootstrap_required is False
+    assert summary.completeness is None
+    assert [game["gameCode"] for game in cache.read_schedule_json(SEASON)["data"]] == [7, 9]
+
+
+def test_resume_restores_the_games_already_archived_and_counts_the_rest(tmp_path):
+    """Break caught: a partly archived season is restored as all or nothing."""
+    connection, archive_storage = archived_season(played=(7, 9), omit=("Points", 9))
+    cache = ResponseCache(tmp_path)
+
+    summary = restore_for_resume(connection, cache, archive_storage, SEASON)
+
+    assert summary.restored_responses == 6
+    assert summary.missing_responses == 1
+    assert cache.read_bytes(SEASON, "Boxscore", 9) == b'{"game":9,"endpoint":"Boxscore"}'
+    assert not cache.path_for(SEASON, "Points", 9).exists()
+
+
+def test_resume_still_rejects_a_duplicate_current_entry(tmp_path):
+    """Break caught: tolerating an absent entry also tolerates a corrupt index.
+
+    Absent means not fetched yet, and fetching is what fixes it. Duplicate means
+    the index disagrees with itself about which version is current, and no amount
+    of fetching fixes that. Only the first is tolerated here.
+    """
+    connection, archive_storage = archived_season(played=(7,))
+    connection.rows.append(connection.rows[1])
+
+    with pytest.raises(ArchiveIndexError, match=r"duplicate.*Boxscore.*7"):
+        restore_for_resume(connection, ResponseCache(tmp_path), archive_storage, SEASON)
+
+
+def test_resume_still_rejects_a_current_entry_the_schedule_does_not_expect(tmp_path):
+    """Break caught: an archived response for an unplayed game passes unnoticed."""
+    connection, archive_storage = archived_season(played=(7,), unplayed=(8,))
+    stray, compressed = _entry(99, "Points", 8, b'{"game":8,"endpoint":"Points"}')
+    connection.rows.append(tuple(stray.__dict__.values()))
+    archive_storage.objects[stray.storage_path] = compressed
+
+    with pytest.raises(ArchiveIndexError, match=r"extra.*Points.*8"):
+        restore_for_resume(connection, ResponseCache(tmp_path), archive_storage, SEASON)
+
+
+def test_resume_leaves_an_untouched_season_as_an_ordinary_first_run(tmp_path):
+    """Break caught: a season nobody has started is reported as a damaged archive."""
+    summary = restore_for_resume(EmptyIndexConnection(), ResponseCache(tmp_path), storage(), SEASON)
+
+    assert summary.bootstrap_required is True
+    assert summary.restored_responses == 0
+    assert summary.missing_responses == 0
+
+
+def test_resume_refuses_to_fill_a_consumer_snapshot(tmp_path):
+    """Break caught: a parser is handed a snapshot with played games missing.
+
+    A snapshot exists so a consumer can read a season that will not move under
+    it. A partial one keeps that promise and breaks the more important one, and
+    the consumer has no way to tell the difference, so the combination is refused
+    rather than half-honoured.
+    """
+    connection, archive_storage = archived_season(played=(7,), omit=("Points", 7))
+
+    with pytest.raises(ValueError, match="snapshot must be complete"):
+        restore_current_season_cache(
+            connection,
+            ResponseCache(tmp_path / "canonical"),
+            archive_storage,
+            SEASON,
+            allow_incomplete=True,
+            snapshot_cache=ResponseCache(tmp_path / "snapshot"),
+        )

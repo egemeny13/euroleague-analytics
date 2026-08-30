@@ -107,6 +107,9 @@ class RestoreSummary:
     exact_bytes: int
     completeness: CacheCompleteness | None
     bootstrap_required: bool
+    # Zero whenever the archive is complete, and zero for every strict caller,
+    # because a strict caller raises rather than returning a partial season.
+    missing_responses: int = 0
 
 
 @dataclass(frozen=True)
@@ -354,8 +357,24 @@ def _identity_label(identity: tuple[str, int | None]) -> str:
 
 
 def _required_archive_entries(
-    entries: tuple[ArchiveIndexEntry, ...], season_code: str, played_gamecodes: tuple[int, ...]
-) -> tuple[ArchiveIndexEntry, ...]:
+    entries: tuple[ArchiveIndexEntry, ...],
+    season_code: str,
+    played_gamecodes: tuple[int, ...],
+    *,
+    allow_incomplete: bool = False,
+) -> tuple[tuple[ArchiveIndexEntry, ...], int]:
+    """Order the current entries a restore needs, and count the ones absent.
+
+    WHY THIS TAKES A FLAG. Two callers ask this the same question and mean
+    opposite things by it. The archive gate asks whether a season is complete,
+    so an absent entry is the answer and has to raise. A fetcher asks what is
+    already archived so that it can request the remainder, and for it an absent
+    entry is the ordinary state of a season somebody is halfway through.
+
+    The tolerance is deliberately narrow. Extra and duplicate entries raise
+    either way, because those describe an index that disagrees with itself about
+    what is current, and no amount of fetching repairs that.
+    """
     expected_identities = {("Schedule", None)} | {
         (endpoint, gamecode) for gamecode in played_gamecodes for endpoint in ENDPOINTS
     }
@@ -372,9 +391,9 @@ def _required_archive_entries(
         for identity, matching_entries in entries_by_identity.items()
         if len(matching_entries) != 1
     }
+    problems: list[str] = []
     if missing or extra or duplicates:
-        problems: list[str] = []
-        if missing:
+        if missing and not allow_incomplete:
             problems.append(
                 "missing current " + ", ".join(_identity_label(key) for key in sorted(missing))
             )
@@ -386,6 +405,7 @@ def _required_archive_entries(
             problems.append(
                 "duplicate current " + ", ".join(_identity_label(key) for key in sorted(duplicates))
             )
+    if problems:
         raise ArchiveIndexError(
             f"Season {season_code} archive index cannot restore its played cache: "
             + "; ".join(problems)
@@ -396,7 +416,12 @@ def _required_archive_entries(
     ordered_identities += [
         (endpoint, gamecode) for gamecode in played_gamecodes for endpoint in ENDPOINTS
     ]
-    return tuple(entries_by_identity[identity][0] for identity in ordered_identities)
+    ordered = tuple(
+        entries_by_identity[identity][0]
+        for identity in ordered_identities
+        if identity in entries_by_identity
+    )
+    return ordered, len(missing)
 
 
 def restore_current_season_cache(
@@ -406,6 +431,7 @@ def restore_current_season_cache(
     season_code: str,
     *,
     allow_bootstrap: bool = False,
+    allow_incomplete: bool = False,
     snapshot_cache: ResponseCache | None = None,
 ) -> RestoreSummary:
     """Rebuild the canonical cache and optionally an immutable consumer snapshot.
@@ -413,7 +439,17 @@ def restore_current_season_cache(
     The optional snapshot receives the same verified bodies before the canonical
     directory is swapped. A parser can consume that private directory even if a
     later process advances the canonical cache while the run is still working.
+
+    `allow_incomplete` restores whatever the archive holds rather than refusing a
+    season that is missing responses. Only a fetcher wants that, and it should
+    reach it through `restore_for_resume` rather than by setting the flag here.
     """
+    if allow_incomplete and snapshot_cache is not None:
+        raise ValueError(
+            "A consumer snapshot must be complete. Restoring an incomplete archive "
+            "into one would hand a parser a season with played games missing, and "
+            "nothing downstream would notice."
+        )
     entries = current_archive_entries(connection, season_code)
     if not entries:
         if allow_bootstrap:
@@ -445,7 +481,9 @@ def restore_current_season_cache(
         sorted({int(game["gameCode"]) for game in games if game.get("played") is True})
     )
 
-    required_entries = _required_archive_entries(entries, season_code, played_gamecodes)
+    required_entries, missing_responses = _required_archive_entries(
+        entries, season_code, played_gamecodes, allow_incomplete=allow_incomplete
+    )
     downloaded = [(schedule_entry, schedule_body)]
     for entry in required_entries:
         if entry == schedule_entry:
@@ -459,7 +497,12 @@ def restore_current_season_cache(
         staged_cache = ResponseCache(root)
         for entry, body in downloaded:
             _write_bytes_atomically(_cache_path(staged_cache, entry), body)
-        completeness = assert_complete_played_cache(staged_cache, season_code)
+        # A resume that found nothing absent is still a complete season, so it is
+        # still checked. Only a genuinely partial restore skips the assertion, and
+        # it reports `missing_responses` in place of a completeness record.
+        completeness = (
+            None if missing_responses else assert_complete_played_cache(staged_cache, season_code)
+        )
         if snapshot_cache is not None:
             snapshot_season = snapshot_cache.root / season_code
             if snapshot_season.exists():
@@ -477,6 +520,37 @@ def restore_current_season_cache(
         exact_bytes=sum(len(body) for _, body in downloaded),
         completeness=completeness,
         bootstrap_required=False,
+        missing_responses=missing_responses,
+    )
+
+
+def restore_for_resume(
+    connection: Any,
+    cache: ResponseCache,
+    storage: SupabaseStorage,
+    season_code: str,
+) -> RestoreSummary:
+    """Restore what the archive already holds so a fetcher requests only the rest.
+
+    This is the fetcher's half of `restore_current_season_cache`, given a name
+    instead of two booleans repeated at every call site. It tolerates a season
+    nobody has started and a season somebody started and did not finish. The
+    archive gate tolerates neither and keeps the strict defaults.
+
+    WHY IT EXISTS. On 2026-08-30 a chain run archived E2017's schedule and was
+    cancelled before any game response. Every later run then refused to start,
+    because the restore treated an archive missing responses as damage rather
+    than as work in progress, and the fifteen seasons behind E2017 were
+    unreachable. The nightly live job makes the identical call and carried the
+    identical fault, unfired only because no nightly run had been interrupted.
+    """
+    return restore_current_season_cache(
+        connection,
+        cache,
+        storage,
+        season_code,
+        allow_bootstrap=True,
+        allow_incomplete=True,
     )
 
 

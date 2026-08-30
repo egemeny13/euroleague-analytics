@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -744,3 +745,32 @@ def test_429_exhausted_retries_raises_fetch_error(tmp_path) -> None:
         fetcher.fetch_season("E2025")
 
     assert not (tmp_path / "E2025" / "Points" / "7.json").exists()
+
+
+def test_fetch_archive_can_only_restore_in_resume_mode() -> None:
+    """Break caught: the fetcher restores with the archive gate's semantics again.
+
+    The gate asks whether a season is complete, so it must refuse an archive that
+    is missing responses. The fetcher is the thing that makes a season complete,
+    so the same refusal stops it before it starts and leaves an interrupted season
+    permanently unfinishable. Importing the entry point shows which of the two
+    functions it can reach at all.
+
+    WHAT THIS DOES NOT PROVE. Nothing here opens a database, a socket or a
+    Storage bucket, so it says nothing about whether a real run succeeds. It also
+    cannot see a call made through `getattr` or a late import.
+    """
+    from euroleague.archive import restore_for_resume
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "fetch_archive.py"
+    spec = importlib.util.spec_from_file_location("fetch_archive_under_test", script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        del sys.modules[spec.name]
+
+    assert module.restore_for_resume is restore_for_resume
+    assert "restore_current_season_cache" not in vars(module)
