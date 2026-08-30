@@ -2057,6 +2057,88 @@ re-taken rather than inherited.
 
 ---
 
+## 37. The archive fits the free Storage quota, and the paid project waits for a sponsor
+
+**Decision 33 is amended. Its central premise was arithmetic on uncompressed
+bytes, and Decision 9 had already identified and named that exact error.**
+
+Decision 33 states that the archive, "about 1.2 GB, exceeds Supabase's 1 GB free
+Storage allowance and can therefore only live on the paid project." The 1.2 GB is
+the total of the bytes *fetched*. It is not the total of the bytes *stored*. Every
+response body is gzipped individually before it is uploaded.
+
+**The measurements, all of them already in this repository:**
+
+| Measurement | Source | Result |
+|---|---|---|
+| Compression ratio | Decision 9, measured over 660 E2024 responses | 14.76x |
+| Five seasons as stored | `docs/HISTORICAL_ARCHIVE_E2022_REPORT.md`, read from `storage.objects` | 25,032,908 bytes, 2.50 % of 1 GB |
+| One historical season | E2022 4,776,632 bytes; E2023 4,847,042 bytes | about 4.8 MB |
+| Twenty-three seasons | from the per-season figure above | about 118 MB, roughly 12 % of the quota |
+
+Decision 9 wrote the warning eleven days earlier: "The earlier worry that a 1 GB
+pile of raw JSON had nowhere to live was arithmetic on uncompressed bytes."
+Decision 33 then made the same mistake against the same quota. It is recorded
+here rather than quietly corrected, because the failure mode is the interesting
+part: a number carried between documents keeps its digits and loses its unit.
+
+**What follows from the correction:**
+
+- **The archive stays on the free project.** It has roughly eight times the
+  headroom it needs. It never moves to a paid subscription, so Decision 33's
+  worry that "the most valuable asset would sit on a subscription somebody else
+  pays for" does not arise at all.
+- **R-10 is no longer a capacity requirement and no longer gates R-8.** Its
+  second justification survives untouched and is the real one: fifty hours of
+  fetching currently has exactly one copy. It is redundancy, scheduled on its
+  own merits rather than as a blocker.
+- **Decision 33's condition - "it needs a second home before this architecture is
+  built, not after" - is discharged.** The architecture no longer puts the
+  archive at risk, which is the thing the condition protected.
+
+**The paid project is created when a sponsor exists, not before.**
+
+```
+   FREE project - permanent, never lapses      PAID project - created on sponsorship
+   the whole archive in Storage (~12%)         every season loaded
+   public hot window E2024-E2026 (~68%)        the invite-only Action lives here
+   the public Fly app points here              a second Fly app points here
+```
+
+This is a change of *timing* only; the two-deployment shape of Decision 33 is
+unchanged and is what makes the split free of code. Access is separated by which
+database a deployment is pointed at, never by a per-user entitlement, so
+Decision 32's prohibition on billing, tiers and per-season entitlements stands
+untouched. A single project upgraded in place was considered and rejected: when
+the sponsorship ends, that project is over the free limits and Supabase restricts
+it, so the public service would die with the sponsor. Two projects means the
+public one never notices.
+
+**What this does to the launch.** The deployment that exists today already runs
+on the free project with the public hot window loaded. Shipping the free offering
+therefore needs no second project, no second Fly app, no R-8 and no R-10 - only
+R-9, which is switching off one Auth0 Action.
+
+**What is established.** The storage figures above are measured, from
+`storage.objects` and from the archive index, and two independent measurements
+agree. The database side is measured too: 339,430,547 bytes, 67.89 % of the
+500 MB free tier, with E2024 and E2025 loaded.
+
+**What is not established.** Nobody has measured what twenty-three seasons cost
+in the *database*, and nothing here claims they fit anywhere near 500 MB - they
+are the reason the paid project exists. Nobody has measured how long loading a
+historical season takes, or what share of its games the validation gates exclude;
+the two loaded seasons exclude 7.2 % (53 of 732) and older data is not assumed to
+behave the same. Free-tier egress under public traffic is unmeasured.
+
+**Condition.** This rests on the archive staying an order of magnitude inside the
+1 GB Storage quota. Publish the stored total, read from `storage.objects`, with
+each archive batch. If it passes 500 MB - half the quota, chosen so the signal
+arrives with room to act - stop and re-take this decision rather than discovering
+the ceiling by hitting it.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

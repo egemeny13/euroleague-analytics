@@ -1014,3 +1014,95 @@ session after 30 were ready, before database work. The successful concurrency
 run therefore used independent protocol sessions without the optional GET
 stream, so its 40 slots represented 40 tool POSTs. R-8 must account for this
 before describing public capacity in users rather than requests.
+
+---
+
+## Phase 2, re-sequenced around the launch. Written 2026-08-30, late.
+
+`DECISIONS.md` item 37 corrects the premise the previous sequence rested on. The
+archive is about 118 MB as stored, not 1.2 GB, so it fits the free Storage quota
+with roughly eight times the headroom. R-10 stops being a capacity blocker, and
+R-8 stops being a precondition for anything the public sees.
+
+### What the goal actually is
+
+The full-archive offering needs a sponsor. A sponsor needs to see a working
+thing. So the free offering is not a lesser version of the product - it is the
+argument for funding the other one, and it is the only artefact that does any
+persuading. Everything below is ordered by that.
+
+### The launch is not blocked by the technical queue
+
+The deployment running today already sits on the free Supabase project with
+E2024 and E2025 loaded and E2026 filling nightly. That is the free offering,
+complete, with an invite list in front of it.
+
+| | Work | Who | Blocks the launch? |
+|---|---|---|---|
+| **R-9** | Switch off the invite-only Auth0 Action | owner, ~1 h | **Yes. It is the only one.** |
+| R-8 | Second Supabase project, second Fly app | after a sponsor | No |
+| R-8a | Staging Fly app | with R-8 | No |
+| R-10 | A second home for the archive | insurance, own merits | No |
+
+R-8 and R-9 have swapped their dependency. R-9 used to require R-8 because there
+was no public deployment to open; there is one, and it is the deployment we have.
+
+### When to launch, and why not sooner
+
+**A few days after 2026-09-24**, the first E2026 game. Not before it, and not on
+it.
+
+- Before it there is no basketball audience and nothing to show but historical
+  seasons. It is the coldest possible version of "look, this works".
+- On it, the nightly pipeline meets real live data for the first time. Being at
+  maximum visibility on the night of maximum fragility is a choice, not an
+  accident.
+- A few days after it, the pipeline has proved itself on two or three real game
+  nights and the demonstration becomes *"here is last night's game, with its
+  possessions reconstructed from the play-by-play"*. That is the thing being
+  sold, shown working on data the audience watched being created.
+
+### Launch work, and when each piece can start
+
+| Piece | Depends on | Can start |
+|---|---|---|
+| Website copy, tweet thread, README, sponsor one-pager | nothing | now |
+| Free test account flow for a prospective sponsor | the invite list, which already exists | now |
+| Short videos | a working public deployment, so R-9 | after R-9 |
+| The launch itself | the above, plus two or three clean live game nights | after 2026-09-24 |
+
+The writing is the long pole and it is the piece that waits on no code.
+
+### R-12: load the historical seasons into a warehouse. New, and not previously counted.
+
+**Archiving a season does not make it queryable.** The chain stores exact response
+bytes with their checksums; the warehouse is built by a separate parse, derive and
+load. E2024 and E2025 are loaded. The other twenty-one seasons are archived and
+not loaded, and nothing in the queue before this entry did that work.
+
+This is what "ready if a sponsor says yes" actually requires, and it sits after
+the launch rather than before it. What must be measured before anything is
+promised to a sponsor:
+
+- **How long one historical season takes** to parse, derive, load and gate.
+- **What share of its games the gates exclude.** E2024 and E2025 exclude 7.2 %
+  (53 of 732). Older seasons are not assumed to behave the same, and a promise of
+  "every season" made without this number is a promise about an unmeasured
+  quantity.
+- **What twenty-three seasons cost in the database**, with `pg_total_relation_size`
+  as Decision 8 requires. They are the reason the paid project exists; the
+  question is which paid tier, not whether.
+
+The cheap version of readiness is to rehearse one old season end to end and
+publish those three numbers. That converts "we could load everything" into "it is
+N hours and here is the coverage", which is what a sponsor conversation needs and
+is worth far more than having the data already sitting on a subscription nobody
+is paying for yet.
+
+### What none of this establishes
+
+The launch date is a judgement about attention and risk, not a measurement. The
+claim that the free offering persuades anybody is untested - no one outside the
+invite list has used this server. Free-tier egress under public traffic is
+unmeasured, and R-7's forty-request result was measured against a server with a
+handful of users, not against a launch.
