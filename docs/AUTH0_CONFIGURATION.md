@@ -260,6 +260,74 @@ nothing to do with this project's tenant, server or connector.
 the duration of the login. Auth0's support note records that a retry often
 succeeds on its own.
 
+### 2026-08-30 — the server now checks what a token was issued for
+
+**What this file said, and what it missed.** Section 4 above records that the
+server passes `verify_aud=False` and enforces no scope, so "any valid token from
+this tenant is accepted". That was correct and it was incomplete. Reading
+`verify_token` in full on 2026-08-30 found **three** verification paths, not the
+two this file describes:
+
+1. JWT verification against the tenant's JWKS.
+2. RFC 7662 introspection.
+3. **A call to the tenant's `/userinfo` endpoint**, which granted access on any
+   response carrying a `sub`, **with no scopes at all**.
+
+The third was not written down anywhere. It matters more than the first two,
+because a userinfo response proves only that the bearer exists in the tenant: it
+carries **no audience**, so it cannot show which API the token was minted for.
+Any audience check added to paths 1 and 2 would have been bypassable by anyone
+holding any token from this tenant — and registration here is open by design.
+
+**What changed in the code.** `acceptable_claims()` in
+`src/euroleague/mcp/http_app.py` is one function used by both remaining paths. It
+requires that the token's audience names this resource and that its issuer is
+this tenant. Path 3 is deleted; `test_the_userinfo_fallback_is_gone` asserts no
+GET follows a refused introspection. Refusals are logged at WARNING with a reason
+that carries no claim values, and the 401 sent to the client says nothing.
+
+**Why this does not break the connector, established from this file rather than
+from an experiment.** The audience a token carries is the API's Identifier in
+Auth0. The identifier is quoted verbatim in the 2026-08-29 entry above, in
+Auth0's own error message:
+
+```
+... is not authorized to access resource server
+"https://euroleague-analytics-mcp.fly.dev/mcp"
+```
+
+The server publishes the same string as its `resource`, verified unauthenticated
+on 2026-08-30:
+
+```
+GET /.well-known/oauth-protected-resource/mcp
+{"resource":"https://euroleague-analytics-mcp.fly.dev/mcp",
+ "authorization_servers":["https://dev-ew0k6i4pmarjvgkn.us.auth0.com"], ...}
+```
+
+They match. The issuer matches after normalising the trailing slash Auth0 adds to
+`iss`, which the code does on both sides.
+
+**The scope is deliberately NOT required, and this file is the reason.** Section 5
+records `read:warehouse` being created because the API had no permissions at all.
+**That is evidence the permission exists, not evidence that an issued token
+carries it** — which depends on what the connector requests, and this server's
+discovery document advertises no scope for it to request. `MCP_REQUIRED_SCOPE`
+therefore defaults to empty. Turn it on only after observing a real token that
+carries the scope; `scripts/check_hosted_token.py` prints exactly that, from a
+token held in an environment variable and never written anywhere.
+
+**Observation still owed.** No real token has been through the new code. Both
+conclusions above are drawn from published strings and a recorded error message.
+This entry is therefore **not finished** by this file's own standard: an entry
+with no observation is not finished.
+
+**What this does not change.** Who may obtain a token. That is still decided
+entirely by the post-login Action, and `All` remains the third-party default
+permission setting. This entry closes one way in; it does not narrow the front
+door.
+
+
 ## 6. What this file does not establish
 
 - **It is a record, not a verification.** Except where a line says "verified"

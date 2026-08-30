@@ -270,6 +270,15 @@ the event stream as a bug.
   that cannot fail is not evidence. An accounting identity is not a validation.
 - **Never grant yourself an exemption from a roadmap gate.** If a gate must be
   relaxed, stop and ask, and record who decided and when.
+- **A change that alters what the system does, refuses, or costs lands its
+  decision in `DECISIONS.md` in the same pull request, with its condition.** Not
+  afterwards, and not only in a commit message: a reason recorded only in a
+  commit message is one that gets rediscovered by repeating the mistake. On
+  2026-08-30 three decisions sat in commit messages until the owner asked where
+  they were. `tests/test_documentation_integrity.py` catches the mechanical half
+  — an environment variable the code reads and `.env.example` omits, and a
+  citation to a decision number that does not exist. It cannot catch a missing
+  reason, which is why this rule is here rather than only in a test.
 
 ## Boundaries around production work
 

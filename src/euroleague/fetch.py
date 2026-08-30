@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -118,6 +119,35 @@ class _Counters:
     permanent_missing: int = 0
     failed_targets: int = 0
     http_requests: int = 0
+
+
+# A season code is `E` followed by exactly four digits. The competition letter is
+# fixed at `E` because every URL builder below hard-codes `competitions/E`; when
+# EuroCup is added this pattern and those URLs change together, and a EuroCup code
+# rejected here is a missing feature rather than a mistake.
+SEASON_CODE = re.compile(r"^E[0-9]{4}$")
+
+
+def validate_season_code(value: str) -> str:
+    """Return the season code unchanged, or raise if it is not one.
+
+    Called at the edges of the application - the command line scripts - because
+    a season code arriving from outside becomes two things it must not be able
+    to corrupt. It is interpolated into an API path by the URL builders below,
+    where a `/` or a `?` would change which resource is requested, and it is
+    passed as a shell argument by the archive workflows.
+
+    The check is deliberately exact rather than forgiving: no trimming, no
+    upper-casing. A value that needs repairing before it is usable is a value
+    somebody typed wrongly, and repairing it quietly hides that.
+    """
+    if not SEASON_CODE.match(value):
+        raise ValueError(
+            f"{value!r} is not a season code. Expected the letter E followed by "
+            f"exactly four digits, for example E2024. "
+            f"EuroCup codes are not supported by this fetcher."
+        )
+    return value
 
 
 def _schedule_url(season_code: str) -> str:

@@ -51,6 +51,20 @@ from euroleague.mcp.tools import build_registry
 
 ANONYMOUS_SUBJECT = "anonymous"
 
+# OFF BY DEFAULT, AND THE REASON IS A DISTINCTION THAT WAS GLOSSED ONCE ALREADY.
+# docs/AUTH0_CONFIGURATION.md records that `read:warehouse` was created because
+# the API defined no permissions at all. That is evidence the permission EXISTS.
+# It is not evidence that an issued token CARRIES it - that depends on what the
+# connector asks for, and this server's discovery document advertises no required
+# scope for it to ask for. Defaulting to a check nothing has been observed to
+# pass is how an operator locks themselves out of their own server.
+#
+# The audience check is the mechanism that closes the hole this file's
+# `acceptable_claims` was written for, and it has no switch. The scope is
+# defence in depth: set MCP_REQUIRED_SCOPE=read:warehouse once a real token has
+# been seen to carry it.
+DEFAULT_REQUIRED_SCOPE = ""
+
 AUTH_VARIABLES = (
     "MCP_ISSUER_URL",
     "MCP_RESOURCE_URL",
@@ -61,9 +75,73 @@ AUTH_VARIABLES = (
 )
 
 
+def _same_url(left: str, right: str) -> bool:
+    """Compare two URLs ignoring a trailing slash, and nothing else.
+
+    Auth0 publishes `iss` with a trailing slash while the configured issuer is
+    conventionally written without one, and a lockout caused by punctuation is
+    still a lockout. This is deliberately NOT a prefix or substring comparison:
+    `https://server/mcp.attacker.example.com` must not match
+    `https://server/mcp`.
+    """
+    return left.rstrip("/") == right.rstrip("/")
+
+
+def scopes_from_claims(claims: Mapping[str, Any]) -> list[str]:
+    """Read the granted scopes, whichever of the two spellings they arrive in.
+
+    Introspection responses use `scope` as a space-separated string; some
+    providers use a `scopes` array. Both were already handled in two places
+    before this function existed, which is why it exists.
+    """
+    raw = claims.get("scope") or claims.get("scopes") or []
+    if isinstance(raw, str):
+        return raw.split()
+    return [str(entry) for entry in raw]
+
+
+def acceptable_claims(
+    claims: Mapping[str, Any],
+    *,
+    resource_url: str | None,
+    issuer_url: str | None,
+    required_scope: str | None,
+) -> str | None:
+    """Return None if these claims authorise this server, or the reason they do not.
+
+    THE CHECK THIS EXISTS FOR IS THE AUDIENCE. Until 2026-08-30 the server
+    verified a token's signature and accepted it, passing `verify_aud=False`.
+    Registration on the tenant is open by design, so "signed by this tenant" was
+    never a restriction: any token the tenant issued, for any purpose, opened the
+    warehouse. `aud` names the API a token was minted for, and a token minted for
+    something else carries a different one.
+
+    The returned reason is written to the server log and never to the client. It
+    deliberately contains no claim values - not the subject, not the token - so
+    that a rejection does not become a second disclosure.
+    """
+    if resource_url:
+        audience = claims.get("aud")
+        candidates = [audience] if isinstance(audience, str) else list(audience or [])
+        if not any(isinstance(one, str) and _same_url(one, resource_url) for one in candidates):
+            return "token audience does not name this server"
+
+    if issuer_url:
+        issuer = claims.get("iss")
+        if not isinstance(issuer, str) or not _same_url(issuer, issuer_url):
+            return "token issuer is not the configured authority"
+
+    if required_scope and required_scope not in scopes_from_claims(claims):
+        return f"token does not carry the required scope {required_scope}"
+
+    return None
+
+
 class IntrospectionTokenVerifier(TokenVerifier):
-    """Verifies Bearer tokens against an RFC 7662 OAuth 2.0 token introspection endpoint,
-    an OIDC userinfo endpoint, or JWT JWKS.
+    """Verifies Bearer tokens by JWKS signature or RFC 7662 token introspection.
+
+    Two paths, not three. The OIDC userinfo endpoint was a third until
+    2026-08-30; see `verify_token` for why it cannot make this decision.
     """
 
     def __init__(
@@ -73,6 +151,7 @@ class IntrospectionTokenVerifier(TokenVerifier):
         client_secret: str,
         resource_url: str | None = None,
         issuer_url: str | None = None,
+        required_scope: str | None = None,
         timeout_seconds: float = 10.0,
     ) -> None:
         self.introspection_url = introspection_url
@@ -80,6 +159,7 @@ class IntrospectionTokenVerifier(TokenVerifier):
         self.client_secret = client_secret
         self.resource_url = resource_url
         self.issuer_url = issuer_url
+        self.required_scope = required_scope
         self.timeout_seconds = timeout_seconds
         self._jwks_client = None
         if issuer_url:
@@ -91,11 +171,28 @@ class IntrospectionTokenVerifier(TokenVerifier):
             except Exception:
                 self._jwks_client = None
 
-    async def verify_token(self, token: str) -> AccessToken | None:
-        """Query JWT JWKS, introspection endpoint, or userinfo to validate token.
+    def _refuse(self, reason: str, path: str) -> None:
+        """Record why a token was refused, where an operator can find it.
 
-        Never raises on introspection failure or network error; returns None so
-        the auth middleware can issue a clean 401.
+        Every failure in this method used to be swallowed by a bare `except:
+        pass`, which was survivable while the checks were permissive and is not
+        now. A tightened check that rejects without saying why turns a
+        configuration mistake into an unexplained 401.
+        """
+        logging.getLogger(LOGGER_NAME).warning("token refused on the %s path: %s", path, reason)
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        """Validate a bearer token by JWKS signature or RFC 7662 introspection.
+
+        Never raises on network error; returns None so the auth middleware can
+        issue a clean 401.
+
+        THE `/userinfo` PATH WAS REMOVED ON 2026-08-30, and its removal is the
+        point rather than a tidy-up. A userinfo response proves the bearer
+        exists in the tenant. It carries no audience, so it cannot show which API
+        the token was minted for, and this tenant lets any client register
+        itself. Keeping that path would have left the exact hole the audience
+        check closes, reachable by anyone holding any token from the tenant.
         """
         # 1. Try JWT verification if it looks like a JWT
         if self._jwks_client is not None and token.count(".") == 2:
@@ -103,16 +200,29 @@ class IntrospectionTokenVerifier(TokenVerifier):
                 import jwt
 
                 signing_key = self._jwks_client.get_signing_key_from_jwt(token)
+                # The signature is verified here. The audience is compared
+                # afterwards by `acceptable_claims` rather than by PyJWT, because
+                # PyJWT matches the audience exactly and Auth0's issuer and
+                # resource identifiers differ from the configured ones by a
+                # trailing slash. Which component compares two strings is not a
+                # cryptographic question; whether the signature was checked is,
+                # and it was.
                 claims = jwt.decode(
                     token,
                     signing_key.key,
                     algorithms=["RS256"],
                     options={"verify_aud": False},
                 )
-                raw_scope = claims.get("scope") or claims.get("scopes") or []
-                scopes = (
-                    raw_scope.split() if isinstance(raw_scope, str) else [str(s) for s in raw_scope]
+                refusal = acceptable_claims(
+                    claims,
+                    resource_url=self.resource_url,
+                    issuer_url=self.issuer_url,
+                    required_scope=self.required_scope,
                 )
+                if refusal is not None:
+                    self._refuse(refusal, "JWT")
+                    return None
+                scopes = scopes_from_claims(claims)
                 client_id_val = (
                     claims.get("client_id")
                     or claims.get("azp")
@@ -151,12 +261,16 @@ class IntrospectionTokenVerifier(TokenVerifier):
                 if response.status_code == 200:
                     data = response.json()
                     if isinstance(data, dict) and data.get("active"):
-                        raw_scope = data.get("scope") or data.get("scopes") or []
-                        scopes = (
-                            raw_scope.split()
-                            if isinstance(raw_scope, str)
-                            else [str(s) for s in raw_scope]
+                        refusal = acceptable_claims(
+                            data,
+                            resource_url=self.resource_url,
+                            issuer_url=self.issuer_url,
+                            required_scope=self.required_scope,
                         )
+                        if refusal is not None:
+                            self._refuse(refusal, "introspection")
+                            return None
+                        scopes = scopes_from_claims(data)
                         client_id_val = (
                             data.get("client_id") or data.get("sub") or ANONYMOUS_SUBJECT
                         )
@@ -180,30 +294,9 @@ class IntrospectionTokenVerifier(TokenVerifier):
         except Exception:
             pass
 
-        # 3. Try OIDC /userinfo endpoint
-        if self.issuer_url:
-            try:
-                userinfo_url = f"{self.issuer_url.rstrip('/')}/userinfo"
-                async with httpx2.AsyncClient(timeout=self.timeout_seconds) as client:
-                    response = await client.get(
-                        userinfo_url,
-                        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-                    )
-                    if response.status_code == 200:
-                        data = response.json()
-                        if isinstance(data, dict) and data.get("sub"):
-                            sub_val = data.get("sub")
-                            return AccessToken(
-                                token=token,
-                                client_id=str(sub_val),
-                                scopes=[],
-                                resource=self.resource_url,
-                                subject=str(sub_val),
-                                claims=data,
-                            )
-            except Exception:
-                pass
-
+        # There is deliberately no third path. See the docstring: `/userinfo`
+        # cannot show which API a token was minted for, so it cannot make this
+        # decision.
         return None
 
 
@@ -222,12 +315,19 @@ def auth_from_env(values: Mapping[str, str]) -> tuple[TokenVerifier, AuthSetting
             f"The server has no unauthenticated mode."
         )
 
+    # The audience and issuer checks are not optional and have no variable. The
+    # scope does: `MCP_REQUIRED_SCOPE` defaults to the permission
+    # docs/AUTH0_CONFIGURATION.md records as the only one this API defines, and
+    # is set to an empty string by an operator who has not yet confirmed their
+    # tokens carry it. Turning the scope off leaves the audience check standing,
+    # which is the one that decides whether a token is this server's at all.
     verifier = IntrospectionTokenVerifier(
         introspection_url=values["MCP_INTROSPECTION_URL"],
         client_id=values["MCP_CLIENT_ID"],
         client_secret=values["MCP_CLIENT_SECRET"],
         resource_url=values["MCP_RESOURCE_URL"],
         issuer_url=values["MCP_ISSUER_URL"],
+        required_scope=values.get("MCP_REQUIRED_SCOPE", DEFAULT_REQUIRED_SCOPE).strip() or None,
     )
     settings = AuthSettings(
         issuer_url=values["MCP_ISSUER_URL"],  # type: ignore[arg-type]

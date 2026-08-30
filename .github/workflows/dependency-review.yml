@@ -1,0 +1,52 @@
+# Refuse a pull request that adds a vulnerable or licence-incompatible dependency.
+#
+# WHY THIS ONE MATTERS MOST OF THE SECURITY WORKFLOWS HERE. CLAUDE.md carries a
+# rule with a name in it: do not add `euroleague_api` (giasemidis), because it is
+# GPLv3 and would bind this project's licence. Until now that rule was a sentence
+# in a file. This workflow is the only thing in the repository that can actually
+# stop it happening, and it stops it before the merge rather than after.
+#
+# The project is MIT. Strong copyleft - GPL and AGPL - is what conflicts with
+# that, and only those are denied. LGPL is deliberately NOT denied: for a Python
+# project that imports rather than statically links, LGPL carries no obligation
+# this project cannot meet, and denying it on reflex would be the "blindly
+# blacklist licences" mistake rather than a policy.
+#
+# WHAT THIS DOES NOT CATCH, and the gap is real:
+#
+#   * It reads the dependency graph diff of the pull request. `requirements.txt`
+#     pins direct dependencies only and deliberately not the transitive tree
+#     (see the comment in that file), so a transitive package arriving under a
+#     denied licence may not appear here at all.
+#   * A dependency whose licence metadata is missing is reported as unknown, not
+#     as denied. Unknown is not the same as safe.
+#   * It says nothing about a dependency already in the tree. It compares the
+#     pull request against its base; it is not an audit of what is installed.
+
+name: Dependency review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Moderate and low findings are reported without blocking. High is the
+          # line because a solo maintainer who cannot merge anything stops
+          # reading the tool rather than fixing the finding.
+          fail-on-severity: high
+          # Both the current SPDX identifiers and the deprecated bare forms are
+          # listed, because published package metadata still uses both.
+          deny-licenses: >-
+            GPL-2.0, GPL-2.0-only, GPL-2.0-or-later,
+            GPL-3.0, GPL-3.0-only, GPL-3.0-or-later,
+            AGPL-3.0, AGPL-3.0-only, AGPL-3.0-or-later

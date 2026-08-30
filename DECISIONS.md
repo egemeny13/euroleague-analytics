@@ -1814,6 +1814,192 @@ set.
 
 ---
 
+## 32. The hosted server is a portfolio project with its costs covered, not a product
+
+The MCP server is **not** being built to sell. Two goals, in this order: it is a
+project the owner wants on their CV, which is why the repository stays public
+and MIT and why documentation and security posture are deliverables rather than
+chores; and it should cover its own hosting, which is about $2.02 a month on Fly
+plus roughly $35 a month in Supabase once every season is loaded. The owner funds
+the Fly side. The Supabase side is to come from **one collaborator** — the
+intended route is an arrangement with a single EuroLeague-related account, not
+public sales.
+
+**What this decides against.** A proposal on 2026-08-30 to split the work into a
+free public MCP covering E2024-E2026 and a paid private one covering every
+season, in a second repository. It was rejected on its premise: the owner is not
+trying to sell access.
+
+**What follows from it, and these are the operative parts:**
+
+- **No billing, no tiers, no per-season entitlement code.** Any future work item
+  that proposes building one is out of scope until this decision changes.
+- **No second repository.** See Decision 33.
+- **Because there is no paywall, the per-subject daily row budget
+  (`src/euroleague/mcp/row_budget.py`) and the sweep refusal are the only things
+  standing between a public opening and an unbounded hosting bill.** They were
+  built as fairness limits. They are now cost controls, and must be measured
+  before the public opening rather than trusted.
+
+**What is not settled.** Whether commercial use of data derived from
+euroleague.net's public API is permissible at all. The owner is researching this
+separately. Nothing in the current plan depends on the answer, because nothing in
+the current plan sells anything — but the collaborator arrangement does, and it
+cannot proceed before that answer exists.
+
+**Condition.** If the collaborator arrangement does not happen, the paid Supabase
+project does not exist, and everything below E2024 stays in the archive without
+entering a hot window. That is a smaller product, not a broken one.
+
+---
+
+## 33. The free and full offerings are one code base in two deployments
+
+One public repository. Two deployments that differ only in environment values:
+
+```
+   PUBLIC deployment                       PRIVATE deployment
+   Fly app, owner-funded                   Fly app
+   Supabase FREE project                   Supabase paid project
+   E2024-E2026 hot window                  every season, and the archive
+   open, bounded by the row budget         the invite-only Action stays
+                                           two people: owner, collaborator
+```
+
+**Why not two repositories.** The value is the warehouse, not the source. The MCP
+server is a thin query layer over pre-computed tables, and the fetch scripts are
+public against a public API — closing the source protects nothing and costs the
+reputational half of Decision 32's first goal. It also doubles maintenance and
+guarantees drift. And on a private repository CodeQL, Secret Scanning, Push
+Protection and Dependency Review all become paid add-ons, so the paid half of the
+product would run with most of its security tooling switched off.
+
+**Why two Supabase projects rather than one database with two roles.** A single
+paid database with a restricted read-only role, or row-level security, is the
+better engineering. It was rejected for a reason that outranks that: **the
+collaborator may stop paying, and the public service must survive it.** Two
+projects means the free one is untouched when the paid one lapses. It also keeps
+public traffic away from the database holding twenty seasons.
+
+**What this costs, and it is not nothing:**
+
+- The nightly E2026 job must load into **both** hot windows, which is a new
+  failure mode — one load succeeds, the other does not — and needs handling
+  rather than a second command bolted onto the first.
+- The archive, about 1.2 GB, exceeds Supabase's 1 GB free Storage allowance and
+  can therefore only live on the paid project. **The most valuable asset in the
+  project would sit on a subscription somebody else pays for**, and it represents
+  roughly fifty hours of fetching. It needs a second home before this
+  architecture is built, not after.
+
+**Condition.** If the free project cannot hold E2024-E2026 within 500 MB, the
+lever is the number of seasons in the **public hot window**, not the archive.
+Measure with `pg_total_relation_size` before assuming, as Decision 8 requires.
+
+---
+
+## 34. A token that does not name this server is refused, and `/userinfo` is not a way in
+
+Until 2026-08-30 the hosted server verified a bearer token's signature and then
+accepted it: `jwt.decode(..., options={"verify_aud": False})`, no scope enforced.
+Client registration on the Auth0 tenant is open by design (Decision 29), so
+"signed by this tenant" was never a restriction. **Any token that tenant issued,
+for any purpose, opened the warehouse.** `acceptable_claims()` in
+`src/euroleague/mcp/http_app.py` now requires that the audience names this
+resource and that the issuer is the configured authority, on both surviving
+verification paths.
+
+**A second way in was found while fixing the first, and no document mentioned
+it.** `verify_token` had a third path: when JWKS and introspection both declined,
+it called the tenant's `/userinfo` endpoint and granted access on any response
+carrying a `sub`, **with no scopes at all**. A userinfo response proves the
+bearer exists in the tenant. It carries no audience, so it cannot show which API
+the token was minted for. Every check added above would have been bypassable by
+anyone holding any token from the tenant. The path is deleted, and
+`test_the_userinfo_fallback_is_gone` asserts that no GET follows a refused
+introspection.
+
+**The scope check is off by default, and the reason is a distinction worth
+keeping.** `docs/AUTH0_CONFIGURATION.md` records `read:warehouse` being created
+on the API. That is evidence the permission **exists**. It is not evidence that
+an issued token **carries** it — that depends on what the connector requests, and
+this server's discovery document advertises no scope for it to request.
+Defaulting to a check nothing has been observed to pass is how an operator locks
+themselves out. `MCP_REQUIRED_SCOPE` defaults to empty and is set once a real
+token has been seen carrying the scope. **The audience check has no such
+switch.** The scope is defence in depth; the audience is the mechanism.
+
+**Trailing slashes are normalised on both sides and nowhere else.** Auth0
+publishes `iss` with one and the configured value conventionally has none, and a
+lockout caused by punctuation is still a lockout. The comparison is equality
+after normalisation, never a prefix match: a test asserts
+`https://server/mcp.attacker.example.com` is refused.
+
+**Refusals are logged, and the client is told nothing.** Every failure in this
+method used to be swallowed by a bare `except: pass`, which was survivable while
+the checks were permissive. A tightened check that rejects without saying why
+turns a configuration mistake into an unexplained 401, so the reason is written
+to the server log at WARNING — carrying no claim values, so a rejection does not
+become a second disclosure. The 401 itself says nothing, because an error
+distinguishing "wrong audience" from "unknown token" tells a caller which half of
+their guess was right.
+
+**What is not established.** No real Auth0 token has been through this code. The
+audience conclusion rests on two published strings and one error message Auth0
+itself produced, recorded in `docs/AUTH0_CONFIGURATION.md` on 2026-08-29 — which
+is evidence, not observation. `scripts/check_hosted_token.py` exists to make the
+observation when an interactive login is next available.
+
+**Condition.** This decision does not make the server safe to open publicly. It
+removes one specific way in. Who may obtain a token is still decided entirely by
+the post-login Action in Auth0, and Decision 32's row budget is still the only
+bound on how much an admitted caller can take.
+
+## 35. The archive restore gate has a manual GitHub workflow
+
+`.github/workflows/historical-archive.yml` stores one named season but does not
+verify it. The unattended chain verifies after fetching, but on 2026-08-30 the
+E2020 gate failed on a Supabase read timeout while another fetch was writing to
+the archive. The chooser then moved to E2019 because it asks whether a season is
+fetched, not whether its gate passed. E2020 and E2021 were therefore stored
+without a successful restore gate.
+
+**The existing restore gate is now a manual GitHub workflow.**
+`.github/workflows/verify-archive-season.yml` requires one season code and runs
+`scripts/verify_archive_season.py` with the production credentials scoped only
+to that step. It has no schedule and no default season. The season reaches the
+shell through an environment variable, every action is pinned to a commit, the
+checkout token is not persisted, and the workflow token can only read repository
+contents.
+
+**The shared concurrency group protects Supabase here, not the EuroLeague API.**
+The verifier makes no EuroLeague request. It uses `e2026-live-fetcher` with
+`cancel-in-progress: false` because the failed E2020 run established that a
+restore competing with an archive write can time out. A manually requested gate
+waits for a fetch instead of competing with or cancelling it.
+
+**What is unchanged.** The chooser's blind spot remains: a failed gate does not
+make an already fetched season eligible again. Fixing that is separate work,
+recorded in `ROADMAP.md`, and this workflow is the bounded operator path for one
+known season. It does not fetch, repair, migrate, or write archive data.
+
+**What is established.** Direct read-only runs on 2026-08-30 passed for E2020
+(985 responses and 66,934,128 bytes) and E2021 (898 responses and 60,024,084
+bytes). Both matched indexed byte totals, verified object checksums, and restored
+complete caches.
+
+**What is not established.** The new GitHub workflow has never been dispatched.
+Its tests and `zizmor` can prove its static shape, not that GitHub accepts the
+dispatch, that its secrets are configured, or that the job completes against
+production.
+
+**Condition.** Keep this entry point while archive verification can need a
+deliberate rerun outside the fetch job. If verification becomes part of archive
+completion state and the chooser refuses unverified seasons, re-evaluate whether
+the separate manual workflow still earns its maintenance cost.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

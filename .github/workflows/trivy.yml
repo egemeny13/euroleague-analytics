@@ -1,0 +1,76 @@
+# Scan the image the hosted server actually runs on for known vulnerabilities.
+#
+# WHAT THIS CATCHES THAT NOTHING ELSE HERE DOES. CodeQL reads this repository's
+# Python. Dependabot and Dependency Review read declared dependencies. Neither
+# looks inside the built container, where the Debian packages of
+# `python:3.14-slim` live. Those are the majority of an image's CVE surface and
+# none of them appear in `requirements.txt`.
+#
+# WHY IT IS WEEKLY AND NOT A REQUIRED CHECK, and this is a deliberate trade. A
+# base image carries CVEs that cannot be fixed from this repository: the fix is
+# a new upstream image, which arrives when Debian and the Python image publish
+# one. A required check that a solo maintainer cannot make pass is a check that
+# gets switched off, and a switched-off scanner is worse than none because it
+# reads as coverage. So this runs on a schedule, fails loudly by email when
+# something critical appears, and blocks nothing.
+#
+# New CVEs are published against unchanged code, which is exactly why the
+# schedule matters more than the pull request trigger here.
+#
+# WHAT IT DOES NOT ESTABLISH. That a reported CVE is reachable from this
+# application. Trivy reports what is installed and what is known about it; it
+# does not know whether the server ever calls the affected code path. A finding
+# is a prompt to look, not a proof of exposure.
+
+name: Trivy image scan
+
+on:
+  schedule:
+    # Monday morning, after Dependabot's weekly pull requests have been opened,
+    # so a base image bump and its scan arrive together.
+    - cron: "0 7 * * 1"
+  pull_request:
+    paths:
+      - Dockerfile
+      - requirements.txt
+      - requirements-http.txt
+      - .github/workflows/trivy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      # Built locally rather than pulled: the point is to scan the image this
+      # repository produces, including the packages installed into it, not the
+      # base image on its own.
+      - name: Build the image
+        run: docker build --tag euroleague-mcp:scan .
+
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: euroleague-mcp:scan
+          format: table
+          # CRITICAL only. HIGH is reported by the second step below without
+          # failing, so the baseline stays visible while the gate stays passable.
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Report high severity findings without failing
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: euroleague-mcp:scan
+          format: table
+          severity: HIGH
+          exit-code: "0"
+          ignore-unfixed: true

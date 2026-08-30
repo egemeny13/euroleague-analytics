@@ -14,11 +14,14 @@ jobs:
   measure:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    # DATABASE_URL is declared on the measuring step below, not here. A job-level
+    # env block would also hand the database password to `pip install`, which runs
+    # setup code from packages this repository does not write.
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.14"
           cache: pip
@@ -28,4 +31,6 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install -e .
       - name: Measure MCP connection lifecycle and end-to-end JSON-RPC latency
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python scripts/measure_mcp_lifecycle.py --season E2024 --repetitions 7 --processes 5

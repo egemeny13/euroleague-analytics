@@ -44,6 +44,7 @@ from euroleague.archive import (
 )
 from euroleague.cache import ResponseCache
 from euroleague.config import live_runtime_settings, load_env_file
+from euroleague.fetch import validate_season_code
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -62,7 +63,13 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    season_code = args.season
+    # Same reason as scripts/fetch_archive.py: this value arrives as a shell
+    # argument from a workflow and is used to address stored objects.
+    try:
+        season_code = validate_season_code(args.season)
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+        return 2
 
     environment = {**load_env_file(), **{k: v for k, v in os.environ.items() if v}}
     database_settings, storage_settings = live_runtime_settings(environment)

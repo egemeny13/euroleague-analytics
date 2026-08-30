@@ -692,3 +692,320 @@ is safe until P2-2 and P2-3 are settled.**
 - **Not Order 8.** A public opening before 2026-09-24 is possible; it simply
   cannot claim live-season evidence it does not have yet.
 
+
+---
+
+## Phase 2, revised. Written 2026-08-30.
+
+Phase 2 above was written on 2026-08-29 for **one public server**. Two decisions
+taken on 2026-08-30 change what it aims at, and one of them moves an item that
+was previously a blocker.
+
+### The two decisions
+
+**The product is a portfolio project with its hosting costs covered, not a
+product for sale.** The owner funds the roughly two dollars a month the public
+Fly application costs. The roughly thirty-five dollars a month that all twenty
+seasons need in Supabase is to come from one collaborator, not from public
+sales. There is no billing to build, no paid tier, and no per-season entitlement
+code. An earlier proposal that day - a free public MCP and a paid private one in
+a second repository - was rejected on its premise.
+
+**The split is a deployment split, not a code split.** One public repository,
+one code base, two deployments that differ only in environment values:
+
+```
+                    one repository (public, MIT)
+                              |
+          same code, different environment values
+          +-------------------+-------------------+
+          |                                       |
+   PUBLIC deployment                       PRIVATE deployment
+   Fly app, owner-funded                   Fly app
+   Supabase FREE project                   Supabase paid project
+   E2024-E2026 hot window                  every season, and the archive
+   open, bounded by the row budget         the invite-only Action stays
+                                           two people: owner, collaborator
+```
+
+**Two Supabase projects rather than one database with two roles.** A single paid
+database with a restricted read-only role is the better engineering, and it was
+rejected for a reason that outranks that: the collaborator may stop paying, and
+the public service must survive it. Two projects means the free one is untouched
+when the paid one lapses. It also keeps public traffic away from the database
+holding twenty seasons.
+
+**What this costs, stated now rather than discovered later:**
+
+- The nightly E2026 job must load into **both** hot windows. That is a new
+  failure mode - one load succeeds, the other does not - and it needs handling,
+  not a second command bolted onto the first.
+- The archive of roughly 1.2 GB can only live on the paid project, because
+  Supabase's free Storage allowance is 1 GB. **The archive is therefore the most
+  valuable asset in the project, sitting on a subscription somebody else pays
+  for**, and it represents about fifty hours of fetching that cannot be repeated
+  quickly. It needs a second home. Cloudflare R2 (10 GB free, S3-compatible, no
+  egress charge) fits the existing checksum-addressed storage code most closely.
+- Whether E2024-E2026 fits the free 500 MB was not measured here. The owner
+  reports that it fits today and expects pressure once E2026 games are played,
+  which is at least two to three months away. Dropping the oldest seasons from
+  the **hot window** is the lever if it stops fitting; that is a different
+  decision from dropping them from the archive.
+
+### What this changes about Phase 2 above
+
+**P2-4 shrinks.** "Retire the invite-only Action" was written when there was one
+server. The Action now stays on the private deployment, which has two users, and
+is removed from the public deployment only. That is less work than P2-4
+described, not more.
+
+**P2-2 is downgraded from a blocker to a re-examination, and the owner decides.**
+The sentence that made the Auth0 tenant urgent was that a development tenant
+cannot carry public traffic. With the deployments split, the tenant fronting the
+private server serves two people, which a development tenant covers comfortably,
+and the public deployment holds three seasons in a free database.
+
+The cost of moving is unchanged, and it is not money: Auth0's environment tag
+and a second tenant are both free, and the free plan's user allowance is far
+beyond this project's scale. What a move costs is **rework that no part of this
+repository can reproduce.** A new tenant means a new issuer URL, and that URL is
+baked into the server's environment, into the discovery document it publishes,
+and into every connector anybody has already added - all of which break at once.
+The API, its `read:warehouse` permission, the Native/PKCE application, the
+third-party default permission setting and the post-login Action are five
+dashboard objects, each of which took a debugging round on 2026-08-29, and none
+of which exists as a migration, a test or a diff. **That is what makes it the
+riskiest item: not damage, but an unreproducible rebuild whose worst failure is
+silent.** A connector that authenticates while the allowlist Action is not
+attached looks exactly like a working one.
+
+**P2-3 keeps its priority and changes its justification.** It is no longer
+argued for as the thing standing between the warehouse and the public. It is the
+precondition of removing the allowlist from the public deployment: the moment
+that Action goes, an unaudienced token is the only thing left, and the server
+accepts any token its tenant issued for any purpose.
+
+### The work, in order, with what is already done
+
+Done on 2026-08-30, on branch `security/workflow-hardening`:
+
+- `zizmor` run against `.github/workflows/` for the first time. 28 findings, now
+  0. The measurement preceded the fix deliberately, and it earned its keep:
+  `artipacked` - eight checkouts leaving a credential in the workspace - was not
+  on the hand-written list of things to fix.
+- Every action reference pinned to a commit SHA, `setup-flyctl@master` among
+  them. That one shared a workflow with `FLY_API_TOKEN`.
+- Production credentials removed from every job-level `env` block, so
+  `pip install` no longer runs package setup code holding the database password.
+- Season codes passed through `env` rather than interpolated into shell
+  commands, and `validate_season_code()` added at the script entry points. That
+  value also reaches an API URL, where a `/` or a `?` changes the request.
+- `tests/test_workflow_security.py`: four tests locking all of the above.
+
+Remaining, in the order it should be worked:
+
+| | Work | Why it sits here | Estimate |
+|---|---|---|---|
+| **R-1** | Protect `master` with a ruleset | The last piece of the hardening above, and the rule CLAUDE.md already states in prose | 15 min |
+| **R-2** | Run the restore gate for E2020 and E2021 | Both are archived and neither has passed a gate. E2020's gate failed on a Supabase read timeout on 2026-08-30 and the chain moved on, because the chooser tests whether a season is *fetched*, not whether it *verified* | 20 min |
+| **R-3** | Dependabot, CodeQL, Dependency Review | All free on a public repository. Dependency Review matters most here: it is the only mechanism that enforces CLAUDE.md's GPLv3 prohibition, which is otherwise a sentence | 2 h |
+| **R-4** | zizmor in CI, Trivy weekly and non-blocking, Docker digest pin | zizmor is the scanner that produced the list above. Trivy is scheduled only and deliberately not a required check: `python:3.14-slim` carries Debian CVEs that cannot be fixed here, and a required check nobody can pass is a check that gets disabled | 2 h |
+| **R-5** | Confirm Secret Scanning and Push Protection | Free and on by default for public repositories. A verification, not an installation | 10 min |
+| **R-6** | **P2-3**: verify the token audience and enforce a scope | Precondition for R-9 | half a day |
+| **R-7** | **P2-1**: load test the hosted server | Needs an interactive login, so it cannot run unattended. Fly admits 40 concurrent requests into a pool of 5 connections and nobody has measured it | 1 h |
+| **R-8** | Build the split: second Supabase project, second Fly app, nightly job loading both | The architecture above | 1 day |
+| **R-9** | Remove the allowlist from the public deployment only | After R-6 | 1 h |
+| **R-10** | A second home for the archive | Fifty hours of fetching currently has one copy | half a day |
+| **R-11** | README, announcement, video | Owner | owner |
+
+**P2-2 sits outside this table deliberately.** It is a decision, not a queued
+task, and the paragraph above is the case for re-examining it rather than doing
+it.
+
+### Dropped, and why
+
+- **A `docs/` exposure review.** `docs/AUTH0_CONFIGURATION.md` describes the
+  server's own unfixed weaknesses in a public repository, and moving it was
+  proposed. The owner judged the risk not worth the work, and that judgement
+  holds at this scale: the exposure is proportional to what is behind the door,
+  and behind it are basketball statistics behind an invite list. Removing the
+  file would also not undo publication - the repository is public and its
+  history keeps it. R-6 is the fix that actually retires the concern.
+- **A legal review of commercial use.** The owner is researching this separately
+  and will report the outcome. Nothing above depends on it, because nothing
+  above sells anything.
+
+### What none of this establishes
+
+The archive chain is unattended and running: E2019 back to E2003, roughly five
+seasons a day measured across four completed seasons, expected to finish about
+2026-09-02. That estimate is drawn from seasons larger than the ones remaining,
+and it is a projection rather than a measurement.
+
+**Nothing in this section verifies the archive's contents.** The restore gate
+proves the bytes come back unchanged; it does not prove they are what the API
+would serve today, and R-2 exists because two seasons have not had even that.
+
+### Progress, 2026-08-30, later the same day
+
+Still on branch `security/workflow-hardening`, deliberately unmerged: a merge is
+a production release, and the work below belongs in one release rather than
+five.
+
+**R-1 done.** Repository ruleset `master is a deploy trigger`, active on the
+default branch: pull request required (zero approvals, so a solo maintainer is
+not blocked), the `test` check required, force pushes and deletion refused. The
+configuration is verified through GitHub's rules endpoint. **Enforcement is
+not independently demonstrated**, and deliberately so: the only way to prove a
+direct push is refused is to attempt one, which - if the rule failed - would put
+commits on master without review and trigger a deploy.
+
+**R-5 done, and it was a verification rather than an installation**, as
+predicted. Secret Scanning and Push Protection were already enabled; public
+repositories get both by default. Two adjacent settings were found off:
+`dependabot_security_updates` was disabled and is now enabled (vulnerability
+alerts had to be turned on first, which was also off).
+`secret_scanning_validity_checks` was requested and **did not take effect** -
+the API accepted the call and the setting still reads disabled. Unresolved.
+`secret_scanning_non_provider_patterns` is left off on purpose: it widens
+detection at a cost in false positives that a solo maintainer pays personally.
+
+**R-3 done.** `.github/dependabot.yml` covers pip, GitHub Actions and Docker,
+weekly, with development dependencies grouped so ruff and pytest churn arrives
+as one pull request. `.github/workflows/dependency-review.yml` refuses a pull
+request that introduces a high-severity vulnerability or a GPL/AGPL dependency,
+which is the first time CLAUDE.md's GPLv3 prohibition exists as a mechanism
+instead of a sentence. LGPL is deliberately not denied.
+
+**CodeQL enabled** through default setup, `security-extended`, for Python and
+GitHub Actions.
+
+**R-4 done.** zizmor now runs inside `ci.yml` rather than as a workflow of its
+own, so it is covered by the one required status check and adds no new moving
+part. Trivy is a separate weekly workflow, failing on CRITICAL and reporting
+HIGH without failing, and is **not** a required check - a base image carries
+CVEs that cannot be fixed from this repository, and a gate nobody can pass is a
+gate that gets switched off. The Docker base image is digest-pinned, which
+Dependabot now maintains.
+
+**A finding that was not on the list, and its fix changed twice.** The deploy
+did not wait for CI. `fly-deploy.yml` triggered on `push` to master, so it and
+`CI` started at the same instant - the merge of pull request #25 stamps both
+runs `2026-08-29T21:10:31Z` - and a merge whose tests failed would have
+deployed anyway, because nothing asked. The first fix was a `workflow_run`
+trigger; zizmor rejected it as a dangerous trigger, correctly, since
+`workflow_run` runs with secrets in the base repository's context. The deploy is
+now a `deploy` job inside `ci.yml` with `needs: test`. **That is a mechanism
+rather than a guard**: the earlier shape was configured not to deploy early,
+this one cannot.
+
+### A staging environment: agreed in principle, sequenced deliberately
+
+Raised by the owner on 2026-08-30. It is worth having, and it splits into three
+pieces that do not have the same value.
+
+- **Gating the deploy on the tests was the urgent part**, and it is done above.
+  Nothing about staging would have closed that hole, because the hole was that
+  the release asked no questions at all.
+- **A staging Fly application is worth building**, as `R-8a`. Nothing currently
+  checks, before the live server restarts, that the container builds, boots,
+  reads its environment, publishes the expected tool list and answers a real
+  JSON-RPC call. Its cost is close to zero if it sets `auto_stop_machines = 'on'`
+  - production runs always-on at about $2.02 a month because
+  `docs/MCP_CONNECTION_LIFECYCLE_REPORT.md` measured 1,612 ms for a cold first
+  call against 606 ms warm, and that measurement is about production latency,
+  not about staging.
+- **A permanently hosted staging database is not worth it yet.** Supabase's free
+  plan caps active projects, and the risk it would address - a migration
+  behaving differently against real data - already has a rule in CLAUDE.md
+  written after production and the repository disagreed twice in two days:
+  rehearse on a disposable database, then apply. Making that database permanent
+  buys little and probably costs money.
+
+**`R-8a` is sequenced with `R-8`, not before it.** The two-deployment
+architecture already creates a second Fly application and a second Supabase
+project. Building staging first means laying the same plumbing twice.
+
+### R-6 done in code, and NOT yet proven against a real token. 2026-08-30.
+
+The server now refuses a token that does not name it. `acceptable_claims()` in
+`src/euroleague/mcp/http_app.py` is one function, used by both surviving
+verification paths, checking three things: the audience names this resource, the
+issuer is the configured authority, and the token carries the required scope.
+Trailing slashes are normalised on both sides, because Auth0 publishes `iss`
+with one and the configured value conventionally has none - and the comparison
+is an equality after normalisation, never a prefix match.
+
+**A second hole was found while fixing the first, and it was not in the
+documentation.** `verify_token` had a third path: if JWKS and introspection both
+declined, it called the tenant's `/userinfo` endpoint and, on any response
+carrying a `sub`, granted access **with no scopes at all**. A userinfo response
+proves the bearer exists in the tenant. It carries no audience, so it cannot
+show which API the token was minted for, and this tenant lets any client
+register itself. Every check added here would have been bypassable by anyone
+holding any token from the tenant. The path is deleted, and
+`test_the_userinfo_fallback_is_gone` asserts no GET follows a refused
+introspection.
+
+`MCP_REQUIRED_SCOPE` defaults to `read:warehouse` and can be set to an empty
+string to disable the scope check. The audience and issuer checks have no such
+switch: the scope is defence in depth, the audience is the mechanism.
+
+Rejections are now logged with their reason, at WARNING, on the server. The
+reason is deliberately absent from the 401 the client receives - an error that
+separates "wrong audience" from "unknown token" tells a caller which half of
+their guess was right - and it contains no claim values, so a rejection does not
+become a second disclosure.
+
+**WHAT IS NOT ESTABLISHED, and it is the important part.** No real Auth0 token
+has been through this code. The tests use constructed claim sets, and their
+shape comes from what Auth0's documentation and `docs/AUTH0_CONFIGURATION.md`
+say a token carries - not from an observed one. If the deployed configuration
+does not put `read:warehouse` in the token, or issues an audience that differs
+from `MCP_RESOURCE_URL` by more than a trailing slash, **this change locks the
+owner out of the hosted server**, and the merge that deploys it is the moment
+that happens.
+
+That risk is the clearest argument yet for `R-8a`: this is precisely the change
+a staging deployment exists to receive first. Until one exists, R-6 must be
+validated by `R-7`'s interactive login against a deployed instance, and the
+server log read for `token refused` before anybody relies on it.
+
+Two pre-existing tests were updated rather than removed. Their introspection
+fixtures had no `aud`, which described a token this server should never have
+accepted; a real response for an API access token carries one. Coverage went up
+rather than sideways: `test_app_with_auth_refuses_a_token_minted_for_another_api`
+now asserts the refusal end to end, at the point a client meets it.
+
+### R-6's lockout risk, resolved without a token. 2026-08-30.
+
+The open question was whether a real access token satisfies the new rule, and
+the answer turned out to be already recorded rather than needing an experiment.
+
+- **Audience: it matches.** The server publishes
+  `resource = https://euroleague-analytics-mcp.fly.dev/mcp`. Auth0's own error
+  message, pasted into `docs/AUTH0_CONFIGURATION.md` on 2026-08-29, names the
+  API by its identifier: *is not authorized to access resource server
+  "https://euroleague-analytics-mcp.fly.dev/mcp"*. The identifier is what lands
+  in `aud`, and it is the same string.
+- **Issuer: it matches after normalisation.** Auth0 issues `iss` with a trailing
+  slash and the configured issuer has none. `_same_url` was written for exactly
+  this and a test covers both spellings.
+- **Scope: unknown, and the default changed because of it.**
+  `MCP_REQUIRED_SCOPE` now defaults to empty. `docs/AUTH0_CONFIGURATION.md`
+  proves `read:warehouse` **exists** on the API; it does not prove an issued
+  token **carries** it, which depends on what the connector requests, and this
+  server's discovery document advertises no scope for it to request. Defaulting
+  to a check nothing has been observed to pass is how an operator locks
+  themselves out. Set the variable once a real token has been seen carrying the
+  scope.
+
+The distinction between a permission existing and a token carrying it was
+glossed when the default was first chosen. It is written down here because it is
+the kind of reasoning error that reads as thoroughness.
+
+**What this still does not establish.** No real token has been through the code.
+The audience and issuer conclusions come from two published strings and one
+recorded error message, which is evidence rather than observation.
+`scripts/check_hosted_token.py` remains the way to observe it, and R-7's
+interactive login is the occasion.

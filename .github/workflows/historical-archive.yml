@@ -47,13 +47,15 @@ jobs:
     # own six-hour ceiling. A season that needs longer should be split, not
     # given a bigger number.
     timeout-minutes: 330
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    # The production credentials are deliberately NOT declared here. A job-level
+    # env block hands them to every step, including `pip install`, which executes
+    # setup code from packages this repository does not write. Each step below
+    # that genuinely needs them declares them itself.
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.14"
           cache: pip
@@ -65,5 +67,17 @@ jobs:
 
       # --archive refuses E2026 itself, so the nightly season cannot be fetched
       # here even if somebody types it into the dispatch box.
+      #
+      # `season` reaches the command as an environment variable, never as
+      # `${{ inputs.season }}` inside the command text. An expression is
+      # substituted before the shell parses the line, so a dispatch input
+      # containing a quote and a semicolon would become commands rather than an
+      # argument. As a variable it is data the shell reads, and the season code
+      # is checked again for shape inside scripts/fetch_archive.py.
       - name: Restore, fetch and archive the season
-        run: python scripts/fetch_archive.py "${{ inputs.season }}" --archive --cache-root .archive-cache
+        env:
+          SEASON: ${{ inputs.season }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/fetch_archive.py "$SEASON" --archive --cache-root .archive-cache

@@ -16,6 +16,7 @@ from starlette.testclient import TestClient
 
 from euroleague.mcp.http_app import (
     IntrospectionTokenVerifier,
+    acceptable_claims,
     auth_from_env,
     build_app,
     determine_allowed_hosts,
@@ -79,10 +80,15 @@ def test_verifier_validates_active_token() -> None:
         client_secret="shhh",
         resource_url="https://euroleague.fly.dev/mcp",
     )
+    # `aud` was added to this fixture on 2026-08-30. It is not a concession to a
+    # new check: a real introspection response for an API access token carries
+    # the audience, and a fixture without one described a token this server
+    # should never have accepted.
     fake_response = httpx2.Response(
         200,
         json={
             "active": True,
+            "aud": "https://euroleague.fly.dev/mcp",
             "client_id": "client-123",
             "scope": "read write",
             "exp": 1893456000,
@@ -210,12 +216,17 @@ def test_app_with_auth_accepts_valid_token() -> None:
         allowed_hosts=["testserver"],
         row_budget=DailyRowBudget(InMemoryUsageStore()),
     )
+    # The scope is present although nothing requires it by default, because a
+    # real token from an API-audienced request carries one. What this exercises
+    # is the audience and issuer pair, end to end.
     fake_response = httpx2.Response(
         200,
         json={
             "active": True,
+            "aud": COMPLETE["MCP_RESOURCE_URL"],
+            "iss": COMPLETE["MCP_ISSUER_URL"],
             "client_id": "client-123",
-            "scope": "read",
+            "scope": "read:warehouse",
         },
     )
 
@@ -241,6 +252,151 @@ def test_app_with_auth_accepts_valid_token() -> None:
             },
         )
     assert response.status_code == 200
+
+
+def test_the_scope_check_is_off_until_somebody_turns_it_on() -> None:
+    """A default that has never been observed to pass is a lockout waiting to run.
+
+    `read:warehouse` is defined on the API - `docs/AUTH0_CONFIGURATION.md` records
+    it being created - but no issued token has been seen carrying it, and the
+    discovery document advertises no scope for a client to request. Requiring it
+    by default would refuse the owner's own connector on the first deploy.
+
+    The audience check has no such switch, and it is the one that closes the hole.
+    """
+    verifier, _ = auth_from_env(COMPLETE)
+    assert verifier.required_scope is None
+
+    with_scope, _ = auth_from_env({**COMPLETE, "MCP_REQUIRED_SCOPE": "read:warehouse"})
+    assert with_scope.required_scope == "read:warehouse"
+
+
+def test_turning_the_scope_off_does_not_turn_the_audience_off() -> None:
+    """The two must not share a switch, or disabling the noisy one disables the
+    one that matters."""
+    verifier, _ = auth_from_env({**COMPLETE, "MCP_REQUIRED_SCOPE": ""})
+    assert verifier.required_scope is None
+    assert verifier.resource_url == COMPLETE["MCP_RESOURCE_URL"]
+    assert (
+        acceptable_claims(
+            {"aud": "https://elsewhere.example.com", "iss": COMPLETE["MCP_ISSUER_URL"]},
+            resource_url=verifier.resource_url,
+            issuer_url=verifier.issuer_url,
+            required_scope=verifier.required_scope,
+        )
+        is not None
+    )
+
+
+def test_app_with_auth_refuses_a_token_minted_for_another_api() -> None:
+    """The hole closed on 2026-08-30, asserted where a client would meet it.
+
+    Everything about this token is genuine: the identity provider says it is
+    active, it is signed by the configured tenant, and it carries the required
+    scope. It was simply issued for a different API. Before this check the
+    server accepted it, and registration on that tenant is open to anybody.
+    """
+    verifier, settings = auth_from_env(COMPLETE)
+    app = build_app(
+        lambda q, a: {},
+        verifier=verifier,
+        auth_settings=settings,
+        allowed_hosts=["testserver"],
+        row_budget=DailyRowBudget(InMemoryUsageStore()),
+    )
+    fake_response = httpx2.Response(
+        200,
+        json={
+            "active": True,
+            "aud": "https://a-different-api.example.com",
+            "iss": COMPLETE["MCP_ISSUER_URL"],
+            "client_id": "client-123",
+            "scope": "read:warehouse",
+        },
+    )
+
+    with (
+        patch("httpx2.AsyncClient.post", return_value=fake_response),
+        TestClient(app) as client,
+    ):
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+            headers={
+                "Authorization": "Bearer token-for-somebody-else",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
+    assert response.status_code == 401
+    assert "WWW-Authenticate" in response.headers
+
+
+def test_the_client_is_told_nothing_about_why_the_token_was_refused() -> None:
+    """The reason belongs in the server log, not in the response.
+
+    An error that distinguishes "wrong audience" from "unknown token" tells an
+    attacker which half of their guess was right.
+    """
+    verifier, settings = auth_from_env(COMPLETE)
+    app = build_app(
+        lambda q, a: {},
+        verifier=verifier,
+        auth_settings=settings,
+        allowed_hosts=["testserver"],
+        row_budget=DailyRowBudget(InMemoryUsageStore()),
+    )
+    wrong_audience = httpx2.Response(
+        200,
+        json={"active": True, "aud": "https://elsewhere.example.com", "sub": "someone"},
+    )
+
+    with (
+        patch("httpx2.AsyncClient.post", return_value=wrong_audience),
+        TestClient(app) as client,
+    ):
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+            headers={
+                "Authorization": "Bearer token-for-somebody-else",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
+    assert response.status_code == 401
+    assert "audience" not in response.text.lower()
+
+
+def test_the_userinfo_fallback_is_gone() -> None:
+    """A token the introspection endpoint rejects must not find a second door.
+
+    `/userinfo` used to be that door. It answers for any token the tenant
+    issued, carries no audience, and granted access with no scopes at all - so
+    every check added above would have been bypassable by holding any token
+    from the tenant. Removing it is the fix; this asserts it stays removed.
+    """
+    verifier = IntrospectionTokenVerifier(
+        introspection_url="https://example-idp.com/oauth2/introspect",
+        client_id="client-abc",
+        client_secret="shhh",
+        resource_url="https://euroleague.fly.dev/mcp",
+        issuer_url="https://example-idp.com",
+    )
+    inactive = httpx2.Response(200, json={"active": False})
+    userinfo = httpx2.Response(200, json={"sub": "auth0|somebody", "email": "a@b.c"})
+
+    async def run() -> None:
+        with (
+            patch("httpx2.AsyncClient.post", return_value=inactive),
+            patch("httpx2.AsyncClient.get", return_value=userinfo) as mock_get,
+        ):
+            assert await verifier.verify_token("a-token-from-this-tenant") is None
+        assert mock_get.call_count == 0, (
+            "The verifier called a GET endpoint after introspection refused the "
+            "token. The /userinfo fallback was removed because it cannot show "
+            "which API a token was minted for."
+        )
+
+    anyio.run(run)
 
 
 def test_determine_allowed_hosts() -> None:
