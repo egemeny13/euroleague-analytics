@@ -1099,6 +1099,42 @@ N hours and here is the coverage", which is what a sponsor conversation needs an
 is worth far more than having the data already sitting on a subscription nobody
 is paying for yet.
 
+### R-13: Auth0 production readiness. It blocks R-9, and it is owner work.
+
+Read from the tenant's own production checklist on 2026-08-30. `dev-ew0k6i4pmarjvgkn`
+is tagged DEVELOPMENT and fails seven checks, five of them marked CRITICAL. The
+correction this forces to the paragraph above is that **R-9 is not the only thing
+between here and a launch**: opening the door publicly while the tenant is in this
+state is the wrong order.
+
+**P2-2 is answered, and the answer is: do not move the tenant.** Every failed check
+is a setting on *this* tenant. Moving costs the unreproducible rebuild of five
+dashboard objects that P2-2 already priced, and buys none of these fixes, because a
+new tenant starts with the same developer keys and the same absent custom domain.
+
+| Check | What it actually costs at launch | Verdict |
+|---|---|---|
+| Social connections on Auth0 **developer keys** (4/10 apps) | The heaviest item. The keys are shared across tenants, the consent screen carries Auth0's branding rather than this project's, and Auth0 documents them as "restricted to testing only and should not be used in production". They also **cannot be used together with a custom domain**, and they break SSO, Actions redirects, federated logout, `prompt=none` and MFA. | **Blocking. Do first** - it is the precondition for the custom domain. Free: it needs this project's own Google OAuth client, not money. |
+| **Custom Domain** | Without it every visitor's login URL reads `dev-ew0k6i4pmarjvgkn.us.auth0.com`. That is the first thing a prospective sponsor sees. | **Blocking.** Auth0's free plan now includes one custom domain at no charge (card required for verification, not billed). It needs a domain this project owns - and the launch website needs one anyway, so it is one purchase serving two needs. |
+| Tenant **Support URL** and **Support Email** | Shown on consent and error screens. | Do now. Five minutes, free. |
+| `EuroLeague MCP Introspection` has an `http://localhost` **callback** | It is a server-side introspection client; an interactive callback on it is vestigial. | Do now. Also settle whether that application is still needed: the tenant caps at ten applications and holds exactly ten. |
+| Custom **Email Provider** | Only bites if a database (email and password) connection is ever added, for verification and reset mail. The promoted connection is social, and the identity provider verifies the address. | **Conditional.** Not on the path to a social-only launch. |
+| Custom **Error Page** | Cosmetic. | Optional. |
+
+**Do this now rather than after the launch, and the reason is not tidiness.**
+Replacing the developer keys with the project's own OAuth client changes how the
+social connection is configured. Today the tenant has exactly one user in the
+allowlist - the owner. If anything about identity continuity goes wrong, the only
+person it can break is the person doing the work. After a public opening, the same
+change breaks strangers, silently, on the day the project is being judged.
+
+**What this does not establish.** Whether existing social identities survive the key
+swap unchanged has not been verified here, only reasoned about; it is exactly the
+thing the one-user window makes cheap to find out. Whether the DEVELOPMENT
+environment tag can be changed on this tenant was not read from the dashboard. The
+tag matters less than the two things it stands for: fix the keys and the domain, and
+the label is either fixable or irrelevant.
+
 ### What none of this establishes
 
 The launch date is a judgement about attention and risk, not a measurement. The
