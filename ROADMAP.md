@@ -925,3 +925,54 @@ pieces that do not have the same value.
 **`R-8a` is sequenced with `R-8`, not before it.** The two-deployment
 architecture already creates a second Fly application and a second Supabase
 project. Building staging first means laying the same plumbing twice.
+
+### R-6 done in code, and NOT yet proven against a real token. 2026-08-30.
+
+The server now refuses a token that does not name it. `acceptable_claims()` in
+`src/euroleague/mcp/http_app.py` is one function, used by both surviving
+verification paths, checking three things: the audience names this resource, the
+issuer is the configured authority, and the token carries the required scope.
+Trailing slashes are normalised on both sides, because Auth0 publishes `iss`
+with one and the configured value conventionally has none - and the comparison
+is an equality after normalisation, never a prefix match.
+
+**A second hole was found while fixing the first, and it was not in the
+documentation.** `verify_token` had a third path: if JWKS and introspection both
+declined, it called the tenant's `/userinfo` endpoint and, on any response
+carrying a `sub`, granted access **with no scopes at all**. A userinfo response
+proves the bearer exists in the tenant. It carries no audience, so it cannot
+show which API the token was minted for, and this tenant lets any client
+register itself. Every check added here would have been bypassable by anyone
+holding any token from the tenant. The path is deleted, and
+`test_the_userinfo_fallback_is_gone` asserts no GET follows a refused
+introspection.
+
+`MCP_REQUIRED_SCOPE` defaults to `read:warehouse` and can be set to an empty
+string to disable the scope check. The audience and issuer checks have no such
+switch: the scope is defence in depth, the audience is the mechanism.
+
+Rejections are now logged with their reason, at WARNING, on the server. The
+reason is deliberately absent from the 401 the client receives - an error that
+separates "wrong audience" from "unknown token" tells a caller which half of
+their guess was right - and it contains no claim values, so a rejection does not
+become a second disclosure.
+
+**WHAT IS NOT ESTABLISHED, and it is the important part.** No real Auth0 token
+has been through this code. The tests use constructed claim sets, and their
+shape comes from what Auth0's documentation and `docs/AUTH0_CONFIGURATION.md`
+say a token carries - not from an observed one. If the deployed configuration
+does not put `read:warehouse` in the token, or issues an audience that differs
+from `MCP_RESOURCE_URL` by more than a trailing slash, **this change locks the
+owner out of the hosted server**, and the merge that deploys it is the moment
+that happens.
+
+That risk is the clearest argument yet for `R-8a`: this is precisely the change
+a staging deployment exists to receive first. Until one exists, R-6 must be
+validated by `R-7`'s interactive login against a deployed instance, and the
+server log read for `token refused` before anybody relies on it.
+
+Two pre-existing tests were updated rather than removed. Their introspection
+fixtures had no `aud`, which described a token this server should never have
+accepted; a real response for an API access token carries one. Coverage went up
+rather than sideways: `test_app_with_auth_refuses_a_token_minted_for_another_api`
+now asserts the refusal end to end, at the point a client meets it.
