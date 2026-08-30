@@ -20,16 +20,25 @@ single most useful thing in this calendar.** It puts real, live, brand-new games
 in front of the nightly pipeline while nothing is public and nobody is watching.
 Whatever breaks there is free; the same break on 2026-09-24 is not.
 
-**It is not known whether the API serves it.** A third competition needs a
-competition code, and this project handles `E` and `U`. That is recon, scheduled
-below, not an assumption.
+**The API does serve it, and the recon is done.** `exploration/SUPERCUP_RECON.md`,
+2026-08-30: `SC` is a published competition code, `SC2026` is a real season with
+two semi-finals on 18 September, and the v1 game endpoints are
+competition-agnostic - proved by pulling a full play-by-play payload for a played
+EuroCup game rather than by assuming it.
+
+**But this project cannot ask for it yet**, and that is `ROADMAP.md` R-14:
+`validate_season_code()` requires `E` plus four digits and three v2 URL builders
+hard-code `competitions/E`. **R-14 is undecided and it expires on 2026-09-17.**
+Without it there is no rehearsal on the 18th, and the plan below falls back to
+the season opener being the pipeline's first live test - which is the risk the
+rehearsal existed to remove.
 
 ## Week 1, 2026-08-31 to 09-06 — unblock
 
 | Day | Owner | Agent |
 |---|---|---|
-| **08-31 Mon** | Merge PR #33. **Buy the domain** - it serves the launch website and the Auth0 custom domain both. | Confirm the chain cleared E2017; if it did not, that is the day's work and everything below slips. |
-| **09-01 Tue** | **R-13 part 1:** create this project's own Google OAuth client and replace Auth0's developer keys. The riskiest step, done while the allowlist holds one address. | SuperCup API recon: is there a competition code, and does the schedule endpoint answer for it. |
+| **08-31 Mon** | **Buy the domain, or decide deliberately not to** - `ROADMAP.md` R-13 has the zero-cost alternative and what it costs instead. Check the *renewal* price, not the first year. **Decide R-14**, which expires on 09-17. | Confirm the chain cleared E2017; if it did not, that is the day's work and everything below slips. |
+| **09-01 Tue** | **R-13 part 1:** create this project's own Google OAuth client and replace Auth0's developer keys. The riskiest step, done while the allowlist holds one address. **This is the only mandatory Auth0 item**; the custom domain is credibility, not function. | **R-14 if it was said yes to.** It gates the 09-18 rehearsal and nothing else in this plan gates it, so it can start immediately. |
 | **09-02 Wed** | **R-13 parts 2-4:** custom domain, tenant support URL and email, remove the `http://localhost` callback from `EuroLeague MCP Introspection`. Then `scripts/check_hosted_token.py` to observe a real token still works. | Redeploy with the new issuer values; update `docs/AUTH0_CONFIGURATION.md` to match what was actually done. |
 | **09-03 Thu** | - | Publish the archive's stored-byte total from `storage.objects`, which is Decision 37's condition. Confirm every season passed its restore gate. |
 | **09-04 to 09-06** | - | **R-12 rehearsal.** Load one historical season end to end and publish three numbers: how long it took, what share of its games the gates excluded, what it cost in the database. |
@@ -47,9 +56,9 @@ The long pole, and it waits on no code.
 
 | Day | Owner | Agent |
 |---|---|---|
-| **09-14 to 09-16** | - | Whatever the SuperCup recon found. If the API serves the competition, make the pipeline handle it; if it does not, record that and stop. |
+| **09-14 to 09-16** | - | Finish and verify R-14 against `SC2026`'s schedule, which by then should also hold the final. **If R-14 is not done by 09-17 it is abandoned, not rushed** - a rushed widening of `validate_season_code` is a security edit made under time pressure. |
 | **09-17 Thu** | - | **Freeze.** No merges to `master` after today until 09-21 unless something is broken. A merge is a deploy. |
-| **09-18 and 19** | Watch. | **Watch the pipeline against live SuperCup games.** Nothing is public, so a failure costs a night rather than a launch. |
+| **09-18 and 19** | Watch. | **Watch the pipeline against live SuperCup games** - two semi-finals on the 18th, the final on the 19th. Nothing is public, so a failure costs a night rather than a launch. If R-14 was abandoned, there is nothing to watch and the season opener becomes the first live test. |
 | **09-20 Sun** | - | Fix what the rehearsal broke. Write down what it proved and what it did not. |
 
 ## Week 4, 2026-09-21 to 09-27 — open, then launch
