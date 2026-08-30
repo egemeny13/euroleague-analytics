@@ -67,13 +67,15 @@ jobs:
     # 2 h 43 m. The largest season left is E2021 at 299 played games. This clears
     # both with room and stays under GitHub's own six-hour ceiling.
     timeout-minutes: 330
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    # The production credentials are deliberately NOT declared here. A job-level
+    # env block hands them to every step, including `pip install`, which executes
+    # setup code from packages this repository does not write. The three steps
+    # that genuinely reach the database and Storage declare them individually.
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.14"
           cache: pip
@@ -91,14 +93,30 @@ jobs:
       # must never appear here; a test asserts that.
       - name: Choose the next unarchived season
         id: choose
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/next_archive_season.py --github-output
 
       # --archive refuses E2026 itself, so the nightly season cannot be fetched
       # here even if the chooser were wrong about which season is next.
+      #
+      # The season reaches both commands below as an environment variable rather
+      # than as `${{ ... }}` inside the command text. It comes from our own
+      # chooser script and not from a person, so this is defence in depth rather
+      # than a hole being closed - but a step output is still a string the shell
+      # would parse as code, and the rule is cheaper to keep than to reason about
+      # case by case.
       - name: Restore, fetch and archive that season
         if: steps.choose.outputs.season != ''
+        env:
+          SEASON: ${{ steps.choose.outputs.season }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          python scripts/fetch_archive.py "${{ steps.choose.outputs.season }}" \
+          python scripts/fetch_archive.py "$SEASON" \
             --archive --cache-root .archive-cache
 
       # The gate. Downloads every archived object back out of Storage, verifies
@@ -107,7 +125,12 @@ jobs:
       # A failure here fails the job and stops the chain advancing.
       - name: Verify the season restores byte for byte
         if: steps.choose.outputs.season != ''
-        run: python scripts/verify_archive_season.py "${{ steps.choose.outputs.season }}"
+        env:
+          SEASON: ${{ steps.choose.outputs.season }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/verify_archive_season.py "$SEASON"
 
       - name: Report that the backfill is finished
         if: steps.choose.outputs.season == ''

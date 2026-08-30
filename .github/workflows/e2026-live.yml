@@ -16,13 +16,15 @@ jobs:
   daily-fetch:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    # The production credentials are deliberately NOT declared here. A job-level
+    # env block hands them to every step, including `pip install`, which runs
+    # setup code from packages this repository does not write. The three steps
+    # that reach the database and Storage declare them individually.
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.14"
           cache: pip
@@ -33,6 +35,10 @@ jobs:
           python -m pip install -e .
       - name: Fetch and archive newly played E2026 games
         if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/fetch_archive.py E2026 --live --require-fresh-schedule --cache-root .live-cache
 
       # Loads and derives only the games the warehouse is missing, then leaves
@@ -45,6 +51,10 @@ jobs:
       # whatever subset this run happened to fetch. See src/euroleague/live.py.
       - name: Load and derive newly played E2026 games
         if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/live_pipeline.py E2026 --live --cache-root .live-cache
 
       # Decision 7's condition, open since 2026-08-09 and impossible to satisfy
@@ -59,4 +69,8 @@ jobs:
       # is retried from a private archive snapshot rather than forgotten.
       - name: Take Decision 7 settlement readings
         if: always()
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/settlement_recheck.py E2026 --live

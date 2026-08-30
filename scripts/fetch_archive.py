@@ -22,6 +22,7 @@ from euroleague.fetch import (
     DEFAULT_CACHE_ROOT,
     ArchiveFetcher,
     fetch_seasons,
+    validate_season_code,
 )
 from euroleague.step_summary import append_step_summary, format_fetch_summary
 
@@ -88,6 +89,15 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    # Before anything else. A season code from a workflow_dispatch box reaches
+    # this script as a shell argument and leaves it inside an API URL, so its
+    # shape is checked here rather than trusted from either direction.
+    for season in args.seasons:
+        try:
+            validate_season_code(season)
+        except ValueError as error:
+            print(str(error), file=sys.stderr)
+            return 2
     if args.live and args.archive:
         print(
             "--live and --archive both archive to Supabase; choose one. --live is the "
