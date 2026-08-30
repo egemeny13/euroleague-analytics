@@ -1115,11 +1115,28 @@ new tenant starts with the same developer keys and the same absent custom domain
 | Check | What it actually costs at launch | Verdict |
 |---|---|---|
 | Social connections on Auth0 **developer keys** (4/10 apps) | The heaviest item. The keys are shared across tenants, the consent screen carries Auth0's branding rather than this project's, and Auth0 documents them as "restricted to testing only and should not be used in production". They also **cannot be used together with a custom domain**, and they break SSO, Actions redirects, federated logout, `prompt=none` and MFA. | **Blocking. Do first** - it is the precondition for the custom domain. Free: it needs this project's own Google OAuth client, not money. |
-| **Custom Domain** | Without it every visitor's login URL reads `dev-ew0k6i4pmarjvgkn.us.auth0.com`. That is the first thing a prospective sponsor sees. | **Blocking.** Auth0's free plan now includes one custom domain at no charge (card required for verification, not billed). It needs a domain this project owns - and the launch website needs one anyway, so it is one purchase serving two needs. |
+| **Custom Domain** | Without it every visitor's login URL reads `dev-ew0k6i4pmarjvgkn.us.auth0.com`. That is the first thing a prospective sponsor sees. | **Not blocking - corrected 2026-08-30.** It is credibility, not function, and it is *not* a precondition for leaving the developer keys; the dependency runs the other way. Auth0's free plan includes one custom domain at no charge (card for verification, not billed). It needs a domain this project owns, and the launch website needs one anyway, so it is one purchase serving two needs. **Recommended, not required.** |
 | Tenant **Support URL** and **Support Email** | Shown on consent and error screens. | Do now. Five minutes, free. |
 | `EuroLeague MCP Introspection` has an `http://localhost` **callback** | It is a server-side introspection client; an interactive callback on it is vestigial. | Do now. Also settle whether that application is still needed: the tenant caps at ten applications and holds exactly ten. |
 | Custom **Email Provider** | Only bites if a database (email and password) connection is ever added, for verification and reset mail. The promoted connection is social, and the identity provider verifies the address. | **Conditional.** Not on the path to a social-only launch. |
 | Custom **Error Page** | Cosmetic. | Optional. |
+
+**There is a zero-cost path, and it should be chosen deliberately rather than by
+default.** Skip the custom domain, host the site on GitHub Pages, and point
+Google's required homepage and privacy-policy links there. Total cost: nothing.
+What it costs instead is that every stranger's login URL reads
+`dev-ew0k6i4pmarjvgkn.us.auth0.com`, on a project whose entire purpose is to be
+credible enough that somebody funds it. A domain is roughly five to fifteen
+dollars a year against a thirty-five-dollar-a-month ask. Buy it; but if the
+answer is no, the launch still works.
+
+**If a domain is bought, the number that matters is the renewal price, not the
+first-year price.** The common registrar model is a near-free first year and an
+expensive renewal. Porkbun and Cloudflare Registrar price at or near cost;
+`.me` typically renews dearer than `.com`. A personal domain is a defensible
+choice here rather than a compromise: this is a portfolio project, so the thing
+being made credible is the owner, not a product name. One purchase then serves
+three uses - the site, the Auth0 custom domain, and a CV landing page.
 
 **Do this now rather than after the launch, and the reason is not tidiness.**
 Replacing the developer keys with the project's own OAuth client changes how the
@@ -1134,6 +1151,35 @@ thing the one-user window makes cheap to find out. Whether the DEVELOPMENT
 environment tag can be changed on this tenant was not read from the dashboard. The
 tag matters less than the two things it stands for: fix the keys and the domain, and
 the label is either fixable or irrelevant.
+
+### R-14: parameterise the competition code. Undecided, and it expires on 2026-09-18.
+
+`exploration/SUPERCUP_RECON.md` establishes that the API publishes `SC` as a
+competition code, that `SC2026` is a real season with two semi-finals on
+2026-09-18, and that the v1 game endpoints are competition-agnostic - proved by
+pulling a full play-by-play payload for a played EuroCup game, `U2025`.
+
+**This project cannot ask for it.** `validate_season_code()` requires `E` plus
+exactly four digits, and three of the four v2 URL builders hard-code
+`competitions/E`. The comment at `fetch.py:124` anticipated this exact change.
+
+**What it buys.** A dress rehearsal on live data six days before the season
+opener, while nothing is public. And the only possession-level reconstruction of
+the first SuperCup ever played, which is a reason for the launch to be
+interesting rather than merely available. The same change opens EuroCup later,
+which this project has always intended.
+
+**What it costs.** `validate_season_code` was hardened deliberately, because that
+value reaches both an API path and a shell argument. Widening it is a
+security-relevant edit and must keep refusing anything that is not a competition
+code. The fetch, archive and pipeline paths all carry the season code, so the
+change is small in each place and touches several.
+
+**Why it expires.** Undone by 2026-09-17, this item stops being worth anything:
+the games are played on the 18th and the rehearsal is gone. It is not deferred
+work, it is dated work.
+
+**Not decided.** Recorded here so a decision can be made rather than missed.
 
 ### What none of this establishes
 
