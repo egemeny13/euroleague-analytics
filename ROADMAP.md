@@ -845,3 +845,83 @@ and it is a projection rather than a measurement.
 **Nothing in this section verifies the archive's contents.** The restore gate
 proves the bytes come back unchanged; it does not prove they are what the API
 would serve today, and R-2 exists because two seasons have not had even that.
+
+### Progress, 2026-08-30, later the same day
+
+Still on branch `security/workflow-hardening`, deliberately unmerged: a merge is
+a production release, and the work below belongs in one release rather than
+five.
+
+**R-1 done.** Repository ruleset `master is a deploy trigger`, active on the
+default branch: pull request required (zero approvals, so a solo maintainer is
+not blocked), the `test` check required, force pushes and deletion refused. The
+configuration is verified through GitHub's rules endpoint. **Enforcement is
+not independently demonstrated**, and deliberately so: the only way to prove a
+direct push is refused is to attempt one, which - if the rule failed - would put
+commits on master without review and trigger a deploy.
+
+**R-5 done, and it was a verification rather than an installation**, as
+predicted. Secret Scanning and Push Protection were already enabled; public
+repositories get both by default. Two adjacent settings were found off:
+`dependabot_security_updates` was disabled and is now enabled (vulnerability
+alerts had to be turned on first, which was also off).
+`secret_scanning_validity_checks` was requested and **did not take effect** -
+the API accepted the call and the setting still reads disabled. Unresolved.
+`secret_scanning_non_provider_patterns` is left off on purpose: it widens
+detection at a cost in false positives that a solo maintainer pays personally.
+
+**R-3 done.** `.github/dependabot.yml` covers pip, GitHub Actions and Docker,
+weekly, with development dependencies grouped so ruff and pytest churn arrives
+as one pull request. `.github/workflows/dependency-review.yml` refuses a pull
+request that introduces a high-severity vulnerability or a GPL/AGPL dependency,
+which is the first time CLAUDE.md's GPLv3 prohibition exists as a mechanism
+instead of a sentence. LGPL is deliberately not denied.
+
+**CodeQL enabled** through default setup, `security-extended`, for Python and
+GitHub Actions.
+
+**R-4 done.** zizmor now runs inside `ci.yml` rather than as a workflow of its
+own, so it is covered by the one required status check and adds no new moving
+part. Trivy is a separate weekly workflow, failing on CRITICAL and reporting
+HIGH without failing, and is **not** a required check - a base image carries
+CVEs that cannot be fixed from this repository, and a gate nobody can pass is a
+gate that gets switched off. The Docker base image is digest-pinned, which
+Dependabot now maintains.
+
+**A finding that was not on the list, and its fix changed twice.** The deploy
+did not wait for CI. `fly-deploy.yml` triggered on `push` to master, so it and
+`CI` started at the same instant - the merge of pull request #25 stamps both
+runs `2026-08-29T21:10:31Z` - and a merge whose tests failed would have
+deployed anyway, because nothing asked. The first fix was a `workflow_run`
+trigger; zizmor rejected it as a dangerous trigger, correctly, since
+`workflow_run` runs with secrets in the base repository's context. The deploy is
+now a `deploy` job inside `ci.yml` with `needs: test`. **That is a mechanism
+rather than a guard**: the earlier shape was configured not to deploy early,
+this one cannot.
+
+### A staging environment: agreed in principle, sequenced deliberately
+
+Raised by the owner on 2026-08-30. It is worth having, and it splits into three
+pieces that do not have the same value.
+
+- **Gating the deploy on the tests was the urgent part**, and it is done above.
+  Nothing about staging would have closed that hole, because the hole was that
+  the release asked no questions at all.
+- **A staging Fly application is worth building**, as `R-8a`. Nothing currently
+  checks, before the live server restarts, that the container builds, boots,
+  reads its environment, publishes the expected tool list and answers a real
+  JSON-RPC call. Its cost is close to zero if it sets `auto_stop_machines = 'on'`
+  - production runs always-on at about $2.02 a month because
+  `docs/MCP_CONNECTION_LIFECYCLE_REPORT.md` measured 1,612 ms for a cold first
+  call against 606 ms warm, and that measurement is about production latency,
+  not about staging.
+- **A permanently hosted staging database is not worth it yet.** Supabase's free
+  plan caps active projects, and the risk it would address - a migration
+  behaving differently against real data - already has a rule in CLAUDE.md
+  written after production and the repository disagreed twice in two days:
+  rehearse on a disposable database, then apply. Making that database permanent
+  buys little and probably costs money.
+
+**`R-8a` is sequenced with `R-8`, not before it.** The two-deployment
+architecture already creates a second Fly application and a second Supabase
+project. Building staging first means laying the same plumbing twice.

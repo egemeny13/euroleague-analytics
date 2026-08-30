@@ -5,10 +5,23 @@ on:
     branches: [master, main]
   pull_request:
 
-# This workflow holds no secrets and touches no database. It runs the
+# The `test` job holds no secrets and touches no database. It runs the
 # committed fixtures only. The full 330-game validation needs the response
 # cache, which is not in the repository, and arrives as a separate
 # manually-triggered workflow once the archive is in Supabase Storage.
+#
+# THE DEPLOY LIVES HERE, AND THAT IS THE POINT. It used to be its own workflow
+# triggered by `push`, which meant it and this one began at the same instant and
+# neither waited for the other - the merge of pull request #25 stamps both runs
+# 2026-08-29T21:10:31Z. A merge whose tests failed deployed anyway, because
+# nothing asked.
+#
+# The first fix was a `workflow_run` trigger on this workflow's completion, and
+# zizmor rejected it: `workflow_run` runs with secrets in the base repository's
+# context and is the standard way to hand a fork's pull request a production
+# token. The guards that would have made it safe here were real but were guards,
+# where `needs: test` is a mechanism. This shape cannot start before the tests
+# pass, rather than being configured not to.
 permissions:
   contents: read
 
@@ -41,5 +54,42 @@ jobs:
       - name: Check formatting
         run: ruff format --check .
 
+      # zizmor audits the workflow files themselves. It sits in CI rather than in
+      # a workflow of its own so that it is covered by the one required status
+      # check this repository has, and so there is one fewer moving part.
+      #
+      # It found all 28 of the issues fixed on 2026-08-30, including eight nobody
+      # had thought to look for. tests/test_workflow_security.py locks the
+      # specific properties that mattered; this catches the classes nobody has
+      # written a test for yet.
+      - name: Audit the workflows
+        run: |
+          pip install zizmor==1.29.0
+          zizmor --no-online-audits .github/workflows/
+
       - name: Test
         run: pytest
+
+  # CLAUDE.md calls a merge to master a production release: this restarts the
+  # hosted MCP server and interrupts anybody connected to it. `needs: test` is
+  # what makes the release conditional on the tests, and the `if` keeps it to a
+  # direct push on the default branch - a pull request builds and tests, and
+  # deploys nothing.
+  deploy:
+    name: Deploy app
+    needs: test
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    concurrency: deploy-group
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+      # FLY_API_TOKEN is declared on this step alone. The checkout and the
+      # flyctl install above have no use for it.
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

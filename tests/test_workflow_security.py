@@ -168,3 +168,34 @@ def test_checkout_never_persists_credentials() -> None:
         "These `actions/checkout` steps do not set `persist-credentials: false`:"
         "\n  " + "\n  ".join(offenders)
     )
+
+
+def test_the_deploy_depends_on_the_tests() -> None:
+    """A merge to master is a production release, so it must pass its tests first.
+
+    The deploy used to be its own workflow triggered by `push`, which meant it
+    and CI began at the same instant and neither waited for the other: the merge
+    of pull request #25 stamps both runs 2026-08-29T21:10:31Z. A merge whose
+    tests failed deployed anyway, because nothing asked.
+
+    A `workflow_run` trigger was tried and rejected - it runs with secrets in the
+    base repository's context and is the usual route by which a fork's pull
+    request is handed a production token. `needs:` is a mechanism rather than a
+    guard, so that is what this asserts.
+    """
+    assert not (WORKFLOW_DIRECTORY / "fly-deploy.yml").exists(), (
+        "The deploy belongs to the CI workflow, where `needs: test` orders it "
+        "after the tests. A separate workflow cannot express that dependency."
+    )
+    text = (WORKFLOW_DIRECTORY / "ci.yml").read_text(encoding="utf-8")
+    assert "flyctl deploy" in text, "The deploy step is missing from ci.yml."
+    deploy_job = text.split("  deploy:", 1)
+    assert len(deploy_job) == 2, "ci.yml has no `deploy` job."
+    assert "needs: test" in deploy_job[1], (
+        "The deploy job must declare `needs: test`, or it runs alongside the "
+        "tests rather than after them."
+    )
+    assert "github.event_name == 'push'" in deploy_job[1], (
+        "The deploy job must refuse to run for a pull request; a pull request "
+        "builds and tests, and deploys nothing."
+    )

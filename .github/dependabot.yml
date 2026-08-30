@@ -1,0 +1,53 @@
+# Dependabot keeps the pins in this repository current.
+#
+# WHY THIS EXISTS AT ALL. Every action reference is pinned to a commit SHA, and a
+# pin that nobody updates is a pin that quietly ages into a known vulnerability.
+# Pinning and updating are two halves of the same decision; this file is the
+# second half.
+#
+# WEEKLY, NOT DAILY. This is a solo-maintained repository. A daily schedule
+# produces pull requests faster than one person reviews them, and a queue of
+# unread dependency pull requests teaches the maintainer to ignore the label
+# that security updates also arrive under. Weekly is chosen so the pull requests
+# stay readable, and GitHub delivers security advisories out of band regardless
+# of this schedule.
+
+version: 2
+updates:
+  # The runtime tree is deliberately two packages (see requirements.txt), so
+  # these updates are rare and each one is worth reading individually. Grouping
+  # is used only for the development tree, where ruff and pytest churn.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      development-dependencies:
+        patterns:
+          - ruff
+          - pytest*
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # These move together and are always reviewed together. One pull request
+      # per official action would be three per bump for no added information.
+      official-actions:
+        patterns:
+          - actions/*
+
+  # The hosted server's base image. `Dockerfile` pins python:3.14-slim by digest,
+  # and a digest pin receives no security patches on its own - this is what moves
+  # it forward.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
