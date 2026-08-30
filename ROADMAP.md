@@ -676,7 +676,7 @@ is safe until P2-2 and P2-3 are settled.**
 
 | | Work | Who | Why it sits here |
 |---|---|---|---|
-| **P2-1** | **Load test the hosted server** | Owner, with a script | Independent of the rest; can happen any time. Fly admits 40 concurrent requests into a pool of 5 connections. The concern is arithmetic, not an observed failure, and it stays that way until somebody measures it. **It needs an authenticated token, which needs an interactive login**, so it cannot be run unattended. The token belongs in an environment variable on the owner's machine and must never be pasted into a chat or a file. |
+| **P2-1 — DONE 2026-08-30** | **Load test the hosted server** | Owner, with a script | 40 concurrent POSTs completed with 120/120 successes at that level and p95 3,205.620 ms. See `docs/HOSTED_LOAD_TEST_2026-08-30.md`; persistent SDK GET streams consume Fly request slots, so this is not a 40-connected-user claim. |
 | **P2-2** | **Decide the Auth0 tenant** | Owner | `dev-ew0k6i4pmarjvgkn` is labelled DEVELOPMENT and Auth0 does not intend those tenants to carry production traffic. Moving means a new issuer URL, which means redeploying the server with new environment values and rebuilding the API, the application and the Action — essentially redoing the 2026-08-29 Auth0 work. **That cost is the same before or after a public opening; the risk is not.** Decide before. |
 | **P2-3** | **Make the server check the token's audience** | Code | Read on 2026-08-29: `src/euroleague/mcp/http_app.py` validates a bearer token against the tenant's JWKS, introspection endpoint or userinfo, but passes `verify_aud=False` and enforces no scope. **Any valid token from that tenant is accepted.** With an allowlist in front, that is tolerable. Without one, on a tenant anyone can sign up to, it means any token issued by that tenant for any purpose opens the warehouse. This is the reason P2-4 cannot come first. |
 | **P2-4** | **Retire the invite-only Action** | Owner | It must go, or a public server admits nobody. When it goes, the controls that remain are the ones already built: the per-subject daily row budget (goal 032) and the sweep refusal (goal 033), plus Fly's concurrency limits. Those bound *how much* anyone can take; they do not bound *who*. That is the intended trade of going public, and it should be made knowingly. |
@@ -812,7 +812,7 @@ Remaining, in the order it should be worked:
 | **R-4** | zizmor in CI, Trivy weekly and non-blocking, Docker digest pin | zizmor is the scanner that produced the list above. Trivy is scheduled only and deliberately not a required check: `python:3.14-slim` carries Debian CVEs that cannot be fixed here, and a required check nobody can pass is a check that gets disabled | 2 h |
 | **R-5** | Confirm Secret Scanning and Push Protection | Free and on by default for public repositories. A verification, not an installation | 10 min |
 | **R-6** | **P2-3**: verify the token audience and enforce a scope | Precondition for R-9 | half a day |
-| **R-7** | **P2-1**: load test the hosted server | Needs an interactive login, so it cannot run unattended. Fly admits 40 concurrent requests into a pool of 5 connections and nobody has measured it | 1 h |
+| **R-7 — DONE** | **P2-1**: load test the hosted server | 40 concurrent POSTs measured successfully; the separate SDK session-slot limit is recorded, not guessed | completed 2026-08-30 |
 | **R-8** | Build the split: second Supabase project, second Fly app, nightly job loading both | The architecture above | 1 day |
 | **R-9** | Remove the allowlist from the public deployment only | After R-6 | 1 h |
 | **R-10** | A second home for the archive | Fifty hours of fetching currently has one copy | half a day |
@@ -926,7 +926,7 @@ pieces that do not have the same value.
 architecture already creates a second Fly application and a second Supabase
 project. Building staging first means laying the same plumbing twice.
 
-### R-6 done in code, and NOT yet proven against a real token. 2026-08-30.
+### R-6 done in code, and proven against a real token. 2026-08-30.
 
 The server now refuses a token that does not name it. `acceptable_claims()` in
 `src/euroleague/mcp/http_app.py` is one function, used by both surviving
@@ -947,9 +947,9 @@ holding any token from the tenant. The path is deleted, and
 `test_the_userinfo_fallback_is_gone` asserts no GET follows a refused
 introspection.
 
-`MCP_REQUIRED_SCOPE` defaults to `read:warehouse` and can be set to an empty
-string to disable the scope check. The audience and issuer checks have no such
-switch: the scope is defence in depth, the audience is the mechanism.
+`MCP_REQUIRED_SCOPE` defaults to an empty string and can be set to
+`read:warehouse` to enable the scope check. The audience and issuer checks have
+no such switch: the scope is defence in depth, the audience is the mechanism.
 
 Rejections are now logged with their reason, at WARNING, on the server. The
 reason is deliberately absent from the 401 the client receives - an error that
@@ -957,19 +957,11 @@ separates "wrong audience" from "unknown token" tells a caller which half of
 their guess was right - and it contains no claim values, so a rejection does not
 become a second disclosure.
 
-**WHAT IS NOT ESTABLISHED, and it is the important part.** No real Auth0 token
-has been through this code. The tests use constructed claim sets, and their
-shape comes from what Auth0's documentation and `docs/AUTH0_CONFIGURATION.md`
-say a token carries - not from an observed one. If the deployed configuration
-does not put `read:warehouse` in the token, or issues an audience that differs
-from `MCP_RESOURCE_URL` by more than a trailing slash, **this change locks the
-owner out of the hosted server**, and the merge that deploys it is the moment
-that happens.
-
-That risk is the clearest argument yet for `R-8a`: this is precisely the change
-a staging deployment exists to receive first. Until one exists, R-6 must be
-validated by `R-7`'s interactive login against a deployed instance, and the
-server log read for `token refused` before anybody relies on it.
+**The owed observation was completed during R-7.** A real process-local Auth0
+token named the MCP resource in its audience, carried the configured issuer and
+included `read:warehouse`; the deployed rule accepted it. No bearer or personal
+claim was written. Enabling the scope requirement is now known not to reject
+this token shape, but remains a separate owner-approved production change.
 
 Two pre-existing tests were updated rather than removed. Their introspection
 fixtures had no `aud`, which described a token this server should never have
@@ -991,21 +983,34 @@ the answer turned out to be already recorded rather than needing an experiment.
 - **Issuer: it matches after normalisation.** Auth0 issues `iss` with a trailing
   slash and the configured issuer has none. `_same_url` was written for exactly
   this and a test covers both spellings.
-- **Scope: unknown, and the default changed because of it.**
+- **Scope: observed, after the default changed because it was unknown.**
   `MCP_REQUIRED_SCOPE` now defaults to empty. `docs/AUTH0_CONFIGURATION.md`
-  proves `read:warehouse` **exists** on the API; it does not prove an issued
-  token **carries** it, which depends on what the connector requests, and this
-  server's discovery document advertises no scope for it to request. Defaulting
-  to a check nothing has been observed to pass is how an operator locks
-  themselves out. Set the variable once a real token has been seen carrying the
-  scope.
+  first proved only that `read:warehouse` **exists** on the API. R-7 then
+  observed a real issued token carrying it. Defaulting to a check nothing had
+  been observed to pass would still have been the wrong order; the evidence now
+  supports an owner-approved production change if wanted.
 
 The distinction between a permission existing and a token carrying it was
 glossed when the default was first chosen. It is written down here because it is
 the kind of reasoning error that reads as thoroughness.
 
-**What this still does not establish.** No real token has been through the code.
-The audience and issuer conclusions come from two published strings and one
-recorded error message, which is evidence rather than observation.
-`scripts/check_hosted_token.py` remains the way to observe it, and R-7's
-interactive login is the occasion.
+**What this still does not establish.** One accepted token proves this tenant's
+current token shape, not future Auth0 configuration, Production-tenant rate
+limits or every client flow. `scripts/check_hosted_token.py` remains the
+credential-safe way to repeat the observation after an Auth0 change.
+
+### R-7 measured: 40 POSTs pass, 40 connected SDK clients are not implied. 2026-08-30.
+
+The attended production run completed three waves at concurrency 1, 5, 10, 20
+and 40. At 40, all 120 calls succeeded with p50 2,209.658 ms, p95 3,205.620 ms
+and max 3,301.359 ms. All response fingerprints matched. The full method,
+credential-free raw result and limits are in
+`docs/HOSTED_LOAD_TEST_2026-08-30.md`.
+
+The test also found a separate transport ceiling. The installed MCP SDK opens a
+persistent GET/SSE request for every initialized session, and Fly counts those
+against `hard_limit = 40`. A corrected SDK harness timed out while preparing the
+session after 30 were ready, before database work. The successful concurrency
+run therefore used independent protocol sessions without the optional GET
+stream, so its 40 slots represented 40 tool POSTs. R-8 must account for this
+before describing public capacity in users rather than requests.
