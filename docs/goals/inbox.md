@@ -11,7 +11,12 @@ T3-1 → 021, T1-1 → 022, T3-2 → 023.
 
 Owner decisions, not queue items — do not define these as goals without a decision:
 
-- The `DATABASE_URL` repository secret is sending a bare `postgres` username; the nightly E2026 pipeline has failed every night since 2026-08-25 and forfeits Order 8 evidence if it is still red at the season opener. Only the owner can repaste a secret. (T0-1)
+- ~~The `DATABASE_URL` repository secret is sending a bare `postgres` username; the nightly E2026 pipeline has failed every night since 2026-08-25.~~ **Resolved. Struck 2026-08-30 on measurement, not on report:** the last four scheduled `e2026-live.yml` runs, 2026-08-27 through 2026-08-30, all concluded `success`. Left visible rather than deleted, because a captured item that silently disappears cannot be told from one that was overlooked. (T0-1)
 - No read-only database role exists, so a tester given `DATABASE_URL` holds a credential that can drop every table. Needs two owner decisions — views-only or views-plus-tables, one shared role or one per tester — before a migration can be written. (T0-2)
 - Goal 031 interprets the `P`-prefix agreement as a post-link diagnostic only: it may compare an already observed link's two identifiers, but it must never create, select, or repair a link. This preserves Decision 27's purpose while making the required published agreement rate computable.
 - Goal 031 cannot implement its required within-game statistical-line pairing offline: the worktree has neither a cached v2 game-stats body nor a specified field map to `Boxscore.PlayersStats`. Add one archived, checksummed fixture and its verified field mapping before re-queuing the goal.
+
+Captured 2026-08-30 late:
+
+- Group `pydantic` and `pydantic-core` in `.github/dependabot.yml` so the pair is proposed together. Promised in the comment closing pull request #30 and recorded nowhere else; without it the same unresolvable bump returns every release.
+- Recon: does the public API serve the EuroLeague SuperCup (2026-09-18/19, first edition)? It is a third competition alongside `E` and `U` and may carry its own code. Scheduled in `docs/LAUNCH_PLAN_2026.md` for the week of 09-01.
