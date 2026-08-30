@@ -51,12 +51,19 @@ from euroleague.mcp.tools import build_registry
 
 ANONYMOUS_SUBJECT = "anonymous"
 
-# docs/AUTH0_CONFIGURATION.md, 2026-08-29: `read:warehouse` ("Read-only warehouse
-# access") is the only permission this API defines, and it was created because
-# the API had none at all - which was the mechanical cause of the connector
-# failure that day. Overridable through MCP_REQUIRED_SCOPE, including to an empty
-# string to switch the scope check off without touching the audience check.
-DEFAULT_REQUIRED_SCOPE = "read:warehouse"
+# OFF BY DEFAULT, AND THE REASON IS A DISTINCTION THAT WAS GLOSSED ONCE ALREADY.
+# docs/AUTH0_CONFIGURATION.md records that `read:warehouse` was created because
+# the API defined no permissions at all. That is evidence the permission EXISTS.
+# It is not evidence that an issued token CARRIES it - that depends on what the
+# connector asks for, and this server's discovery document advertises no required
+# scope for it to ask for. Defaulting to a check nothing has been observed to
+# pass is how an operator locks themselves out of their own server.
+#
+# The audience check is the mechanism that closes the hole this file's
+# `acceptable_claims` was written for, and it has no switch. The scope is
+# defence in depth: set MCP_REQUIRED_SCOPE=read:warehouse once a real token has
+# been seen to carry it.
+DEFAULT_REQUIRED_SCOPE = ""
 
 AUTH_VARIABLES = (
     "MCP_ISSUER_URL",

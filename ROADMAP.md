@@ -976,3 +976,36 @@ fixtures had no `aud`, which described a token this server should never have
 accepted; a real response for an API access token carries one. Coverage went up
 rather than sideways: `test_app_with_auth_refuses_a_token_minted_for_another_api`
 now asserts the refusal end to end, at the point a client meets it.
+
+### R-6's lockout risk, resolved without a token. 2026-08-30.
+
+The open question was whether a real access token satisfies the new rule, and
+the answer turned out to be already recorded rather than needing an experiment.
+
+- **Audience: it matches.** The server publishes
+  `resource = https://euroleague-analytics-mcp.fly.dev/mcp`. Auth0's own error
+  message, pasted into `docs/AUTH0_CONFIGURATION.md` on 2026-08-29, names the
+  API by its identifier: *is not authorized to access resource server
+  "https://euroleague-analytics-mcp.fly.dev/mcp"*. The identifier is what lands
+  in `aud`, and it is the same string.
+- **Issuer: it matches after normalisation.** Auth0 issues `iss` with a trailing
+  slash and the configured issuer has none. `_same_url` was written for exactly
+  this and a test covers both spellings.
+- **Scope: unknown, and the default changed because of it.**
+  `MCP_REQUIRED_SCOPE` now defaults to empty. `docs/AUTH0_CONFIGURATION.md`
+  proves `read:warehouse` **exists** on the API; it does not prove an issued
+  token **carries** it, which depends on what the connector requests, and this
+  server's discovery document advertises no scope for it to request. Defaulting
+  to a check nothing has been observed to pass is how an operator locks
+  themselves out. Set the variable once a real token has been seen carrying the
+  scope.
+
+The distinction between a permission existing and a token carrying it was
+glossed when the default was first chosen. It is written down here because it is
+the kind of reasoning error that reads as thoroughness.
+
+**What this still does not establish.** No real token has been through the code.
+The audience and issuer conclusions come from two published strings and one
+recorded error message, which is evidence rather than observation.
+`scripts/check_hosted_token.py` remains the way to observe it, and R-7's
+interactive login is the occasion.

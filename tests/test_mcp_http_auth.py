@@ -16,6 +16,7 @@ from starlette.testclient import TestClient
 
 from euroleague.mcp.http_app import (
     IntrospectionTokenVerifier,
+    acceptable_claims,
     auth_from_env,
     build_app,
     determine_allowed_hosts,
@@ -215,9 +216,9 @@ def test_app_with_auth_accepts_valid_token() -> None:
         allowed_hosts=["testserver"],
         row_budget=DailyRowBudget(InMemoryUsageStore()),
     )
-    # Built through auth_from_env, so MCP_REQUIRED_SCOPE takes its default and
-    # the token must carry `read:warehouse` as well as naming this resource and
-    # this issuer. That is the whole configured rule, exercised end to end.
+    # The scope is present although nothing requires it by default, because a
+    # real token from an API-audienced request carries one. What this exercises
+    # is the audience and issuer pair, end to end.
     fake_response = httpx2.Response(
         200,
         json={
@@ -251,6 +252,40 @@ def test_app_with_auth_accepts_valid_token() -> None:
             },
         )
     assert response.status_code == 200
+
+
+def test_the_scope_check_is_off_until_somebody_turns_it_on() -> None:
+    """A default that has never been observed to pass is a lockout waiting to run.
+
+    `read:warehouse` is defined on the API - `docs/AUTH0_CONFIGURATION.md` records
+    it being created - but no issued token has been seen carrying it, and the
+    discovery document advertises no scope for a client to request. Requiring it
+    by default would refuse the owner's own connector on the first deploy.
+
+    The audience check has no such switch, and it is the one that closes the hole.
+    """
+    verifier, _ = auth_from_env(COMPLETE)
+    assert verifier.required_scope is None
+
+    with_scope, _ = auth_from_env({**COMPLETE, "MCP_REQUIRED_SCOPE": "read:warehouse"})
+    assert with_scope.required_scope == "read:warehouse"
+
+
+def test_turning_the_scope_off_does_not_turn_the_audience_off() -> None:
+    """The two must not share a switch, or disabling the noisy one disables the
+    one that matters."""
+    verifier, _ = auth_from_env({**COMPLETE, "MCP_REQUIRED_SCOPE": ""})
+    assert verifier.required_scope is None
+    assert verifier.resource_url == COMPLETE["MCP_RESOURCE_URL"]
+    assert (
+        acceptable_claims(
+            {"aud": "https://elsewhere.example.com", "iss": COMPLETE["MCP_ISSUER_URL"]},
+            resource_url=verifier.resource_url,
+            issuer_url=verifier.issuer_url,
+            required_scope=verifier.required_scope,
+        )
+        is not None
+    )
 
 
 def test_app_with_auth_refuses_a_token_minted_for_another_api() -> None:
