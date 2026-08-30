@@ -1955,6 +1955,49 @@ removes one specific way in. Who may obtain a token is still decided entirely by
 the post-login Action in Auth0, and Decision 32's row budget is still the only
 bound on how much an admitted caller can take.
 
+## 35. The archive restore gate has a manual GitHub workflow
+
+`.github/workflows/historical-archive.yml` stores one named season but does not
+verify it. The unattended chain verifies after fetching, but on 2026-08-30 the
+E2020 gate failed on a Supabase read timeout while another fetch was writing to
+the archive. The chooser then moved to E2019 because it asks whether a season is
+fetched, not whether its gate passed. E2020 and E2021 were therefore stored
+without a successful restore gate.
+
+**The existing restore gate is now a manual GitHub workflow.**
+`.github/workflows/verify-archive-season.yml` requires one season code and runs
+`scripts/verify_archive_season.py` with the production credentials scoped only
+to that step. It has no schedule and no default season. The season reaches the
+shell through an environment variable, every action is pinned to a commit, the
+checkout token is not persisted, and the workflow token can only read repository
+contents.
+
+**The shared concurrency group protects Supabase here, not the EuroLeague API.**
+The verifier makes no EuroLeague request. It uses `e2026-live-fetcher` with
+`cancel-in-progress: false` because the failed E2020 run established that a
+restore competing with an archive write can time out. A manually requested gate
+waits for a fetch instead of competing with or cancelling it.
+
+**What is unchanged.** The chooser's blind spot remains: a failed gate does not
+make an already fetched season eligible again. Fixing that is separate work,
+recorded in `ROADMAP.md`, and this workflow is the bounded operator path for one
+known season. It does not fetch, repair, migrate, or write archive data.
+
+**What is established.** Direct read-only runs on 2026-08-30 passed for E2020
+(985 responses and 66,934,128 bytes) and E2021 (898 responses and 60,024,084
+bytes). Both matched indexed byte totals, verified object checksums, and restored
+complete caches.
+
+**What is not established.** The new GitHub workflow has never been dispatched.
+Its tests and `zizmor` can prove its static shape, not that GitHub accepts the
+dispatch, that its secrets are configured, or that the job completes against
+production.
+
+**Condition.** Keep this entry point while archive verification can need a
+deliberate rerun outside the fetch job. If verification becomes part of archive
+completion state and the chooser refuses unverified seasons, re-evaluate whether
+the separate manual workflow still earns its maintenance cost.
+
 ---
 
 ## Rules to add to the project instruction file
