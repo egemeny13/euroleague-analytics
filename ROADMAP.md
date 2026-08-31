@@ -1152,24 +1152,25 @@ environment tag can be changed on this tenant was not read from the dashboard. T
 tag matters less than the two things it stands for: fix the keys and the domain, and
 the label is either fixable or irrelevant.
 
-### R-14: parameterise the competition code. Offline slices R-14A & R-14B done; live deployment remaining.
+### R-14: parameterise the competition code. Offline routing done; real non-E payload proof and live deployment remain.
 
 `exploration/SUPERCUP_RECON.md` establishes that the API publishes `SC` as a
 competition code, that `SC2026` is a real season with two semi-finals on
 2026-09-18, and that the v1 game endpoints are competition-agnostic - proved by
 pulling a full play-by-play payload for a played EuroCup game, `U2025`.
 
-**Offline slices complete (Decisions 39 & R-14B):**
+**Offline slices complete (Decision 39; R-14A and R-14B):**
 1. **R-14A (Fetch layer):** `validate_season_code()` accepts exactly `E####`, `U####`,
    and `SC####` season codes. All v2 URL builders (`_schedule_url`, `_roster_url`,
    `_game_stats_url`) derive the competition path (`E`, `U`, or `SC`) dynamically
    from the season code, while v1 URL behaviour is preserved and invalid/unsafe inputs
    remain strictly rejected.
-2. **R-14B (Live pipeline & derived layers):** Fixed the `season_code[0]` assumption
+2. **R-14B (Live-core metadata and orchestration):** Fixed the `season_code[0]` assumption
    in `record_season_progress` by using `competition_for_season_code(season_code)` so
-   `SC2026` propagates as `SC`, `U2025` as `U`, and `E2026` as `E`. Tested and verified
-   offline `run_live_pipeline`, `build_dimensions`, `build_game_events`, `build_remaining_rows`,
-   lineups, stints, possessions, and game quality invariants on synthetic `SC` and `U` caches.
+   `SC2026` propagates as `SC`, `U2025` as `U`, and `E2026` as `E`. Offline tests
+   exercise the generic builders with E2024 payloads relabelled as SC and U, and
+   record `run_live_pipeline` orchestration calls. They prove metadata and scope
+   propagation, not compatibility with a real non-E payload or database writes.
 
 **What it buys.** A dress rehearsal on live data six days before the season
 opener, while nothing is public. And the only possession-level reconstruction of
@@ -1177,7 +1178,8 @@ the first SuperCup ever played, which is a reason for the launch to be
 interesting rather than merely available. The same change opens EuroCup later,
 which this project has always intended.
 
-**Remaining work for full R-14 completion.** Live workflows and live script defaults
+**Remaining work for full R-14 completion.** A real played non-E payload must pass
+the offline parse, derived and invariant path before automation is widened. Live workflows and live script defaults
 (`.github/workflows/e2026-live.yml`, `scripts/live_pipeline.py`), automated GitHub Actions
 schedules, production database storage capacity allocation, and live network execution
 remain untouched and scoped to `E2026`.

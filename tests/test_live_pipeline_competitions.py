@@ -1,14 +1,21 @@
-"""Tests proving the live pipeline and derived layer handle SC and U competitions test-first.
+"""Tests proving competition metadata propagates through the offline live core.
 
 WHAT THESE TESTS PROVE.
 1. `record_season_progress` correctly propagates competition code 'SC' for SC2026,
    'U' for U2025, and 'E' for E2026 into the database upsert statement.
 2. `build_dimensions` sets the derived `competition_code` on `team_season` rows.
 3. `build_game_events` sets `competition_code` on `game_event` rows.
-4. `build_remaining_rows` preserves `season_code` and derived invariants across
-   lineups, stints, possessions, player_game_minutes, and game_quality for SC and U games.
-5. `run_live_pipeline` completes end-to-end for synthetic SC2026 and U2025 caches,
-   correctly sequencing raw and derived loads without hardcoding 'E'.
+4. `build_remaining_rows` preserves `season_code` across lineups, stints,
+   possessions, player-game minutes, and game quality on relabelled fixtures.
+5. `run_live_pipeline` routes SC2026 and U2025 through its orchestration without
+   hard-coding `E`.
+
+WHAT THESE TESTS DO NOT PROVE. The synthetic caches reuse E2024 Boxscore and
+PlaybyPlay bodies and change only their schedule metadata, so they do not prove
+that real EuroCup or SuperCup payloads parse or satisfy lineup invariants. The
+orchestration test replaces every database write, derived build, and live gate
+with a recording stub; it proves call scope and order, not warehouse behaviour.
+No test here reaches the public API, Supabase, or a live workflow.
 """
 
 from __future__ import annotations
@@ -150,14 +157,14 @@ def test_derived_layer_scopes_and_invariants_for_competitions(
         ("E2026", "E"),
     ],
 )
-def test_run_live_pipeline_end_to_end_for_competitions(
+def test_run_live_pipeline_orchestration_for_competitions(
     tmp_path: Path,
     fixture_cache: ResponseCache,
     monkeypatch: pytest.MonkeyPatch,
     season_code: str,
     competition_code: str,
 ) -> None:
-    """Test full run_live_pipeline execution on synthetic SC, U, and E caches."""
+    """Break caught: live orchestration silently rewrites a non-E season to E."""
     from euroleague.fetch import competition_for_season_code
 
     cache = _make_synthetic_competition_cache(
@@ -172,7 +179,7 @@ def test_run_live_pipeline_end_to_end_for_competitions(
 
     connection = object()
 
-    # Intercept DB operations to verify exact arguments
+    # Record orchestration boundaries without claiming to exercise PostgreSQL.
     monkeypatch.setattr(live_module, "loaded_gamecodes", lambda conn, season: set())
     monkeypatch.setattr(
         live_module,

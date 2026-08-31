@@ -152,14 +152,7 @@ def validate_season_code(value: str) -> str:
 def competition_for_season_code(season_code: str) -> str:
     """Derive the v2 competition path code (E, U, or SC) from a validated season code."""
     valid_code = validate_season_code(season_code)
-    if valid_code.startswith("SC"):
-        return "SC"
-    if valid_code.startswith("E"):
-        return "E"
-    return "U"
-
-
-_competition_for_season_code = competition_for_season_code
+    return valid_code[:-4]
 
 
 def _schedule_url(season_code: str) -> str:
@@ -179,7 +172,7 @@ def _game_url(season_code: str, endpoint: str, gamecode: int) -> str:
 def _roster_url(season_code: str) -> str:
     # E2025 currently reports 1,055 rows. A 2,000-row bound returns that season
     # in one exact response while the parser still rejects any future overflow.
-    competition = _competition_for_season_code(season_code)
+    competition = competition_for_season_code(season_code)
     query = urlencode({"limit": 2000})
     return (
         f"https://api-live.euroleague.net/v2/competitions/{competition}/"
@@ -188,7 +181,7 @@ def _roster_url(season_code: str) -> str:
 
 
 def _game_stats_url(season_code: str, gamecode: int) -> str:
-    competition = _competition_for_season_code(season_code)
+    competition = competition_for_season_code(season_code)
     return (
         f"https://api-live.euroleague.net/v2/competitions/{competition}/"
         f"seasons/{season_code}/games/{gamecode}/stats"
