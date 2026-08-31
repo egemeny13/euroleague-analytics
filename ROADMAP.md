@@ -1099,58 +1099,34 @@ N hours and here is the coverage", which is what a sponsor conversation needs an
 is worth far more than having the data already sitting on a subscription nobody
 is paying for yet.
 
-### R-13: Auth0 production readiness. It blocks R-9, and it is owner work.
+### R-13: Auth0 production readiness. Complete 2026-08-31.
 
-Read from the tenant's own production checklist on 2026-08-30. `dev-ew0k6i4pmarjvgkn`
-is tagged DEVELOPMENT and fails seven checks, five of them marked CRITICAL. The
-correction this forces to the paragraph above is that **R-9 is not the only thing
-between here and a launch**: opening the door publicly while the tenant is in this
-state is the wrong order.
+**Completed on 2026-08-31.** All required items were executed, verified, and transitioned to Production:
 
-**P2-2 is answered, and the answer is: do not move the tenant.** Every failed check
-is a setting on *this* tenant. Moving costs the unreproducible rebuild of five
-dashboard objects that P2-2 already priced, and buys none of these fixes, because a
-new tenant starts with the same developer keys and the same absent custom domain.
+1. **Google OAuth developer keys retired**: Replaced with the project's own Google
+   OAuth 2.0 Client credentials on the `google-oauth2` connection.
+2. **Identity continuity verified**: Test login verified Google profile data and
+   allowlist match with `email_verified: true`.
+3. **Custom domain active**: `auth.egemenyucelen.me` configured in Auth0 with
+   Auth0-managed SSL; Cloudflare DNS CNAME pointing to
+   `dev-ew0k6i4pmarjvgkn-cd-fdgixg6xdbavegzd.edge.tenants.us.auth0.com` (DNS Only).
+   Google redirect URIs updated to include `https://auth.egemenyucelen.me/login/callback`.
+4. **Tenant support metadata**: Support URL (`https://egemenyucelen.me`) and Support
+   Email configured.
+5. **Introspection callback cleaned**: Vestigial `http://localhost` callback removed
+   from `EuroLeague MCP Introspection`.
+6. **Environment Tag set to Production**: Tenant Environment Tag switched from `Development`
+   to `Production` in Auth0 Dashboard -> Settings -> General.
+7. **Production readiness check reviewed**: Core readiness items (developer keys, custom
+   domain, support metadata, localhost callback) passed. Non-applicable enterprise items
+   (custom email provider, branded email templates, MFA) confirmed non-blocking for a
+   social-only architecture without database authentication or outbound email triggers.
+8. **Fly.io redeploy and token gate**: Fly secrets updated (`MCP_ISSUER_URL="https://auth.egemenyucelen.me"`,
+   `MCP_INTROSPECTION_URL="https://auth.egemenyucelen.me/oauth/token/introspect"`),
+   discovery endpoint verified, and `scripts/check_hosted_token.py` passed with
+   a real token minted by `https://auth.egemenyucelen.me/oauth/token`.
 
-| Check | What it actually costs at launch | Verdict |
-|---|---|---|
-| Social connections on Auth0 **developer keys** (4/10 apps) | The heaviest item. The keys are shared across tenants, the consent screen carries Auth0's branding rather than this project's, and Auth0 documents them as "restricted to testing only and should not be used in production". They also **cannot be used together with a custom domain**, and they break SSO, Actions redirects, federated logout, `prompt=none` and MFA. | **Blocking. Do first** - it is the precondition for the custom domain. Free: it needs this project's own Google OAuth client, not money. |
-| **Custom Domain** | Without it every visitor's login URL reads `dev-ew0k6i4pmarjvgkn.us.auth0.com`. That is the first thing a prospective sponsor sees. | **Not blocking - corrected 2026-08-30.** It is credibility, not function, and it is *not* a precondition for leaving the developer keys; the dependency runs the other way. Auth0's free plan includes one custom domain at no charge (card for verification, not billed). It needs a domain this project owns, and the launch website needs one anyway, so it is one purchase serving two needs. **Recommended, not required.** |
-| Tenant **Support URL** and **Support Email** | Shown on consent and error screens. | Do now. Five minutes, free. |
-| `EuroLeague MCP Introspection` has an `http://localhost` **callback** | It is a server-side introspection client; an interactive callback on it is vestigial. | Do now. Also settle whether that application is still needed: the tenant caps at ten applications and holds exactly ten. |
-| Custom **Email Provider** | Only bites if a database (email and password) connection is ever added, for verification and reset mail. The promoted connection is social, and the identity provider verifies the address. | **Conditional.** Not on the path to a social-only launch. |
-| Custom **Error Page** | Cosmetic. | Optional. |
-
-**There is a zero-cost path, and it should be chosen deliberately rather than by
-default.** Skip the custom domain, host the site on GitHub Pages, and point
-Google's required homepage and privacy-policy links there. Total cost: nothing.
-What it costs instead is that every stranger's login URL reads
-`dev-ew0k6i4pmarjvgkn.us.auth0.com`, on a project whose entire purpose is to be
-credible enough that somebody funds it. A domain is roughly five to fifteen
-dollars a year against a thirty-five-dollar-a-month ask. Buy it; but if the
-answer is no, the launch still works.
-
-**If a domain is bought, the number that matters is the renewal price, not the
-first-year price.** The common registrar model is a near-free first year and an
-expensive renewal. Porkbun and Cloudflare Registrar price at or near cost;
-`.me` typically renews dearer than `.com`. A personal domain is a defensible
-choice here rather than a compromise: this is a portfolio project, so the thing
-being made credible is the owner, not a product name. One purchase then serves
-three uses - the site, the Auth0 custom domain, and a CV landing page.
-
-**Do this now rather than after the launch, and the reason is not tidiness.**
-Replacing the developer keys with the project's own OAuth client changes how the
-social connection is configured. Today the tenant has exactly one user in the
-allowlist - the owner. If anything about identity continuity goes wrong, the only
-person it can break is the person doing the work. After a public opening, the same
-change breaks strangers, silently, on the day the project is being judged.
-
-**What this does not establish.** Whether existing social identities survive the key
-swap unchanged has not been verified here, only reasoned about; it is exactly the
-thing the one-user window makes cheap to find out. Whether the DEVELOPMENT
-environment tag can be changed on this tenant was not read from the dashboard. The
-tag matters less than the two things it stands for: fix the keys and the domain, and
-the label is either fixable or irrelevant.
+Full record and evidence: `docs/AUTH0_CONFIGURATION.md`. R-9 is unblocked.
 
 ### R-14: parameterise the competition code. Pre-live work complete (Decisions 39 & 40); 2026-09-18 live rehearsal remaining.
 

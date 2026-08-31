@@ -37,9 +37,9 @@ rehearsal existed to remove.
 
 | Day | Owner | Agent |
 |---|---|---|
-| **08-31 Mon** | **Buy the domain, or decide deliberately not to** - `ROADMAP.md` R-13 has the zero-cost alternative and what it costs instead. Check the *renewal* price, not the first year. **Decide R-14**, which expires on 09-17. | Confirm the chain cleared E2017; if it did not, that is the day's work and everything below slips. |
-| **09-01 Tue** | **R-13 part 1:** create this project's own Google OAuth client and replace Auth0's developer keys. The riskiest step, done while the allowlist holds one address. **This is the only mandatory Auth0 item**; the custom domain is credibility, not function. | **R-14 if it was said yes to.** It gates the 09-18 rehearsal and nothing else in this plan gates it, so it can start immediately. |
-| **09-02 Wed** | **R-13 parts 2-4:** custom domain, tenant support URL and email, remove the `http://localhost` callback from `EuroLeague MCP Introspection`. Then `scripts/check_hosted_token.py` to observe a real token still works. | Redeploy with the new issuer values; update `docs/AUTH0_CONFIGURATION.md` to match what was actually done. |
+| **08-31 Mon** | **Bought domain `egemenyucelen.me` and completed R-13 in full** (`auth.egemenyucelen.me`, Google OAuth client, support metadata, introspection cleanup, Fly redeploy, token check verified). | Confirm the chain cleared E2017; if it did not, that is the day's work and everything below slips. |
+| **09-01 Tue** | **R-13 complete (executed 08-31).** | **R-14 if it was said yes to.** Pre-live code complete; gates 09-18 rehearsal. |
+| **09-02 Wed** | **R-13 complete (executed 08-31).** | - |
 | **09-03 Thu** | - | Publish the archive's stored-byte total from `storage.objects`, which is Decision 37's condition. Confirm every season passed its restore gate. |
 | **09-04 to 09-06** | - | **R-12 rehearsal.** Load one historical season end to end and publish three numbers: how long it took, what share of its games the gates excluded, what it cost in the database. |
 

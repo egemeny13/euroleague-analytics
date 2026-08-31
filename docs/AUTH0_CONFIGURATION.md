@@ -13,13 +13,13 @@ a secret is needed, this file names the place it lives, not the value.
 ## 1. What the server itself publishes
 
 Anyone can fetch this without credentials, so it is the authoritative statement
-of what the server expects. Verified 2026-08-29:
+of what the server expects. Verified 2026-08-31:
 
 ```
 GET https://euroleague-analytics-mcp.fly.dev/.well-known/oauth-protected-resource/mcp
 {
   "resource": "https://euroleague-analytics-mcp.fly.dev/mcp",
-  "authorization_servers": ["https://dev-ew0k6i4pmarjvgkn.us.auth0.com"],
+  "authorization_servers": ["https://auth.egemenyucelen.me"],
   "bearer_methods_supported": ["header"]
 }
 ```
@@ -32,22 +32,24 @@ pointing at that metadata. That is the expected, healthy behaviour.
 | | |
 |---|---|
 | Tenant | `dev-ew0k6i4pmarjvgkn.us.auth0.com` |
-| Environment tag | **DEVELOPMENT** |
+| Custom Domain | `auth.egemenyucelen.me` (Auth0-managed TLS/SSL active, CNAME to `dev-ew0k6i4pmarjvgkn-cd-fdgixg6xdbavegzd.edge.tenants.us.auth0.com`, DNS only) |
+| Environment tag | **PRODUCTION** (Switched from DEVELOPMENT on 2026-08-31) |
 | Region | US |
+| Support URL | `https://egemenyucelen.me` |
+| Support Email | Configured (owner contact) |
 
-**Open question, not a task.** Auth0 labels this tenant as development, and
-development tenants are not intended to carry production traffic. The private
-pilot is well within that, but a public opening is a decision that has to be
-taken deliberately rather than discovered. Recorded 2026-08-29; not decided.
+The tenant environment tag was switched from Development to Production on
+2026-08-31 after replacing the developer keys, activating the custom domain,
+setting support metadata, and verifying token validity.
 
 ## 3. Applications
 
-Observed in the dashboard on 2026-08-29.
+Observed in the dashboard on 2026-08-31.
 
 | Application | Type | Client ID | Purpose |
 |---|---|---|---|
-| `EuroLeague MCP (Claude)` | Regular Web Application | `xc7tUVTYYK77nIG2Dp5brRU976MwiSlI` | **The intended connector client.** First-party, so it needs no third-party default permission to reach the API. |
-| `EuroLeague MCP Introspection` | Single Page Application | `2tmLipm21yuK0RYiKz38QY08Zmh1g3Fh` | Token introspection used by the server |
+| `EuroLeague MCP (Claude)` | Native (Public PKCE) | `xc7tUVTYYK77nIG2Dp5brRU976MwiSlI` | **The intended connector client.** First-party, so it needs no third-party default permission to reach the API. |
+| `EuroLeague MCP Introspection` | Single Page Application | `2tmLipm21yuK0RYiKz38QY08Zmh1g3Fh` | Token introspection used by the server (obsolete `http://localhost` callback removed) |
 | `Euroleague MCP (Test Application)` | Machine to Machine | `iXZbPjtLr7uTrtHTnTpeDiXpLqVOyWmV` | Test client |
 | `Default App` | Generic | `udfUKO1QvKF9rPREnMyJ4jgRLvHqwb2o` | Auth0's own default, unused |
 | `Claude` ×3 | Generic, **THIRD-PARTY** | `tpc_rJQhwKfWrgorWi1x9VjiTi`, `tpc_eqL3zg7otCDQ2aAotNnmeY`, `tpc_cCKSfZvWC69E8BFydzQVbJ` | Residue of Dynamic Client Registration. One per "Add connector" attempt. To be deleted. |
@@ -331,6 +333,48 @@ been checked again.
 entirely by the post-login Action, and `All` remains the third-party default
 permission setting. This entry closes one way in; it does not narrow the front
 door.
+
+### 2026-08-31 — R-13 Auth0 production readiness completed
+
+**What changed:**
+
+1. **Google OAuth developer keys retired.** Created the project's own Google OAuth
+   2.0 Client ID in Google Cloud Console (`EuroLeague Analytics` consent screen)
+   and configured `google-oauth2` Social Connection in Auth0 with the custom Client ID
+   and Client Secret.
+2. **Identity continuity verified.** The owner successfully executed a test login
+   via Google OAuth; Auth0 returned `google-oauth2` profile data matching the
+   allowlist address with `email_verified: true`.
+3. **Custom domain configured and verified.** Added `auth.egemenyucelen.me` in Auth0
+   Custom Domains with Auth0-managed SSL. Added the CNAME record in Cloudflare DNS
+   pointing to `dev-ew0k6i4pmarjvgkn-cd-fdgixg6xdbavegzd.edge.tenants.us.auth0.com` with
+   Proxy status **DNS Only** (grey cloud). Added `https://auth.egemenyucelen.me/login/callback`
+   to Google Cloud Console's authorized redirect URIs. Auth0 domain verification and
+   SSL certificate provisioning completed with status Ready / Active.
+4. **Tenant support metadata set.** Support URL set to `https://egemenyucelen.me`
+   and Support Email set in Tenant Settings.
+5. **Introspection callback cleaned.** Removed obsolete `http://localhost` callback
+   from `EuroLeague MCP Introspection`.
+6. **Environment Tag set to Production.** Switched the tenant Environment Tag from
+   `Development` to `Production` in Auth0 Dashboard -> Settings -> General.
+7. **Production readiness check reviewed.** Developer keys, custom domain, support
+   URL/email, and localhost callback checks passed. Custom email provider, branded
+   email templates, and MFA checks remain unconfigured and are confirmed non-blocking
+   for a social-only architecture without database authentication or outbound email triggers.
+8. **Fly.io issuer updated and deployed.** Updated Fly secrets with owner approval:
+   `MCP_ISSUER_URL="https://auth.egemenyucelen.me"` and
+   `MCP_INTROSPECTION_URL="https://auth.egemenyucelen.me/oauth/token/introspect"`.
+   The server redeployed and verified publishing:
+   `GET /.well-known/oauth-protected-resource/mcp` -> `authorization_servers: ["https://auth.egemenyucelen.me"]`.
+9. **Token verification verified.** Ran `scripts/check_hosted_token.py` against a real
+   access token issued by `https://auth.egemenyucelen.me/oauth/token`. The claims matched
+   the resource (`https://euroleague-analytics-mcp.fly.dev/mcp`), the issuer
+   (`https://auth.egemenyucelen.me/`), and the scope (`read:warehouse`).
+   Result: `VERDICT: this token is accepted by the new rule. R-6 is safe to merge.`
+
+**What this establishes.** The hosted server requires and accepts tokens minted by
+the verified custom domain `https://auth.egemenyucelen.me` under the Production environment tag.
+The developer keys are retired and the single-tenant allowlist remains untouched.
 
 
 ## 6. What this file does not establish
