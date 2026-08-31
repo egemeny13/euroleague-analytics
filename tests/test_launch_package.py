@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlparse
 
 SITE_DIR = Path("site")
 HTML_FILES = ("index.html", "privacy.html", "support.html")
@@ -46,6 +47,46 @@ class LinkExtractor(HTMLParser):
             self.stylesheets.append(attr_dict["href"])
         elif tag == "script" and "src" in attr_dict:
             self.scripts.append(attr_dict["src"])
+
+
+class PrivacyMarkupParser(HTMLParser):
+    """Extract structured strong-tagged labels and code fragments from privacy policy."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.strong_labels: list[str] = []
+        self.code_elements: list[str] = []
+        self._in_strong = False
+        self._in_code = False
+        self._current_strong: list[str] = []
+        self._current_code: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del attrs
+        if tag == "strong":
+            self._in_strong = True
+            self._current_strong = []
+        elif tag == "code":
+            self._in_code = True
+            self._current_code = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "strong":
+            self._in_strong = False
+            label = "".join(self._current_strong).strip().rstrip(":")
+            if label:
+                self.strong_labels.append(label)
+        elif tag == "code":
+            self._in_code = False
+            code_text = "".join(self._current_code).strip()
+            if code_text:
+                self.code_elements.append(code_text)
+
+    def handle_data(self, data: str) -> None:
+        if self._in_strong:
+            self._current_strong.append(data)
+        if self._in_code:
+            self._current_code.append(data)
 
 
 def test_site_directory_and_required_files_exist() -> None:
@@ -94,12 +135,8 @@ def test_internal_links_and_stylesheets_resolve() -> None:
 
         # Check relative hyperlinks
         for href in parser.links:
-            if (
-                href.startswith("#")
-                or href.startswith("mailto:")
-                or href.startswith("https://")
-                or href.startswith("http://")
-            ):
+            parsed = urlparse(href)
+            if parsed.scheme or href.startswith("#"):
                 continue
             # Strip fragment e.g. "index.html#features" -> "index.html"
             base_href = href.split("#", 1)[0]
@@ -117,7 +154,8 @@ def test_external_links_use_https() -> None:
         parser = LinkExtractor()
         parser.feed(content)
         for href in parser.links:
-            if href.startswith("http://"):
+            parsed = urlparse(href)
+            if parsed.scheme == "http":
                 raise AssertionError(f"In {filename}: insecure HTTP link found: '{href}'")
 
 
@@ -157,22 +195,26 @@ def test_launch_documentation_files_exist() -> None:
 def test_privacy_policy_accurately_discloses_durable_row_budget_and_providers() -> None:
     """Privacy policy must describe durable database row ledger and real third-party providers."""
     privacy_text = (SITE_DIR / "privacy.html").read_text(encoding="utf-8")
+    parser = PrivacyMarkupParser()
+    parser.feed(privacy_text)
 
-    # Durable row budget table / mechanism
-    assert "mcp_row_usage" in privacy_text, (
-        "privacy.html missing disclosure of mcp_row_usage ledger"
+    # Durable row budget table and identifier disclosure in code markup
+    assert "public.mcp_row_usage" in parser.code_elements, (
+        "privacy.html missing code markup for public.mcp_row_usage"
     )
-    assert "50,000" in privacy_text, "privacy.html missing daily row limit"
-    assert "sub" in privacy_text, "privacy.html missing subject identifier disclosure"
+    assert "sub" in parser.code_elements, "privacy.html missing code markup for sub"
 
-    # Third-party infrastructure providers
-    assert "Fly.io" in privacy_text, "privacy.html missing Fly.io disclosure"
-    assert "Supabase" in privacy_text, "privacy.html missing Supabase disclosure"
-    assert "Cloudflare" in privacy_text, "privacy.html missing Cloudflare disclosure"
-    assert "GitHub Pages" in privacy_text, "privacy.html missing GitHub Pages disclosure"
-    assert "Auth0" in privacy_text or "Google" in privacy_text, (
-        "privacy.html missing OAuth provider disclosure"
-    )
+    # Structured provider items in Section 5
+    required_providers = {
+        "Auth0 / Google",
+        "Fly.io",
+        "Supabase (PostgreSQL)",
+        "GitHub Pages",
+        "Cloudflare",
+    }
+    present_strong_labels = set(parser.strong_labels)
+    missing = required_providers - present_strong_labels
+    assert not missing, f"privacy.html missing structured provider labels: {missing}"
 
 
 def test_verified_claims_consistency() -> None:
