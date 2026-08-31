@@ -1,0 +1,250 @@
+{
+  "database_target": "disposable (euroleague_test:5433)",
+  "derived_counts": {
+    "game_event": 172265,
+    "game_quality": 331,
+    "lineup": 5817,
+    "lineup_stint": 13697,
+    "player": 296,
+    "player_game_minutes": 7883,
+    "possession": 47460,
+    "team": 18,
+    "team_season": 18
+  },
+  "evidence_limits": [
+    "Rehearsal proves PostgreSQL persistence and derivation for representative season E2023.",
+    "Does not prove older pre-2016 season formats (e.g. E2003-E2015) share identical event density.",
+    "Does not prove concurrent reader/writer contention or live-window query throughput.",
+    "Measurements were captured in an isolated temporary schema on disposable PostgreSQL database euroleague_test (port 5433) without Supabase RLS overhead.",
+    "The rehearsal verified local cache identity completeness and JSON readability; it did not re-download archive objects or independently compare stored checksums.",
+    "The 23-season and hot-window figures are linear estimates from E2023 row density, not physical measurements of those multi-season databases."
+  ],
+  "exclusions": {
+    "covered_games": 306,
+    "excluded_games": 25,
+    "exclusion_rate_pct": 7.552870090634441,
+    "loaded_games": 331,
+    "played_games": 331,
+    "reasons": {
+      "minutes_mismatch": 2,
+      "off_court_attribution": 8,
+      "possession_gate": 16,
+      "substitution_state": 1
+    },
+    "scheduled_games": 331
+  },
+  "postgres_version": "18.6 (Ubuntu 18.6-0ubuntu0.26.04.1)",
+  "projections": {
+    "bytes_per_game": 345524.20543806645,
+    "projected_23_seasons_bytes": 2055869022.3564954,
+    "projected_hot_window_bytes": 384222916.4471299,
+    "season_total_bytes": 114368512,
+    "supabase_free_tier_bytes": 500000000,
+    "usable_budget_bytes": 474311115
+  },
+  "raw_counts": {
+    "raw_boxscore_player": 7883,
+    "raw_boxscore_team": 1324,
+    "raw_event": 172265,
+    "raw_game": 331,
+    "raw_shot": 50159
+  },
+  "relation_sizes": {
+    "game_event": {
+      "index_bytes": 16506880,
+      "relation_name": "game_event",
+      "row_count": 172265,
+      "table_bytes": 35332096,
+      "toast_bytes": 0,
+      "total_bytes": 51838976
+    },
+    "game_quality": {
+      "index_bytes": 49152,
+      "relation_name": "game_quality",
+      "row_count": 331,
+      "table_bytes": 73728,
+      "toast_bytes": 0,
+      "total_bytes": 122880
+    },
+    "game_source_state": {
+      "index_bytes": 8192,
+      "relation_name": "game_source_state",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "lineup": {
+      "index_bytes": 950272,
+      "relation_name": "lineup",
+      "row_count": 5817,
+      "table_bytes": 679936,
+      "toast_bytes": 0,
+      "total_bytes": 1630208
+    },
+    "lineup_stint": {
+      "index_bytes": 1286144,
+      "relation_name": "lineup_stint",
+      "row_count": 13697,
+      "table_bytes": 2334720,
+      "toast_bytes": 0,
+      "total_bytes": 3620864
+    },
+    "mcp_row_budget_policy": {
+      "index_bytes": 8192,
+      "relation_name": "mcp_row_budget_policy",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "mcp_row_daily_budget": {
+      "index_bytes": 8192,
+      "relation_name": "mcp_row_daily_budget",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "mcp_row_usage": {
+      "index_bytes": 16384,
+      "relation_name": "mcp_row_usage",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 24576
+    },
+    "person_game_link": {
+      "index_bytes": 24576,
+      "relation_name": "person_game_link",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 32768
+    },
+    "player": {
+      "index_bytes": 16384,
+      "relation_name": "player",
+      "row_count": 296,
+      "table_bytes": 49152,
+      "toast_bytes": 0,
+      "total_bytes": 65536
+    },
+    "player_game_minutes": {
+      "index_bytes": 516096,
+      "relation_name": "player_game_minutes",
+      "row_count": 7883,
+      "table_bytes": 589824,
+      "toast_bytes": 0,
+      "total_bytes": 1105920
+    },
+    "possession": {
+      "index_bytes": 5611520,
+      "relation_name": "possession",
+      "row_count": 47460,
+      "table_bytes": 8036352,
+      "toast_bytes": 0,
+      "total_bytes": 13647872
+    },
+    "raw_api_fetch": {
+      "index_bytes": 16384,
+      "relation_name": "raw_api_fetch",
+      "row_count": 0,
+      "table_bytes": 0,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "raw_api_response": {
+      "index_bytes": 24576,
+      "relation_name": "raw_api_response",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 32768
+    },
+    "raw_boxscore_player": {
+      "index_bytes": 516096,
+      "relation_name": "raw_boxscore_player",
+      "row_count": 7883,
+      "table_bytes": 1310720,
+      "toast_bytes": 0,
+      "total_bytes": 1826816
+    },
+    "raw_boxscore_team": {
+      "index_bytes": 81920,
+      "relation_name": "raw_boxscore_team",
+      "row_count": 1324,
+      "table_bytes": 237568,
+      "toast_bytes": 0,
+      "total_bytes": 319488
+    },
+    "raw_event": {
+      "index_bytes": 13754368,
+      "relation_name": "raw_event",
+      "row_count": 172265,
+      "table_bytes": 17301504,
+      "toast_bytes": 0,
+      "total_bytes": 31055872
+    },
+    "raw_game": {
+      "index_bytes": 65536,
+      "relation_name": "raw_game",
+      "row_count": 331,
+      "table_bytes": 122880,
+      "toast_bytes": 0,
+      "total_bytes": 188416
+    },
+    "raw_shot": {
+      "index_bytes": 2097152,
+      "relation_name": "raw_shot",
+      "row_count": 50159,
+      "table_bytes": 6553600,
+      "toast_bytes": 0,
+      "total_bytes": 8650752
+    },
+    "roster_registration": {
+      "index_bytes": 32768,
+      "relation_name": "roster_registration",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 40960
+    },
+    "season_progress": {
+      "index_bytes": 8192,
+      "relation_name": "season_progress",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "team": {
+      "index_bytes": 16384,
+      "relation_name": "team",
+      "row_count": 18,
+      "table_bytes": 16384,
+      "toast_bytes": 0,
+      "total_bytes": 32768
+    },
+    "team_season": {
+      "index_bytes": 32768,
+      "relation_name": "team_season",
+      "row_count": 18,
+      "table_bytes": 16384,
+      "toast_bytes": 0,
+      "total_bytes": 49152
+    }
+  },
+  "run_id": "20260831204452",
+  "season_code": "E2023",
+  "timings": {
+    "cache_verify_seconds": 0.030126199999358505,
+    "derived_build_seconds": 13.607584699988365,
+    "derived_load_seconds": 43.05828290001955,
+    "gate_evaluation_seconds": 0.007060800009639934,
+    "raw_load_seconds": 18.49888130000909,
+    "raw_parse_seconds": 1.5177304999961052,
+    "storage_measurement_seconds": 0.06604609999340028,
+    "total_seconds": 77.03700559999561
+  }
+}

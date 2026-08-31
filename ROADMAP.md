@@ -1073,31 +1073,33 @@ it.
 
 The writing is the long pole and it is the piece that waits on no code.
 
-### R-12: load the historical seasons into a warehouse. New, and not previously counted.
+### R-12: load the historical seasons into a warehouse. Rehearsed and measured 2026-08-31.
 
 **Archiving a season does not make it queryable.** The chain stores exact response
 bytes with their checksums; the warehouse is built by a separate parse, derive and
 load. E2024 and E2025 are loaded. The other twenty-one seasons are archived and
-not loaded, and nothing in the queue before this entry did that work.
+not loaded.
 
-This is what "ready if a sponsor says yes" actually requires, and it sits after
-the launch rather than before it. What must be measured before anything is
-promised to a sponsor:
+The rehearsal was executed on **2026-08-31** against representative season **`E2023`**
+(331 played games, 994 checksum-verified files) on a real disposable PostgreSQL database
+(`euroleague_test:5433`) using the repeatable engine in `src/euroleague/historical_rehearsal.py`
+and `scripts/rehearse_historical_warehouse.py`.
+The complete evidence report is in [`docs/HISTORICAL_WAREHOUSE_REHEARSAL_REPORT.md`](./docs/HISTORICAL_WAREHOUSE_REHEARSAL_REPORT.md)
+and [`docs/evidence/historical_rehearsal_E2023.json`](./docs/evidence/historical_rehearsal_E2023.json).
 
-- **How long one historical season takes** to parse, derive, load and gate.
-- **What share of its games the gates exclude.** E2024 and E2025 exclude 7.2 %
-  (53 of 732). Older seasons are not assumed to behave the same, and a promise of
-  "every season" made without this number is a promise about an unmeasured
-  quantity.
-- **What twenty-three seasons cost in the database**, with `pg_total_relation_size`
-  as Decision 8 requires. They are the reason the paid project exists; the
-  question is which paid tier, not whether.
+**The three questions are now answered with measured evidence and bounded estimates:**
 
-The cheap version of readiness is to rehearse one old season end to end and
-publish those three numbers. That converts "we could load everything" into "it is
-N hours and here is the coverage", which is what a sponsor conversation needs and
-is worth far more than having the data already sitting on a subscription nobody
-is paying for yet.
+1. **How long one historical season takes**:
+   - One measured end-to-end local build and database load took **77.04 seconds** for 331 games (raw ingest: 18.50s, derived load: 43.06s).
+   - A straight per-game extrapolation across 5,950 games is **~23.1 minutes**. This is an estimate, not a measured 23-season run.
+2. **What share of its games the gates exclude**:
+   - **7.55 %** (25 of 331 games quarantined by default), close to E2024 (7.27%) and E2025 (7.21%). This measures E2023 only and does not establish the rate for earlier seasons.
+   - Breakdown: 16 `possession_gate`, 8 `off_court_attribution`, 2 `minutes_mismatch`, 1 `substitution_state`.
+3. **What twenty-three seasons cost in the database (`pg_total_relation_size`)**:
+   - One season (`E2023`) measures **114,368,512 bytes** across all 23 physical tables and indexes, including empty fixed-overhead tables (**345,524 bytes/game**).
+   - Linear E2023-density estimate for the 1,112-game hot-window shape: **384,222,916 bytes**. This does not replace the existing production capacity gate.
+   - Linear E2023-density estimate for 5,950 historical games: **2,055,869,022 bytes (~2.06 GB)**, about 4.33 times the usable free-tier budget.
+   - **Conclusion**: the E2023 rehearsal strongly supports the paid/dedicated full-history architecture. Only E2023 was physically measured; a 23-season database was not.
 
 ### R-13: Auth0 production readiness. Complete 2026-08-31.
 
