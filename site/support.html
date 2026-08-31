@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support &amp; Connection Guide — EuroLeague Analytics</title>
+  <meta name="description" content="Help, connection instructions, and troubleshooting for the EuroLeague Analytics MCP Server.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="container nav-wrapper">
+      <a href="index.html" class="brand">
+        <span>EuroLeague Analytics</span>
+        <span class="brand-badge">MCP</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="support.html" style="color: var(--accent-primary);">Support</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="page-content">
+      <h1>Support &amp; Connection Guide</h1>
+      <div class="page-meta">
+        <span>Last Updated: August 31, 2026</span> &bull;
+        <span>EuroLeague Analytics Documentation</span>
+      </div>
+
+      <p class="lead">
+        This guide walks through configuring your AI assistant or development environment to query EuroLeague Analytics via the Model Context Protocol (MCP).
+      </p>
+
+      <h2>1. Connecting with Claude Desktop</h2>
+      <p>
+        To allow Claude Desktop to use EuroLeague Analytics tools, edit your configuration file:
+      </p>
+      <ul>
+        <li><strong>macOS:</strong> <code>~/Library/Application Support/Claude/claude_desktop_config.json</code></li>
+        <li><strong>Windows:</strong> <code>%APPDATA%\Claude\claude_desktop_config.json</code></li>
+      </ul>
+
+      <h3>Hosted Cloud Server (Recommended)</h3>
+      <pre><code>{
+  "mcpServers": {
+    "euroleague-analytics": {
+      "url": "https://euroleague-analytics-mcp.fly.dev/mcp"
+    }
+  }
+}</code></pre>
+
+      <h3>Local Server via stdio (Developers)</h3>
+      <p>If you have cloned the repository and configured a local <code>.env</code> with your PostgreSQL connection:</p>
+      <pre><code>{
+  "mcpServers": {
+    "euroleague-local": {
+      "command": "python",
+      "args": ["/path/to/euroleague-analytics/scripts/mcp_server.py"]
+    }
+  }
+}</code></pre>
+
+      <h2>2. Connecting with Other MCP Clients (Cursor, Windsurf, etc.)</h2>
+      <p>
+        Configure an HTTP/SSE remote MCP server using:
+      </p>
+      <ul>
+        <li><strong>Server URL:</strong> <code>https://euroleague-analytics-mcp.fly.dev/mcp</code></li>
+        <li><strong>Transport:</strong> StreamableHTTP / SSE</li>
+      </ul>
+
+      <h2>3. Available Tools &amp; Usage</h2>
+      <p>
+        The server exposes 11 read-only tools prefixed with <code>el_</code>. Every query response includes metadata declaring data coverage and whether minutes are raw or corrected.
+      </p>
+      <ul>
+        <li><code>el_describe_warehouse</code> &mdash; Start here. Discloses loaded seasons, game counts, and any quarantined games.</li>
+        <li><code>el_find_games</code> &mdash; Search games by season (e.g. <code>E2024</code>, <code>E2025</code>), team, round, date, or winner.</li>
+        <li><code>el_get_boxscore</code> &mdash; Retrieve official box score statistics for both teams and all active players.</li>
+        <li><code>el_get_play_by_play</code> &mdash; Source-ordered event stream with 5-man on-court lineups, clock readings, and margin.</li>
+        <li><code>el_get_shot_data</code> &mdash; Court shot attempts with normalized coordinates (X, Y) for spatial charting.</li>
+        <li><code>el_get_team_stats</code> &mdash; Four Factors (eFG%, TOV%, ORB%, FTR), offensive rating, defensive rating, and pace.</li>
+        <li><code>el_get_player_stats</code> &mdash; Player per-game and per-100 possession statistics.</li>
+        <li><code>el_get_lineup_stats</code> &mdash; 5-man lineup ratings, possession counts, and net differentials.</li>
+        <li><code>el_get_on_off_splits</code> &mdash; Team offensive and defensive ratings with a player on court vs off court.</li>
+        <li><code>el_get_possessions</code> &mdash; Exact possession records with start score, duration, ending reason, and clutch filters.</li>
+        <li><code>el_get_game_quality</code> &mdash; Audit records and quarantine status for any specific game.</li>
+      </ul>
+
+      <h2>4. Frequently Asked Questions</h2>
+
+      <h3>What loaded seasons are currently available?</h3>
+      <p>
+        The public warehouse contains complete regular season and playoff data for <strong>E2024</strong> (330 games) and <strong>E2025</strong> (402 games), plus schedule and roster data for the upcoming <strong>E2026</strong> season.
+      </p>
+
+      <h3>Why do responses declare "corrected" vs "raw" minutes?</h3>
+      <p>
+        In 32 specific overtime substitution events across 330 games, the source API clock recorded substitutions 60 seconds off. Our narrow, validated correction restores exact second-level agreement with the official box score (99.54% match). To ensure full transparency, every tool response explicitly declares its time basis.
+      </p>
+
+      <h3>What is a "quarantined" game?</h3>
+      <p>
+        When source play-by-play events contain unresolvable recording errors (such as missing possession-ending events that exceed our conservative 2-possession tolerance), those games are flagged in <code>game_quality</code> and excluded from default aggregations. They can still be queried by passing <code>include_quarantined=True</code>.
+      </p>
+
+      <h2>5. Troubleshooting</h2>
+      <ul>
+        <li><strong>Server returns 401 Unauthorized:</strong> Ensure your OAuth client token has not expired and specifies the correct audience URL.</li>
+        <li><strong>Connection timeout:</strong> Hosted instances wake up automatically from standby; cold starts may take 1-2 seconds on the initial request.</li>
+        <li><strong>Query returns empty result:</strong> Verify season codes (e.g. <code>E2024</code>, <code>E2025</code>) and 3-letter team codes (e.g. <code>IST</code> for Anadolu Efes, <code>FBB</code> for Fenerbahce, <code>RMD</code> for Real Madrid, <code>PAO</code> for Panathinaikos). Use <code>el_find_games</code> to inspect codes.</li>
+      </ul>
+
+      <h2>6. Bug Reports &amp; Feedback</h2>
+      <p>
+        Found an anomaly in the data or want to request a new analytics feature?
+      </p>
+      <ul>
+        <li>Open an issue on GitHub: <a href="https://github.com/egemeny13/euroleague-analytics/issues" target="_blank" rel="noopener noreferrer">github.com/egemeny13/euroleague-analytics/issues</a></li>
+        <li>Direct contact: <a href="mailto:egemenyucelen@gmail.com">egemenyucelen@gmail.com</a></li>
+      </ul>
+    </article>
+  </main>
+
+  <footer>
+    <div class="container footer-content">
+      <div>
+        <p>&copy; 2026 Egemen Y&uuml;celen. Open source under the <a href="https://github.com/egemeny13/euroleague-analytics/blob/master/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="support.html">Support &amp; Help</a></li>
+        <li><a href="privacy.html">Privacy Policy</a></li>
+        <li><a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+      </ul>
+    </div>
+  </footer>
+
+</body>
+</html>

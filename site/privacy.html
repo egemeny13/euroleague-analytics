@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — EuroLeague Analytics</title>
+  <meta name="description" content="Privacy Policy for EuroLeague Analytics and the Model Context Protocol (MCP) server operated by Egemen Yücelen at egemenyucelen.me.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="container nav-wrapper">
+      <a href="index.html" class="brand">
+        <span>EuroLeague Analytics</span>
+        <span class="brand-badge">MCP</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="support.html">Support</a></li>
+          <li><a href="privacy.html" style="color: var(--accent-primary);">Privacy</a></li>
+          <li><a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="page-content">
+      <h1>Privacy Policy</h1>
+      <div class="page-meta">
+        <span>Effective Date: August 31, 2026</span> &bull;
+        <span>Operator: Egemen Y&uuml;celen</span>
+      </div>
+
+      <div class="alert-box">
+        <p><strong>Summary:</strong> EuroLeague Analytics is an open-source basketball analytics warehouse and MCP server. We do not use cookies, we do not run third-party advertising or tracker pixels, and we do not sell or monetize personal user data.</p>
+      </div>
+
+      <h2>1. Overview and Scope</h2>
+      <p>
+        This Privacy Policy applies to the static website (<code>egemenyucelen.me</code>) and the hosted EuroLeague Analytics Model Context Protocol (MCP) server operated by Egemen Y&uuml;celen. It explains how information is handled when you browse the site or authenticate to query the basketball warehouse.
+      </p>
+
+      <h2>2. Website Browsing and Zero-Cookie Policy</h2>
+      <p>
+        When you visit <code>egemenyucelen.me</code>:
+      </p>
+      <ul>
+        <li><strong>Zero Cookies:</strong> We do not set or read any cookies (session, tracking, or persistent) on your browser.</li>
+        <li><strong>No Analytics Trackers:</strong> We do not embed Google Analytics, Meta Pixels, tracking beacons, or telemetry scripts.</li>
+        <li><strong>Self-Contained Assets:</strong> All stylesheets and fonts are self-contained and served directly from the site domain.</li>
+      </ul>
+
+      <h2>3. Authentication and OAuth Token Processing</h2>
+      <p>
+        The hosted MCP server (<code>https://euroleague-analytics-mcp.fly.dev/mcp</code>) provides authenticated read-only access to our database. When connecting via Google OAuth or Auth0:
+      </p>
+      <ul>
+        <li><strong>Purpose of Authentication:</strong> Authentication is required solely to verify that a connecting client possesses the required read permission (<code>read:warehouse</code>) and to protect database infrastructure from denial-of-service abuse.</li>
+        <li><strong>Token Validation:</strong> Access tokens (JWTs) are validated in memory against the identity provider's JSON Web Key Set (JWKS). We verify signature authenticity, token audience (<code>aud</code>), issuer authority (<code>iss</code>), and expiration.</li>
+        <li><strong>No Profile Harvesting:</strong> We do not store your real name, email address, profile picture, or social graph.</li>
+      </ul>
+
+      <h2>4. Durable Per-Subject Row-Budget Storage</h2>
+      <p>
+        To ensure fair warehouse availability and prevent automated scraping sweeps, the server enforces a daily quota of 50,000 returned rows per subject per UTC calendar day.
+      </p>
+      <p>
+        To enforce this policy across server restarts, the server records an accounting ledger in PostgreSQL (<code>public.mcp_row_usage</code>) via a dedicated, isolated database role:
+      </p>
+      <ul>
+        <li><strong>Stored Fields:</strong> The token's subject identifier (<code>sub</code>), the UTC usage date, the operation type (reserve/settle), and the integer count of rows returned.</li>
+        <li><strong>No Query Content Stored:</strong> This ledger stores zero prompt text, zero query arguments, zero search criteria, and zero personal information.</li>
+      </ul>
+
+      <h2>5. Necessary Third-Party Infrastructure Providers</h2>
+      <p>
+        To provide reliable hosting, DNS resolution, and security, EuroLeague Analytics relies on the following infrastructure providers:
+      </p>
+      <ul>
+        <li><strong>Auth0 / Google:</strong> Provides OAuth 2.0 / OpenID Connect identity validation and token issuance.</li>
+        <li><strong>Fly.io:</strong> Hosts the containerized MCP HTTP server instance in the European Union region.</li>
+        <li><strong>Supabase (PostgreSQL):</strong> Hosts the basketball analytics warehouse and row-budget accounting ledger in Frankfurt, Germany (EU region).</li>
+        <li><strong>GitHub Pages:</strong> Hosts the open-source repository and static website files.</li>
+        <li><strong>Cloudflare:</strong> Provides DNS routing, TLS termination, and edge CDN delivery for <code>egemenyucelen.me</code>.</li>
+      </ul>
+
+      <h2>6. Data Sharing and Sale</h2>
+      <p>
+        We do not sell, rent, monetize, or disclose user connection identifiers or usage data to any third parties or advertisers.
+      </p>
+
+      <h2>7. Contact and Inquiries</h2>
+      <p>
+        For any questions regarding this Privacy Policy or data handling practices, please contact:
+      </p>
+      <p>
+        <strong>Egemen Y&uuml;celen</strong><br>
+        Email: <a href="mailto:egemenyucelen@gmail.com">egemenyucelen@gmail.com</a><br>
+        GitHub: <a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">github.com/egemeny13/euroleague-analytics</a>
+      </p>
+    </article>
+  </main>
+
+  <footer>
+    <div class="container footer-content">
+      <div>
+        <p>&copy; 2026 Egemen Y&uuml;celen. Open source under the <a href="https://github.com/egemeny13/euroleague-analytics/blob/master/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="support.html">Support &amp; Help</a></li>
+        <li><a href="privacy.html">Privacy Policy</a></li>
+        <li><a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+      </ul>
+    </div>
+  </footer>
+
+</body>
+</html>

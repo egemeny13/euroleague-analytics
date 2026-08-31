@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EuroLeague Analytics — Validated Data Warehouse & MCP Server</title>
+  <meta name="description" content="A validated data warehouse and Model Context Protocol (MCP) server for EuroLeague basketball analytics, exposing exact play-by-play possessions, lineup on/off splits, and shot coordinates.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="container nav-wrapper">
+      <a href="index.html" class="brand">
+        <span>EuroLeague Analytics</span>
+        <span class="brand-badge">MCP</span>
+      </a>
+      <nav>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#data">Verified Data</a></li>
+          <li><a href="#tools">MCP Tools</a></li>
+          <li><a href="#connect">Connect</a></li>
+          <li><a href="#sponsor">Sponsorship</a></li>
+          <li><a href="support.html">Support</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <span class="hero-tag">Model Context Protocol for Basketball Intelligence</span>
+        <h1>Validated EuroLeague &amp; EuroCup Analytics for AI Models</h1>
+        <p class="lead">
+          Not an API wrapper. A precision derived layer reconstructing exact possessions, four factors, five-man lineup on/off splits, and court shot charts from public play-by-play event streams.
+        </p>
+        <div class="cta-group">
+          <a href="#connect" class="btn btn-primary">Connect to Claude Desktop</a>
+          <a href="https://github.com/egemeny13/euroleague-analytics" class="btn btn-outline" target="_blank" rel="noopener noreferrer">View Repository on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Stats / Verified Numbers -->
+    <section id="data">
+      <div class="container">
+        <div class="section-header">
+          <h2>Verified Ground Truth</h2>
+          <p>Every metric is mechanically proven against official EuroLeague box scores and explicit mathematical invariants.</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-value">732</div>
+            <div class="stat-label">Games Loaded</div>
+            <div class="stat-sub">330 in E2024 &bull; 402 in E2025</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value">107,311</div>
+            <div class="stat-label">Reconstructed Possessions</div>
+            <div class="stat-sub">Counted independently from 5 ending events</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value">99.54%</div>
+            <div class="stat-label">Minute Precision</div>
+            <div class="stat-sub">Exact second match with official box score</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value">100%</div>
+            <div class="stat-label">Score Reconciliation</div>
+            <div class="stat-sub">0 point mismatches across all 732 games</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value">41,524</div>
+            <div class="stat-label">Verified Coordinates</div>
+            <div class="stat-sub">E2024 field goals with real court locations</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value">23</div>
+            <div class="stat-label">Seasons Archived</div>
+            <div class="stat-sub">5,950+ games in immutable cold storage</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features">
+      <div class="container">
+        <div class="section-header">
+          <h2>The Derived Analytics Layer</h2>
+          <p>Moving beyond box-score approximations to exact play-by-play event reconstruction.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-icon">&oplus;</div>
+            <h3>Exact Possession Accounting</h3>
+            <p>
+              Traditional box score formulas (like <code>FGA - ORB + TO + 0.44*FTA</code>) are crude estimates. Possessions are counted directly from the event stream across five verified possession-ending criteria, preserving offensive rebound continuations and dead-ball technical free throws.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">&boxbox;</div>
+            <h3>5-Man Lineup Reconstruction</h3>
+            <p>
+              Tracks substitution batches dynamically to maintain exactly five players on court at all times. Reconstructs matchup stints, lineup offensive/defensive ratings, net ratings, and on/off player impact splits.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">&target;</div>
+            <h3>Court Shot Coordinates</h3>
+            <p>
+              Merges coordinate sources with play-by-play event attempts, allowing models to filter shot locations by lineup unit, clutch time remaining, and game margin.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">&clock;</div>
+            <h3>Dynamic Clutch Filters</h3>
+            <p>
+              Clutch is stored as <code>margin_at_start</code> and <code>seconds_remaining_at_start</code> on each possession rather than a hard-coded table. Query any clutch definition (e.g. final 2 minutes &plusmn;3 points or final 5 minutes &plusmn;5 points) on the fly.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">&shield;</div>
+            <h3>Honest Data Integrity</h3>
+            <p>
+              When source data contains unresolvable clock anomalies or recording errors, games are explicitly quarantined (e.g. <code>possession_gate</code>) and disclosed in every response, never smoothed over with synthetic data.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">&zap;</div>
+            <h3>Fast, Read-Only MCP Server</h3>
+            <p>
+              Exposes 11 specialized, read-only tools designed specifically for LLMs. Optimized database views serve complex four-factor and on/off splits in milliseconds.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MCP Tools Section -->
+    <section id="tools">
+      <div class="container">
+        <div class="section-header">
+          <h2>11 Specialized MCP Tools</h2>
+          <p>Read-only tools providing focused answers and strict pagination to preserve LLM context windows.</p>
+        </div>
+
+        <div class="tool-list">
+          <div class="tool-item">
+            <span class="tool-name">el_describe_warehouse</span>
+            <span class="tool-desc">Returns loaded seasons, game counts, coverage notes, and data exclusions.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_find_games</span>
+            <span class="tool-desc">Search and filter games by season, round, date range, team, or winner.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_boxscore</span>
+            <span class="tool-desc">Official player and team box scores with raw, corrected, and official minutes.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_play_by_play</span>
+            <span class="tool-desc">Source-ordered play-by-play events with on-court lineups, score margins, and clock readings.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_shot_data</span>
+            <span class="tool-desc">Shot attempts with normalized half-court coordinates (X, Y), zone classifications, and event context.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_team_stats</span>
+            <span class="tool-desc">Season-level Four Factors (eFG%, TOV%, ORB%, FTR), pace, offensive rating, and defensive rating.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_player_stats</span>
+            <span class="tool-desc">Player per-game and per-100 possession statistics across regular season and playoffs.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_lineup_stats</span>
+            <span class="tool-desc">5-man lineup performance with possession counts, offensive rating, defensive rating, and net margin.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_on_off_splits</span>
+            <span class="tool-desc">Team net performance differential with a specific player on court versus off court.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_possessions</span>
+            <span class="tool-desc">Individual possessions with start score, duration, ending reason, lineup on floor, and clutch filters.</span>
+          </div>
+          <div class="tool-item">
+            <span class="tool-name">el_get_game_quality</span>
+            <span class="tool-desc">Audit trail and validation report identifying any quarantined minutes or possession anomalies.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Connect Section -->
+    <section id="connect">
+      <div class="container">
+        <div class="section-header">
+          <h2>Quickstart Setup</h2>
+          <p>Add EuroLeague Analytics to Claude Desktop or any MCP-compatible environment in seconds.</p>
+        </div>
+
+        <h3>1. Local Setup via stdio (Developers)</h3>
+        <p>Clone the repository and add the local server configuration to your <code>claude_desktop_config.json</code>:</p>
+        <pre><code>{
+  "mcpServers": {
+    "euroleague": {
+      "command": "python",
+      "args": ["/path/to/euroleague-analytics/scripts/mcp_server.py"],
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:[PASSWORD]@...pooler.supabase.com:5432/postgres"
+      }
+    }
+  }
+}</code></pre>
+
+        <h3>2. Hosted Endpoint via HTTP/SSE</h3>
+        <p>Connect directly to our hosted endpoint for authenticated read-only access:</p>
+        <pre><code>{
+  "mcpServers": {
+    "euroleague-cloud": {
+      "url": "https://euroleague-analytics-mcp.fly.dev/mcp"
+    }
+  }
+}</code></pre>
+        <p>For more client setups, troubleshooting tips, and authentication details, see the <a href="support.html">Support Guide</a>.</p>
+      </div>
+    </section>
+
+    <!-- Sponsor Section -->
+    <section id="sponsor">
+      <div class="container">
+        <div class="section-header">
+          <h2>Sponsorship &amp; Collaboration</h2>
+          <p>Help unlock 23 seasons of European basketball history.</p>
+        </div>
+
+        <div class="card" style="border-left: 4px solid var(--accent-secondary);">
+          <h3>The Opportunity: Complete Historical Queryability</h3>
+          <p>
+            The public server currently operates within Supabase's free tier, maintaining a high-performance hot window of <strong>E2024, E2025, and live E2026</strong>.
+          </p>
+          <p>
+            The remaining <strong>21 historical seasons (E2003–E2023, 5,200+ games)</strong> are archived in immutable cold storage (~118 MB). Sponsoring a dedicated Supabase Pro database (~$25–35/month) enables full PostgreSQL indexing and queryability for the entire 23-season archive.
+          </p>
+          <p style="margin-top: 1rem;">
+            Read the complete <a href="https://github.com/egemeny13/euroleague-analytics/blob/master/docs/SPONSOR_ONE_PAGER.md" target="_blank" rel="noopener noreferrer">Sponsor One-Pager</a> or get in touch at <a href="mailto:egemenyucelen@gmail.com">egemenyucelen@gmail.com</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-content">
+      <div>
+        <p>&copy; 2026 Egemen Y&uuml;celen. Open source under the <a href="https://github.com/egemeny13/euroleague-analytics/blob/master/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.25rem;">Zero cookies. Zero tracking. Built with validated EuroLeague play-by-play data.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="privacy.html">Privacy Policy</a></li>
+        <li><a href="support.html">Support &amp; Help</a></li>
+        <li><a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+      </ul>
+    </div>
+  </footer>
+
+</body>
+</html>
