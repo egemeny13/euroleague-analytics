@@ -1071,7 +1071,32 @@ it.
 | Short videos | a working public deployment, so R-9 | after R-9 |
 | The launch itself | the above, plus two or three clean live game nights | after 2026-09-24 |
 
-The writing is the long pole and it is the piece that waits on no code.
+#### Priority reset, 2026-09-01
+
+The technical launch queue is now substantially complete. R-12 and R-13 are
+complete, R-14's pre-live implementation is complete, and the remaining
+operational items are short or date-gated. The historical archive chain may
+continue independently; it does not prevent launch-material preparation.
+
+The principal work before launch is therefore the **launch package itself**:
+
+1. rebuild the public website from scratch around the finished product and its
+   evidence;
+2. rewrite and cut the announcement thread into the final launch narrative;
+3. prepare the video storyboards, query scripts, shot list and recording setup
+   before the live-season window, then capture the final footage after the
+   public flow and live data are ready.
+
+The existing `site/` package, `docs/LAUNCH_COPY.md` and related R-11 material are
+useful drafts, not accepted final launch assets. The earlier private showcase at
+<https://euroleague-mcp-showcase.vercel.app/> is reference material only and is
+not the production website or a base that must be preserved. The website may be
+rethought from zero.
+
+This entry records priority and scope only. It does not authorize a website
+implementation, a deployment, publication of the thread, or video recording.
+Those begin as separately attended work. The writing and pre-production are the
+long pole, and they wait on no code.
 
 ### R-12: load the historical seasons into a warehouse. Rehearsed and measured 2026-08-31.
 

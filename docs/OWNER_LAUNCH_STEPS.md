@@ -4,6 +4,23 @@ A chronological, actionable reference guide for the repository owner to prepare,
 
 ---
 
+## Current launch-package status (2026-09-01)
+
+The repository's `site/`, `docs/LAUNCH_COPY.md`, and
+`docs/SPONSOR_ONE_PAGER.md` are working R-11 drafts, not the accepted final
+launch package. The earlier private Vercel showcase at
+<https://euroleague-mcp-showcase.vercel.app/> is reference material only.
+
+The primary remaining preparation is to rebuild the website from scratch,
+finalise the announcement thread, and prepare the video storyboards, demo
+queries, shot list and recording setup. This preparation can happen while the
+historical archive chain runs. Final video capture still waits for the public
+flow and clean live-season data.
+
+This status note does not authorize a deployment or publication.
+
+---
+
 ## 1. Domain & Static Site Setup (`egemenyucelen.me`)
 
 The static site lives in `/site` and requires zero server-side compute.
