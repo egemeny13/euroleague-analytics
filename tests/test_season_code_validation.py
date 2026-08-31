@@ -12,6 +12,9 @@ part of a URL, where a `/` or a `?` changes which resource is requested.
 
 WHAT THIS DOES NOT PROVE. That the season exists. `E2099` passes this check and
 returns nothing useful; the check is about shape, not about the API's contents.
+It also does not prove that a played SuperCup game has the expected payload,
+that lineup reconstruction works for another competition, or that any live
+workflow can fetch, load, or validate `SC2026`.
 """
 
 from __future__ import annotations
@@ -78,6 +81,7 @@ def test_accepts_supported_competition_season_codes(value: str) -> None:
         'E2024"; rm -rf /',
         'SC2026"; rm -rf /',
         "\nSC2026",
+        "SC2026\n",
     ],
 )
 def test_rejects_anything_that_is_not_exactly_supported_prefix_plus_four_digits(value: str) -> None:

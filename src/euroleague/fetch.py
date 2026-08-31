@@ -124,7 +124,7 @@ class _Counters:
 # A season code is a supported competition prefix (E for EuroLeague, U for
 # EuroCup, or SC for SuperCup) followed by exactly four digits. The competition
 # prefix determines the competition path in v2 API URLs below.
-SEASON_CODE = re.compile(r"^(E|U|SC)[0-9]{4}$")
+SEASON_CODE = re.compile(r"(E|U|SC)[0-9]{4}")
 
 
 def validate_season_code(value: str) -> str:
@@ -140,7 +140,7 @@ def validate_season_code(value: str) -> str:
     upper-casing. A value that needs repairing before it is usable is a value
     somebody typed wrongly, and repairing it quietly hides that.
     """
-    if not SEASON_CODE.match(value):
+    if SEASON_CODE.fullmatch(value) is None:
         raise ValueError(
             f"{value!r} is not a valid season code. Expected competition prefix "
             f"(E, U, or SC) followed by exactly four digits, for example E2024, "
@@ -152,11 +152,7 @@ def validate_season_code(value: str) -> str:
 def _competition_for_season_code(season_code: str) -> str:
     """Derive the v2 competition path code (E, U, or SC) from a validated season code."""
     valid_code = validate_season_code(season_code)
-    if valid_code.startswith("SC"):
-        return "SC"
-    if valid_code.startswith("E"):
-        return "E"
-    return "U"
+    return valid_code[:-4]
 
 
 def _schedule_url(season_code: str) -> str:

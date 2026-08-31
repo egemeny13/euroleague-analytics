@@ -777,6 +777,12 @@ def test_fetch_archive_can_only_restore_in_resume_mode() -> None:
 
 
 def test_url_builders_derive_competition_code_for_all_supported_competitions() -> None:
+    """Break caught: a supported season is sent through the EuroLeague v2 path.
+
+    WHAT THIS DOES NOT PROVE. These are constructed URLs exercised against a
+    recording transport, not requests to the public API, and they say nothing
+    about live workflow, warehouse, or lineup support for another competition.
+    """
     from euroleague.fetch import (
         _game_stats_url,
         _game_url,
@@ -834,6 +840,7 @@ def test_url_builders_derive_competition_code_for_all_supported_competitions() -
 
 @pytest.mark.parametrize("invalid_code", ["", "2024", "e2024", "EQR2024", "J2024", "S2026"])
 def test_v2_url_builders_reject_invalid_season_codes(invalid_code: str) -> None:
+    """Break caught: an unsupported prefix reaches an interpolated v2 path."""
     from euroleague.fetch import (
         _game_stats_url,
         _roster_url,
@@ -849,6 +856,7 @@ def test_v2_url_builders_reject_invalid_season_codes(invalid_code: str) -> None:
 
 
 def test_fetch_season_supercup_routes_to_sc_v2_and_v1_endpoints(tmp_path) -> None:
+    """Break caught: a SuperCup fetch mixes SC v2 paths with E v2 paths."""
     schedule = schedule_bytes([{"gameCode": 1, "played": True}])
     transport = RecordingTransport(
         [
@@ -880,6 +888,7 @@ def test_fetch_season_supercup_routes_to_sc_v2_and_v1_endpoints(tmp_path) -> Non
 
 
 def test_fetch_roster_and_game_stats_route_to_correct_competition_v2_paths(tmp_path) -> None:
+    """Break caught: non-game v2 requests silently stay on competition E."""
     transport = RecordingTransport(
         [
             StubResponse(200, {}, _roster_bytes([])),
