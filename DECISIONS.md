@@ -2217,6 +2217,60 @@ or `U` competitions is activated.
 
 ---
 
+## 40. SuperCup live pipeline rehearsal and three-game storage projection
+
+`scripts/fetch_archive.py` and `scripts/live_pipeline.py` accept `SC2026` as a
+supported `--live` season alongside `E2026`. A manual-only rehearsal workflow
+(`.github/workflows/supercup-rehearsal.yml`, triggered solely via
+`workflow_dispatch` with no automatic schedule) enables dry-running the live
+fetch and derived loading of SuperCup 2026 on 2026-09-18. Settlement rechecks in
+`scripts/settlement_recheck.py` remain strictly `E2026`-only, and the scheduled
+daily workflow (`.github/workflows/e2026-live.yml`) remains unchanged.
+
+**Storage projection.** A conservative 3-game SuperCup tournament (two
+semi-finals and one final) is priced using the measured per-game evidence from
+Decisions 20 and 21 (362,966 bytes/game whole database; 347,668 bytes/game public
+relations; 359,505 bytes/game 20-team rate):
+- 3 games at 362,966 bytes/game = **1,088,898 bytes (~1.09 MB)** in Postgres.
+- At an upper-bound 400 KB/game (10% variance buffer): **~1.20 MB**.
+- Available measured headroom in the free-tier 500 MB quota (with E2024, E2025,
+  and a full 380-game E2026) is **72,008,225 bytes (72.0 MB / 14.40%)**.
+- 3 games consume **~1.5% of available headroom** (0.22% of total quota), keeping
+  the database safely inside the free-tier budget without adjusting Decision 20's
+  hot window.
+- In Supabase Storage, 3 games produce 12 gzipped response files (~0.4 MB),
+  negligible against the 1 GB quota.
+
+**What is established.**
+- Exact-byte public EuroCup (`U2025` game 1) fixtures committed in
+  `tests/fixtures/games/U2025/` match SHA-256 checksums and prove that the full
+  offline pipeline (cache -> parse -> validate -> derived -> lineups -> stints
+  -> possessions -> game_quality) executes cleanly with zero on-court violations,
+  zero attribution issues, and clean game quality on real non-EuroLeague API data.
+- CLI argument validation for `fetch_archive.py` and `live_pipeline.py` is unit-tested
+  to permit `E2026` and `SC2026` while refusing unsupported or unsafe inputs.
+- `settlement_recheck.py` is unit-tested to strictly reject `SC2026` and `U2025`.
+
+**What this does not prove and what remains date-gated.**
+- Does not prove live upstream API stability, payload timing, or final game scheduling
+  for `SC2026` prior to the semi-finals on 2026-09-18.
+- Does not prove whether SuperCup games exhibit unusual foul/overtime rates differing
+  from EuroLeague regular-season distributions.
+- Does not prove Postgres dead tuple bloat during incremental live additions without
+  routine maintenance.
+- Live rehearsal execution is date-gated to 2026-09-18 when the real games are played.
+
+**Provenance.**
+- Basis: MEASURED & MIXED. Per-game storage rates from Decisions 20/21; `U2025`
+  exact-byte fixture derivation tests; `SUPERCUP_RECON.md` API findings.
+- Alternatives considered: automatic cron schedule for SuperCup (rejected —
+  manual workflow dispatch isolates experimental rehearsal from production live jobs);
+  including SuperCup in settlement recheck (rejected — Decision 7 settlement study
+  is strictly scoped to 1 live EuroLeague season, `E2026`).
+- Approved: Egemen Yücelen on 2026-08-31 in the R-14 pre-live completion request.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

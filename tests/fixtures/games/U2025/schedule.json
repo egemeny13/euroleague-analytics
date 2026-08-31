@@ -1,0 +1,152 @@
+{
+  "data": [
+    {
+      "id": "1584de42-8ba9-488b-ac01-21ef9a34c006",
+      "identifier": "U2025_1",
+      "gameCode": 1,
+      "season": {
+        "name": "EuroCup 2025-26",
+        "code": "U2025",
+        "alias": "2025-26",
+        "competitionCode": "U",
+        "year": 2025,
+        "startDate": "2025-07-01T00:00:00"
+      },
+      "group": {
+        "id": "5e4f08e0-25dd-43f3-a889-8f6a88a33c85",
+        "order": 1,
+        "name": "Group A",
+        "rawName": "A"
+      },
+      "phaseType": {
+        "code": "RS",
+        "alias": "REGULAR SEASON",
+        "name": "Regular Season",
+        "isGroupPhase": true
+      },
+      "round": 1,
+      "roundAlias": "Round 1",
+      "roundName": "Round 1",
+      "played": true,
+      "date": "2025-09-30T19:00:00",
+      "confirmedDate": true,
+      "confirmedHour": true,
+      "localTimeZone": 2,
+      "localDate": "2025-09-30T19:00:00",
+      "utcDate": "2025-09-30T17:00:00Z",
+      "local": {
+        "club": {
+          "code": "WRO",
+          "name": "Slask Wroclaw",
+          "abbreviatedName": "Slask",
+          "editorialName": "Slask",
+          "tvCode": "WKS",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.incrowdsports.com/0415061b-5374-4a0d-bc04-8fcbc8ad0bb3.png"
+          }
+        },
+        "score": 95,
+        "standingsScore": 95,
+        "partials": {
+          "partials1": 28,
+          "partials2": 19,
+          "partials3": 23,
+          "partials4": 25,
+          "extraPeriods": {}
+        }
+      },
+      "road": {
+        "club": {
+          "code": "KLA",
+          "name": "Neptunas Klaipeda",
+          "abbreviatedName": "Neptunas",
+          "editorialName": "Neptunas",
+          "tvCode": "NEP",
+          "isVirtual": false,
+          "images": {
+            "crest": "https://media-cdn.cortextech.io/ed0df5cd-c9e4-4387-bcd4-3606270cd255.png"
+          }
+        },
+        "score": 85,
+        "standingsScore": 85,
+        "partials": {
+          "partials1": 21,
+          "partials2": 24,
+          "partials3": 24,
+          "partials4": 16,
+          "extraPeriods": {}
+        }
+      },
+      "audience": 3307,
+      "audienceConfirmed": true,
+      "socialFeed": "",
+      "operationsCode": null,
+      "referee1": {
+        "code": "OJJF",
+        "name": "BALAK, AMIT",
+        "alias": "BALAK, A.",
+        "country": {
+          "code": "ISR",
+          "name": "Israel"
+        },
+        "images": {
+          "verticalSmall": "ayriycws57abu4o7"
+        },
+        "active": true
+      },
+      "referee2": {
+        "code": "QJMP",
+        "name": "POROBIC, DRAGAN",
+        "alias": "POROBIC, D.",
+        "country": {
+          "code": "BIH",
+          "name": "Bosnia and Herzegovina"
+        },
+        "images": {
+          "verticalSmall": null
+        },
+        "active": true
+      },
+      "referee3": {
+        "code": "QJMO",
+        "name": "GORDON, NOAM",
+        "alias": "GORDON, N.",
+        "country": {
+          "code": "ISR",
+          "name": "Israel"
+        },
+        "images": {
+          "verticalSmall": null
+        },
+        "active": true
+      },
+      "referee4": null,
+      "venue": {
+        "name": "CENTENNIAL HALL",
+        "code": "AUS",
+        "capacity": 5242,
+        "address": "Wystawowa 1Str, 51-618 Wroclaw, Poland",
+        "images": {
+          "medium": null
+        },
+        "active": true,
+        "notes": ""
+      },
+      "isNeutralVenue": false,
+      "gameStatus": "Confirmed",
+      "winner": {
+        "code": "BOU",
+        "name": "Cosea JL Bourg-en-Bresse",
+        "abbreviatedName": "Bourg",
+        "editorialName": "Bourg",
+        "tvCode": "JLB",
+        "isVirtual": false,
+        "images": {
+          "crest": "https://media-cdn.incrowdsports.com/d4225e1b-7c1b-4382-98d4-ca8511c64441.png"
+        }
+      }
+    }
+  ],
+  "total": 1
+}

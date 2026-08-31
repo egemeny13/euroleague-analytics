@@ -88,6 +88,9 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+SUPPORTED_LIVE_SEASONS = ("E2026", "SC2026")
+
+
 def _restore_report(season_code: str, restored: RestoreSummary) -> str:
     """Say what came out of the archive, and what the fetch still has to supply.
 
@@ -123,12 +126,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.live and args.archive:
         print(
             "--live and --archive both archive to Supabase; choose one. --live is the "
-            "nightly E2026 path, --archive is for one historical season.",
+            "path for live seasons, --archive is for one historical season.",
             file=sys.stderr,
         )
         return 2
-    if args.live and args.seasons != ["E2026"]:
-        print("--live currently supports exactly one season: E2026.", file=sys.stderr)
+    if args.live and (len(args.seasons) != 1 or args.seasons[0] not in SUPPORTED_LIVE_SEASONS):
+        print(
+            f"--live currently supports: {', '.join(sorted(SUPPORTED_LIVE_SEASONS))}.",
+            file=sys.stderr,
+        )
         return 2
     if args.archive:
         # One season per run, deliberately. The plan this serves bounds each batch
@@ -137,12 +143,12 @@ def main(argv: list[str] | None = None) -> int:
         if len(args.seasons) != 1:
             print("--archive takes exactly one season per run.", file=sys.stderr)
             return 2
-        # E2026 belongs to the nightly job. Fetching it here would put two
+        # E2026/SC2026 belong to the live jobs. Fetching them here would put two
         # fetchers on the same season even when the concurrency group holds.
-        if args.seasons == ["E2026"]:
+        if args.seasons[0] in SUPPORTED_LIVE_SEASONS:
             print(
-                "--archive is for historical seasons; E2026 is the live season and "
-                "belongs to the nightly --live job.",
+                f"--archive is for historical seasons; {args.seasons[0]} is a live season and "
+                "belongs to the --live job.",
                 file=sys.stderr,
             )
             return 2
@@ -151,23 +157,24 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.live:
+            live_season = args.seasons[0]
             database_settings, storage_settings = live_runtime_settings(os.environ)
             with psycopg.connect(database_settings.url(), autocommit=True) as connection:
                 storage = SupabaseStorage(storage_settings)
                 storage.ensure_private_bucket()
-                # Resume rather than gate. A nightly run that is cancelled or
-                # times out leaves E2026 archived as far as it got, and the next
+                # Resume rather than gate. A live run that is cancelled or
+                # times out leaves the season archived as far as it got, and the next
                 # run has to be able to continue from there. Asking for a
                 # complete archive here would refuse to start for exactly the
                 # reason the run exists.
                 print(
                     _restore_report(
-                        "E2026",
+                        live_season,
                         restore_for_resume(
                             connection,
                             ResponseCache(args.cache_root),
                             storage,
-                            "E2026",
+                            live_season,
                         ),
                     )
                 )
