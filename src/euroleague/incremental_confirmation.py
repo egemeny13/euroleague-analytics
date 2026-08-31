@@ -382,8 +382,13 @@ def apply_current_migrations(connection: Any) -> None:
     if not migrations:
         raise RuntimeError(f"No up migrations found in {MIGRATIONS_ROOT}.")
     with connection.cursor() as cursor:
+        cursor.execute("SELECT current_schema()")
+        cur_schema = cursor.fetchone()[0]
         for migration in migrations:
-            cursor.execute(migration.read_text(encoding="utf-8"))
+            sql_text = migration.read_text(encoding="utf-8")
+            if cur_schema and cur_schema not in ("public", "pg_catalog"):
+                sql_text = sql_text.replace("public.", f"{cur_schema}.")
+            cursor.execute(sql_text)
 
 
 def current_derived_writer(

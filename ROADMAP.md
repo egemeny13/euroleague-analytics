@@ -1081,23 +1081,24 @@ load. E2024 and E2025 are loaded. The other twenty-one seasons are archived and
 not loaded.
 
 The rehearsal was executed on **2026-08-31** against representative season **`E2023`**
-(331 played games, 994 checksum-verified files) using the repeatable engine in
-`src/euroleague/historical_rehearsal.py` and `scripts/rehearse_historical_warehouse.py`.
+(331 played games, 994 checksum-verified files) on a real disposable PostgreSQL database
+(`euroleague_test:5433`) using the repeatable engine in `src/euroleague/historical_rehearsal.py`
+and `scripts/rehearse_historical_warehouse.py`.
 The complete evidence report is in [`docs/HISTORICAL_WAREHOUSE_REHEARSAL_REPORT.md`](./docs/HISTORICAL_WAREHOUSE_REHEARSAL_REPORT.md)
 and [`docs/evidence/historical_rehearsal_E2023.json`](./docs/evidence/historical_rehearsal_E2023.json).
 
 **The three questions are now answered with measured evidence:**
 
 1. **How long one historical season takes**:
-   - Total transformation and validation time is **9.68 seconds** for 331 games (**34.2 games/sec**).
-   - Extrapolated across all 23 historical seasons (5,950 games), pure pipeline computation takes **~174 seconds (~3 minutes)**.
+   - Total end-to-end build and live database loading time is **54.66 seconds** for 331 games (raw ingest: 15.82s, derived load: 26.88s).
+   - Extrapolated across all 23 historical seasons (5,950 games), full build and database insertion takes **~982 seconds (~16.4 minutes)**.
 2. **What share of its games the gates exclude**:
    - **7.55 %** (25 of 331 games quarantined by default), showing that older seasons share the same quality stability as modern seasons (E2024: 7.27%, E2025: 7.21%).
    - Breakdown: 16 `possession_gate`, 8 `off_court_attribution`, 2 `minutes_mismatch`, 1 `substitution_state`.
 3. **What twenty-three seasons cost in the database (`pg_total_relation_size`)**:
-   - One season (`E2023`) costs **151.96 MB** across 14 tables and indexes (**459,098 bytes / 448.3 KB per game**).
-   - **Hot Window (3 seasons, 1,112 games)**: **510.52 MB** uncompacted, settling to **~340 MB** with compaction (fits within the 474.31 MB usable free tier).
-   - **All 23 Historical Seasons (5,950 games)**: **2,731.64 MB (2.73 GB)**.
+   - One season (`E2023`) costs **114.16 MB (114,155,520 bytes)** across 14 tables and indexes (**344,880.73 bytes / game (~336.8 KB/game)**).
+   - **Hot Window (3 seasons, 1,112 games)**: **365.74 MB (383,507,366 bytes)** (fits comfortably within the 474.31 MB usable free tier).
+   - **All 23 Historical Seasons (5,950 games)**: **1,956.98 MB (~1.96 GB / 2,052,040,314 bytes)**.
    - **Conclusion**: Proves conclusively that loading full historical depth exceeds the 500 MB free-tier limit and requires a paid/dedicated storage layer or lakehouse parquet storage, while the active hot window remains safely hosted on the free tier.
 
 ### R-13: Auth0 production readiness. It blocks R-9, and it is owner work.

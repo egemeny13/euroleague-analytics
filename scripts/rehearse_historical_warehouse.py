@@ -1,15 +1,8 @@
-"""Run a repeatable historical-season warehouse rehearsal (R-12).
+"""CLI runner for repeatable historical-season warehouse rehearsals (R-12).
 
-Usage:
-    # Offline rehearsal using verified cache (default: E2023)
-    python scripts/rehearse_historical_warehouse.py
-
-    # Disposable database rehearsal (requires EL_TEST_DATABASE_URL=...euroleague_test:5433)
-    python scripts/rehearse_historical_warehouse.py --db
-
-    # Custom output path and season
-    python scripts/rehearse_historical_warehouse.py --season-code E2023 \\
-        --output docs/evidence/historical_rehearsal_E2023.json
+Restores checksum-verified cached responses, executes raw ingestion, derived
+building, schema migration, and physical PostgreSQL measurement inside an isolated
+temporary schema on a disposable local database.
 """
 
 from __future__ import annotations
@@ -18,9 +11,6 @@ import argparse
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-
-# Add src to sys.path for local executions
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import psycopg
 
@@ -86,28 +76,25 @@ def main(args: list[str] | None = None) -> int:
 
     progress(f"Starting historical warehouse rehearsal for season {season_code}...")
 
-    conn = None
-    if opts.db:
-        settings = load_test_database_settings()
-        progress(
-            f"Connecting to test database at {settings.host}:{settings.port}/{settings.dbname}..."
-        )
-        conn = psycopg.connect(
-            settings.connection_string,
-            autocommit=True,
-        )
-        assert_rehearsal_target_safe(conn)
+    settings = load_test_database_settings()
+    progress(
+        f"Connecting to test database at {settings.host}:{settings.port}/{settings.database}..."
+    )
+    conn = psycopg.connect(
+        settings.url(),
+        autocommit=True,
+    )
+    assert_rehearsal_target_safe(conn)
 
     try:
         result = run_historical_rehearsal(
             cache,
-            season_code=season_code,
             connection=conn,
+            season_code=season_code,
             progress=progress,
         )
     finally:
-        if conn is not None:
-            conn.close()
+        conn.close()
 
     print("\n" + "=" * 78)
     print(f"HISTORICAL WAREHOUSE REHEARSAL RESULT: {result.season_code}")
@@ -135,46 +122,48 @@ def main(args: list[str] | None = None) -> int:
         f"({result.exclusions.exclusion_rate_pct:.2f}%)"
     )
     print("  Exclusion Breakdown:")
-    for reason, cnt in sorted(result.exclusions.reasons.items()):
-        print(f"    - {reason:<24} : {cnt:>3} games")
+    for reason, count in result.exclusions.reasons.items():
+        print(f"    - {reason:<25}: {count:>3} games")
     print("-" * 78)
     print("ROW COUNTS:")
-    for tbl, cnt in {**result.raw_counts, **result.derived_counts}.items():
-        print(f"  {tbl:<22} : {cnt:>8,} rows")
+    for tbl, count in {**result.raw_counts, **result.derived_counts}.items():
+        print(f"  {tbl:<22} : {count:>8,d} rows")
     print("-" * 78)
     print("STORAGE BREAKDOWN & PROJECTIONS:")
-    print(f"  {'Relation':<22} {'Table Bytes':>14} {'Index Bytes':>14} {'Total Bytes':>14}")
-    for tbl, s in sorted(result.relation_sizes.items()):
-        print(f"  {tbl:<22} {s.table_bytes:>14,} {s.index_bytes:>14,} {s.total_bytes:>14,}")
+    print(f"  {'Relation':<25} {'Table Bytes':>12} {'Index Bytes':>12} {'Total Bytes':>12}")
+    for tbl, metric in sorted(result.relation_sizes.items()):
+        print(
+            f"  {tbl:<25} {metric.table_bytes:>12,d} "
+            f"{metric.index_bytes:>12,d} {metric.total_bytes:>12,d}"
+        )
+    total_table = sum(m.table_bytes for m in result.relation_sizes.values())
+    total_index = sum(m.index_bytes for m in result.relation_sizes.values())
     print(
-        f"  {'TOTAL':<22} {sum(s.table_bytes for s in result.relation_sizes.values()):>14,} "
-        f"{sum(s.index_bytes for s in result.relation_sizes.values()):>14,} "
-        f"{result.projections.season_total_bytes:>14,}"
+        f"  {'TOTAL':<25} {total_table:>12,d} {total_index:>12,d} "
+        f"{result.projections.season_total_bytes:>12,d}"
     )
     print(f"\n  Average Cost per Game   : {result.projections.bytes_per_game:,.2f} bytes/game")
-    hot_mb = result.projections.projected_hot_window_bytes / (1024 * 1024)
-    hot_bytes = result.projections.projected_hot_window_bytes
+    proj_hot_mb = result.projections.projected_hot_window_bytes / 1_000_000
+    proj_23_mb = result.projections.projected_23_seasons_bytes / 1_000_000
+    budget_mb = result.projections.usable_budget_bytes / 1_000_000
     print(
-        f"  Projected Hot Window    : {hot_mb:.2f} MB ({hot_bytes:,.0f} bytes across 1,112 games)"
+        f"  Projected Hot Window    : {proj_hot_mb:.2f} MB "
+        f"({int(result.projections.projected_hot_window_bytes):,d} bytes across 1,112 games)"
     )
-    hist_mb = result.projections.projected_23_seasons_bytes / (1024 * 1024)
-    hist_bytes = result.projections.projected_23_seasons_bytes
     print(
-        f"  Projected 23 Seasons    : {hist_mb:.2f} MB ({hist_bytes:,.0f} bytes across 5,950 games)"
+        f"  Projected 23 Seasons    : {proj_23_mb:.2f} MB "
+        f"({int(result.projections.projected_23_seasons_bytes):,d} bytes across 5,950 games)"
     )
-    budg_mb = result.projections.usable_budget_bytes / (1024 * 1024)
-    budg_bytes = result.projections.usable_budget_bytes
-    print(f"  Supabase Usable Budget  : {budg_mb:.2f} MB ({budg_bytes:,} bytes)")
+    print(
+        f"  Supabase Usable Budget  : {budget_mb:.2f} MB "
+        f"({result.projections.usable_budget_bytes:,d} bytes)"
+    )
     print("=" * 78)
 
-    output_path = opts.output
-    if output_path is None:
-        filename = f"historical_rehearsal_{season_code}_{result.run_id}.json"
-        output_path = Path("docs/evidence") / filename
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(result.to_json())
-    progress(f"Wrote rehearsal result artifact to {output_path}")
+    if opts.output:
+        opts.output.parent.mkdir(parents=True, exist_ok=True)
+        opts.output.write_text(result.to_json() + "\n", encoding="utf-8")
+        progress(f"Wrote rehearsal result artifact to {opts.output}")
 
     return 0
 

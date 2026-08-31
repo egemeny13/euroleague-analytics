@@ -127,6 +127,9 @@ class DummyConnection:
 
         return TxContext()
 
+    def close(self) -> None:
+        pass
+
 
 def test_guard_refuses_production_or_unauthorised_database() -> None:
     """Break caught: rehearsal connects to production or wrong port."""
@@ -157,7 +160,6 @@ def test_cache_integrity_verification_checks_expected_files(tmp_path: Path) -> N
 
     cache = ResponseCache(cache_root)
 
-    # Incomplete because game 1 endpoints are missing
     with pytest.raises(RuntimeError, match="missing"):
         verify_cache_integrity(cache, "E2023")
 
@@ -218,37 +220,9 @@ def test_storage_projections_calculation() -> None:
     assert proj.usable_budget_bytes == 474_311_115
 
 
-def test_offline_rehearsal_run(tmp_path: Path) -> None:
-    """Break caught: rehearsal cannot run or format findings offline."""
-    real_cache = ResponseCache("exploration/cache")
-    if (Path("exploration/cache/E2023/schedule.json")).exists():
-        result = run_historical_rehearsal(
-            real_cache,
-            season_code="E2023",
-            connection=None,
-            run_id="testoffline",
-        )
-        assert result.season_code == "E2023"
-        assert result.exclusions.played_games == 331
-        assert result.exclusions.loaded_games == 331
-        assert result.exclusions.excluded_games == 25
-        assert round(result.exclusions.exclusion_rate_pct, 2) == 7.55
-        assert result.raw_counts["raw_game"] == 331
-        assert result.raw_counts["raw_event"] == 172_265
-        assert result.derived_counts["game_event"] == 172_265
-        assert result.derived_counts["possession"] == 47_460
-        assert len(result.evidence_limits) >= 3
-
-        # Test serialization
-        output_file = tmp_path / "rehearsal_result.json"
-        output_file.write_text(result.to_json())
-        loaded = json.loads(output_file.read_text())
-        assert loaded["season_code"] == "E2023"
-        assert loaded["exclusions"]["excluded_games"] == 25
-
-
-def test_database_rehearsal_with_dummy_connection(
+def test_rehearsal_with_dummy_connection(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Break caught: schema setup, migrations, or size query logic fails under connection."""
     real_cache = ResponseCache("exploration/cache")
@@ -268,15 +242,30 @@ def test_database_rehearsal_with_dummy_connection(
     conn = DummyConnection()
     result = run_historical_rehearsal(
         real_cache,
-        season_code="E2023",
         connection=conn,
+        season_code="E2023",
         run_id="testdummy",
     )
     assert result.season_code == "E2023"
     assert "euroleague_test:5433" in (result.database_target or "")
+    assert result.exclusions.played_games == 331
+    assert result.exclusions.loaded_games == 331
+    assert result.exclusions.excluded_games == 25
+    assert round(result.exclusions.exclusion_rate_pct, 2) == 7.55
+    assert result.raw_counts["raw_game"] == 331
+    assert result.raw_counts["raw_event"] == 172_265
+    assert result.derived_counts["game_event"] == 172_265
+    assert result.derived_counts["possession"] == 47_460
     assert any("CREATE SCHEMA" in query for query, _ in conn.executions)
     assert any("DROP SCHEMA" in query for query, _ in conn.executions)
     assert "game_event" in result.relation_sizes
+
+    # Test serialization
+    output_file = tmp_path / "rehearsal_result.json"
+    output_file.write_text(result.to_json())
+    loaded = json.loads(output_file.read_text())
+    assert loaded["season_code"] == "E2023"
+    assert loaded["exclusions"]["excluded_games"] == 25
 
 
 SCRIPT_PATH = (
@@ -310,12 +299,27 @@ def test_cli_argument_parsing() -> None:
     assert custom.output == Path("out.json")
 
 
-def test_cli_execution_offline(tmp_path: Path) -> None:
-    """Break caught: CLI main function fails in offline mode."""
+def test_cli_execution_with_dummy_db(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Break caught: CLI main function fails with database connection."""
     if not (Path("exploration/cache/E2023/schedule.json")).exists():
         pytest.skip("E2023 cache not present")
 
     script = _load_script()
+    conn = DummyConnection()
+    monkeypatch.setattr(script.psycopg, "connect", lambda *args, **kwargs: conn)
+    import euroleague.historical_rehearsal as hr
+
+    monkeypatch.setattr(hr, "apply_current_migrations", lambda c: None)
+    monkeypatch.setattr(hr, "load_confirmation_raw_rows", lambda c, cache, sc: {})
+    monkeypatch.setattr(
+        hr,
+        "load_derived_rows",
+        lambda c, dims, evts, rem, sc, gamecodes=None: {},
+    )
+
     out_file = tmp_path / "cli_rehearsal.json"
     exit_code = script.main(["--season-code", "E2023", "--output", str(out_file), "--quiet"])
     assert exit_code == 0
