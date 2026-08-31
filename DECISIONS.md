@@ -2170,6 +2170,53 @@ invocation does not carry forward, and discussion of the skill is not an invocat
 
 ---
 
+## 39. Multi-competition season codes and v2 URL paths in the offline fetch layer
+
+`validate_season_code()` supports exactly `E####`, `U####`, and `SC####` season
+codes (where `####` is exactly four decimal digits). All v2 URL builders
+(`_schedule_url`, `_roster_url`, `_game_stats_url`) dynamically derive the
+competition path component (`E`, `U`, or `SC`) from the validated season code
+instead of hard-coding `competitions/E`. The legacy v1 URL builder (`_game_url`)
+behavior is preserved, continuing to pass the full season code as the
+`seasoncode` query parameter. Unsupported competition prefixes, wrong digit
+lengths, lowercase characters, whitespace, and injection/traversal inputs
+continue to be strictly rejected with a `ValueError`.
+
+**Why.** `exploration/SUPERCUP_RECON.md` established that the public EuroLeague
+API serves the SuperCup under competition code `SC` (with `SC2026` games
+scheduled for 2026-09-18) and EuroCup under `U`, and that the v1 endpoints are
+competition-agnostic. Previously, `validate_season_code()` accepted only `E####`
+and the v2 URL builders hard-coded `competitions/E`. Parameterising the
+competition code in the offline fetch layer opens the fetcher to SuperCup and
+EuroCup without sacrificing the strict shape validation that protects API URL
+interpolation and shell arguments.
+
+**What is established.** Focused unit tests in `tests/test_season_code_validation.py`
+and `tests/test_fetch.py` verify acceptance of valid `E`, `U`, and `SC` season
+codes, rejection of unsafe and malformed inputs, exact URL generation across
+all v2 and v1 builders, and mocked `ArchiveFetcher` schedule, game, roster, and
+game stats operations for `SC2026` and `U2025`.
+
+**What is not established and remains for live operations.** This decision is an
+offline fetch-layer slice only. It does not alter live workflow triggers or
+scripts (`.github/workflows/e2026-live.yml`, `scripts/live_pipeline.py`), which
+remain scoped to `E2026`. Full R-14 support requires live-pipeline routing,
+database storage assessment, and schema validation before live ingestion of `SC`
+or `U` competitions is activated.
+
+**Provenance.**
+- Basis: MIXED
+- Evidence: `exploration/SUPERCUP_RECON.md` proves that `SC` and `U` exist on
+  the public API and that v1 game payloads are competition-agnostic; R-14 in
+  `ROADMAP.md` identifies the fetch-layer restriction and the 2026-09-18 SuperCup
+  timing.
+- Alternatives considered: keep `validate_season_code` restricted to `E####`
+  until full multi-competition pipeline support is built, or implement the offline
+  fetch-layer slice first while keeping live workflows protected.
+- Approved: Egemen Yücelen on 2026-08-31 in the R-14 implementation request.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

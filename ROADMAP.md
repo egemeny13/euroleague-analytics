@@ -1152,16 +1152,18 @@ environment tag can be changed on this tenant was not read from the dashboard. T
 tag matters less than the two things it stands for: fix the keys and the domain, and
 the label is either fixable or irrelevant.
 
-### R-14: parameterise the competition code. Undecided, and it expires on 2026-09-18.
+### R-14: parameterise the competition code. Offline fetch layer done (Decision 39); live pipeline remaining.
 
 `exploration/SUPERCUP_RECON.md` establishes that the API publishes `SC` as a
 competition code, that `SC2026` is a real season with two semi-finals on
 2026-09-18, and that the v1 game endpoints are competition-agnostic - proved by
 pulling a full play-by-play payload for a played EuroCup game, `U2025`.
 
-**This project cannot ask for it.** `validate_season_code()` requires `E` plus
-exactly four digits, and three of the four v2 URL builders hard-code
-`competitions/E`. The comment at `fetch.py:124` anticipated this exact change.
+**Offline fetch-layer slice complete (Decision 39).** `validate_season_code()`
+now accepts exactly `E####`, `U####`, and `SC####` season codes. All v2 URL
+builders (`_schedule_url`, `_roster_url`, `_game_stats_url`) derive the
+competition path (`E`, `U`, or `SC`) dynamically from the season code, while
+v1 URL behaviour is preserved and invalid/unsafe inputs remain strictly rejected.
 
 **What it buys.** A dress rehearsal on live data six days before the season
 opener, while nothing is public. And the only possession-level reconstruction of
@@ -1169,17 +1171,15 @@ the first SuperCup ever played, which is a reason for the launch to be
 interesting rather than merely available. The same change opens EuroCup later,
 which this project has always intended.
 
-**What it costs.** `validate_season_code` was hardened deliberately, because that
-value reaches both an API path and a shell argument. Widening it is a
-security-relevant edit and must keep refusing anything that is not a competition
-code. The fetch, archive and pipeline paths all carry the season code, so the
-change is small in each place and touches several.
+**Remaining work for full R-14 completion.** Live workflows and pipelines
+(`.github/workflows/e2026-live.yml`, `scripts/live_pipeline.py`, database loading,
+and storage projections) remain untouched and currently scoped to `E`. Full
+support requires deciding live-pipeline dispatching, storage/backfill gates,
+and multi-competition table reconciliation before 2026-09-18.
 
 **Why it expires.** Undone by 2026-09-17, this item stops being worth anything:
 the games are played on the 18th and the rehearsal is gone. It is not deferred
 work, it is dated work.
-
-**Not decided.** Recorded here so a decision can be made rather than missed.
 
 ### What none of this establishes
 
