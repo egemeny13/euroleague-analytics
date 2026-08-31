@@ -1101,8 +1101,7 @@ is paying for yet.
 
 ### R-13: Auth0 production readiness. Complete 2026-08-31.
 
-**Completed on 2026-08-31.** All five required items were executed and verified
-with the allowlist holding only the owner:
+**Completed on 2026-08-31.** All required items were executed, verified, and transitioned to Production:
 
 1. **Google OAuth developer keys retired**: Replaced with the project's own Google
    OAuth 2.0 Client credentials on the `google-oauth2` connection.
@@ -1116,7 +1115,13 @@ with the allowlist holding only the owner:
    Email configured.
 5. **Introspection callback cleaned**: Vestigial `http://localhost` callback removed
    from `EuroLeague MCP Introspection`.
-6. **Fly.io redeploy and token gate**: Fly secrets updated (`MCP_ISSUER_URL="https://auth.egemenyucelen.me"`,
+6. **Environment Tag set to Production**: Tenant Environment Tag switched from `Development`
+   to `Production` in Auth0 Dashboard -> Settings -> General.
+7. **Production readiness check reviewed**: Core readiness items (developer keys, custom
+   domain, support metadata, localhost callback) passed. Non-applicable enterprise items
+   (custom email provider, branded email templates, MFA) confirmed non-blocking for a
+   social-only architecture without database authentication or outbound email triggers.
+8. **Fly.io redeploy and token gate**: Fly secrets updated (`MCP_ISSUER_URL="https://auth.egemenyucelen.me"`,
    `MCP_INTROSPECTION_URL="https://auth.egemenyucelen.me/oauth/token/introspect"`),
    discovery endpoint verified, and `scripts/check_hosted_token.py` passed with
    a real token minted by `https://auth.egemenyucelen.me/oauth/token`.

@@ -33,15 +33,14 @@ pointing at that metadata. That is the expected, healthy behaviour.
 |---|---|
 | Tenant | `dev-ew0k6i4pmarjvgkn.us.auth0.com` |
 | Custom Domain | `auth.egemenyucelen.me` (Auth0-managed TLS/SSL active, CNAME to `dev-ew0k6i4pmarjvgkn-cd-fdgixg6xdbavegzd.edge.tenants.us.auth0.com`, DNS only) |
-| Environment tag | **DEVELOPMENT** |
+| Environment tag | **PRODUCTION** (Switched from DEVELOPMENT on 2026-08-31) |
 | Region | US |
 | Support URL | `https://egemenyucelen.me` |
 | Support Email | Configured (owner contact) |
 
-**Open question, not a task.** Auth0 labels this tenant as development, and
-development tenants are not intended to carry production traffic. The private
-pilot is well within that, but a public opening is a decision that has to be
-taken deliberately rather than discovered. Recorded 2026-08-29; not decided.
+The tenant environment tag was switched from Development to Production on
+2026-08-31 after replacing the developer keys, activating the custom domain,
+setting support metadata, and verifying token validity.
 
 ## 3. Applications
 
@@ -356,20 +355,26 @@ door.
    and Support Email set in Tenant Settings.
 5. **Introspection callback cleaned.** Removed obsolete `http://localhost` callback
    from `EuroLeague MCP Introspection`.
-6. **Fly.io issuer updated and deployed.** Updated Fly secrets with owner approval:
+6. **Environment Tag set to Production.** Switched the tenant Environment Tag from
+   `Development` to `Production` in Auth0 Dashboard -> Settings -> General.
+7. **Production readiness check reviewed.** Developer keys, custom domain, support
+   URL/email, and localhost callback checks passed. Custom email provider, branded
+   email templates, and MFA checks remain unconfigured and are confirmed non-blocking
+   for a social-only architecture without database authentication or outbound email triggers.
+8. **Fly.io issuer updated and deployed.** Updated Fly secrets with owner approval:
    `MCP_ISSUER_URL="https://auth.egemenyucelen.me"` and
    `MCP_INTROSPECTION_URL="https://auth.egemenyucelen.me/oauth/token/introspect"`.
    The server redeployed and verified publishing:
    `GET /.well-known/oauth-protected-resource/mcp` -> `authorization_servers: ["https://auth.egemenyucelen.me"]`.
-7. **Token verification verified.** Ran `scripts/check_hosted_token.py` against a real
+9. **Token verification verified.** Ran `scripts/check_hosted_token.py` against a real
    access token issued by `https://auth.egemenyucelen.me/oauth/token`. The claims matched
    the resource (`https://euroleague-analytics-mcp.fly.dev/mcp`), the issuer
    (`https://auth.egemenyucelen.me/`), and the scope (`read:warehouse`).
    Result: `VERDICT: this token is accepted by the new rule. R-6 is safe to merge.`
 
 **What this establishes.** The hosted server requires and accepts tokens minted by
-the verified custom domain `https://auth.egemenyucelen.me`. The developer keys are
-retired and the single-tenant allowlist remains untouched.
+the verified custom domain `https://auth.egemenyucelen.me` under the Production environment tag.
+The developer keys are retired and the single-tenant allowlist remains untouched.
 
 
 ## 6. What this file does not establish
