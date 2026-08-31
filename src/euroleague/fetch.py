@@ -149,14 +149,21 @@ def validate_season_code(value: str) -> str:
     return value
 
 
-def _competition_for_season_code(season_code: str) -> str:
+def competition_for_season_code(season_code: str) -> str:
     """Derive the v2 competition path code (E, U, or SC) from a validated season code."""
     valid_code = validate_season_code(season_code)
-    return valid_code[:-4]
+    if valid_code.startswith("SC"):
+        return "SC"
+    if valid_code.startswith("E"):
+        return "E"
+    return "U"
+
+
+_competition_for_season_code = competition_for_season_code
 
 
 def _schedule_url(season_code: str) -> str:
-    competition = _competition_for_season_code(season_code)
+    competition = competition_for_season_code(season_code)
     query = urlencode({"limit": 1000})
     return (
         f"https://api-live.euroleague.net/v2/competitions/{competition}/"

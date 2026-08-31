@@ -65,16 +65,26 @@ class MockConnection:
         return self._cursor
 
 
-def test_record_season_progress_executes_upsert() -> None:
-    """Break caught: live loader fails to upsert season_progress."""
+@pytest.mark.parametrize(
+    ("season_code", "expected_competition", "scheduled_games"),
+    [
+        ("E2026", "E", 380),
+        ("U2025", "U", 190),
+        ("SC2026", "SC", 2),
+    ],
+)
+def test_record_season_progress_executes_upsert(
+    season_code: str, expected_competition: str, scheduled_games: int
+) -> None:
+    """Break caught: live loader fails to upsert season_progress with correct competition code."""
     cursor = MockCursor([])
     conn = MockConnection(cursor)
-    record_season_progress(conn, "E2026", 380)
+    record_season_progress(conn, season_code, scheduled_games)
 
     assert len(cursor.statements) == 1
     assert "insert into season_progress" in cursor.statements[0]
     assert "on conflict (season_code) do update" in cursor.statements[0]
-    assert cursor.parameters[0] == ("E2026", "E", 380)
+    assert cursor.parameters[0] == (season_code, expected_competition, scheduled_games)
 
 
 def test_describe_warehouse_reports_completeness_and_progress_fields() -> None:
