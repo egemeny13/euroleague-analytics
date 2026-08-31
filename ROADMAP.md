@@ -1168,20 +1168,24 @@ pulling a full play-by-play payload for a played EuroCup game, `U2025`.
 2. **Live pipeline & derived layers:** Fixed the `season_code[0]` assumption in
    `record_season_progress` using `competition_for_season_code(season_code)` so
    `SC2026` propagates as `SC`, `U2025` as `U`, and `E2026` as `E`.
-3. **Real non-E fixture verification:** Captured exact-byte public API responses
-   for played EuroCup game `U2025` game 1 (`tests/fixtures/games/U2025/`) and proved
-   that the full offline pipeline (cache -> parse -> validate -> derived -> lineups
-   -> stints -> possessions -> game quality) executes with zero attribution issues,
-   zero on-court violations, and clean game quality on real non-EuroLeague data.
+3. **Real non-E fixture verification:** Captured exact-byte public API response
+   bodies (`Boxscore`, `PlaybyPlay`, `Points`, `GameStats`) for played EuroCup game `U2025`
+   game 1 (`tests/fixtures/games/U2025/`) along with a curated single-game `schedule.json`
+   fixture, and proved that the full offline pipeline (cache -> parse -> validate ->
+   derived -> lineups -> stints -> possessions -> game quality) executes with zero
+   attribution issues, zero on-court violations, and clean game quality on real non-EuroLeague data.
 4. **Three-game storage projection (Decision 40):** Priced a 3-game SuperCup tournament
    (2 semi-finals + 1 final) at ~1.09 MB Postgres storage (upper-bound ~1.20 MB) and
-   12 gzip files (~0.4 MB) in Storage. Consumes only ~1.5% of the 72.0 MB / 14.40%
-   measured free-tier headroom, safely preserving Decision 20's hot window.
+   12 per-game gzip objects plus the Schedule object (13 objects in total, estimated ~0.4 MB)
+   in Storage. Consumes only ~1.5% of the 72.0 MB / 14.40% measured free-tier headroom,
+   safely preserving Decision 20's hot window.
 5. **CLI & manual rehearsal workflow (Decision 40):** Parameterised `scripts/fetch_archive.py`
    and `scripts/live_pipeline.py` to support `SC2026` for `--live`. Added the manual-only
    `.github/workflows/supercup-rehearsal.yml` workflow (`workflow_dispatch` only, no
-   scheduled cron). Kept settlement rechecks in `scripts/settlement_recheck.py` strictly
-   `E2026`-only and preserved the existing scheduled `e2026-live.yml` workflow.
+   scheduled cron), sharing the `e2026-live-fetcher` concurrency group with `e2026-live.yml`
+   to prevent concurrent writes to production database and archive. Kept settlement rechecks
+   in `scripts/settlement_recheck.py` strictly `E2026`-only and preserved the existing
+   scheduled `e2026-live.yml` workflow.
 
 **What it buys.** A dress rehearsal on live data six days before the season
 opener, while nothing is public. And the only possession-level reconstruction of

@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: supercup-rehearsal-fetcher
+  group: e2026-live-fetcher
   cancel-in-progress: false
 
 jobs:

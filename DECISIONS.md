@@ -2238,15 +2238,23 @@ relations; 359,505 bytes/game 20-team rate):
 - 3 games consume **~1.5% of available headroom** (0.22% of total quota), keeping
   the database safely inside the free-tier budget without adjusting Decision 20's
   hot window.
-- In Supabase Storage, 3 games produce 12 gzipped response files (~0.4 MB),
-  negligible against the 1 GB quota.
+- In Supabase Storage, 3 games produce 12 per-game gzip objects plus the Schedule
+  object (13 objects in total, estimated ~0.4 MB), negligible against the 1 GB
+  Storage quota.
 
 **What is established.**
-- Exact-byte public EuroCup (`U2025` game 1) fixtures committed in
-  `tests/fixtures/games/U2025/` match SHA-256 checksums and prove that the full
+- The four per-game response bodies (`Boxscore`, `PlaybyPlay`, `Points`, and
+  `GameStats`) committed in `tests/fixtures/games/U2025/` are verified exact public
+  API bytes matching their SHA-256 checksums; `schedule.json` is a curated single-game
+  fixture subset containing game 1's schedule record. Together they prove that the full
   offline pipeline (cache -> parse -> validate -> derived -> lineups -> stints
   -> possessions -> game_quality) executes cleanly with zero on-court violations,
   zero attribution issues, and clean game quality on real non-EuroLeague API data.
+- Workflow safety tests in `tests/test_supercup_rehearsal_workflow.py` verify that
+  `.github/workflows/supercup-rehearsal.yml` is strictly manual-only (`workflow_dispatch`),
+  shares the `e2026-live-fetcher` concurrency group with `e2026-live.yml` to prevent
+  overlapping writes to production database and archive, exposes no job-level secrets,
+  and preserves `if: always()` step reporting without settlement rechecks.
 - CLI argument validation for `fetch_archive.py` and `live_pipeline.py` is unit-tested
   to permit `E2026` and `SC2026` while refusing unsupported or unsafe inputs.
 - `settlement_recheck.py` is unit-tested to strictly reject `SC2026` and `U2025`.

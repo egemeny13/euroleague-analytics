@@ -1,9 +1,12 @@
-"""Tests for the committed U2025 (EuroCup) exact-byte fixture game.
+"""Tests for the committed U2025 (EuroCup) fixture game.
 
-WHAT THIS PROVES.
-1. The exact raw response bytes fetched from the public EuroCup API for U2025 game 1
-   match their recorded SHA-256 checksums without modification.
-2. The entire offline pipeline (cache -> parse -> validate -> derived -> lineups ->
+WHAT THIS PROVES:
+1. The 4 per-game response bodies (Boxscore, PlaybyPlay, Points, and GameStats) are
+   verified exact public API bytes fetched from the public EuroCup endpoints and match
+   their recorded SHA-256 checksums without modification.
+2. `schedule.json` is a curated single-game fixture subset containing game 1's schedule
+   record (matching how E2024 fixtures are committed), verified against its checksum.
+3. The entire offline pipeline (cache -> parse -> validate -> derived -> lineups ->
    possessions -> game quality) executes cleanly on real non-EuroLeague data and
    satisfies all mechanical and structural invariants.
 """
@@ -19,28 +22,31 @@ from euroleague.parse import parse_cached_game, parse_shots
 from euroleague.validation import validate_season
 
 U2025_ROOT = Path(__file__).resolve().parent / "fixtures" / "games" / "U2025"
-EXPECTED_SHA256 = {
-    "schedule": "6d5dc731c82a0e7287c5384f38a1d9ff0bda5b30b4f2c7f629c2d3f8c6b1dfb9",
+EXACT_API_GAME_SHA256 = {
     "Boxscore": "d62a95fe564979b58034446c084c7897c08bc44fa18ffc107989154693b3079f",
     "PlaybyPlay": "d508bb92eb9bdf82f87dc6cfeb594a78aaf7872e5e2c11e1348224e2c3d35a89",
     "Points": "d7a76edc0464b8d449b13679216c5c66ce0ebf0d5e8e2648f99d8dc0e1b617a2",
     "GameStats": "d854f5b1140279fc05b9e657c91bce6a725e567154a9fe241eb38a42749194f2",
 }
+CURATED_SCHEDULE_SHA256 = "6d5dc731c82a0e7287c5384f38a1d9ff0bda5b30b4f2c7f629c2d3f8c6b1dfb9"
 
 
-def test_u2025_fixture_bytes_match_checksums() -> None:
-    """The committed U2025 fixture files have exact expected sha256 hashes."""
-    schedule_bytes = (U2025_ROOT / "schedule.json").read_bytes()
-    assert sha256_of_bytes(schedule_bytes) == EXPECTED_SHA256["schedule"]
-
-    for endpoint in ("Boxscore", "PlaybyPlay", "Points", "GameStats"):
+def test_u2025_game_endpoints_match_exact_public_api_checksums() -> None:
+    """Boxscore, PlaybyPlay, Points, and GameStats are verified exact public API bytes."""
+    for endpoint, expected_hash in EXACT_API_GAME_SHA256.items():
         path = U2025_ROOT / endpoint / "1.json"
         assert path.exists(), f"Fixture file missing: {path}"
         actual_hash = sha256_of_bytes(path.read_bytes())
-        assert actual_hash == EXPECTED_SHA256[endpoint], (
-            f"Checksum mismatch for {endpoint}/1.json: "
-            f"expected {EXPECTED_SHA256[endpoint]}, got {actual_hash}"
+        assert actual_hash == expected_hash, (
+            f"Checksum mismatch for exact API response {endpoint}/1.json: "
+            f"expected {expected_hash}, got {actual_hash}"
         )
+
+
+def test_u2025_curated_schedule_matches_checksum() -> None:
+    """The curated single-game schedule fixture matches its recorded checksum."""
+    schedule_bytes = (U2025_ROOT / "schedule.json").read_bytes()
+    assert sha256_of_bytes(schedule_bytes) == CURATED_SCHEDULE_SHA256
 
 
 def test_u2025_fixture_derivation_and_invariants() -> None:
