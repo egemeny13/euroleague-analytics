@@ -2139,6 +2139,37 @@ the ceiling by hitting it.
 
 ---
 
+## 38. `define-goal` is opt-in, never inferred from an ordinary work request
+
+The `define-goal` skill runs only when the owner explicitly asks to use it in the
+current request. A request to fix, build, change or investigate something does not
+invoke the skill merely because it states a desired outcome. Mentioning the skill
+only to discuss its behavior does not invoke it either.
+
+**Why.** The skill's broad trigger matches nearly every ordinary work request, but
+the skill deliberately stops after writing a goal contract and never implements the
+requested change. Inferring that trigger from language such as "make the necessary
+edits" therefore replaces the owner's immediate implementation request with queue
+administration. Goal definition is useful when requested; it is not the default
+front door for repository work.
+
+**What this gives up.** Ordinary requests no longer receive an automatic goal
+contract, contract review or queue entry. The owner can still request those by
+explicitly invoking `define-goal` or `/define-goal`.
+
+**Condition.** The invocation must be explicit in the current request. A prior-turn
+invocation does not carry forward, and discussion of the skill is not an invocation.
+
+**Provenance.**
+- Basis: OWNER POLICY
+- Evidence: none; this controls the owner's preferred workflow rather than a data or
+  performance claim.
+- Alternatives considered: keep the skill's broad inferred trigger, or make it
+  opt-in for this repository.
+- Approved: Egemen Yücelen on 2026-08-31 in the request to add this repository rule.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

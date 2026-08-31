@@ -259,6 +259,11 @@ the event stream as a bug.
 
 ## Workflow rules
 
+- **`define-goal` is opt-in.** Do not invoke or follow the `define-goal` skill
+  unless the owner explicitly asks to use it in the current request. An ordinary
+  request to fix, build, change, or investigate something is not an invocation,
+  and a mention made only to discuss the skill does not invoke it. See
+  `DECISIONS.md` item 38.
 - **Test before code.** Write the validation test first, then the
   implementation that satisfies it.
 - One task per session. Do not scope-creep.
