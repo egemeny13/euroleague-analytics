@@ -24,7 +24,7 @@ import pytest
 from euroleague.mcp.http_app import acceptable_claims, scopes_from_claims
 
 RESOURCE = "https://euroleague-analytics-mcp.fly.dev/mcp"
-ISSUER = "https://dev-ew0k6i4pmarjvgkn.us.auth0.com"
+ISSUER = "https://auth.egemenyucelen.me"
 
 
 def claims(**overrides: object) -> dict[str, object]:
