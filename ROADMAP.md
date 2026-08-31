@@ -1152,16 +1152,40 @@ environment tag can be changed on this tenant was not read from the dashboard. T
 tag matters less than the two things it stands for: fix the keys and the domain, and
 the label is either fixable or irrelevant.
 
-### R-14: parameterise the competition code. Undecided, and it expires on 2026-09-18.
+### R-14: parameterise the competition code. Pre-live work complete (Decisions 39 & 40); 2026-09-18 live rehearsal remaining.
 
 `exploration/SUPERCUP_RECON.md` establishes that the API publishes `SC` as a
 competition code, that `SC2026` is a real season with two semi-finals on
 2026-09-18, and that the v1 game endpoints are competition-agnostic - proved by
 pulling a full play-by-play payload for a played EuroCup game, `U2025`.
 
-**This project cannot ask for it.** `validate_season_code()` requires `E` plus
-exactly four digits, and three of the four v2 URL builders hard-code
-`competitions/E`. The comment at `fetch.py:124` anticipated this exact change.
+**Pre-live implementation complete (Decisions 39 & 40):**
+1. **Fetch layer & URL builders (Decision 39):** `validate_season_code()` accepts
+   exactly `E####`, `U####`, and `SC####` season codes. All v2 URL builders
+   (`_schedule_url`, `_roster_url`, `_game_stats_url`) dynamically derive the
+   competition path (`E`, `U`, or `SC`) from the season code, while v1 URL
+   query behaviour is preserved and invalid/unsafe inputs remain strictly rejected.
+2. **Live pipeline & derived layers:** Fixed the `season_code[0]` assumption in
+   `record_season_progress` using `competition_for_season_code(season_code)` so
+   `SC2026` propagates as `SC`, `U2025` as `U`, and `E2026` as `E`.
+3. **Real non-E fixture verification:** Captured exact-byte public API response
+   bodies (`Boxscore`, `PlaybyPlay`, `Points`, `GameStats`) for played EuroCup game `U2025`
+   game 1 (`tests/fixtures/games/U2025/`) along with a curated single-game `schedule.json`
+   fixture, and proved that the full offline pipeline (cache -> parse -> validate ->
+   derived -> lineups -> stints -> possessions -> game quality) executes with zero
+   attribution issues, zero on-court violations, and clean game quality on real non-EuroLeague data.
+4. **Three-game storage projection (Decision 40):** Priced a 3-game SuperCup tournament
+   (2 semi-finals + 1 final) at ~1.09 MB Postgres storage (upper-bound ~1.20 MB) and
+   12 per-game gzip objects plus the Schedule object (13 objects in total, estimated ~0.4 MB)
+   in Storage. Consumes only ~1.5% of the 72.0 MB / 14.40% measured free-tier headroom,
+   safely preserving Decision 20's hot window.
+5. **CLI & manual rehearsal workflow (Decision 40):** Parameterised `scripts/fetch_archive.py`
+   and `scripts/live_pipeline.py` to support `SC2026` for `--live`. Added the manual-only
+   `.github/workflows/supercup-rehearsal.yml` workflow (`workflow_dispatch` only, no
+   scheduled cron), sharing the `e2026-live-fetcher` concurrency group with `e2026-live.yml`
+   to prevent concurrent writes to production database and archive. Kept settlement rechecks
+   in `scripts/settlement_recheck.py` strictly `E2026`-only and preserved the existing
+   scheduled `e2026-live.yml` workflow.
 
 **What it buys.** A dress rehearsal on live data six days before the season
 opener, while nothing is public. And the only possession-level reconstruction of
@@ -1169,17 +1193,15 @@ the first SuperCup ever played, which is a reason for the launch to be
 interesting rather than merely available. The same change opens EuroCup later,
 which this project has always intended.
 
-**What it costs.** `validate_season_code` was hardened deliberately, because that
-value reaches both an API path and a shell argument. Widening it is a
-security-relevant edit and must keep refusing anything that is not a competition
-code. The fetch, archive and pipeline paths all carry the season code, so the
-change is small in each place and touches several.
+**Remaining date-gated work for 2026-09-18.** All code, tooling, and offline verification
+are ready. The only remaining work is the date-gated live rehearsal on 2026-09-18:
+manually triggering `.github/workflows/supercup-rehearsal.yml` once the semi-final
+games are played, verifying live response payloads from the upstream API, and reviewing
+derived game quality records.
 
 **Why it expires.** Undone by 2026-09-17, this item stops being worth anything:
 the games are played on the 18th and the rehearsal is gone. It is not deferred
 work, it is dated work.
-
-**Not decided.** Recorded here so a decision can be made rather than missed.
 
 ### What none of this establishes
 

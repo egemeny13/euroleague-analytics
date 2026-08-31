@@ -121,11 +121,10 @@ class _Counters:
     http_requests: int = 0
 
 
-# A season code is `E` followed by exactly four digits. The competition letter is
-# fixed at `E` because every URL builder below hard-codes `competitions/E`; when
-# EuroCup is added this pattern and those URLs change together, and a EuroCup code
-# rejected here is a missing feature rather than a mistake.
-SEASON_CODE = re.compile(r"^E[0-9]{4}$")
+# A season code is a supported competition prefix (E for EuroLeague, U for
+# EuroCup, or SC for SuperCup) followed by exactly four digits. The competition
+# prefix determines the competition path in v2 API URLs below.
+SEASON_CODE = re.compile(r"(E|U|SC)[0-9]{4}")
 
 
 def validate_season_code(value: str) -> str:
@@ -141,18 +140,28 @@ def validate_season_code(value: str) -> str:
     upper-casing. A value that needs repairing before it is usable is a value
     somebody typed wrongly, and repairing it quietly hides that.
     """
-    if not SEASON_CODE.match(value):
+    if SEASON_CODE.fullmatch(value) is None:
         raise ValueError(
-            f"{value!r} is not a season code. Expected the letter E followed by "
-            f"exactly four digits, for example E2024. "
-            f"EuroCup codes are not supported by this fetcher."
+            f"{value!r} is not a valid season code. Expected competition prefix "
+            f"(E, U, or SC) followed by exactly four digits, for example E2024, "
+            f"U2025, or SC2026."
         )
     return value
 
 
+def competition_for_season_code(season_code: str) -> str:
+    """Derive the v2 competition path code (E, U, or SC) from a validated season code."""
+    valid_code = validate_season_code(season_code)
+    return valid_code[:-4]
+
+
 def _schedule_url(season_code: str) -> str:
+    competition = competition_for_season_code(season_code)
     query = urlencode({"limit": 1000})
-    return f"https://api-live.euroleague.net/v2/competitions/E/seasons/{season_code}/games?{query}"
+    return (
+        f"https://api-live.euroleague.net/v2/competitions/{competition}/"
+        f"seasons/{season_code}/games?{query}"
+    )
 
 
 def _game_url(season_code: str, endpoint: str, gamecode: int) -> str:
@@ -163,13 +172,18 @@ def _game_url(season_code: str, endpoint: str, gamecode: int) -> str:
 def _roster_url(season_code: str) -> str:
     # E2025 currently reports 1,055 rows. A 2,000-row bound returns that season
     # in one exact response while the parser still rejects any future overflow.
+    competition = competition_for_season_code(season_code)
     query = urlencode({"limit": 2000})
-    return f"https://api-live.euroleague.net/v2/competitions/E/seasons/{season_code}/people?{query}"
+    return (
+        f"https://api-live.euroleague.net/v2/competitions/{competition}/"
+        f"seasons/{season_code}/people?{query}"
+    )
 
 
 def _game_stats_url(season_code: str, gamecode: int) -> str:
+    competition = competition_for_season_code(season_code)
     return (
-        "https://api-live.euroleague.net/v2/competitions/E/"
+        f"https://api-live.euroleague.net/v2/competitions/{competition}/"
         f"seasons/{season_code}/games/{gamecode}/stats"
     )
 

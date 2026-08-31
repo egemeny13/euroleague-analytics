@@ -53,6 +53,7 @@ from euroleague.derived_load import (
     stage_dimension_rows,
     stage_obsolete_dimension_candidates,
 )
+from euroleague.fetch import competition_for_season_code
 from euroleague.gate import assert_phase5_reconciles
 from euroleague.load import (
     assert_phase4_safe,
@@ -423,7 +424,7 @@ def record_season_progress(
     scheduled_games: int,
 ) -> None:
     """Record or update the season's scheduled game count and load timestamp."""
-    competition_code = season_code[0]
+    competition_code = competition_for_season_code(season_code)
     with connection.cursor() as cursor:
         cursor.execute(
             """

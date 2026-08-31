@@ -29,19 +29,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from euroleague.archive import SupabaseStorage, restore_current_season_cache
 from euroleague.cache import ResponseCache
 from euroleague.config import DatabaseSettings, live_runtime_settings
-from euroleague.fetch import DEFAULT_CACHE_ROOT
+from euroleague.fetch import DEFAULT_CACHE_ROOT, validate_season_code
 from euroleague.live import run_live_pipeline
 from euroleague.step_summary import append_step_summary, format_live_pipeline_summary
 from euroleague.storage_watch import format_storage_summary, read_budgets
 
-LIVE_SEASON = "E2026"
+SUPPORTED_LIVE_SEASONS = ("E2026", "SC2026")
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Load and derive newly played games for one season, then gate them."
     )
-    parser.add_argument("season", metavar="SEASON", help="season code such as E2026")
+    parser.add_argument("season", metavar="SEASON", help="season code such as E2026 or SC2026")
     parser.add_argument(
         "--cache-root",
         type=Path,
@@ -71,8 +71,17 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
 
-    if args.live and args.season != LIVE_SEASON:
-        print(f"--live currently supports exactly one season: {LIVE_SEASON}.", file=sys.stderr)
+    try:
+        season_code = validate_season_code(args.season)
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+        return 2
+
+    if args.live and season_code not in SUPPORTED_LIVE_SEASONS:
+        print(
+            f"--live currently supports: {', '.join(sorted(SUPPORTED_LIVE_SEASONS))}.",
+            file=sys.stderr,
+        )
         return 2
 
     cache = ResponseCache(args.cache_root)
@@ -98,21 +107,21 @@ def main(argv: list[str] | None = None) -> int:
                 # recomputed from a subset - see src/euroleague/live.py.
                 cache.root.parent.mkdir(parents=True, exist_ok=True)
                 with tempfile.TemporaryDirectory(
-                    prefix=f".{args.season}-live-snapshot-", dir=cache.root.parent
+                    prefix=f".{season_code}-live-snapshot-", dir=cache.root.parent
                 ) as snapshot_root:
                     snapshot = ResponseCache(snapshot_root)
                     restored = restore_current_season_cache(
                         connection,
                         cache,
                         storage,
-                        args.season,
+                        season_code,
                         allow_bootstrap=True,
                         snapshot_cache=snapshot,
                     )
                     consumer_cache = cache if restored.bootstrap_required else snapshot
-                    summary = run_live_pipeline(connection, consumer_cache, args.season)
+                    summary = run_live_pipeline(connection, consumer_cache, season_code)
             else:
-                summary = run_live_pipeline(connection, cache, args.season)
+                summary = run_live_pipeline(connection, cache, season_code)
 
             # Read the budgets while the connection is still open. This is
             # reporting, not a gate: a failure here must never cost the night's
@@ -125,11 +134,11 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as failure:
         # The message, never the settings object: a traceback carrying a
         # connection string would land in a public log.
-        append_step_summary(format_live_pipeline_summary(args.season, None, failure=failure))
+        append_step_summary(format_live_pipeline_summary(season_code, None, failure=failure))
         print(f"Live pipeline failed: {type(failure).__name__}: {failure}", file=sys.stderr)
         return 1
 
-    append_step_summary(format_live_pipeline_summary(args.season, summary))
+    append_step_summary(format_live_pipeline_summary(season_code, summary))
     if budgets is not None:
         append_step_summary(format_storage_summary(*budgets))
         print(

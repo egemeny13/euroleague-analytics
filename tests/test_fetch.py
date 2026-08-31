@@ -774,3 +774,147 @@ def test_fetch_archive_can_only_restore_in_resume_mode() -> None:
 
     assert module.restore_for_resume is restore_for_resume
     assert "restore_current_season_cache" not in vars(module)
+
+
+def test_url_builders_derive_competition_code_for_all_supported_competitions() -> None:
+    """Break caught: a supported season is sent through the EuroLeague v2 path.
+
+    WHAT THIS DOES NOT PROVE. These are constructed URLs exercised against a
+    recording transport, not requests to the public API, and they say nothing
+    about live workflow, warehouse, or lineup support for another competition.
+    """
+    from euroleague.fetch import (
+        _game_stats_url,
+        _game_url,
+        _roster_url,
+        _schedule_url,
+    )
+
+    # Schedule URLs
+    assert _schedule_url("E2024") == (
+        "https://api-live.euroleague.net/v2/competitions/E/seasons/E2024/games?limit=1000"
+    )
+    assert _schedule_url("U2025") == (
+        "https://api-live.euroleague.net/v2/competitions/U/seasons/U2025/games?limit=1000"
+    )
+    assert _schedule_url("SC2026") == (
+        "https://api-live.euroleague.net/v2/competitions/SC/seasons/SC2026/games?limit=1000"
+    )
+
+    # Roster URLs
+    assert _roster_url("E2026") == (
+        "https://api-live.euroleague.net/v2/competitions/E/seasons/E2026/people?limit=2000"
+    )
+    assert _roster_url("U2025") == (
+        "https://api-live.euroleague.net/v2/competitions/U/seasons/U2025/people?limit=2000"
+    )
+    assert _roster_url("SC2026") == (
+        "https://api-live.euroleague.net/v2/competitions/SC/seasons/SC2026/people?limit=2000"
+    )
+
+    # Game stats URLs
+    assert _game_stats_url("E2025", 17) == (
+        "https://api-live.euroleague.net/v2/competitions/E/seasons/E2025/games/17/stats"
+    )
+    assert _game_stats_url("U2025", 1) == (
+        "https://api-live.euroleague.net/v2/competitions/U/seasons/U2025/games/1/stats"
+    )
+    assert _game_stats_url("SC2026", 2) == (
+        "https://api-live.euroleague.net/v2/competitions/SC/seasons/SC2026/games/2/stats"
+    )
+
+    # v1 game URLs (preserve query param behaviour across competitions)
+    assert _game_url("E2024", "PlaybyPlay", 10) == (
+        "https://live.euroleague.net/api/PlaybyPlay?gamecode=10&seasoncode=E2024"
+    )
+    assert _game_url("U2025", "PlaybyPlay", 1) == (
+        "https://live.euroleague.net/api/PlaybyPlay?gamecode=1&seasoncode=U2025"
+    )
+    assert _game_url("SC2026", "Points", 1) == (
+        "https://live.euroleague.net/api/Points?gamecode=1&seasoncode=SC2026"
+    )
+    assert _game_url("SC2026", "Boxscore", 2) == (
+        "https://live.euroleague.net/api/Boxscore?gamecode=2&seasoncode=SC2026"
+    )
+
+
+@pytest.mark.parametrize("invalid_code", ["", "2024", "e2024", "EQR2024", "J2024", "S2026"])
+def test_v2_url_builders_reject_invalid_season_codes(invalid_code: str) -> None:
+    """Break caught: an unsupported prefix reaches an interpolated v2 path."""
+    from euroleague.fetch import (
+        _game_stats_url,
+        _roster_url,
+        _schedule_url,
+    )
+
+    with pytest.raises(ValueError):
+        _schedule_url(invalid_code)
+    with pytest.raises(ValueError):
+        _roster_url(invalid_code)
+    with pytest.raises(ValueError):
+        _game_stats_url(invalid_code, 1)
+
+
+def test_fetch_season_supercup_routes_to_sc_v2_and_v1_endpoints(tmp_path) -> None:
+    """Break caught: a SuperCup fetch mixes SC v2 paths with E v2 paths."""
+    schedule = schedule_bytes([{"gameCode": 1, "played": True}])
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, schedule),
+            StubResponse(200, {}, b'{"boxscore":1}'),
+            StubResponse(200, {}, b'{"playbyplay":1}'),
+            StubResponse(200, {}, b'{"points":1}'),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport)
+
+    summary = fetcher.fetch_season("SC2026")
+
+    assert summary.played_games == 1
+    assert summary.fetched_files == 4
+    assert transport.calls[0][0] == (
+        "https://api-live.euroleague.net/v2/competitions/SC/seasons/SC2026/games?limit=1000"
+    )
+    assert transport.calls[1][0] == (
+        "https://live.euroleague.net/api/Boxscore?gamecode=1&seasoncode=SC2026"
+    )
+    assert transport.calls[2][0] == (
+        "https://live.euroleague.net/api/PlaybyPlay?gamecode=1&seasoncode=SC2026"
+    )
+    assert transport.calls[3][0] == (
+        "https://live.euroleague.net/api/Points?gamecode=1&seasoncode=SC2026"
+    )
+    assert (tmp_path / "SC2026" / "Boxscore" / "1.json").read_bytes() == b'{"boxscore":1}'
+
+
+def test_fetch_roster_and_game_stats_route_to_correct_competition_v2_paths(tmp_path) -> None:
+    """Break caught: non-game v2 requests silently stay on competition E."""
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, _roster_bytes([])),
+            StubResponse(200, {}, _roster_bytes([])),
+            StubResponse(200, {}, b'{"stats":1}'),
+            StubResponse(200, {}, b'{"stats":2}'),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport)
+
+    fetcher.fetch_roster("SC2026")
+    assert transport.calls[0][0] == (
+        "https://api-live.euroleague.net/v2/competitions/SC/seasons/SC2026/people?limit=2000"
+    )
+
+    fetcher.fetch_roster("U2025")
+    assert transport.calls[1][0] == (
+        "https://api-live.euroleague.net/v2/competitions/U/seasons/U2025/people?limit=2000"
+    )
+
+    fetcher.fetch_game_stats("SC2026", 1)
+    assert transport.calls[2][0] == (
+        "https://api-live.euroleague.net/v2/competitions/SC/seasons/SC2026/games/1/stats"
+    )
+
+    fetcher.fetch_game_stats("U2025", 2)
+    assert transport.calls[3][0] == (
+        "https://api-live.euroleague.net/v2/competitions/U/seasons/U2025/games/2/stats"
+    )
