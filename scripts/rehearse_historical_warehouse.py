@@ -19,11 +19,7 @@ from euroleague.historical_rehearsal import (
     assert_rehearsal_target_safe,
     run_historical_rehearsal,
 )
-from euroleague.incremental_confirmation import (
-    LOCAL_CONFIRMATION_DATABASE,
-    LOCAL_CONFIRMATION_PORT,
-    load_test_database_settings,
-)
+from euroleague.incremental_confirmation import load_test_database_settings
 
 
 def parse_arguments(args: list[str] | None = None) -> argparse.Namespace:
@@ -40,14 +36,6 @@ def parse_arguments(args: list[str] | None = None) -> argparse.Namespace:
         "--cache-dir",
         default="exploration/cache",
         help="Local response cache root directory (default: exploration/cache).",
-    )
-    parser.add_argument(
-        "--db",
-        action="store_true",
-        help=(
-            "Run against disposable PostgreSQL database defined in EL_TEST_DATABASE_URL "
-            f"(must be {LOCAL_CONFIRMATION_DATABASE} on port {LOCAL_CONFIRMATION_PORT})."
-        ),
     )
     parser.add_argument(
         "--output",
@@ -100,6 +88,7 @@ def main(args: list[str] | None = None) -> int:
     print(f"HISTORICAL WAREHOUSE REHEARSAL RESULT: {result.season_code}")
     print("=" * 78)
     print(f"Target Database : {result.database_target}")
+    print(f"PostgreSQL      : {result.postgres_version}")
     print(f"Run ID          : {result.run_id}")
     print(f"Total Wall Time : {result.timings.total_seconds:.3f} seconds")
     print("-" * 78)

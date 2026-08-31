@@ -33,6 +33,7 @@ from euroleague.incremental_confirmation import (
     assert_local_confirmation_target,
     load_confirmation_raw_rows,
     prepare_confirmation_session,
+    rehearsal_role_names,
 )
 from euroleague.load import played_games
 from euroleague.parse import (
@@ -105,6 +106,7 @@ class HistoricalRehearsalResult:
     season_code: str
     run_id: str
     database_target: str
+    postgres_version: str
     timings: TimingBreakdown
     exclusions: ExclusionBreakdown
     raw_counts: dict[str, int]
@@ -126,7 +128,7 @@ def assert_rehearsal_target_safe(connection: Any) -> None:
 
 
 def verify_cache_integrity(cache: ResponseCache, season_code: str) -> CacheCompleteness:
-    """Verify that all scheduled played games for the season exist in cache with checksums."""
+    """Verify exact endpoint completeness for every played game in the local cache."""
     completeness = assert_complete_played_cache(cache, season_code)
     schedule_data = cache.read_schedule_json(season_code).get("data") or []
     played = played_games(schedule_data)
@@ -217,13 +219,94 @@ def evaluate_in_memory_gates(
     }
 
 
+def measure_schema_relations(connection: Any) -> dict[str, RelationSizeMetric]:
+    """Measure every physical table in the selected rehearsal schema."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT current_schema()")
+        schema_name = str(cursor.fetchone()[0])
+        cursor.execute(
+            """
+            SELECT c.relname
+            FROM pg_class AS c
+            JOIN pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = %s
+              AND c.relkind IN ('r', 'p')
+            ORDER BY c.relname
+            """,
+            (schema_name,),
+        )
+        relation_names = [str(row[0]) for row in cursor.fetchall()]
+
+        measured: dict[str, RelationSizeMetric] = {}
+        for relation_name in relation_names:
+            qualified_name = f"{schema_name}.{relation_name}"
+            cursor.execute(
+                """
+                SELECT pg_table_size(%s::regclass),
+                       pg_indexes_size(%s::regclass),
+                       pg_total_relation_size(%s::regclass)
+                """,
+                (qualified_name, qualified_name, qualified_name),
+            )
+            table_bytes, index_bytes, total_bytes = cursor.fetchone()
+            cursor.execute(
+                sql.SQL("SELECT count(*) FROM {}.{}").format(
+                    sql.Identifier(schema_name),
+                    sql.Identifier(relation_name),
+                )
+            )
+            row_count = cursor.fetchone()[0]
+            measured[relation_name] = RelationSizeMetric(
+                relation_name=relation_name,
+                table_bytes=int(table_bytes),
+                index_bytes=int(index_bytes),
+                toast_bytes=max(0, int(total_bytes) - int(table_bytes) - int(index_bytes)),
+                total_bytes=int(total_bytes),
+                row_count=int(row_count),
+            )
+    return measured
+
+
+def assert_loaded_counts(
+    expected_counts: dict[str, int],
+    relation_sizes: dict[str, RelationSizeMetric],
+) -> None:
+    """Require PostgreSQL row counts to equal every parsed and derived count."""
+    mismatches = {
+        relation_name: {
+            "expected": expected_count,
+            "observed": (
+                relation_sizes[relation_name].row_count if relation_name in relation_sizes else None
+            ),
+        }
+        for relation_name, expected_count in sorted(expected_counts.items())
+        if relation_name not in relation_sizes
+        or relation_sizes[relation_name].row_count != expected_count
+    }
+    if mismatches:
+        raise AssertionError(f"PostgreSQL row-count reconciliation failed: {mismatches}")
+
+
 @contextmanager
 def managed_rehearsal_schema(connection: Any, schema_name: str):
-    """Create, select, and destroy an isolated temporary schema for rehearsal."""
+    """Create and remove an isolated schema plus migration-created global roles."""
     created = False
+    run_roles = rehearsal_role_names(schema_name)
     try:
         assert_rehearsal_target_safe(connection)
+        if getattr(connection, "autocommit", True) is not True:
+            raise RuntimeError("Historical rehearsal requires an autocommit connection.")
         with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT rolname FROM pg_roles WHERE rolname = ANY(%s)",
+                (list(run_roles),),
+            )
+            preexisting_roles = {str(row[0]) for row in cursor.fetchall()}
+            if preexisting_roles:
+                raise RuntimeError(
+                    f"Rehearsal roles already exist for schema {schema_name!r}: "
+                    f"{sorted(preexisting_roles)}. Clean up the interrupted run first."
+                )
             cursor.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema_name)))
             created = True
             cursor.execute(sql.SQL("SET search_path TO {}").format(sql.Identifier(schema_name)))
@@ -237,6 +320,23 @@ def managed_rehearsal_schema(connection: Any, schema_name: str):
                 cursor.execute(
                     sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(schema_name))
                 )
+                cursor.execute(
+                    "SELECT rolname FROM pg_roles WHERE rolname = ANY(%s)",
+                    (list(run_roles),),
+                )
+                roles_after_run = {str(row[0]) for row in cursor.fetchall()}
+                for role_name in sorted(roles_after_run):
+                    cursor.execute(
+                        sql.SQL("REVOKE CONNECT ON DATABASE postgres FROM {}").format(
+                            sql.Identifier(role_name)
+                        )
+                    )
+                    cursor.execute(
+                        sql.SQL("REVOKE USAGE ON SCHEMA public FROM {}").format(
+                            sql.Identifier(role_name)
+                        )
+                    )
+                    cursor.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role_name)))
                 cursor.execute(
                     "SELECT count(*) FROM pg_namespace WHERE nspname = %s",
                     (schema_name,),
@@ -257,6 +357,9 @@ def run_database_rehearsal(
     """Execute complete end-to-end historical rehearsal inside a disposable database."""
     assert_rehearsal_target_safe(connection)
     prepare_confirmation_session(connection)
+    with connection.cursor() as cursor:
+        cursor.execute("SHOW server_version")
+        postgres_version = str(cursor.fetchone()[0])
 
     t_start = time.perf_counter()
 
@@ -338,37 +441,16 @@ def run_database_rehearsal(
         t_derived_load = time.perf_counter() - t0
         progress(f"Loaded derived rows in {t_derived_load:.3f}s")
 
-        # In-DB Gates
+        # Derivation Gates
         t0 = time.perf_counter()
         evaluate_in_memory_gates(season_code, raw_games, dims, attached_events, remaining)
         t_gate_eval = time.perf_counter() - t0
         progress(f"Evaluated warehouse gates in {t_gate_eval:.3f}s")
 
-        # Measure Physical Sizes
+        # Measure every physical table, including empty warehouse support tables.
         t0 = time.perf_counter()
-        all_tables = tuple(raw_counts.keys()) + tuple(derived_counts.keys())
-        with connection.cursor() as cursor:
-            for tbl in all_tables:
-                cursor.execute(
-                    """
-                    SELECT pg_table_size(%s::regclass),
-                           pg_indexes_size(%s::regclass),
-                           pg_total_relation_size(%s::regclass),
-                           (SELECT count(*) FROM """
-                    + tbl
-                    + """)
-                    """,
-                    (tbl, tbl, tbl),
-                )
-                t_bytes, i_bytes, tot_bytes, count = cursor.fetchone()
-                relation_sizes[tbl] = RelationSizeMetric(
-                    relation_name=tbl,
-                    table_bytes=int(t_bytes),
-                    index_bytes=int(i_bytes),
-                    toast_bytes=max(0, int(tot_bytes) - int(t_bytes) - int(i_bytes)),
-                    total_bytes=int(tot_bytes),
-                    row_count=int(count),
-                )
+        relation_sizes = measure_schema_relations(connection)
+        assert_loaded_counts({**raw_counts, **derived_counts}, relation_sizes)
         t_storage_meas = time.perf_counter() - t0
         progress(f"Measured physical relation sizes in {t_storage_meas:.3f}s")
 
@@ -400,12 +482,21 @@ def run_database_rehearsal(
             f"database {LOCAL_CONFIRMATION_DATABASE} (port {LOCAL_CONFIRMATION_PORT}) without "
             "Supabase RLS overhead."
         ),
+        (
+            "The rehearsal verified local cache identity completeness and JSON readability; it "
+            "did not re-download archive objects or independently compare stored checksums."
+        ),
+        (
+            "The 23-season and hot-window figures are linear estimates from E2023 row density, "
+            "not physical measurements of those multi-season databases."
+        ),
     ]
 
     return HistoricalRehearsalResult(
         season_code=season_code,
         run_id=run_id,
         database_target=f"disposable ({LOCAL_CONFIRMATION_DATABASE}:{LOCAL_CONFIRMATION_PORT})",
+        postgres_version=postgres_version,
         timings=timings,
         exclusions=exclusions,
         raw_counts=raw_counts,

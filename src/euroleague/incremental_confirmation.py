@@ -6,6 +6,7 @@ import json
 from collections.abc import Callable, Sequence
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -376,6 +377,37 @@ def assert_same_fingerprints(
         raise AssertionError(f"Fingerprint mismatch for {comparison}: {mismatches}")
 
 
+def rehearsal_role_names(schema_name: str) -> tuple[str, str]:
+    """Return deterministic run-scoped roles for a disposable migration rehearsal."""
+    suffix = sha256(schema_name.encode("utf-8")).hexdigest()[:16]
+    return (f"rehearsal_reader_{suffix}", f"rehearsal_usage_writer_{suffix}")
+
+
+def rewrite_rehearsal_migration(
+    sql_text: str,
+    *,
+    quoted_schema: str,
+    reader_role: str,
+    usage_writer_role: str,
+) -> str:
+    """Retarget public-schema DDL and persistent roles to one disposable run."""
+    rewritten = sql_text.replace("public.", f"{quoted_schema}.")
+    rewritten = rewritten.replace("schema public", f"schema {quoted_schema}")
+    rewritten = rewritten.replace("search_path = public", f"search_path = {quoted_schema}")
+    rewritten = rewritten.replace(
+        "create role el_usage_writer with login;",
+        """do $$
+begin
+    if not exists (select 1 from pg_roles where rolname = 'el_usage_writer') then
+        create role el_usage_writer with login;
+    end if;
+end
+$$;""",
+    )
+    rewritten = rewritten.replace("el_usage_writer", usage_writer_role)
+    return rewritten.replace("el_reader", reader_role)
+
+
 def apply_current_migrations(connection: Any) -> None:
     """Apply every committed up migration to the selected temporary schema."""
     migrations = sorted(MIGRATIONS_ROOT.glob("*.up.sql"))
@@ -387,7 +419,14 @@ def apply_current_migrations(connection: Any) -> None:
         for migration in migrations:
             sql_text = migration.read_text(encoding="utf-8")
             if cur_schema and cur_schema not in ("public", "pg_catalog"):
-                sql_text = sql_text.replace("public.", f"{cur_schema}.")
+                quoted_schema = sql.Identifier(str(cur_schema)).as_string(connection)
+                reader_role, usage_writer_role = rehearsal_role_names(str(cur_schema))
+                sql_text = rewrite_rehearsal_migration(
+                    sql_text,
+                    quoted_schema=quoted_schema,
+                    reader_role=reader_role,
+                    usage_writer_role=usage_writer_role,
+                )
             cursor.execute(sql_text)
 
 
