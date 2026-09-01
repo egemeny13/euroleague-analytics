@@ -2482,6 +2482,60 @@ credential in a public repository and this stops being acceptable.
   `migrations/README.md` records for the production 0011 rehearsal, so the
   version limit 0013 had to state is closed rather than merely narrowed.
 
+## 45. The launch is 2026-09-16, two days before the SuperCup, and it trades a proof for an audience
+
+The launch moves from *a few days after 2026-09-24* to **2026-09-16**. Owner's
+decision, 2026-09-02.
+
+**This is not a date change, it is an inversion.** `ROADMAP.md` argued for
+launching after two or three clean live game nights, so that the demonstration
+could be last night's real game with its possessions reconstructed. That
+argument was correct on its own terms and is kept in `ROADMAP.md` rather than
+deleted, because this decision was taken against it, not in ignorance of it. The
+half that changed is the premise that only the regular season supplies an
+audience: 09-16 is two days before the first EuroLeague competition of the
+season, and the SuperCup supplies one.
+
+**What is given up.** The live pipeline goes public having never met a real,
+newly played game. The SuperCup was a free dress rehearsal six days before the
+season, run while nothing was public; it is now a live test two days *after*
+launch, in front of whoever the launch brought.
+
+**What blunts it, and this is measurable rather than hopeful.**
+
+- Every served response filters quarantined games:
+  `src/euroleague/mcp/queries.py` appends `and not excluded_by_default` unless a
+  caller explicitly asks otherwise. A SuperCup load that goes wrong lands as
+  quarantined rows nothing includes by default. The public failure mode is
+  "SC2026 shows fewer games than its schedule", not "the server answers wrongly".
+- Nothing the launch claims comes from the live pipeline. Every published number
+  is E2024 and E2025: loaded, validated against official box scores, and
+  untouched by whatever `SC2026` does.
+
+**What has no cover, and what was moved because of it.** Free-tier behaviour
+under real anonymous traffic is untested and cannot be tested by anything but
+real anonymous traffic. R-9, switching off the invite-only Auth0 Action, moves
+from 09-22 to **09-12** - four quiet days open before the announcement, because
+launching to the public through a closed door is not a launch, and one day of
+traffic data is not data.
+
+**The condition.** The date is now the deadline in a way the old one was not:
+there are no live game nights before it to fail. The replacement gate is the
+material, not the pipeline - if the website, thread and videos are not ready on
+09-15, the launch moves. A date chosen for attention is spent rather than earned
+by arriving on time with weak work.
+
+- Basis: the owner's judgement about reach, recorded as a judgement. Not a
+  measurement, and it does not pretend to be one.
+- Evidence for the mitigations, both checkable in the repository rather than
+  argued: the `excluded_by_default` filter in `queries.py`, and the fact that
+  every launch claim guarded by `tests/test_launch_package.py` concerns E2024
+  and E2025.
+- **What this does not establish.** That 09-16 gets more attention than 09-27.
+  That is the whole reason for the change and it is untestable in advance; the
+  most that can be said is that the reasoning is recorded, so if the launch
+  lands quietly the cause is known rather than guessed at afterwards.
+
 ## Rules to add to the project instruction file
 
 ```
