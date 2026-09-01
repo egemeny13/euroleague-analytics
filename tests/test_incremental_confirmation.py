@@ -428,3 +428,48 @@ def test_second_batch_must_not_change_first_batch_fingerprints() -> None:
 
     with pytest.raises(AssertionError, match="possession"):
         assert_same_fingerprints(before, after, "first batch after second batch")
+
+
+def test_disposable_target_prefers_the_real_environment_over_the_env_file(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CI has no `.env`, so the variable has to be readable from the environment.
+
+    `DatabaseSettings.from_env` already states the rule this follows: a real
+    environment variable always wins over the file, because in CI the value
+    comes from the workflow and a stray `.env` must never override it. Without
+    this, `scripts/migration_gate.py` cannot run anywhere but a developer's
+    machine, which is why the 0013 rehearsal was done by hand.
+    """
+    monkeypatch.setattr(
+        "euroleague.incremental_confirmation.load_env_file",
+        lambda: {"EL_TEST_DATABASE_URL": "postgresql://f:f@localhost:5433/euroleague_test"},
+    )
+    monkeypatch.setenv("EL_TEST_DATABASE_URL", "postgresql://e:e@127.0.0.1:5433/euroleague_test")
+
+    settings = load_test_database_settings()
+
+    assert settings.host == "127.0.0.1", "the .env file overrode the environment"
+
+
+def test_disposable_target_still_refuses_production_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reading the environment must not become a way around the port and name check.
+
+    This is the failure the check exists for: a workflow that sets the variable
+    from the wrong secret would otherwise point an up/down/up/down cycle at the
+    real warehouse, and that cycle ends in `drop`.
+    """
+    monkeypatch.setattr("euroleague.incremental_confirmation.load_env_file", dict)
+    # A well-formed production pooler URL, username included, so that the
+    # refusal below comes from the database and port check rather than from the
+    # pooler username validation, which would fire first on a malformed one.
+    monkeypatch.setenv(
+        "EL_TEST_DATABASE_URL",
+        "postgresql://postgres.pctiewdpstnwcutrvegu:secret"
+        "@aws-0-eu-central-1.pooler.supabase.com:5432/postgres",
+    )
+
+    with pytest.raises(ValueError, match="euroleague_test"):
+        load_test_database_settings()

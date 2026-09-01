@@ -9,7 +9,17 @@ lose the ability to run it at all.
 The cycle is up, down, up, down. It finishes with an empty database so the
 migrations can then be applied and recorded properly through the Supabase MCP.
 
-    python scripts/migration_gate.py
+    EL_TEST_DATABASE_URL=postgresql://...:5433/euroleague_test \
+        python scripts/migration_gate.py
+
+WHY NOT `DATABASE_URL`. This script used to read it, and `DATABASE_URL` is
+production. The only thing standing between a mistyped variable and a
+`drop`-terminated cycle against the real warehouse was the empty-schema check
+below, which is a check on the database's *contents* rather than on its
+identity - it would pass against a warehouse that had not been loaded yet.
+The gate now takes the same disposable-only variable the incremental
+confirmation takes, which refuses anything not named `euroleague_test` on port
+5433 before a connection is opened. See `DECISIONS.md` item 44.
 """
 
 from __future__ import annotations
@@ -19,7 +29,7 @@ from pathlib import Path
 
 import psycopg
 
-from euroleague.config import DatabaseSettings
+from euroleague.incremental_confirmation import load_test_database_settings
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_ROOT = REPO_ROOT / "migrations"
@@ -59,7 +69,7 @@ def main() -> int:
     if not stems:
         raise SystemExit(f"No migrations found in {MIGRATIONS_ROOT}.")
 
-    settings = DatabaseSettings.from_env()
+    settings = load_test_database_settings()
     print(f"Target: {settings.host}:{settings.port}/{settings.database}")
     print(f"Migrations: {', '.join(stems)}\n")
 

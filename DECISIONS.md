@@ -2423,6 +2423,56 @@ attribution it would buy has no consumer today.
   gate on a disposable PostgreSQL that 0013 got, and then the owner's separate
   approval immediately before the production apply.
 
+## 44. The migration gate runs in CI, against PostgreSQL 17, on a target it cannot mistake for production
+
+`scripts/migration_gate.py` now reads `EL_TEST_DATABASE_URL` instead of
+`DATABASE_URL`, and `.github/workflows/migration-gate.yml` runs it against a
+PostgreSQL 17 service container on every pull request touching `migrations/**`.
+
+**What was wrong with running it by hand.** Nothing, until you read what the
+0013 rehearsal had to admit. It ran on **PostgreSQL 16.2**, "because that is
+what the disposable server bundled", against 17.x in production — a limit the
+record states rather than hides, and one that exists only because the server was
+whatever the person happened to have. And it was a single event: migrations 0014
+through 0019 were applied afterwards without the cycle being re-run over the
+whole set. A rehearsal nobody can run is a rehearsal that stops happening, which
+is what happened here: migration 0020 was written on a machine with neither
+PostgreSQL nor Docker, so its author could not run the gate at all.
+
+**Why `DATABASE_URL` had to go.** The gate's cycle ends in `down`, which ends in
+`drop`. The only thing between a mistyped variable and that cycle running
+against the warehouse was the empty-schema check, and that is a check on the
+database's *contents*, not its identity — it passes against a warehouse that has
+not been loaded yet, and it runs after the connection is already open. The gate
+now uses `load_test_database_settings`, which refuses any value not naming
+`euroleague_test` on port 5433 before connecting. The workflow sets that
+variable to a literal pointing at its own service container and reads no
+repository secret, so there is nothing in the job that could name production.
+
+`load_test_database_settings` gained one thing to make this possible: it now
+prefers a real environment variable over `.env`. CI has no `.env` file at all.
+This widens where the value may come from, not what it may say — the database
+and port check is untouched, and a test asserts a well-formed production pooler
+URL is still refused through the new path.
+
+**The condition.** The literal credential in the workflow is safe only while the
+job's database is a service container it creates and destroys. If that job is
+ever pointed at a shared or long-lived server, the literal becomes a real
+credential in a public repository and this stops being acceptable.
+
+- Basis: the recorded limits of the 0013 rehearsal, quoted from
+  `migrations/README.md`, plus the state of the machine that wrote 0020.
+- **What this does not establish.** That the migrations are *correct*. The gate
+  proves they apply, reverse and reapply to an identical set of tables on an
+  empty database. It says nothing about whether a migration does the right
+  thing, nothing about behaviour against real data, and nothing about Supabase's
+  own extensions and roles, which a stock `postgres:17` container does not have.
+  A green gate is a licence to apply, not evidence the change is right.
+- **Also not established: that the workflow passes.** It has never run. It is
+  written and reviewed, and the first pull request touching `migrations/**` is
+  what will say whether the service container, the port mapping and the version
+  pin actually work together.
+
 ## Rules to add to the project instruction file
 
 ```
