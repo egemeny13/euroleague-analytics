@@ -25,7 +25,7 @@ Every metric in the warehouse is tested against official box scores and mechanic
 | **Court Shot Coordinates** | **41,524 verified** field goals with real coordinates | `docs/SHOT_DATA_TOOL_REPORT.md` |
 | **Score Reconciliation** | **100%** (0 point mismatches across all 732 games) | `docs/PHASE_6_POSSESSIONS_REPORT.md` |
 | **Minute Accuracy** | **99.54%** of player-games match official box scores to the second | `docs/PHASE_3_REPORT.md` |
-| **Archive Cold Storage** | **23 seasons** (E2003–E2025, 5,950+ played games), **~118 MB stored** | `DECISIONS.md` item 37 |
+| **Historical Archive** | **Backfill in progress** toward E2003–E2025; every completed season is restored byte for byte before the chain advances | `.github/workflows/historical-archive-chain.yml` |
 | **Query Performance** | **88.5 ms** for full-season lineup on/off; **0.8 ms** for clutch filters | `docs/LINEUP_ON_OFF_PERFORMANCE_DECISION.md` |
 | **Hosted Server Capacity** | **40 concurrent POST requests** verified at p95 3,205 ms | `docs/HOSTED_LOAD_TEST_2026-08-30.md` |
 
@@ -37,7 +37,7 @@ Every metric in the warehouse is tested against official box scores and mechanic
 The public server operates within Supabase's free tier, maintaining a high-performance hot window of **E2024, E2025, and live E2026** (~428 MB projected, 14.4% headroom).
 
 ### The Historical Archive
-All **21 historical seasons (E2003 through E2023, 5,200+ played games)** are archived in immutable cold storage (~118 MB compressed). Loading and querying the complete 23-season database in PostgreSQL requires a paid database instance.
+The automated archive backfill is working toward all **21 historical seasons (E2003 through E2023, 5,200+ played games)** in immutable cold storage. Every completed season passes a byte-for-byte restore gate before the chain advances. The final stored-byte total and complete-archive claim remain withheld until the workflow reports that no season remains. Loading and querying the eventual 23-season database in PostgreSQL requires a paid database instance.
 
 ```
 +-------------------------------------------------------------------------------+
