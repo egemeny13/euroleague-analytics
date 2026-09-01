@@ -1047,20 +1047,31 @@ complete, with an invite list in front of it.
 R-8 and R-9 have swapped their dependency. R-9 used to require R-8 because there
 was no public deployment to open; there is one, and it is the deployment we have.
 
-### When to launch, and why not sooner
+### When to launch
 
-**A few days after 2026-09-24**, the first E2026 game. Not before it, and not on
-it.
+**2026-09-16**, two days before the SuperCup. Owner's decision, 2026-09-02,
+replacing the reasoning below. `DECISIONS.md` item 45 records it.
 
-- Before it there is no basketball audience and nothing to show but historical
-  seasons. It is the coldest possible version of "look, this works".
-- On it, the nightly pipeline meets real live data for the first time. Being at
+This section previously argued for *a few days after 2026-09-24*, and the
+argument is kept rather than deleted, because the decision was taken against it
+rather than in ignorance of it:
+
+- *Before the first game there is no basketball audience and nothing to show but
+  historical seasons. It is the coldest possible version of "look, this
+  works".* — This is the half that changed. 09-16 is not a cold week: it is two
+  days before the first EuroLeague competition of the season, and the SuperCup
+  supplies the audience the old reasoning said only the regular season could.
+- *On it, the nightly pipeline meets real live data for the first time. Being at
   maximum visibility on the night of maximum fragility is a choice, not an
-  accident.
-- A few days after it, the pipeline has proved itself on two or three real game
-  nights and the demonstration becomes *"here is last night's game, with its
-  possessions reconstructed from the play-by-play"*. That is the thing being
-  sold, shown working on data the audience watched being created.
+  accident.* — This still holds and is now accepted knowingly. What blunts it:
+  every response filters `excluded_by_default`, so a game that fails its
+  invariants is quarantined rather than served wrong, and nothing the launch
+  claims comes from the live pipeline.
+- *A few days after it, the pipeline has proved itself on two or three real game
+  nights and the demonstration becomes "here is last night's game, with its
+  possessions reconstructed from the play-by-play".* — Still true, and still
+  worth doing. It moves from precondition to follow-up: `docs/LAUNCH_PLAN_2026.md`
+  puts it in the 09-25 to 09-27 window as a second wave.
 
 ### Launch work, and when each piece can start
 
@@ -1068,8 +1079,9 @@ it.
 |---|---|---|
 | Website copy, tweet thread, README, sponsor one-pager | nothing | now |
 | Free test account flow for a prospective sponsor | the invite list, which already exists | now |
-| Short videos | a working public deployment, so R-9 | after R-9 |
-| The launch itself | the above, plus two or three clean live game nights | after 2026-09-24 |
+| Short videos | a working public deployment, so R-9 | after R-9, now 2026-09-12 |
+| The launch itself | the above, and the material being ready | 2026-09-16 |
+| The "here is last night's game" post | two or three clean live game nights | after 2026-09-24, as a follow-up rather than a gate |
 
 #### Priority reset, 2026-09-01
 
