@@ -6,8 +6,6 @@ import re
 import tomllib
 from pathlib import Path
 
-import yaml
-
 
 def _load_ci_test_command() -> str:
     ci_path = Path(".github") / "workflows" / "ci.yml"
@@ -144,6 +142,42 @@ def test_the_migration_gate_seeds_every_role_the_migrations_expect() -> None:
     )
 
 
+def _dependabot_pattern_groups() -> list[set[str]]:
+    """Every `patterns:` list in the Dependabot config, as sets of package names.
+
+    Read as text, not parsed. PyYAML is not a dependency of this project and
+    adding one to assert a two-line config would cost more than it proves; the
+    sibling workflow tests read their files the same way, and `CLAUDE.md` asks
+    for the dependency list to stay small.
+
+    Indentation is what ends a block. A `patterns:` entry is followed by more
+    deeply indented `- name` lines, and the next thing at or below its own
+    indentation closes it - without that, the `- package-ecosystem:` line
+    starting the next ecosystem would be collected as a package name.
+    """
+    groups: list[set[str]] = []
+    current: set[str] | None = None
+    patterns_indent = 0
+
+    for line in Path(".github/dependabot.yml").read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+
+        if stripped == "patterns:":
+            current = set()
+            groups.append(current)
+            patterns_indent = indent
+        elif current is not None:
+            if indent > patterns_indent and stripped.startswith("- "):
+                current.add(stripped[2:].strip())
+            else:
+                current = None
+
+    return groups
+
+
 def test_pydantic_and_pydantic_core_are_proposed_as_one_dependabot_group() -> None:
     """`pydantic` pins the exact `pydantic-core` it works with, so a lone bump cannot resolve.
 
@@ -156,18 +190,7 @@ def test_pydantic_and_pydantic_core_are_proposed_as_one_dependabot_group() -> No
     It checks that both names sit in one group, not which group. Renaming the
     group is somebody's prerogative; splitting the pair is the mistake.
     """
-    config = yaml.safe_load(Path(".github/dependabot.yml").read_text(encoding="utf-8"))
-
-    pip_updates = [entry for entry in config["updates"] if entry["package-ecosystem"] == "pip"]
-    assert pip_updates, "dependabot.yml no longer configures the pip ecosystem"
-
-    grouped_together = [
-        name
-        for entry in pip_updates
-        for name, group in entry.get("groups", {}).items()
-        if {"pydantic", "pydantic-core"} <= set(group.get("patterns", []))
-    ]
-    assert grouped_together, (
+    assert any({"pydantic", "pydantic-core"} <= group for group in _dependabot_pattern_groups()), (
         "pydantic and pydantic-core are not in one dependabot group. Bumped "
         "separately they cannot resolve, and the same dead pull request returns "
         "every pydantic release."
