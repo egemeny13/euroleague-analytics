@@ -259,7 +259,6 @@ def test_verified_claims_consistency() -> None:
     assert "99.54%" in sponsor_text, "SPONSOR_ONE_PAGER missing 99.54% minute accuracy"
 
 
-
 def test_public_launch_copy_does_not_claim_the_running_archive_is_complete() -> None:
     """The historical chain is still running, so completion copy would be false."""
     forbidden = (
@@ -275,7 +274,9 @@ def test_public_launch_copy_does_not_claim_the_running_archive_is_complete() -> 
             f"{path} must disclose the running archive backfill"
         )
         for pattern in forbidden:
-            assert not pattern.search(text), f"{path} overclaims archive completion: {pattern.pattern}"
+            assert not pattern.search(text), (
+                f"{path} overclaims archive completion: {pattern.pattern}"
+            )
 
 
 def test_public_launch_surfaces_only_advertise_current_mcp_tool_names() -> None:
