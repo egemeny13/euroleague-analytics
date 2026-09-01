@@ -6,7 +6,9 @@ import gzip
 import json
 import os
 import shutil
+import sys
 import tempfile
+import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -167,10 +169,66 @@ class SupabaseStorage:
         *,
         session: requests.Session | Any | None = None,
         timeout_seconds: int = 60,
+        max_attempts: int = 4,
+        retry_backoff_seconds: float = 2.0,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.settings = settings
         self.session = session or requests.Session()
         self.timeout_seconds = timeout_seconds
+        self.max_attempts = max_attempts
+        self.retry_backoff_seconds = retry_backoff_seconds
+        self.sleep = sleep
+
+    def _send(self, operation: str, verb: str, url: str, **kwargs: Any):
+        """Send one Storage request, repeating it only if no answer arrived.
+
+        WHY THIS EXISTS. A season takes about two hours of requests, and every
+        one of them ends in a call from here. Before this method a single
+        connection failure anywhere in that window ended the run and threw the
+        whole season's remaining work away. Two of the three archive chain
+        failures on record are exactly that: `requests.exceptions.ReadTimeout`
+        inside `download_verified` on 2026-08-30 at 02:02 UTC, and
+        `ConnectionResetError(104)` on 2026-09-01 at 17:09 UTC, after 1 h 24 m
+        and 513 of E2012's 759 requests.
+
+        WHAT IS REPEATED, AND WHAT IS NOT. Only `requests.RequestException` -
+        the connection refused, reset, or timed out before Supabase answered.
+        An HTTP status is an answer and is returned to the caller untouched, so
+        a 409 on an existing checksum path still means "verify, do not
+        overwrite" exactly as it did before.
+
+        WHY REPEATING AN UPLOAD IS SAFE. The upload is a POST, and a POST that
+        is repeated may be delivered twice. Here the second delivery lands on a
+        path named by the checksum of the body being sent, and
+        `upload_immutable` already answers a duplicate path by downloading it
+        and comparing the bytes. A repeat therefore reaches a case the code
+        handles rather than a new one.
+
+        WHAT THIS DOES NOT DO. It does not make the archive resilient to a
+        Supabase outage longer than its own budget, and it does not repeat the
+        bucket-creation POST - see `ensure_private_bucket`.
+        """
+        last_error: requests.RequestException | None = None
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                return getattr(self.session, verb)(url, **kwargs)
+            except requests.RequestException as error:
+                last_error = error
+                if attempt == self.max_attempts:
+                    break
+                delay = self.retry_backoff_seconds * 2 ** (attempt - 1)
+                # Printed, not swallowed: a retry nobody can count is a defect
+                # nobody can measure. The workflow log is where that count lives.
+                print(
+                    f"Supabase Storage could not {operation} (attempt {attempt} of "
+                    f"{self.max_attempts}): {error!r}. Retrying in {delay:.0f}s.",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self.sleep(delay)
+        assert last_error is not None
+        raise last_error
 
     def _headers(self) -> dict[str, str]:
         key = self.settings.service_key()
@@ -193,10 +251,19 @@ class SupabaseStorage:
 
     def ensure_private_bucket(self) -> None:
         """Create the bucket if absent and reject it if it is public."""
-        response = self.session.get(
-            self._bucket_url(), headers=self._headers(), timeout=self.timeout_seconds
+        response = self._send(
+            "inspect the archive bucket",
+            "get",
+            self._bucket_url(),
+            headers=self._headers(),
+            timeout=self.timeout_seconds,
         )
         if response.status_code == 404:
+            # Deliberately not repeated. A creation that succeeded but whose
+            # answer was lost would be answered with "bucket already exists" on
+            # the second try, which this code reads as a failure. The bucket has
+            # existed since Phase 4, so this branch is cold; if it is ever warm,
+            # decide what a duplicate create means before repeating it.
             create = self.session.post(
                 f"{self.settings.project_url}/storage/v1/bucket",
                 headers={**self._headers(), "Content-Type": "application/json"},
@@ -209,8 +276,12 @@ class SupabaseStorage:
             )
             if not 200 <= create.status_code < 300:
                 raise self._error("create the private archive bucket", create.status_code)
-            response = self.session.get(
-                self._bucket_url(), headers=self._headers(), timeout=self.timeout_seconds
+            response = self._send(
+                "inspect the archive bucket",
+                "get",
+                self._bucket_url(),
+                headers=self._headers(),
+                timeout=self.timeout_seconds,
             )
         if not 200 <= response.status_code < 300:
             raise self._error("inspect the archive bucket", response.status_code)
@@ -222,7 +293,9 @@ class SupabaseStorage:
 
     def upload_immutable(self, archived: ArchiveObject) -> None:
         """Upload once; on a duplicate path, verify rather than overwrite it."""
-        response = self.session.post(
+        response = self._send(
+            "upload an immutable archive object",
+            "post",
             self._object_url(archived.storage_path),
             headers={
                 **self._headers(),
@@ -241,7 +314,9 @@ class SupabaseStorage:
 
     def download_verified(self, archived: ArchiveObject) -> bytes:
         """Download, decompress, and compare the exact body hash with local disk."""
-        response = self.session.get(
+        response = self._send(
+            "download an archive object for verification",
+            "get",
             self._object_url(archived.storage_path),
             headers=self._headers(),
             timeout=self.timeout_seconds,

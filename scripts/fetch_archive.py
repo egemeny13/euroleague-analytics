@@ -6,6 +6,7 @@ import argparse
 import os
 import sys
 import time
+import traceback
 from pathlib import Path
 
 import psycopg
@@ -110,6 +111,20 @@ def _restore_report(season_code: str, restored: RestoreSummary) -> str:
         f"{season_code}: restored {restored.restored_responses:,} archived responses "
         "into the cache before fetching."
     )
+
+
+def report_failure(error: BaseException) -> None:
+    """Print the failure with the call stack that produced it.
+
+    WHY THE STACK IS PRINTED. This handler used to print the exception alone,
+    and on 2026-09-01 that left the archive chain log saying
+    `('Connection aborted.', ConnectionResetError(104, ...))` with no indication
+    of which request had been in flight. The exception's own arguments do not
+    name the caller; the traceback does, and it is the only copy of it that
+    survives the process.
+    """
+    traceback.print_exception(error, file=sys.stderr)
+    sys.stderr.flush()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -264,7 +279,7 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as error:
         season_str = ", ".join(args.seasons)
         append_step_summary(format_fetch_summary(season_str, [], failure=error))
-        print(error, file=sys.stderr)
+        report_failure(error)
         return 1
 
     season_str = ", ".join(args.seasons)

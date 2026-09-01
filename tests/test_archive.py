@@ -235,3 +235,129 @@ def test_archive_season_uploads_every_response_records_metadata_and_verifies_sam
     assert storage.uploaded == recorded
     assert storage.downloaded == [storage.uploaded[0]]
     assert result == {"responses": 2, "exact_bytes": 22, "verified_samples": 1}
+
+
+class DroppedConnectionSession(StorageSession):
+    """A Storage boundary that drops the connection before it answers.
+
+    Two archive chain runs died this way and threw away the whole season's work:
+    2026-08-30 02:02 UTC with `requests.exceptions.ReadTimeout` inside
+    `download_verified`, and 2026-09-01 17:09 UTC with
+    `ConnectionResetError(104)` after 1 h 24 m and 513 of 759 requests for E2012.
+    Neither was an answer from Supabase; both were the connection failing before
+    one arrived.
+    """
+
+    def __init__(self, *, failures: int, error: requests.RequestException) -> None:
+        super().__init__()
+        self.remaining_failures = failures
+        self.error = error
+        self.get_calls = 0
+        self.post_calls = 0
+
+    def _maybe_fail(self) -> None:
+        if self.remaining_failures > 0:
+            self.remaining_failures -= 1
+            raise self.error
+
+    def get(self, url, **kwargs):
+        self.get_calls += 1
+        self._maybe_fail()
+        return super().get(url, **kwargs)
+
+    def post(self, url, **kwargs):
+        self.post_calls += 1
+        self._maybe_fail()
+        return super().post(url, **kwargs)
+
+
+def _retrying_storage(session: StorageSession, delays: list[float]) -> SupabaseStorage:
+    settings = StorageSettings(
+        project_url="https://project.supabase.co",
+        _service_key="secret",
+        bucket="archive",
+    )
+    return SupabaseStorage(
+        settings,
+        session=session,
+        max_attempts=4,
+        retry_backoff_seconds=2.0,
+        sleep=delays.append,
+    )
+
+
+def test_a_dropped_upload_connection_is_retried_rather_than_ending_the_run() -> None:
+    """Break caught: one reset TCP connection discards hours of archived work.
+
+    WHAT THIS DOES NOT PROVE. The connection here is a fake that raises on
+    command. It says nothing about how often the real Supabase endpoint drops a
+    connection, nor that four attempts are enough for any particular outage.
+    """
+    session = DroppedConnectionSession(
+        failures=2,
+        error=requests.ConnectionError("Connection aborted.", ConnectionResetError(104)),
+    )
+    delays: list[float] = []
+    storage = _retrying_storage(session, delays)
+    archived = build_archive_object(_cached(b'{"value":1}'))
+
+    storage.upload_immutable(archived)
+
+    assert gzip.decompress(session.objects[archived.storage_path]) == b'{"value":1}'
+    assert session.post_calls == 3
+    assert delays == [2.0, 4.0]
+
+
+def test_a_verification_download_that_times_out_is_retried() -> None:
+    """Break caught: the read timeout that ended the 2026-08-30 02:02 run recurs."""
+    session = DroppedConnectionSession(failures=1, error=requests.ReadTimeout("Read timed out."))
+    delays: list[float] = []
+    storage = _retrying_storage(session, delays)
+    archived = build_archive_object(_cached(b'{"value":1}'))
+    session.objects[archived.storage_path] = gzip.compress(b'{"value":1}', mtime=0)
+
+    assert storage.download_verified(archived) == b'{"value":1}'
+    assert session.get_calls == 2
+    assert delays == [2.0]
+
+
+def test_a_transport_failure_that_never_clears_is_raised_after_the_budget() -> None:
+    """Break caught: a retry loop hides a real outage by never giving up.
+
+    The original exception is re-raised rather than replaced, because its type
+    and message are what identify the failure in a workflow log.
+    """
+    error = requests.ConnectionError("Connection aborted.", ConnectionResetError(104))
+    session = DroppedConnectionSession(failures=99, error=error)
+    delays: list[float] = []
+    storage = _retrying_storage(session, delays)
+    archived = build_archive_object(_cached(b'{"value":1}'))
+
+    with pytest.raises(requests.ConnectionError) as raised:
+        storage.upload_immutable(archived)
+
+    assert raised.value is error
+    assert session.post_calls == 4
+    assert delays == [2.0, 4.0, 8.0]
+
+
+def test_an_http_status_is_answered_once_and_never_retried() -> None:
+    """Break caught: retries spread from dropped connections to real answers.
+
+    A 409 on an existing checksum path is Supabase answering correctly, and the
+    duplicate is verified rather than uploaded again. Repeating it would turn one
+    upload into four requests for every object already in the archive.
+    """
+    session = DroppedConnectionSession(failures=0, error=requests.ConnectionError("unused"))
+    delays: list[float] = []
+    storage = _retrying_storage(session, delays)
+    archived = build_archive_object(_cached(b'{"value":1}'))
+    storage.upload_immutable(archived)
+    session.post_calls = 0
+    session.get_calls = 0
+
+    storage.upload_immutable(archived)
+
+    assert session.post_calls == 1
+    assert session.get_calls == 1
+    assert delays == []
