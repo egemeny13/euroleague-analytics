@@ -39,6 +39,7 @@ is binding — the decision is only approved with it.
 | 24 | Pre-season roster identity and registration grain | Approved 2026-08-24 — source-native registrations; no invented player-ID mapping |
 | 25 | Structural possession residuals | Approved 2026-08-26 — keep the conservative gate; no structural adjustment |
 | 26 | An HTTP transport alongside stdio | Approved 2026-08-27 — hosted and OAuth-authenticated; stdio unchanged and still the local default |
+| 48 | Public opening boundaries and R-9 execution | Approved 2026-09-02 — baseline limits preserved; Auth0 invite-only action unlinked |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -2667,6 +2668,19 @@ publish a thread, deploy the website or certify the rendered binaries. It also
 does not make the launch brief authoritative for launch timing. If shared code
 or an automated cross-repository release process is introduced later, the cost
 and ownership boundary must be decided again.
+
+## 48. Public launch opening keeps baseline cost boundaries without artificial tightening
+
+The owner evaluated boundary tightening (proposals to lower limits to 20 calls/min, 5,000 rows/day, and 100 rows/response) prior to the public opening on 2026-09-02, and decided to maintain the established baseline limits: 120 calls/minute rolling cap per subject, 50,000 rows/day durable subject budget, and 200 rows maximum response clamp.
+
+**Why.**
+1. Fly.io compute is provisioned as a single always-on `shared-cpu-1x` 256 MB machine in `fra` at a flat ~$2.02/month cost (`fly.toml`, `fly scale show`), unchanged by call volume within capacity.
+2. Supabase Postgres storage sits at 357.6 MB (71.5% of 500 MB quota) with 122.4 MB headroom to Decision 28's stop rule, and Storage archive sits at 63.6 MB (6.36% of 1 GB quota).
+3. Egress on Supabase Free tier provides 5 GB/month; normal MCP queries returning up to 200 rows generate ~20 KB payloads, remaining safely within monthly allowances.
+4. The 120-call/min rate limit and 50,000-row/day budget serve their intended function as runaway loop protection and cost backstops without requiring disruptive migration or client tuning.
+
+**Action executed (R-9).**
+The `Invite-only access` post-login Auth0 Action was unlinked from the active Login trigger flow in the Auth0 dashboard on 2026-09-02, opening the hosted MCP server to public logins while preserving the Action in the Library for rapid rollback if needed.
 
 ## Rules to add to the project instruction file
 
