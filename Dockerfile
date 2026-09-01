@@ -6,7 +6,7 @@
 # the tag alone means two builds a week apart are two different images. The tag
 # stays in the comment because a bare digest is unreadable, and Dependabot moves
 # the digest forward - a digest pin receives no security patches on its own.
-FROM python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
+FROM python:3.14-slim@sha256:656d12e70054d5fda18a045e2494c96701e9792dd1445f95b3d038df954f57e9
 
 # Run as a non-root user. Nothing here needs root, and a container that cannot
 # write to its own filesystem is one less thing to reason about.
