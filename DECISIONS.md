@@ -2357,6 +2357,72 @@ invisible for three days:
 
 ---
 
+## 43. A tester gets `el_tester`, a second read-only role, not the server's one
+
+A human tester is given `el_tester`: a login role with `select` on the seven
+served views and the twelve base tables they read, `bypassrls`, and nothing
+else. It is created by migration 0020 with **no password**, which the owner sets
+out of band exactly as with `el_reader`.
+
+**The inbox item this answers was asking the wrong question.** `docs/goals/
+inbox.md` item T0-2 read: "No read-only database role exists, so a tester given
+`DATABASE_URL` holds a credential that can drop every table." The first clause
+is false — `el_reader` has existed since migration 0013, approved by Decision 26
+— and the item's two proposed decisions dissolve on inspection:
+
+- *Views only, or views plus tables?* There is no choice here. Migration 0011
+  made all seven views `security_invoker`, so a view runs with the caller's
+  permissions; a role holding only view grants fails every query with a
+  permission error on the base table underneath. "Views only" is not the
+  narrower working option, it is the non-working one. Anything that reads the
+  views reads the tables.
+- *One shared role, or one per tester?* One shared role, on the stated condition
+  below.
+
+The real question was narrower than the item's framing: whether to hand testers
+the role that already exists, or make a second one. **A second one.** The two
+roles read identically; what differs is what revoking them costs. `el_reader` is
+the hosted server's credential, held in a Fly secret, and rotating it interrupts
+production until that secret is updated. A tester's copy is the likeliest
+credential to leak, because it is pasted into a client config on a machine we do
+not control. Separating them turns "cut this tester off" from a production
+incident into a password change on a role nothing depends on.
+
+**The condition.** One shared role holds only while testers are few and are cut
+off together. The first time a single tester must be revoked without disturbing
+the others, or the number grows past a handful, this splits into per-tester
+roles — a new migration, not an edit to 0020. Per-tester roles were not chosen
+now because this repository's migration ceremony (numbered file with a matching
+`down`, a full up/down/up/down rehearsal on a disposable database, an
+owner-approved apply) is the wrong weight to run once per person, and the
+attribution it would buy has no consumer today.
+
+- Basis: the schema, read directly. Not a measurement of behaviour, and it does
+  not need to be — `security_invoker` and the RLS state are facts about the
+  migrations, checkable in the files.
+- Evidence for the grant set: `migrations/0011_public_view_security.up.sql`
+  makes the views `security_invoker`; `migrations/0001`, `0002` and `0003`
+  enable row level security on every granted table, with no permissive policy
+  for a plain login role, which is why `el_reader` carries `bypassrls` and why
+  `el_tester` must.
+- **What `bypassrls` costs, stated rather than waved past.** It removes
+  row-level filtering for this role on every table, present and future. That is
+  acceptable only because the grant list is explicit and short: the role reaches
+  nothing it was not named into. If row level security is ever used here to
+  express a real per-row rule rather than a blanket deny, this grant becomes a
+  hole and the decision must be revisited.
+- **What the tests would fail to detect.** `tests/test_tester_role.py` proves
+  the role can read what the server serves, cannot write, cannot do DDL, and
+  cannot reach `lineup_stint` or the row-budget tables. It proves nothing about
+  whether that read reach is *appropriate* — a tester can read the whole
+  warehouse, which is intended — and, the role being shared, nothing about which
+  tester did what. It also skips entirely until the password is set, and a skip
+  is not a pass.
+- **Not established: that migration 0020 applies cleanly.** It is written and
+  reviewed, not rehearsed and not applied. It needs the same up/down/up/down
+  gate on a disposable PostgreSQL that 0013 got, and then the owner's separate
+  approval immediately before the production apply.
+
 ## Rules to add to the project instruction file
 
 ```

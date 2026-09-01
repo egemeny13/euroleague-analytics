@@ -119,3 +119,46 @@ def test_every_decision_referenced_by_number_exists() -> None:
         + "\n  ".join(f"{where}: {sorted(numbers)}" for where, numbers in sorted(dangling.items()))
         + f"\nDECISIONS.md currently defines 1 to {max(existing)}."
     )
+
+
+def test_every_migration_has_a_matching_down() -> None:
+    """`scripts/migration_gate.py` needs the pair, and it needs a database to say so.
+
+    The gate applies every `up`, reverses it with the `down`, and applies it
+    again. A migration written without its `down` therefore breaks the gate
+    rather than this suite, and the gate only runs against a disposable
+    PostgreSQL that nobody has to hand. That pushes the discovery to whoever
+    next tries to rehearse a release, which is the worst moment to find it.
+    """
+    migrations = Path("migrations")
+    missing = [
+        f"{path.name.removesuffix('.up.sql')}.down.sql"
+        for path in sorted(migrations.glob("*.up.sql"))
+        if not (migrations / f"{path.name.removesuffix('.up.sql')}.down.sql").exists()
+    ]
+    assert not missing, (
+        "These migrations have no rollback, so the migration gate cannot run:\n  "
+        + "\n  ".join(missing)
+    )
+
+
+def test_every_migration_is_recorded_in_the_ledger() -> None:
+    """A migration absent from `migrations/README.md` is a schema change with no reason.
+
+    The table in that file is the ledger: what each migration creates, when it
+    was applied, and what it was approved by. This checks only that a row
+    exists - it cannot check that the row is true, and a row saying nothing
+    useful passes.
+    """
+    ledger = (Path("migrations") / "README.md").read_text(encoding="utf-8")
+    recorded = set(re.findall(r"^\|\s*`([0-9][0-9a-z_]*)`", ledger, re.MULTILINE))
+
+    unrecorded = sorted(
+        path.name.removesuffix(".up.sql")
+        for path in Path("migrations").glob("*.up.sql")
+        if path.name.removesuffix(".up.sql") not in recorded
+    )
+    assert not unrecorded, (
+        "These migrations change the schema and appear nowhere in the ledger at "
+        "migrations/README.md:\n  " + "\n  ".join(unrecorded)
+    )
