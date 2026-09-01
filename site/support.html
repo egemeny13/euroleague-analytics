@@ -83,15 +83,15 @@
       <ul>
         <li><code>el_describe_warehouse</code> &mdash; Start here. Discloses loaded seasons, game counts, and any quarantined games.</li>
         <li><code>el_find_games</code> &mdash; Search games by season (e.g. <code>E2024</code>, <code>E2025</code>), team, round, date, or winner.</li>
+        <li><code>el_get_game</code> &mdash; Single-game Four Factors, exact possessions, ratings, and officiating crew side-by-side.</li>
         <li><code>el_get_boxscore</code> &mdash; Retrieve official box score statistics for both teams and all active players.</li>
-        <li><code>el_get_play_by_play</code> &mdash; Source-ordered event stream with 5-man on-court lineups, clock readings, and margin.</li>
-        <li><code>el_get_shot_data</code> &mdash; Court shot attempts with normalized coordinates (X, Y) for spatial charting.</li>
-        <li><code>el_get_team_stats</code> &mdash; Four Factors (eFG%, TOV%, ORB%, FTR), offensive rating, defensive rating, and pace.</li>
+        <li><code>el_get_team_stats</code> &mdash; Season-level Four Factors (eFG%, TOV%, ORB%, FTR), pace, ORtg, and DRtg.</li>
         <li><code>el_get_player_stats</code> &mdash; Player per-game and per-100 possession statistics.</li>
-        <li><code>el_get_lineup_stats</code> &mdash; 5-man lineup ratings, possession counts, and net differentials.</li>
-        <li><code>el_get_on_off_splits</code> &mdash; Team offensive and defensive ratings with a player on court vs off court.</li>
+        <li><code>el_get_lineup_stats</code> &mdash; 5-man lineup performance with possession counts, offensive, defensive, and net ratings.</li>
+        <li><code>el_get_player_on_off</code> &mdash; Team net rating differential with a specific player on court versus off court.</li>
         <li><code>el_get_possessions</code> &mdash; Exact possession records with start score, duration, ending reason, and clutch filters.</li>
-        <li><code>el_get_game_quality</code> &mdash; Audit records and quarantine status for any specific game.</li>
+        <li><code>el_get_play_by_play</code> &mdash; Source-ordered event stream with on-court lineups, score margins, and clock readings.</li>
+        <li><code>el_get_shot_data</code> &mdash; Court shot attempts with normalized half-court coordinates (X, Y) for spatial charting.</li>
       </ul>
 
       <h2>4. Frequently Asked Questions</h2>

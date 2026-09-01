@@ -2,6 +2,9 @@
 
 Pre-drafted social announcement threads and launch posts in English for the public release of EuroLeague Analytics.
 
+> [!NOTE]
+> The primary, character-verified 4-tweet launch thread is maintained in [`docs/LAUNCH_THREAD_FINAL.md`](./LAUNCH_THREAD_FINAL.md).
+
 ---
 
 ## 1. Principles Behind This Launch Copy

@@ -45,15 +45,15 @@ The server exposes 11 read-only tools designed specifically for LLMs. Every resp
 |---|---|
 | `el_describe_warehouse` | Returns loaded seasons, game counts, coverage notes, and data exclusions. |
 | `el_find_games` | Search and filter games by season, round, date, team, or winner. |
+| `el_get_game` | Single-game Four Factors, exact possessions, ratings, and officiating crew side-by-side. |
 | `el_get_boxscore` | Official player and team box scores with raw, corrected, and official minutes. |
-| `el_get_play_by_play` | Source-ordered event stream with on-court lineups, score margins, and clock readings. |
-| `el_get_shot_data` | Shot attempts with normalized half-court court coordinates (X, Y). |
-| `el_get_team_stats` | Four Factors (eFG%, TOV%, ORB%, FTR), pace, offensive rating, and defensive rating. |
+| `el_get_team_stats` | Season-level Four Factors (eFG%, TOV%, ORB%, FTR), pace, ORtg, and DRtg. |
 | `el_get_player_stats` | Player per-game and per-100 possession statistics. |
 | `el_get_lineup_stats` | 5-man lineup performance with possession counts, offensive, defensive, and net ratings. |
-| `el_get_on_off_splits` | Team net rating differential with a specific player on court versus off court. |
+| `el_get_player_on_off` | Team net rating differential with a specific player on court versus off court. |
 | `el_get_possessions` | Individual possession records with start score, duration, ending reason, and clutch filters. |
-| `el_get_game_quality` | Audit trail and validation report identifying any quarantined minutes or possession anomalies. |
+| `el_get_play_by_play` | Source-ordered event stream with on-court lineups, score margins, and clock readings. |
+| `el_get_shot_data` | Shot attempts with normalized half-court court coordinates (X, Y). |
 
 ---
 

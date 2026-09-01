@@ -1,0 +1,30 @@
+{
+  "name": "euroleague-analytics-launch-video",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "remotion preview src/index.ts",
+    "build": "remotion render src/index.ts EuroLeagueLaunch output/euroleague-launch.mp4",
+    "build:codex": "remotion render src/index.ts EuroLeagueLaunchCodex output/euroleague-launch-codex.mp4 --codec=h264 && node scripts/finalize-codex-video.js",
+    "build:clips": "remotion render src/index.ts ClipTJShorts output/micro-clip-tj-shorts.mp4 --codec=h264 && remotion render src/index.ts ClipVerification output/micro-clip-verification.mp4 --codec=h264",
+    "build:cards": "remotion still src/index.ts Card1LineupsBenchmark output/cards/card-1-lineups-benchmark.png && remotion still src/index.ts Card2TJShortsBenchmark output/cards/card-2-tj-shorts-benchmark.png && remotion still src/index.ts Card3TrustAuditSheet output/cards/card-3-trust-audit-sheet.png && remotion still src/index.ts Card4ClutchBenchmark output/cards/card-4-clutch-benchmark.png",
+    "test:codex": "node scripts/validate-codex-video.js",
+    "still": "remotion still src/index.ts EuroLeagueLaunch output/still.png"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.260",
+    "@remotion/cli": "^4.0.260",
+    "@remotion/media-utils": "^4.0.260",
+    "@remotion/renderer": "^4.0.260",
+    "@remotion/transitions": "^4.0.260",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.260"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.4",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.2"
+  }
+}
