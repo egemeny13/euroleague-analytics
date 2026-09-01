@@ -3,8 +3,13 @@
 [![CI](https://github.com/egemeny13/euroleague-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/egemeny13/euroleague-analytics/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-egemenyucelen.me-blue)](https://egemenyucelen.me)
+[![Launch Media](https://img.shields.io/badge/Launch-media-orange)](https://github.com/egemeny13/euroleague-analytics-launch)
 
 A validated data warehouse and [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for EuroLeague and EuroCup basketball, exposing precision play-by-play possessions, lineup on/off splits, four factors, and court shot charts directly to AI language models.
+
+The Remotion launch video, micro-clips and social cards are maintained in the
+separate [launch media repository](https://github.com/egemeny13/euroleague-analytics-launch).
+The deployable website remains in this repository under `site/`.
 
 ---
 

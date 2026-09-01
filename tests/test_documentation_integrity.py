@@ -49,6 +49,7 @@ NOT_OUR_CONFIGURATION = {
 
 DECISION_REFERENCE = re.compile(r"[Dd]ecisions?\s+(?:item\s+)?(\d{1,3})\b")
 DECISION_HEADING = re.compile(r"^## (\d{1,3})\.", re.MULTILINE)
+LAUNCH_REPOSITORY_URL = "https://github.com/egemeny13/euroleague-analytics-launch"
 
 
 def _python_files() -> list[Path]:
@@ -118,6 +119,41 @@ def test_every_decision_referenced_by_number_exists() -> None:
         "These files cite a decision number that DECISIONS.md does not define:\n  "
         + "\n  ".join(f"{where}: {sorted(numbers)}" for where, numbers in sorted(dangling.items()))
         + f"\nDECISIONS.md currently defines 1 to {max(existing)}."
+    )
+
+
+def test_launch_asset_repository_ownership_is_documented() -> None:
+    """Media production must not silently drift back into this warehouse repo.
+
+    The launch package was split into its own repository on 2026-09-01, but the
+    owner checklist still pointed agents at the superseded worktree the next
+    day. This check cannot prove the remote repository is available or current.
+    It only makes the ownership boundary discoverable from every local planning
+    document that an agent is expected to follow.
+    """
+    documents = {
+        "DECISIONS.md": Path("DECISIONS.md").read_text(encoding="utf-8"),
+        "ROADMAP.md": Path("ROADMAP.md").read_text(encoding="utf-8"),
+        "docs/OWNER_LAUNCH_STEPS.md": Path("docs/OWNER_LAUNCH_STEPS.md").read_text(
+            encoding="utf-8"
+        ),
+        "docs/LAUNCH_THREAD_FINAL.md": Path("docs/LAUNCH_THREAD_FINAL.md").read_text(
+            encoding="utf-8"
+        ),
+    }
+
+    missing = [name for name, text in documents.items() if LAUNCH_REPOSITORY_URL not in text]
+    assert not missing, (
+        "The separate launch repository is absent from these planning documents: "
+        + ", ".join(missing)
+    )
+
+    owner_steps = documents["docs/OWNER_LAUNCH_STEPS.md"]
+    assert "create_launch_video_remotion" not in owner_steps, (
+        "The owner checklist still routes launch work to the superseded worktree."
+    )
+    assert "`site/`" in owner_steps, (
+        "The ownership note must also say that the deployable website stays in this repo."
     )
 
 

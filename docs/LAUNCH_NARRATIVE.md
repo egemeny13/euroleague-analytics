@@ -4,6 +4,13 @@ The shared story for the public website, announcement thread and launch videos.
 It is a content source of truth, not finished channel copy and not deployment
 approval.
 
+The website, final copy, current schedule and verified claims live in this
+repository. Video source, renders, micro-clips and social cards live in the
+separate
+[`euroleague-analytics-launch`](https://github.com/egemeny13/euroleague-analytics-launch)
+repository. Its creative brief cannot override this repository's product
+evidence or Decision 45's launch date; see Decision 47.
+
 ## Audience, in order
 
 1. Professional basketball analysts and serious journalists. The work must be
@@ -107,4 +114,6 @@ Before website deployment, thread publication or final video render:
 3. re-earn every displayed number from its cited repository evidence;
 4. update the archive wording only if the chain has finished and every season
    has passed its restore gate;
-5. keep publication and deployment as explicit owner-approved actions.
+5. verify the final rendered media in the launch repository, not a superseded
+   local worktree copy;
+6. keep publication and deployment as explicit owner-approved actions.

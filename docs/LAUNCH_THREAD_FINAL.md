@@ -2,6 +2,12 @@
 
 Consolidated, character-validated social launch copy and media attachment map for X (Twitter) and professional communities (LinkedIn, Reddit).
 
+The final copy and verified claims are maintained in this repository. The
+attached video, micro-clips and social cards are produced and stored in the
+separate
+[`euroleague-analytics-launch`](https://github.com/egemeny13/euroleague-analytics-launch)
+repository; use its `output/` directory rather than a superseded local worktree.
+
 ---
 
 ## 1. Primary X / Twitter Thread (4-Post Optimized Sequence)
@@ -103,7 +109,7 @@ The entire codebase, database schema migrations, and evaluation suite are open s
 
 ## 3. Media Asset Mapping Table (Authoritative Editorial Benchmark Graphics)
 
-Rendered with high data-ink ratio, editorial framing, and crystal-clear analytical charts directly in `launch-video/output/cards/`:
+Rendered with high data-ink ratio, editorial framing, and crystal-clear analytical charts in the launch repository's `output/cards/` directory:
 
 | Tweet | Editorial Benchmark Graphic (1200×1000) | Dynamic Video Option | Core Analytical Story |
 |---|---|---|---|
