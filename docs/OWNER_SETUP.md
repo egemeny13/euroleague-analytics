@@ -71,6 +71,43 @@ All 14 tests in `tests/test_readonly_role.py` pass:
 
 ---
 
+## O2b: Set the `el_tester` Database Role Password
+
+Only needed when you are about to give somebody access to the warehouse for testing. Migration 0020 creates the `el_tester` role with the same `SELECT` reach as `el_reader` and no password.
+
+**Do not hand out `READER_DATABASE_URL` instead.** That is the credential the hosted server logs in as. If a tester's copy leaks you have to rotate it, and the server stays broken until you also update the Fly secret. `el_tester` exists so that revoking a tester costs one password change and no downtime. See `DECISIONS.md` item 43.
+
+### Action
+1. Confirm migration 0020 has been applied. As of 2026-09-01 it is rehearsed but **not applied**: the up/down/up/down gate passed on PostgreSQL 17.11, and the production apply still needs your approval immediately before it.
+2. Open the Supabase dashboard and navigate to **SQL Editor**.
+3. Generate a strong random password for `el_tester`, different from `el_reader`'s.
+4. Run the following SQL statement:
+   ```sql
+   alter role el_tester with password '<tester-password>';
+   ```
+5. Test the role from your local terminal before giving it to anyone:
+   ```bash
+   TESTER_DATABASE_URL="postgresql://el_tester:<tester-password>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres" uv run pytest -m warehouse tests/test_tester_role.py -v
+   ```
+6. Give the tester the connection string. Nothing else.
+
+### Correct Result
+All tests in `tests/test_tester_role.py` pass: the seven views and both directly queried tables are readable, and `INSERT`, `UPDATE`, `DELETE`, `CREATE TABLE`, `DROP TABLE`, `CREATE ROLE`, `lineup_stint` and the three row-budget tables are each refused with `InsufficientPrivilege`.
+
+### To revoke every tester
+Rotate the password:
+```sql
+alter role el_tester with password '<new-password>';
+```
+Every tester loses access at their next connection. The hosted server is unaffected, because it does not use this role. There is no way to revoke one tester and not the others — the role is shared. Item 43 records the condition under which that changes.
+
+### If it fails
+- If tests skip: verify `TESTER_DATABASE_URL` is set and non-empty.
+- If every query returns no rows but nothing errors: the role is missing `bypassrls`. Re-apply migration 0020 up.
+- If `test_the_tester_role_is_not_the_servers_role` fails: the connection string is `el_reader`'s, not `el_tester`'s.
+
+---
+
 ## O3: Create Fly.io Account and Organization
 
 The hosted MCP server runs on Fly.io in the Frankfurt region (`fra`), co-located with the `eu-central-1` Supabase project.

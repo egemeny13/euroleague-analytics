@@ -7,6 +7,7 @@ from collections.abc import Callable, Sequence
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from hashlib import sha256
+from os import environ
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -29,6 +30,7 @@ from euroleague.load import load_cached_season, load_cached_shots
 
 LOCAL_CONFIRMATION_DATABASE = "euroleague_test"
 LOCAL_CONFIRMATION_PORT = 5433
+TEST_URL_ENV_VAR = "EL_TEST_DATABASE_URL"
 
 
 def load_test_database_settings(values: dict[str, str] | None = None) -> DatabaseSettings:
@@ -43,9 +45,24 @@ def load_test_database_settings(values: dict[str, str] | None = None) -> Databas
 
     It refuses anything but the disposable database on its own port, so a
     confirmation run cannot be pointed at production by a stray variable.
+
+    WHERE THE VALUE COMES FROM. A real environment variable wins over `.env`,
+    the same rule `DatabaseSettings.from_env` follows and for the same reason:
+    in CI the value comes from the workflow and there is no `.env` file at all,
+    while on a developer's machine a stray file must not override an explicit
+    variable. Reading the environment widens where the value may come from, not
+    what it may say - the database and port check below is unchanged, and it is
+    what stops a wrong secret pointing an up/down/up/down cycle, which ends in
+    `drop`, at the real warehouse.
     """
-    env_values = load_env_file() if values is None else values
-    settings = DatabaseSettings.from_url(env_values.get("EL_TEST_DATABASE_URL", ""))
+    if values is None:
+        env_values = dict(load_env_file())
+        from_environment = environ.get(TEST_URL_ENV_VAR)
+        if from_environment:
+            env_values[TEST_URL_ENV_VAR] = from_environment
+    else:
+        env_values = values
+    settings = DatabaseSettings.from_url(env_values.get(TEST_URL_ENV_VAR, ""))
     if settings.database != LOCAL_CONFIRMATION_DATABASE or settings.port != LOCAL_CONFIRMATION_PORT:
         raise ValueError(
             f"EL_TEST_DATABASE_URL must name {LOCAL_CONFIRMATION_DATABASE!r} on port "

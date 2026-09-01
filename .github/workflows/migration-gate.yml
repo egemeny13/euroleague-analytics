@@ -1,0 +1,107 @@
+# Prove every migration applies, reverses and reapplies identically.
+#
+# WHY THIS EXISTS. `scripts/migration_gate.py` has always been the standard, but
+# it needs a disposable PostgreSQL, so it was run by hand on whichever machine
+# had one. Migration 0013's rehearsal record states the two limits that came
+# from that: it ran on PostgreSQL 16.2 rather than the 17.x production runs,
+# "because that is what the disposable server bundled", and it was a one-off
+# rather than a check every later migration had to pass. Both are properties of
+# running it by hand. A service container fixes both. See `DECISIONS.md` item 44.
+#
+# WHY IT CANNOT REACH PRODUCTION. The job sets `EL_TEST_DATABASE_URL`, not
+# `DATABASE_URL`, and never reads a repository secret - the value below is a
+# literal pointing at the container beside it. `load_test_database_settings`
+# refuses any value not naming `euroleague_test` on port 5433 before opening a
+# connection, so there is no secret here to mistype and no variable that could
+# name the warehouse.
+name: Migration gate
+
+on:
+  pull_request:
+    paths:
+      - "migrations/**"
+      - "scripts/migration_gate.py"
+      - "src/euroleague/incremental_confirmation.py"
+      - ".github/workflows/migration-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Up, down, up, down
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        # Pinned by digest, matching the Dockerfile's reasoning: a tag is
+        # rebuilt under the same name, so two runs a week apart would otherwise
+        # be two different servers. PostgreSQL 17 is what production runs; the
+        # 0013 rehearsal could only reach 16.2 and said so.
+        image: postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675
+        env:
+          POSTGRES_PASSWORD: gate
+          POSTGRES_USER: gate
+          POSTGRES_DB: euroleague_test
+        # 5433 on the runner, because that is the port the disposable-target
+        # check requires. The container still listens on 5432 inside itself.
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U gate -d euroleague_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        # `pyproject.toml` declares no dependencies - the pins live in
+        # `requirements.txt` - so `pip install -e .` alone would install the
+        # package without psycopg and the gate would fail on the import.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Report the server version the gate actually ran against
+        env:
+          PGPASSWORD: gate
+        run: psql -h localhost -p 5433 -U gate -d euroleague_test -c "select version()"
+
+      - name: Seed the roles the platform provides
+        # Supabase creates `anon` and `authenticated` before any of our SQL
+        # runs; a stock postgres container does not. Without them the cycle
+        # aborts on migration 0009's `revoke all ... from anon, authenticated`,
+        # which is exactly what the first run of this workflow did, eight
+        # migrations in. They are NOLOGIN and hold nothing: they exist so the
+        # revokes have a subject, and every migration that mentions them is
+        # taking privileges away rather than granting any.
+        #
+        # tests/test_ci_configuration.py derives this list from the migrations
+        # themselves and fails if they ever expect a role not created here.
+        env:
+          PGPASSWORD: gate
+        run: |
+          psql -h localhost -p 5433 -U gate -d euroleague_test -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          SQL
+
+      - name: Run the gate
+        env:
+          # A literal, not a secret. See the header: this is what makes the job
+          # incapable of reaching production rather than merely unlikely to.
+          EL_TEST_DATABASE_URL: postgresql://gate:gate@localhost:5433/euroleague_test
+        run: python scripts/migration_gate.py

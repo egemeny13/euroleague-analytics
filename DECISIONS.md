@@ -2357,6 +2357,131 @@ invisible for three days:
 
 ---
 
+## 43. A tester gets `el_tester`, a second read-only role, not the server's one
+
+A human tester is given `el_tester`: a login role with `select` on the seven
+served views and the twelve base tables they read, `bypassrls`, and nothing
+else. It is created by migration 0020 with **no password**, which the owner sets
+out of band exactly as with `el_reader`.
+
+**The inbox item this answers was asking the wrong question.** `docs/goals/
+inbox.md` item T0-2 read: "No read-only database role exists, so a tester given
+`DATABASE_URL` holds a credential that can drop every table." The first clause
+is false — `el_reader` has existed since migration 0013, approved by Decision 26
+— and the item's two proposed decisions dissolve on inspection:
+
+- *Views only, or views plus tables?* There is no choice here. Migration 0011
+  made all seven views `security_invoker`, so a view runs with the caller's
+  permissions; a role holding only view grants fails every query with a
+  permission error on the base table underneath. "Views only" is not the
+  narrower working option, it is the non-working one. Anything that reads the
+  views reads the tables.
+- *One shared role, or one per tester?* One shared role, on the stated condition
+  below.
+
+The real question was narrower than the item's framing: whether to hand testers
+the role that already exists, or make a second one. **A second one.** The two
+roles read identically; what differs is what revoking them costs. `el_reader` is
+the hosted server's credential, held in a Fly secret, and rotating it interrupts
+production until that secret is updated. A tester's copy is the likeliest
+credential to leak, because it is pasted into a client config on a machine we do
+not control. Separating them turns "cut this tester off" from a production
+incident into a password change on a role nothing depends on.
+
+**The condition.** One shared role holds only while testers are few and are cut
+off together. The first time a single tester must be revoked without disturbing
+the others, or the number grows past a handful, this splits into per-tester
+roles — a new migration, not an edit to 0020. Per-tester roles were not chosen
+now because this repository's migration ceremony (numbered file with a matching
+`down`, a full up/down/up/down rehearsal on a disposable database, an
+owner-approved apply) is the wrong weight to run once per person, and the
+attribution it would buy has no consumer today.
+
+- Basis: the schema, read directly. Not a measurement of behaviour, and it does
+  not need to be — `security_invoker` and the RLS state are facts about the
+  migrations, checkable in the files.
+- Evidence for the grant set: `migrations/0011_public_view_security.up.sql`
+  makes the views `security_invoker`; `migrations/0001`, `0002` and `0003`
+  enable row level security on every granted table, with no permissive policy
+  for a plain login role, which is why `el_reader` carries `bypassrls` and why
+  `el_tester` must.
+- **What `bypassrls` costs, stated rather than waved past.** It removes
+  row-level filtering for this role on every table, present and future. That is
+  acceptable only because the grant list is explicit and short: the role reaches
+  nothing it was not named into. If row level security is ever used here to
+  express a real per-row rule rather than a blanket deny, this grant becomes a
+  hole and the decision must be revisited.
+- **What the tests would fail to detect.** `tests/test_tester_role.py` proves
+  the role can read what the server serves, cannot write, cannot do DDL, and
+  cannot reach `lineup_stint` or the row-budget tables. It proves nothing about
+  whether that read reach is *appropriate* — a tester can read the whole
+  warehouse, which is intended — and, the role being shared, nothing about which
+  tester did what. It also skips entirely until the password is set, and a skip
+  is not a pass.
+- **Not established: that migration 0020 applies cleanly.** It is written and
+  reviewed, not rehearsed and not applied. It needs the same up/down/up/down
+  gate on a disposable PostgreSQL that 0013 got, and then the owner's separate
+  approval immediately before the production apply.
+
+## 44. The migration gate runs in CI, against PostgreSQL 17, on a target it cannot mistake for production
+
+`scripts/migration_gate.py` now reads `EL_TEST_DATABASE_URL` instead of
+`DATABASE_URL`, and `.github/workflows/migration-gate.yml` runs it against a
+PostgreSQL 17 service container on every pull request touching `migrations/**`.
+
+**What was wrong with running it by hand.** Nothing, until you read what the
+0013 rehearsal had to admit. It ran on **PostgreSQL 16.2**, "because that is
+what the disposable server bundled", against 17.x in production — a limit the
+record states rather than hides, and one that exists only because the server was
+whatever the person happened to have. And it was a single event: migrations 0014
+through 0019 were applied afterwards without the cycle being re-run over the
+whole set. A rehearsal nobody can run is a rehearsal that stops happening, which
+is what happened here: migration 0020 was written on a machine with neither
+PostgreSQL nor Docker, so its author could not run the gate at all.
+
+**Why `DATABASE_URL` had to go.** The gate's cycle ends in `down`, which ends in
+`drop`. The only thing between a mistyped variable and that cycle running
+against the warehouse was the empty-schema check, and that is a check on the
+database's *contents*, not its identity — it passes against a warehouse that has
+not been loaded yet, and it runs after the connection is already open. The gate
+now uses `load_test_database_settings`, which refuses any value not naming
+`euroleague_test` on port 5433 before connecting. The workflow sets that
+variable to a literal pointing at its own service container and reads no
+repository secret, so there is nothing in the job that could name production.
+
+`load_test_database_settings` gained one thing to make this possible: it now
+prefers a real environment variable over `.env`. CI has no `.env` file at all.
+This widens where the value may come from, not what it may say — the database
+and port check is untouched, and a test asserts a well-formed production pooler
+URL is still refused through the new path.
+
+**The condition.** The literal credential in the workflow is safe only while the
+job's database is a service container it creates and destroys. If that job is
+ever pointed at a shared or long-lived server, the literal becomes a real
+credential in a public repository and this stops being acceptable.
+
+- Basis: the recorded limits of the 0013 rehearsal, quoted from
+  `migrations/README.md`, plus the state of the machine that wrote 0020.
+- **What this does not establish.** That the migrations are *correct*. The gate
+  proves they apply, reverse and reapply to an identical set of tables on an
+  empty database. It says nothing about whether a migration does the right
+  thing, nothing about behaviour against real data, and nothing about Supabase's
+  own extensions and roles, which a stock `postgres:17` container does not have.
+  A green gate is a licence to apply, not evidence the change is right.
+- **The workflow now has a result, and its first run failed.** Run
+  33557294587, 2026-09-01: `role "anon" does not exist`, eight migrations in, on
+  0009's `revoke all ... from anon, authenticated`. Supabase provides those two
+  roles; a stock container does not. That is the caveat above turning into a
+  specific list rather than a surprise, and it is why the gate is worth having:
+  the same gap was invisible while the rehearsal ran on whichever machine
+  happened to have a database, because those machines had the roles already.
+  The workflow now seeds them NOLOGIN, and a test derives the list from the
+  migrations so the two cannot drift.
+- Evidence, run 33557852446, 2026-09-01: **GATE PASSED, 23 tables created,
+  removed, and recreated identically, on PostgreSQL 17.11** — the same version
+  `migrations/README.md` records for the production 0011 rehearsal, so the
+  version limit 0013 had to state is closed rather than merely narrowed.
+
 ## Rules to add to the project instruction file
 
 ```

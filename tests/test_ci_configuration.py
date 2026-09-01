@@ -88,3 +88,55 @@ def test_tester_reporting_route_files_exist_and_prompt_for_required_fields() -> 
     assert "season" in combined_template_text.lower()
     assert "raw" in combined_template_text.lower() or "corrected" in combined_template_text.lower()
     assert "minutes" in combined_template_text.lower()
+
+
+def _roles_the_migrations_expect_to_exist() -> set[str]:
+    """Every role granted or revoked that no migration creates for itself.
+
+    These are the roles the platform provides. On Supabase `anon` and
+    `authenticated` are there before any of our SQL runs; on a stock PostgreSQL
+    container they are not, and the first `revoke ... from anon` aborts the run.
+    """
+    granted: set[str] = set()
+    created: set[str] = set()
+    for path in sorted(Path("migrations").glob("*.sql")):
+        sql = path.read_text(encoding="utf-8")
+        created.update(name.lower() for name in re.findall(r"create\s+role\s+([a-z_]+)", sql, re.I))
+
+        # Comment lines go first and the rest is split on the semicolon. A bare
+        # search for "from" also finds every FROM clause in a view body and
+        # every "recorded ... from" in a migration header comment, which is
+        # exactly what the first version of this helper collected.
+        code = "\n".join(line for line in sql.splitlines() if not line.lstrip().startswith("--"))
+        for statement in code.split(";"):
+            stripped = statement.strip()
+            if not re.match(r"(grant|revoke)\b", stripped, re.I):
+                continue
+            tail = re.search(r"\b(?:to|from)\s+([a-z_][a-z_,\s]*)$", stripped, re.I)
+            if tail:
+                granted.update(name.strip() for name in tail.group(1).split(",") if name.strip())
+    return {name for name in granted if name not in created and name != "public"}
+
+
+def test_the_migration_gate_seeds_every_role_the_migrations_expect() -> None:
+    """Break caught: the gate died on `role "anon" does not exist` after eight migrations.
+
+    The container is a stock `postgres:17`, so it has none of the roles Supabase
+    provides. The workflow creates them before the cycle. This test ties the two
+    together: add a `revoke ... from` some new platform role and the workflow
+    stops matching the migrations, and this fails rather than the gate failing
+    later in CI with a message about the eighth migration.
+
+    It does not check the reverse. A workflow seeding a role no migration
+    mentions is harmless, and forbidding it would make removing the last
+    reference to a role a two-file change for no gain.
+    """
+    workflow = Path(".github/workflows/migration-gate.yml").read_text(encoding="utf-8")
+    seeded = set(re.findall(r"create\s+role\s+([a-z_]+)", workflow, re.I))
+
+    missing = sorted(_roles_the_migrations_expect_to_exist() - seeded)
+    assert not missing, (
+        "The migration gate's container will not have these roles, so the cycle "
+        f"aborts partway through: {missing}. Seed them in "
+        ".github/workflows/migration-gate.yml."
+    )
