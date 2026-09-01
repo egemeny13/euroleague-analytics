@@ -20,12 +20,14 @@ from euroleague.mcp.tools import TOOL_NAMES
 SITE_DIR = Path("site")
 HTML_FILES = ("index.html", "privacy.html", "support.html")
 DOC_FILES = ("SPONSOR_ONE_PAGER.md", "LAUNCH_COPY.md", "OWNER_LAUNCH_STEPS.md")
+LAUNCH_THREAD = Path("docs/LAUNCH_THREAD_FINAL.md")
 PUBLIC_LAUNCH_SURFACES = (
     Path("README.md"),
     SITE_DIR / "index.html",
     SITE_DIR / "support.html",
     Path("docs/LAUNCH_COPY.md"),
     Path("docs/SPONSOR_ONE_PAGER.md"),
+    LAUNCH_THREAD,
 )
 ARCHIVE_STATUS_SURFACES = (
     Path("README.md"),
@@ -33,6 +35,10 @@ ARCHIVE_STATUS_SURFACES = (
     Path("docs/LAUNCH_COPY.md"),
     Path("docs/SPONSOR_ONE_PAGER.md"),
 )
+# Surfaces that must not overclaim, but are not required to raise the subject.
+# A tweet thread has no room to disclose the backfill; it still must not say the
+# archive is finished.
+OVERCLAIM_SURFACES = (*ARCHIVE_STATUS_SURFACES, SITE_DIR / "support.html", LAUNCH_THREAD)
 
 FORBIDDEN_TRACKER_PATTERNS = [
     r"google-analytics\.com",
@@ -273,6 +279,9 @@ def test_public_launch_copy_does_not_claim_the_running_archive_is_complete() -> 
         assert "archive" in lowered and "backfill" in lowered, (
             f"{path} must disclose the running archive backfill"
         )
+
+    for path in OVERCLAIM_SURFACES:
+        text = path.read_text(encoding="utf-8")
         for pattern in forbidden:
             assert not pattern.search(text), (
                 f"{path} overclaims archive completion: {pattern.pattern}"
@@ -291,3 +300,24 @@ def test_public_launch_surfaces_only_advertise_current_mcp_tool_names() -> None:
             advertised[path] = unknown
 
     assert not advertised, f"Public launch copy advertises unknown MCP tools: {advertised}"
+
+
+def test_readme_tool_table_lists_every_registered_tool() -> None:
+    """The README states a tool count, so its table must match the registry.
+
+    The guard above catches a name we advertise but do not serve. It cannot
+    catch the opposite - a tool we serve and forgot to list - because an
+    incomplete list contains no unknown name. Both directions mislead a reader
+    on a public surface, so this asserts the missing one.
+    """
+    readme_text = Path("README.md").read_text(encoding="utf-8")
+
+    listed = set(re.findall(r"\|\s*`(el_[a-z_]+)`\s*\|", readme_text))
+    missing = set(TOOL_NAMES) - listed
+    assert not missing, f"README tool table omits registered tools: {sorted(missing)}"
+
+    claimed = re.search(r"exposes (\d+) read-only tools", readme_text)
+    assert claimed is not None, "README must state how many read-only tools it exposes"
+    assert int(claimed.group(1)) == len(TOOL_NAMES), (
+        f"README claims {claimed.group(1)} tools; the registry serves {len(TOOL_NAMES)}"
+    )

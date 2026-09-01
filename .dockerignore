@@ -9,3 +9,9 @@ docs
 tests
 *.md
 .env
+
+# The public website, including its 6.6 MB preview video. The Dockerfile never
+# COPYs it, so it cannot reach the image - but flyctl uploads the whole build
+# context, so without this line every deploy ships the video to the builder for
+# nothing.
+site

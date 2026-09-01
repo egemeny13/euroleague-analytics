@@ -45,6 +45,7 @@ The server exposes 11 read-only tools designed specifically for LLMs. Every resp
 |---|---|
 | `el_describe_warehouse` | Returns loaded seasons, game counts, coverage notes, and data exclusions. |
 | `el_find_games` | Search and filter games by season, round, date, team, or winner. |
+| `el_get_game` | Single-game scores, pace, Four Factors, exact possession totals, and quality flags. |
 | `el_get_boxscore` | Official player and team box scores with raw, corrected, and official minutes. |
 | `el_get_play_by_play` | Source-ordered event stream with on-court lineups, score margins, and clock readings. |
 | `el_get_shot_data` | Shot attempts with normalized half-court court coordinates (X, Y). |

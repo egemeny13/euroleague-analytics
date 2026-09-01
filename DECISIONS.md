@@ -2449,6 +2449,38 @@ roadmap statements above are corrected.
   rather than left to disagree, so the two files now agree and this entry
   records the change rather than a standing conflict.
 
+### A stale filename in `CLAUDE.md` nearly deleted the merge-timing rule — found 2026-09-01
+
+`CLAUDE.md` cited `.github/workflows/fly-deploy.yml` as the reason `master` is a
+deploy trigger. That file does not exist: `bc2a9cd` untracked it. The absence was
+read here as proof the deploy itself was gone, and this section briefly recorded
+that merging could no longer restart the hosted server. **That was wrong**, and
+it is kept rather than deleted because the shape of the error is the lesson.
+
+- The deploy exists. `ef685a1` ("security: gate the deploy on CI") moved it into
+  the `deploy` job of `.github/workflows/ci.yml`, which runs
+  `flyctl deploy --remote-only` on every push to `main` or `master` behind
+  `needs: test`. Untracking the old file and removing the deploy look identical
+  from the filename alone, and only one of them happened.
+- A second deploy rides the same push and was also missed: `pages.yml`
+  republishes the public website when `site/**` changes.
+- **What the near-miss would have cost.** `CLAUDE.md` calls merge timing a safety
+  rule, not tidiness. Relaxing it on this reasoning would have licensed a merge
+  during a live-season window, which restarts the MCP server mid-query. The
+  owner had already approved merging pull request #45 on the strength of the
+  false claim before it was caught.
+- **Why the check that was run did not catch it.** `ls .github/workflows/ | grep
+  fly` searches filenames, and the deploy is a job inside a file named `ci.yml`.
+  A grep for the *mechanism* — `flyctl`, or `secrets.FLY_API_TOKEN` — finds it
+  immediately. When a document names a path and the path is missing, the missing
+  path is the weakest possible evidence about the behaviour it described: search
+  for the behaviour before concluding it is gone.
+- **What was actually stale**, and is now corrected in `CLAUDE.md`: the filename,
+  and the omission of the CI gate. Neither changes what a merge does.
+- **What this does not establish.** Whether master *should* auto-deploy. `bc2a9cd`
+  called that an open owner decision and nothing here settles it; the deploy runs
+  today regardless.
+
 ### Decisions whose justification depends on goals, audience, or budget
 
 These need the owner's separate check against the unavailable `CONTEXT.md`:
