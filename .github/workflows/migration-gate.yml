@@ -80,6 +80,25 @@ jobs:
           PGPASSWORD: gate
         run: psql -h localhost -p 5433 -U gate -d euroleague_test -c "select version()"
 
+      - name: Seed the roles the platform provides
+        # Supabase creates `anon` and `authenticated` before any of our SQL
+        # runs; a stock postgres container does not. Without them the cycle
+        # aborts on migration 0009's `revoke all ... from anon, authenticated`,
+        # which is exactly what the first run of this workflow did, eight
+        # migrations in. They are NOLOGIN and hold nothing: they exist so the
+        # revokes have a subject, and every migration that mentions them is
+        # taking privileges away rather than granting any.
+        #
+        # tests/test_ci_configuration.py derives this list from the migrations
+        # themselves and fails if they ever expect a role not created here.
+        env:
+          PGPASSWORD: gate
+        run: |
+          psql -h localhost -p 5433 -U gate -d euroleague_test -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          SQL
+
       - name: Run the gate
         env:
           # A literal, not a secret. See the header: this is what makes the job
