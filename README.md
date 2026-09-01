@@ -32,7 +32,7 @@ Every number published by this warehouse is mechanically verified against offici
 | **Court Shot Coordinates** | **41,524 verified** | E2024 field goals with real half-court coordinates |
 | **Score Reconciliation** | **100.0%** | 0 point discrepancies across all 732 games |
 | **Player Minutes Precision** | **99.54%** | Exact second match against official box scores |
-| **Archived Cold Storage** | **23 seasons** | E2003–E2025 (5,950+ played games), ~118 MB |
+| **Historical Archive** | **Backfill in progress** | E2003–E2025 target; every completed season passes a byte-for-byte restore gate |
 | **Dual-Path Evaluations** | **10 / 10 passed** | Verified via SQL and live MCP tool calls |
 
 ---
@@ -51,9 +51,8 @@ The server exposes 11 read-only tools designed specifically for LLMs. Every resp
 | `el_get_team_stats` | Four Factors (eFG%, TOV%, ORB%, FTR), pace, offensive rating, and defensive rating. |
 | `el_get_player_stats` | Player per-game and per-100 possession statistics. |
 | `el_get_lineup_stats` | 5-man lineup performance with possession counts, offensive, defensive, and net ratings. |
-| `el_get_on_off_splits` | Team net rating differential with a specific player on court versus off court. |
+| `el_get_player_on_off` | Team net rating differential with a specific player on court versus off court. |
 | `el_get_possessions` | Individual possession records with start score, duration, ending reason, and clutch filters. |
-| `el_get_game_quality` | Audit trail and validation report identifying any quarantined minutes or possession anomalies. |
 
 ---
 

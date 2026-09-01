@@ -39,7 +39,7 @@ Pre-drafted social announcement threads and launch posts in English for the publ
 > ⏱️ 99.54% of player-games match official minutes to the exact second
 > 🎯 100% final score reconciliation (0 point mismatches)
 > 📍 41,524 field goal attempts with verified court coordinates in E2024
-> 🗄️ 23 seasons (E2003–E2025) archived in immutable storage
+> 🗄️ Historical archive backfill running with a byte-for-byte restore gate on every completed season
 
 ### Tweet 5 (11 MCP Tools for AI Assistants)
 > Designed from scratch for LLMs:

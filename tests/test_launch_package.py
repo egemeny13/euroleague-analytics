@@ -15,9 +15,24 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
 
+from euroleague.mcp.tools import TOOL_NAMES
+
 SITE_DIR = Path("site")
 HTML_FILES = ("index.html", "privacy.html", "support.html")
 DOC_FILES = ("SPONSOR_ONE_PAGER.md", "LAUNCH_COPY.md", "OWNER_LAUNCH_STEPS.md")
+PUBLIC_LAUNCH_SURFACES = (
+    Path("README.md"),
+    SITE_DIR / "index.html",
+    SITE_DIR / "support.html",
+    Path("docs/LAUNCH_COPY.md"),
+    Path("docs/SPONSOR_ONE_PAGER.md"),
+)
+ARCHIVE_STATUS_SURFACES = (
+    Path("README.md"),
+    SITE_DIR / "index.html",
+    Path("docs/LAUNCH_COPY.md"),
+    Path("docs/SPONSOR_ONE_PAGER.md"),
+)
 
 FORBIDDEN_TRACKER_PATTERNS = [
     r"google-analytics\.com",
@@ -243,9 +258,35 @@ def test_verified_claims_consistency() -> None:
     assert "99.54%" in index_text, "index.html missing 99.54% minute accuracy"
     assert "99.54%" in sponsor_text, "SPONSOR_ONE_PAGER missing 99.54% minute accuracy"
 
-    # 23 seasons archived
-    assert "23 seasons" in readme_text, "README missing 23 seasons mention"
-    assert "23" in index_text and "Seasons Archived" in index_text, (
-        "index.html missing 23 seasons mention"
+
+
+def test_public_launch_copy_does_not_claim_the_running_archive_is_complete() -> None:
+    """The historical chain is still running, so completion copy would be false."""
+    forbidden = (
+        re.compile(r"23 seasons.{0,40}archived", re.IGNORECASE | re.DOTALL),
+        re.compile(r"all\s+21\s+historical\s+seasons.{0,40}archived", re.IGNORECASE),
+        re.compile(r"seasons\s+archived", re.IGNORECASE),
     )
-    assert "23 seasons" in sponsor_text, "SPONSOR_ONE_PAGER missing 23 seasons mention"
+
+    for path in ARCHIVE_STATUS_SURFACES:
+        text = path.read_text(encoding="utf-8")
+        lowered = text.lower()
+        assert "archive" in lowered and "backfill" in lowered, (
+            f"{path} must disclose the running archive backfill"
+        )
+        for pattern in forbidden:
+            assert not pattern.search(text), f"{path} overclaims archive completion: {pattern.pattern}"
+
+
+def test_public_launch_surfaces_only_advertise_current_mcp_tool_names() -> None:
+    """Every concrete el_* name in public copy must exist in the live registry."""
+    advertised: dict[Path, set[str]] = {}
+    current_names = set(TOOL_NAMES)
+
+    for path in PUBLIC_LAUNCH_SURFACES:
+        names = set(re.findall(r"\bel_[a-z_]+\b", path.read_text(encoding="utf-8")))
+        unknown = names - current_names
+        if unknown:
+            advertised[path] = unknown
+
+    assert not advertised, f"Public launch copy advertises unknown MCP tools: {advertised}"

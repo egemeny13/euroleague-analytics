@@ -81,9 +81,9 @@
             <div class="stat-sub">E2024 field goals with real court locations</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value">23</div>
-            <div class="stat-label">Seasons Archived</div>
-            <div class="stat-sub">5,950+ games in immutable cold storage</div>
+            <div class="stat-value">Active</div>
+            <div class="stat-label">Archive Backfill</div>
+            <div class="stat-sub">Every completed season is restore-verified byte for byte</div>
           </div>
         </div>
       </div>
@@ -191,7 +191,7 @@
             <span class="tool-desc">5-man lineup performance with possession counts, offensive rating, defensive rating, and net margin.</span>
           </div>
           <div class="tool-item">
-            <span class="tool-name">el_get_on_off_splits</span>
+            <span class="tool-name">el_get_player_on_off</span>
             <span class="tool-desc">Team net performance differential with a specific player on court versus off court.</span>
           </div>
           <div class="tool-item">
@@ -199,8 +199,8 @@
             <span class="tool-desc">Individual possessions with start score, duration, ending reason, lineup on floor, and clutch filters.</span>
           </div>
           <div class="tool-item">
-            <span class="tool-name">el_get_game_quality</span>
-            <span class="tool-desc">Audit trail and validation report identifying any quarantined minutes or possession anomalies.</span>
+            <span class="tool-name">el_get_game</span>
+            <span class="tool-desc">One game with scores, pace, Four Factors, possessions, and quality flags.</span>
           </div>
         </div>
       </div>
@@ -255,7 +255,7 @@
             The public server currently operates within Supabase's free tier, maintaining a high-performance hot window of <strong>E2024, E2025, and live E2026</strong>.
           </p>
           <p>
-            The remaining <strong>21 historical seasons (E2003–E2023, 5,200+ games)</strong> are archived in immutable cold storage (~118 MB). Sponsoring a dedicated Supabase Pro database (~$25–35/month) enables full PostgreSQL indexing and queryability for the entire 23-season archive.
+            The automated archive backfill is working toward the full <strong>E2003–E2025 source span</strong>. Every completed season must restore byte for byte before the chain advances. Sponsoring a dedicated Supabase Pro database (~$25–35/month) would enable full PostgreSQL indexing and queryability after that archive is complete.
           </p>
           <p style="margin-top: 1rem;">
             Read the complete <a href="https://github.com/egemeny13/euroleague-analytics/blob/master/docs/SPONSOR_ONE_PAGER.md" target="_blank" rel="noopener noreferrer">Sponsor One-Pager</a> or get in touch at <a href="mailto:egemenyucelen@gmail.com">egemenyucelen@gmail.com</a>.
