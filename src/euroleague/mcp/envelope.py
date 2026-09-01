@@ -70,6 +70,35 @@ _POSSESSION_SUBSTRINGS = ("possession", "per_100", "rating", "pace")
 
 VALID_COMPLETENESS_VALUES: tuple[str, ...] = ("complete", "in_progress", "unknown")
 
+RESPONSE_OUTPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "coverage": {"type": "object", "additionalProperties": True},
+        "excluded": {"type": "object", "additionalProperties": True},
+        "rows": {
+            "type": "array",
+            "items": {"type": "object", "additionalProperties": True},
+        },
+        "row_count": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "boolean"},
+        "caveats": {"type": "array", "items": {"type": "string"}},
+        "minutes_basis": {
+            "type": "object",
+            "properties": {
+                "value": {"type": "string", "enum": ["corrected", "raw", "official"]},
+                "meaning": {"type": "string"},
+            },
+            "required": ["value", "meaning"],
+            "additionalProperties": False,
+        },
+        "total_available": {"type": "integer", "minimum": 0},
+        "next_offset": {"type": "integer", "minimum": 0},
+        "row_budget": {"type": "object", "additionalProperties": True},
+    },
+    "required": ["coverage", "excluded", "rows", "row_count", "truncated", "caveats"],
+    "additionalProperties": True,
+}
+
 
 class MinutesProvenanceError(ValueError):
     """Raised when a response would publish a clock value without saying which kind."""

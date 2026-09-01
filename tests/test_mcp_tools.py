@@ -42,6 +42,31 @@ def test_every_tool_is_marked_read_only(registry):
         assert tool.annotations["readOnlyHint"] is True
 
 
+def test_every_tool_declares_all_standard_safety_annotations(registry):
+    for tool in registry.values():
+        assert tool.annotations == {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "openWorldHint": False,
+        }
+
+
+def test_every_tool_describes_the_existing_response_envelope(registry):
+    for tool in registry.values():
+        schema = tool.output_schema
+        assert schema["type"] == "object"
+        assert set(schema["required"]) == {
+            "coverage",
+            "excluded",
+            "rows",
+            "row_count",
+            "truncated",
+            "caveats",
+        }
+        assert schema["properties"]["rows"]["type"] == "array"
+        assert schema["properties"]["row_count"]["type"] == "integer"
+
+
 def test_every_tool_has_an_object_input_schema(registry):
     for tool in registry.values():
         assert tool.input_schema["type"] == "object"

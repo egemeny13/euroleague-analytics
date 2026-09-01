@@ -35,6 +35,12 @@ METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
 
+READ_ONLY_ANNOTATIONS: dict[str, bool] = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "openWorldHint": False,
+}
+
 
 @dataclass(frozen=True)
 class Tool:
@@ -45,7 +51,8 @@ class Tool:
     input_schema: dict[str, Any]
     handler: Callable[[dict[str, Any]], dict[str, Any]]
     title: str = ""
-    annotations: dict[str, Any] = field(default_factory=lambda: {"readOnlyHint": True})
+    output_schema: dict[str, Any] = field(default_factory=dict)
+    annotations: dict[str, Any] = field(default_factory=lambda: dict(READ_ONLY_ANNOTATIONS))
 
     def to_wire(self) -> dict[str, Any]:
         """The shape `tools/list` publishes."""
@@ -57,6 +64,8 @@ class Tool:
         }
         if self.title:
             published["title"] = self.title
+        if self.output_schema:
+            published["outputSchema"] = self.output_schema
         return published
 
 
