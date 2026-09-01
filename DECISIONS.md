@@ -2468,10 +2468,19 @@ credential in a public repository and this stops being acceptable.
   thing, nothing about behaviour against real data, and nothing about Supabase's
   own extensions and roles, which a stock `postgres:17` container does not have.
   A green gate is a licence to apply, not evidence the change is right.
-- **Also not established: that the workflow passes.** It has never run. It is
-  written and reviewed, and the first pull request touching `migrations/**` is
-  what will say whether the service container, the port mapping and the version
-  pin actually work together.
+- **The workflow now has a result, and its first run failed.** Run
+  33557294587, 2026-09-01: `role "anon" does not exist`, eight migrations in, on
+  0009's `revoke all ... from anon, authenticated`. Supabase provides those two
+  roles; a stock container does not. That is the caveat above turning into a
+  specific list rather than a surprise, and it is why the gate is worth having:
+  the same gap was invisible while the rehearsal ran on whichever machine
+  happened to have a database, because those machines had the roles already.
+  The workflow now seeds them NOLOGIN, and a test derives the list from the
+  migrations so the two cannot drift.
+- Evidence, run 33557852446, 2026-09-01: **GATE PASSED, 23 tables created,
+  removed, and recreated identically, on PostgreSQL 17.11** — the same version
+  `migrations/README.md` records for the production 0011 rehearsal, so the
+  version limit 0013 had to state is closed rather than merely narrowed.
 
 ## Rules to add to the project instruction file
 

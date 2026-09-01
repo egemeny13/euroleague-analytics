@@ -78,7 +78,7 @@ Only needed when you are about to give somebody access to the warehouse for test
 **Do not hand out `READER_DATABASE_URL` instead.** That is the credential the hosted server logs in as. If a tester's copy leaks you have to rotate it, and the server stays broken until you also update the Fly secret. `el_tester` exists so that revoking a tester costs one password change and no downtime. See `DECISIONS.md` item 43.
 
 ### Action
-1. Confirm migration 0020 has been applied. It has not been as of 2026-09-01.
+1. Confirm migration 0020 has been applied. As of 2026-09-01 it is rehearsed but **not applied**: the up/down/up/down gate passed on PostgreSQL 17.11, and the production apply still needs your approval immediately before it.
 2. Open the Supabase dashboard and navigate to **SQL Editor**.
 3. Generate a strong random password for `el_tester`, different from `el_reader`'s.
 4. Run the following SQL statement:
