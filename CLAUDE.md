@@ -285,6 +285,39 @@ the event stream as a bug.
   citation to a decision number that does not exist. It cannot catch a missing
   reason, which is why this rule is here rather than only in a test.
 
+## Working this repository from an agent session
+
+Measured on 2026-09-02, over one session. These are not style preferences; each
+one cost a wasted turn or produced a false green.
+
+- **Never edit a tracked file by writing a shell script that edits it.** Use the
+  `Edit` tool. The route through Bash goes through two escaping layers before
+  Python sees the source, and a regex like `\s` or `\b` arrives mangled: Python
+  raises `SyntaxWarning` rather than an error, the script runs, the anchor never
+  matches, and the edit silently does nothing. It cost three turns in one
+  session. `Edit` requires reading the file first, which is one extra turn and
+  is cheaper than one silent failure.
+- **A throwaway analysis script goes in a file, not in a heredoc.** Same
+  escaping problem, same silence. Write it to the scratchpad directory, then run
+  it. Anything with a regex, a backslash, or a Windows path is in this category.
+- **Every `str.replace` on file content is preceded by `assert old in text`.**
+  `str.replace` returns the string unchanged when the anchor is missing. There
+  is no exception and no return code, so the file stays as it was, the tests
+  still pass, and the change is simply absent. `OVERCLAIM_SURFACES` sat as dead
+  code this way after `0ffe769` reflowed the lines its anchor was copied from.
+  The rule applies to `sed` too: check that the substitution changed something.
+- **Pipe test output through `grep -a`.** The suite prints non-ASCII, so plain
+  `grep` decides the stream is binary and answers `Binary file (standard input)
+  matches` instead of the matching lines. That reply is easy to read as "one
+  match", and once was: two tests fired and only one was counted.
+- **Run the tests as bare `pytest`.** `addopts` in `pyproject.toml` carries the
+  marker filter; it deliberately does not carry `-q`, and adding your own makes
+  `-qq`, which deletes the summary line. See the comment on `addopts` for why.
+- **Permission behaviour is `.claude/settings.json`, not a judgement call.**
+  That file is committed. If a command you need is refused, the fix is to
+  propose a rule there and let the owner decide, not to retry the command in a
+  different shape until something is allowed. See `DECISIONS.md` item 46.
+
 ## Boundaries around production work
 
 **An instruction not to touch production is not a control. It is a request, and
