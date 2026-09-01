@@ -15,8 +15,10 @@
 version: 2
 updates:
   # The runtime tree is deliberately two packages (see requirements.txt), so
-  # these updates are rare and each one is worth reading individually. Grouping
-  # is used only for the development tree, where ruff and pytest churn.
+  # those updates are rare and each one is worth reading individually. Grouping
+  # is the exception, used for two reasons only: where a tree churns and the
+  # bumps carry no individual information, and where two packages pin each
+  # other so tightly that a lone bump cannot resolve at all.
   - package-ecosystem: pip
     directory: /
     schedule:
@@ -28,6 +30,17 @@ updates:
         patterns:
           - ruff
           - pytest*
+      # Not churn - this pair cannot be bumped apart. `pydantic` depends on an
+      # exact `pydantic-core` build, so a pull request moving either one alone
+      # is unresolvable by construction, and Dependabot reopened that same dead
+      # pull request on every pydantic release. Both arrive in
+      # `requirements-http.txt` through the hosted server's transport
+      # dependencies, not because anything here imports them directly.
+      # tests/test_ci_configuration.py keeps the pair together.
+      pydantic:
+        patterns:
+          - pydantic
+          - pydantic-core
 
   - package-ecosystem: github-actions
     directory: /
