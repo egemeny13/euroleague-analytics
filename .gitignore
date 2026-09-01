@@ -11,7 +11,17 @@ CONTEXT.md
 
 # Machine-local symlinks into .agents/skills, created by the skills installer.
 # The skills themselves are committed; these pointers are not portable.
-.claude/
+#
+# Written as `.claude/*` and not `.claude/`, which matters: git does not descend
+# into an excluded directory, so a `!` re-include under a `.claude/` rule would
+# never be reached.
+.claude/*
+
+# ...except the permission rules, which are a project decision rather than a
+# machine detail. See DECISIONS.md item 46: without a committed rule the agent
+# harness classifies each command on its own, and the same `gh pr merge` was
+# allowed once and refused the next time.
+!.claude/settings.json
 
 # Repository-scoped pytest temporary directories. The desktop sandbox cannot
 # reach pytest's machine-wide temp folder, so runs pass --basetemp .tmp/...
