@@ -323,10 +323,19 @@ the migration was correct, but none of that was the instruction's doing.
 `master` directly.**
 
 **`master` is a deploy trigger, not just a default branch.**
-`.github/workflows/fly-deploy.yml` runs `flyctl deploy` on every push to `main`
-or `master`. A merge is therefore a production release: it restarts the hosted
-MCP server and interrupts anyone connected to it. That single fact is what turns
-branch discipline here from tidiness into a safety rule.
+The `deploy` job in `.github/workflows/ci.yml` runs `flyctl deploy --remote-only`
+on every push to `main` or `master`. A merge is therefore a production release:
+it restarts the hosted MCP server and interrupts anyone connected to it. That
+single fact is what turns branch discipline here from tidiness into a safety
+rule. A second deploy rides on the same push: `pages.yml` republishes the public
+website whenever `site/**` changes.
+
+**Do not read the absence of `fly-deploy.yml` as the absence of a deploy.**
+`bc2a9cd` untracked that standalone workflow and `ef685a1` moved the deploy into
+`ci.yml` behind `needs: test`, so a red build no longer ships. The mechanism
+survived; only its address changed. On 2026-09-01 that missing filename was read
+here as proof the deploy was gone, and it nearly relaxed this rule — see the
+entry in `DECISIONS.md`.
 
 - **Name the branch for the work**, not for the person or the day:
   `fix/possession-residual`, `docs/auth0-configuration`.
