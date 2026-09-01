@@ -2279,6 +2279,30 @@ relations; 359,505 bytes/game 20-team rate):
 
 ---
 
+## 41. Small related changes share one milestone pull request
+
+Branch and pull-request safety remains mandatory, but small related corrections
+belong on the active milestone branch and ship through one coherent pull
+request. A pull request is a review and production-deploy boundary, not a
+transport envelope for every tiny edit.
+
+This does not permit direct pushes to `master`, mixing unrelated work, or
+letting a branch grow beyond reviewability. Tests must remain green throughout,
+and merging to `master` remains a deliberate production release because it
+restarts the hosted MCP server.
+
+**Provenance.**
+- Basis: OWNER DECISION and observed workflow cost.
+- Evidence: every merge to `master` triggers the Fly production deployment;
+  micro-PRs therefore add review and deployment churn without improving the
+  review boundary when their changes are part of the same milestone.
+- Alternatives considered: one PR per edit (rejected as unnecessary overhead),
+  or direct commits to `master` for small changes (rejected because it removes
+  review and triggers production without a controlled release boundary).
+- Approved: Egemen Yücelen on 2026-09-01 in the launch website request.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

@@ -4,20 +4,37 @@ A chronological, actionable reference guide for the repository owner to prepare,
 
 ---
 
-## Current launch-package status (2026-09-01)
+## Current operating status (2026-09-01)
 
-The repository's `site/`, `docs/LAUNCH_COPY.md`, and
-`docs/SPONSOR_ONE_PAGER.md` are working R-11 drafts, not the accepted final
-launch package. The earlier private Vercel showcase at
-<https://euroleague-mcp-showcase.vercel.app/> is reference material only.
+- The engineering goal queue is clear: all 33 recorded goals are complete.
+  R-12 and R-13 are complete, and R-14's implementation is complete through
+  the offline and manual-workflow gates.
+- Launch-package production now continues in the separate
+  `create_launch_video_remotion` worktree. Its scope includes the rebuilt
+  website, final announcement thread, launch video, original product-demo and
+  social clips, and their working documentation. Do not duplicate that work in
+  the primary worktree.
+- The repository's current `site/`, `docs/LAUNCH_COPY.md`, and
+  `docs/SPONSOR_ONE_PAGER.md` remain baselines until the launch worktree is
+  reviewed and merged. New documents in that worktree are working material,
+  not repository authority yet.
+- The historical archive chain continues independently. It does not block
+  launch-package production, but completion still requires every season to
+  pass the byte-for-byte restore gate.
+- The next dated gates are the live SuperCup rehearsal on 2026-09-18/19, quiet
+  public activation through R-9 around 2026-09-22, and E2026 opening-night
+  validation from 2026-09-24. Public launch follows only after two or three
+  clean live game nights.
 
-The primary remaining preparation is to rebuild the website from scratch,
-finalise the announcement thread, and prepare the video storyboards, demo
-queries, shot list and recording setup. This preparation can happen while the
-historical archive chain runs. Final video capture still waits for the public
-flow and clean live-season data.
+At the launch-worktree merge boundary, review its new documents together with
+the implementation, re-verify every metric and MCP tool name, document all
+third-party media licences, exclude dependency directories such as
+`node_modules`, and decide deliberately which rendered binaries belong in Git
+or in release assets. Only original product demonstrations and social edits are
+in scope; match clips and broadcast footage remain prohibited.
 
-This status note does not authorize a deployment or publication.
+This status note does not authorize a deployment, Auth0 production change, or
+publication.
 
 ---
 
