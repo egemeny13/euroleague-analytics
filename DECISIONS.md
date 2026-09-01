@@ -2625,6 +2625,49 @@ seen.
   `github`). Those are machine-local configuration outside this repository. The
   `auth0` one matters before R-9 on 2026-09-12 and is not addressed here.
 
+## 47. Launch media lives in its own repository; the website and launch claims stay here
+
+The owner identified the already-public
+[`euroleague-analytics-launch`](https://github.com/egemeny13/euroleague-analytics-launch)
+repository on 2026-09-02. It was created on 2026-09-01 specifically to hold the
+Remotion project, original audio, fonts and licences, rendered launch video,
+micro-clips, social cards and the creative master brief. That repository is the
+source of truth for producing and storing those media assets. The superseded
+`create_launch_video_remotion` worktree is not a launch handoff target, and its
+contents must not be merged wholesale into this repository.
+
+The boundary is deliberate:
+
+- **The launch repository owns media production:** Remotion source, generated
+  audio, bundled font licences, rendered videos, micro-clips, social cards and
+  their creative production notes.
+- **This repository owns the product and publication truth:** the deployable
+  website under `site/`, the final announcement copy, launch narrative, current
+  schedule, verified product claims and the code/tests that re-earn them.
+- `CLAUDE.md`, this decision log and `ROADMAP.md` continue to outrank the launch
+  repository's `BRIEF.md` on product behaviour, evidence and dates. The brief
+  still names the superseded approximately 2026-09-27 window; Decision 45's
+  2026-09-16 launch date wins.
+
+**Why separate it.** The media repository is a Node/TypeScript toolchain with
+about 22 MB of binary audio, fonts and renders, while this is a Python warehouse
+and no warehouse code imports those assets. Copying the package here would grow
+this repository's permanent Git history for no shared runtime value. The website
+is the exception because `site/` is the input to this repository's GitHub Pages
+deployment.
+
+**The synchronization condition.** Before a website deployment, thread
+publication or final media render, the displayed tool names and numbers must be
+re-verified against this repository. The media repository holding a render does
+not make its claims current. Conversely, changing a claim here does not update a
+render there. Both sides of that boundary must be checked at the launch gate.
+
+**What this does not establish.** It does not approve the media creatively,
+publish a thread, deploy the website or certify the rendered binaries. It also
+does not make the launch brief authoritative for launch timing. If shared code
+or an automated cross-repository release process is introduced later, the cost
+and ownership boundary must be decided again.
+
 ## Rules to add to the project instruction file
 
 ```

@@ -1099,6 +1099,19 @@ The principal work before launch is therefore the **launch package itself**:
    before the live-season window, then capture the final footage after the
    public flow and live data are ready.
 
+**Repository boundary, recorded 2026-09-02.** Video production, micro-clips,
+social cards, original audio, bundled fonts and their licences now live in the
+separate
+[`euroleague-analytics-launch`](https://github.com/egemeny13/euroleague-analytics-launch)
+repository. The deployable website remains here under `site/`; the final thread,
+launch narrative, schedule and evidence-backed claims also remain here so their
+tests travel with the warehouse evidence. Do not merge the superseded
+`create_launch_video_remotion` worktree into this repository. See Decision 47.
+
+The launch repository's `BRIEF.md` is creative working material, not schedule or
+product authority. It still names the former approximately 2026-09-27 launch
+window; Decision 45 and `docs/LAUNCH_PLAN_2026.md` set 2026-09-16.
+
 The existing `site/` package, `docs/LAUNCH_COPY.md` and related R-11 material are
 useful drafts, not accepted final launch assets. The earlier private showcase at
 <https://euroleague-mcp-showcase.vercel.app/> is reference material only and is
