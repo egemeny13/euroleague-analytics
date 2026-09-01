@@ -918,3 +918,76 @@ def test_fetch_roster_and_game_stats_route_to_correct_competition_v2_paths(tmp_p
     assert transport.calls[3][0] == (
         "https://api-live.euroleague.net/v2/competitions/U/seasons/U2025/games/2/stats"
     )
+
+
+class RecordingStdout:
+    """A stdout that remembers whether each line was pushed out or left waiting."""
+
+    def __init__(self) -> None:
+        self.written: list[str] = []
+        self.flushes = 0
+
+    def write(self, text: str) -> int:
+        self.written.append(text)
+        return len(text)
+
+    def flush(self) -> None:
+        self.flushes += 1
+
+
+def test_each_progress_line_leaves_the_process_when_it_is_written(monkeypatch) -> None:
+    """Break caught: a two-hour run shows nothing until the moment it ends.
+
+    Python block-buffers stdout when it is a pipe rather than a terminal, which
+    is what GitHub Actions gives it. The archive chain run that failed on
+    2026-09-01 wrote 513 progress lines over 1 h 24 m and every one of them
+    carries the same log timestamp, 17:09:48 - the instant the process exited.
+    Nobody could have seen the run stall, because nobody could see the run.
+
+    WHAT THIS DOES NOT PROVE. It checks the default writer only. A caller that
+    passes its own `progress` callable is responsible for its own flushing, and
+    this says nothing about stderr or about any other script's output.
+    """
+    from euroleague.fetch import ArchiveFetcher
+
+    fetcher = ArchiveFetcher(transport=RecordingTransport([]), cache_root=Path("unused"))
+    stdout = RecordingStdout()
+    monkeypatch.setattr(sys, "stdout", stdout)
+
+    fetcher.progress("[1/759] game 1 Boxscore fetched")
+
+    assert "".join(stdout.written) == "[1/759] game 1 Boxscore fetched\n"
+    assert stdout.flushes == 1
+
+
+def test_a_failed_archive_run_reports_where_the_failure_happened(capsys) -> None:
+    """Break caught: the log says what broke and refuses to say where.
+
+    On 2026-09-01 the chain printed
+    `('Connection aborted.', ConnectionResetError(104, ...))` and nothing else -
+    no module, no line, no call stack. Finding the one unretried request that
+    ended the run took reading the source rather than reading the log.
+
+    WHAT THIS DOES NOT PROVE. It exercises the reporting function directly, not
+    a real run, and it says nothing about whether the failure was worth
+    reporting or should have been retried instead.
+    """
+    script = Path(__file__).resolve().parents[1] / "scripts" / "fetch_archive.py"
+    spec = importlib.util.spec_from_file_location("fetch_archive_failure_report", script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+        try:
+            raise requests.ConnectionError("Connection aborted.", ConnectionResetError(104))
+        except requests.ConnectionError as error:
+            module.report_failure(error)
+    finally:
+        del sys.modules[spec.name]
+
+    reported = capsys.readouterr().err
+    assert "ConnectionError" in reported
+    assert "Connection aborted." in reported
+    assert "Traceback (most recent call last)" in reported
+    assert "test_a_failed_archive_run_reports_where_the_failure_happened" in reported

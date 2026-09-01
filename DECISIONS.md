@@ -2279,6 +2279,84 @@ relations; 359,505 bytes/game 20-team rate):
 
 ---
 
+## 41. Small related changes share one milestone pull request
+
+Branch and pull-request safety remains mandatory, but small related corrections
+belong on the active milestone branch and ship through one coherent pull
+request. A pull request is a review and production-deploy boundary, not a
+transport envelope for every tiny edit.
+
+This does not permit direct pushes to `master`, mixing unrelated work, or
+letting a branch grow beyond reviewability. Tests must remain green throughout,
+and merging to `master` remains a deliberate production release because it
+restarts the hosted MCP server.
+
+**Provenance.**
+- Basis: OWNER DECISION and observed workflow cost.
+- Evidence: every merge to `master` triggers the Fly production deployment;
+  micro-PRs therefore add review and deployment churn without improving the
+  review boundary when their changes are part of the same milestone.
+- Alternatives considered: one PR per edit (rejected as unnecessary overhead),
+  or direct commits to `master` for small changes (rejected because it removes
+  review and triggers production without a controlled release boundary).
+- Approved: Egemen Yücelen on 2026-09-01 in the launch website request.
+
+---
+
+## 42. A dropped Supabase connection is repeated, and a failed run says where it broke
+
+`SupabaseStorage` repeats a request that failed **before Supabase answered** -
+connection refused, connection reset, or a read that timed out - up to four
+attempts with 2 s, 4 s and 8 s between them, and re-raises the original
+exception when the budget runs out. An HTTP status is an answer and is never
+repeated: a 409 on an existing checksum path still means "verify, do not
+overwrite".
+
+**The condition.** This covers the transport, not the archive's meaning. If a
+retry is ever wanted for a status code, or for the bucket-creation POST that is
+deliberately left single-shot, that is a new decision. If Supabase outages start
+outlasting the 14 s budget, re-measure before widening it rather than raising
+the number because a run failed.
+
+Two supporting changes ship with it, because both are reasons the defect stayed
+invisible for three days:
+
+- The fetcher's default progress writer flushes each line. Python block-buffers
+  stdout when it is a pipe, which is what a GitHub Actions runner gives it.
+- `scripts/fetch_archive.py` prints the traceback rather than the exception
+  alone, so the log names the call that failed.
+
+**Provenance.**
+- Basis: MEASUREMENT over the archive chain's complete run history.
+- Evidence: 16 scheduled runs of `.github/workflows/historical-archive-chain.yml`
+  between 2026-08-29 and 2026-09-01: 12 success, 1 cancelled, 3 failure. Two of
+  the three failures are this defect and nothing else. Run 33275416750,
+  2026-08-30 02:02 UTC: `requests.exceptions.ReadTimeout: HTTPSConnectionPool
+  (host='pctiewdpstnwcutrvegu.supabase.co', port=443): Read timed out.
+  (read timeout=60)` raised at `src/euroleague/archive.py:241` in
+  `download_verified`, during the restore gate. Run 33527667370, 2026-09-01
+  17:09 UTC: `('Connection aborted.', ConnectionResetError(104, 'Connection
+  reset by peer'))` after 1 h 24 m and 513 of E2012's 759 requests. The third
+  failure, run 33331411699, is unrelated - `restore_for_resume` refusing E2017's
+  incomplete index - and is already resolved.
+- Blast radius beyond the chain: `SupabaseStorage` is constructed by
+  `scripts/live_pipeline.py`, `scripts/settlement_recheck.py`,
+  `scripts/verify_archive_season.py`, `scripts/repair_archive.py`,
+  `scripts/next_archive_season.py` and
+  `scripts/backfill_person_game_links.py`. The same single dropped connection
+  would have failed a live game night from 2026-09-24.
+- What the failure did **not** cost: no archived object was lost or corrupted.
+  Each successful response is archived as it is fetched and the next run
+  restores from the archive, so the price was the run's remaining work and a
+  five-hour delay, not data.
+- What this does not establish: the fake connection in
+  `tests/test_archive.py` raises on command. Nothing here measures how often
+  the real endpoint drops a connection, and four attempts are not shown to be
+  enough for any particular outage.
+- Approved: Egemen Yücelen on 2026-09-01, in the session that read the failure.
+
+---
+
 ## Rules to add to the project instruction file
 
 ```

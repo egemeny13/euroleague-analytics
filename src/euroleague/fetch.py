@@ -214,6 +214,20 @@ def _schedule_is_complete(schedule: Mapping[str, object]) -> bool:
     return bool(games) and all(game.get("played") is True for game in games)
 
 
+def write_progress_line(line: str) -> None:
+    """Write one progress line and push it out of the process immediately.
+
+    WHY `flush` IS NOT OPTIONAL HERE. Python block-buffers stdout when it is a
+    pipe, which is what a GitHub Actions runner gives it. A plain `print` leaves
+    a two-hour season's progress sitting in a 8 KB buffer, and the whole log
+    appears at once when the process exits. That is how the 2026-09-01 archive
+    chain run came to write 513 progress lines all stamped 17:09:48 - the moment
+    it died. Flushing costs one syscall per request, against a nine-second wait
+    between requests.
+    """
+    print(line, flush=True)
+
+
 class ArchiveFetcher:
     def __init__(
         self,
@@ -224,7 +238,7 @@ class ArchiveFetcher:
         sleep: Callable[[float], None] = time.sleep,
         monotonic: Callable[[], float] = time.monotonic,
         utc_now: Callable[[], datetime] | None = None,
-        progress: Callable[[str], None] = print,
+        progress: Callable[[str], None] = write_progress_line,
         request_interval_seconds: float = 9.0,
         timeout_seconds: float = 30.0,
         max_retries: int = 6,

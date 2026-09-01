@@ -330,6 +330,11 @@ branch discipline here from tidiness into a safety rule.
 
 - **Name the branch for the work**, not for the person or the day:
   `fix/possession-residual`, `docs/auth0-configuration`.
+- **Batch small, related changes into the active milestone branch and one
+  coherent pull request.** Do not open a pull request merely to transport each
+  tiny edit. This does not permit direct pushes to `master`, unrelated scope in
+  the same branch, or an unreviewably large branch; it moves the review and
+  deploy checkpoint to a meaningful unit of work.
 - **Merge deliberately, and pick the moment.** Never merge while somebody is
   testing the live server, mid-settlement, or during a live-season window.
   Ask before merging if you cannot see who is connected.
