@@ -6,6 +6,8 @@ import re
 import tomllib
 from pathlib import Path
 
+import yaml
+
 
 def _load_ci_test_command() -> str:
     ci_path = Path(".github") / "workflows" / "ci.yml"
@@ -139,4 +141,34 @@ def test_the_migration_gate_seeds_every_role_the_migrations_expect() -> None:
         "The migration gate's container will not have these roles, so the cycle "
         f"aborts partway through: {missing}. Seed them in "
         ".github/workflows/migration-gate.yml."
+    )
+
+
+def test_pydantic_and_pydantic_core_are_proposed_as_one_dependabot_group() -> None:
+    """`pydantic` pins the exact `pydantic-core` it works with, so a lone bump cannot resolve.
+
+    Dependabot opened that unresolvable pull request once per pydantic release
+    until the two were grouped. The remedy was promised in the comment closing
+    pull request #30 and written down nowhere else, which is why it survived
+    for weeks as a thing everybody had agreed to and nobody had done. This test
+    is the record.
+
+    It checks that both names sit in one group, not which group. Renaming the
+    group is somebody's prerogative; splitting the pair is the mistake.
+    """
+    config = yaml.safe_load(Path(".github/dependabot.yml").read_text(encoding="utf-8"))
+
+    pip_updates = [entry for entry in config["updates"] if entry["package-ecosystem"] == "pip"]
+    assert pip_updates, "dependabot.yml no longer configures the pip ecosystem"
+
+    grouped_together = [
+        name
+        for entry in pip_updates
+        for name, group in entry.get("groups", {}).items()
+        if {"pydantic", "pydantic-core"} <= set(group.get("patterns", []))
+    ]
+    assert grouped_together, (
+        "pydantic and pydantic-core are not in one dependabot group. Bumped "
+        "separately they cannot resolve, and the same dead pull request returns "
+        "every pydantic release."
     )
