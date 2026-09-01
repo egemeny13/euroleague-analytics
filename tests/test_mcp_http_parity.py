@@ -21,7 +21,7 @@ from euroleague.mcp.http_app import (
 )
 from euroleague.mcp.tools import TOOL_NAMES, build_registry
 
-EXPECTED_TOOL_LIST_FINGERPRINT = "8f8d090aa8f9c592dba84077aa67cb76b839ec8aae9af666681417a05885ec39"
+EXPECTED_TOOL_LIST_FINGERPRINT = "cc41be9cf4a1186fb60f19eef27a1c802ffe83de311bda9da5bde695e06e45c0"
 
 
 def _registry() -> dict:
@@ -44,11 +44,28 @@ def test_every_published_tool_is_marked_read_only() -> None:
         assert tool["annotations"]["readOnlyHint"] is True, tool["name"]
 
 
+def test_every_published_tool_has_explicit_standard_safety_annotations() -> None:
+    for tool in published_tools(_registry()):
+        assert tool["annotations"] == {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "openWorldHint": False,
+        }, tool["name"]
+
+
+def test_every_published_tool_has_an_output_schema() -> None:
+    for tool in published_tools(_registry()):
+        assert tool["outputSchema"]["type"] == "object", tool["name"]
+
+
 def test_every_sdk_tool_is_marked_read_only() -> None:
     """The annotation must survive conversion into the SDK's own objects."""
     for tool in sdk_tools(_registry()):
         assert tool.annotations is not None, tool.name
         assert tool.annotations.read_only_hint is True, tool.name
+        assert tool.annotations.destructive_hint is False, tool.name
+        assert tool.annotations.open_world_hint is False, tool.name
+        assert tool.output_schema is not None, tool.name
 
 
 def test_the_sdk_wire_shape_equals_the_stdio_wire_shape() -> None:
@@ -97,6 +114,19 @@ def test_input_schemas_are_carried_across_verbatim() -> None:
     by_name = {tool.name: tool for tool in sdk_tools(registry)}
     for name, tool in registry.items():
         assert by_name[name].input_schema == tool.input_schema
+
+
+def test_output_schemas_are_carried_across_verbatim() -> None:
+    registry = _registry()
+    by_name = {tool.name: tool for tool in sdk_tools(registry)}
+    for name, tool in registry.items():
+        assert by_name[name].output_schema == tool.output_schema
+
+
+def test_the_portable_registry_contains_no_openai_specific_metadata() -> None:
+    for tool in published_tools(_registry()):
+        assert "_meta" not in tool
+        assert not any(key.startswith("openai/") for key in tool)
 
 
 @pytest.mark.parametrize("name", TOOL_NAMES)

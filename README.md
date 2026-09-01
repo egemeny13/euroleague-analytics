@@ -62,10 +62,21 @@ The server exposes 11 read-only tools designed specifically for LLMs. Every resp
 
 ---
 
-## 4. Connecting to Claude Desktop & AI Clients
+## 4. Generic MCP Client Setup
 
-### Option A: Hosted Cloud Endpoint (Recommended)
-Add the hosted server to your `claude_desktop_config.json`:
+The server remains a standard MCP server. The hosted and local transports publish the
+same 11 tools, input schemas, output schemas, and safety annotations. No ChatGPT-specific
+metadata is present in the tool registry.
+
+### Hosted Streamable HTTP (recommended)
+
+Use this endpoint in any MCP client that supports remote Streamable HTTP:
+
+```text
+https://euroleague-analytics-mcp.fly.dev/mcp
+```
+
+For clients that use a JSON MCP configuration, the shape is:
 
 ```json
 {
@@ -77,7 +88,11 @@ Add the hosted server to your `claude_desktop_config.json`:
 }
 ```
 
-### Option B: Local stdio Server
+The hosted endpoint uses OAuth. The client should follow the authorization discovery
+advertised by the server.
+
+### Local stdio
+
 Clone the repository, configure your PostgreSQL connection string in `.env`, and point Claude Desktop to the local script:
 
 ```json
@@ -91,11 +106,54 @@ Clone the repository, configure your PostgreSQL connection string in `.env`, and
 }
 ```
 
-For Cursor, Windsurf, or custom Python clients, refer to the [Support & Connection Guide](https://egemenyucelen.me/support.html).
+This stdio configuration is suitable for Claude Desktop and other local MCP clients.
+Cursor, Windsurf, Gemini/Antigravity, Codex, and custom MCP clients can use either
+transport when they support it. Client-specific configuration screens differ, but the
+server URL, tool names, and contracts do not.
+
+For troubleshooting, see the [Support & Connection Guide](https://egemenyucelen.me/support.html).
+
+## 5. ChatGPT Setup
+
+ChatGPT uses the same hosted MCP endpoint. There is no separate ChatGPT API and no fork
+of the tool registry.
+
+1. In ChatGPT, open **Settings → Security and login** and enable **Developer mode**.
+2. Open [ChatGPT Plugins](https://chatgpt.com/#settings/Connectors/Advanced).
+3. Add a new MCP connection and enter
+   `https://euroleague-analytics-mcp.fly.dev/mcp` as the public Streamable HTTP URL.
+4. Complete the OAuth sign-in.
+5. Review the discovered 11 tools and start a new conversation with the connection enabled.
+
+Developer mode availability can depend on the ChatGPT account and workspace policy. The
+current official flow is documented in OpenAI's
+[Connect and test your plugin](https://developers.openai.com/plugins/deploy/connect-chatgpt)
+guide.
+
+### OpenAI public directory submission
+
+OpenAI's current documentation redirects the former Apps SDK/App Directory material to
+the Plugins documentation. An MCP-only submission is supported and custom UI is optional.
+This repository therefore keeps the integration deliberately thin:
+
+- all three standard safety annotations are explicit on every tool;
+- every structured result is described by the existing shared response-envelope schema;
+- the portable registry contains no `openai/*` fields or ChatGPT-only `_meta` values;
+- `OPENAI_APPS_CHALLENGE_TOKEN` optionally exposes the exact domain-verification response
+  at `/.well-known/openai-apps-challenge`; when unset, that route does not exist;
+- no custom UI resource is registered because all workflows are complete through normal
+  MCP tool results.
+
+Before submission, the publisher must still complete the external portal work: identity
+verification, listing copy and assets, privacy/terms/support URLs, five positive and three
+negative test cases, country availability, OAuth details, a live Scan Tools run, and domain
+verification. See OpenAI's
+[submission guide](https://developers.openai.com/plugins/deploy/submission) and
+[MCP review requirements](https://developers.openai.com/plugins/deploy/app-review).
 
 ---
 
-## 5. Architecture
+## 6. Architecture
 
 ```
                                   live.euroleague.net API
@@ -122,7 +180,7 @@ For Cursor, Windsurf, or custom Python clients, refer to the [Support & Connecti
 
 ---
 
-## 6. Development & Testing
+## 7. Development & Testing
 
 Python &gt;= 3.14 is required.
 
@@ -142,7 +200,7 @@ python -m venv .venv
 
 ---
 
-## 7. Dual-Path Evaluation Suite
+## 8. Dual-Path Evaluation Suite
 
 [`evaluation.xml`](evaluation.xml) contains 10 complex, realistic questions designed to test LLM retrieval and reasoning over basketball data.
 
@@ -154,7 +212,7 @@ Both paths must agree with the published `<expected_answer>`.
 
 ---
 
-## 8. Links & Documentation
+## 9. Links & Documentation
 
 - **Landing Website**: [egemenyucelen.me](https://egemenyucelen.me)
 - **Privacy Policy**: [egemenyucelen.me/privacy.html](https://egemenyucelen.me/privacy.html)
@@ -165,6 +223,6 @@ Both paths must agree with the published `<expected_answer>`.
 
 ---
 
-## 9. License
+## 10. License
 
 Open source under the [MIT License](LICENSE).

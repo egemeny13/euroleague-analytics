@@ -79,6 +79,8 @@ def test_tools_list_returns_the_registry():
     tools = reply["result"]["tools"]
     assert [tool["name"] for tool in tools] == ["el_echo"]
     assert tools[0]["annotations"]["readOnlyHint"] is True
+    assert tools[0]["annotations"]["destructiveHint"] is False
+    assert tools[0]["annotations"]["openWorldHint"] is False
 
 
 def test_tools_call_wraps_the_handler_result_as_text_and_structured_content():

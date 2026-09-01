@@ -1,4 +1,4 @@
-"""The ten tool definitions.
+"""The eleven tool definitions.
 
 Descriptions are read by the model at call time, so they are written as prompts
 rather than as code comments: what the tool answers, what the numbers mean, and
@@ -12,6 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from euroleague.mcp import queries
+from euroleague.mcp.envelope import RESPONSE_OUTPUT_SCHEMA
 from euroleague.mcp.protocol import Tool
 
 TOOL_NAMES: tuple[str, ...] = (
@@ -146,6 +147,7 @@ def build_registry(
             title=title,
             description=description,
             input_schema=input_schema,
+            output_schema=RESPONSE_OUTPUT_SCHEMA,
             handler=bind(name, query, input_schema),
         )
 

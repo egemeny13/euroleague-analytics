@@ -1,4 +1,4 @@
-"""The HTTP transport: the same ten tools, over StreamableHTTP.
+"""The HTTP transport: the same eleven tools, over StreamableHTTP.
 
 THIS MODULE CONTAINS NO SQL AND DEFINES NO TOOL. It adapts the registry that
 `tools.py` already builds. If a query or a tool description ever appears here,
@@ -438,8 +438,11 @@ def sdk_tools(registry: Mapping[str, Tool]) -> list[types.Tool]:
                 title=wire.get("title") or None,
                 description=wire["description"],
                 inputSchema=wire["inputSchema"],
+                outputSchema=wire.get("outputSchema"),
                 annotations=types.ToolAnnotations(
                     readOnlyHint=annotations.get("readOnlyHint"),
+                    destructiveHint=annotations.get("destructiveHint"),
+                    openWorldHint=annotations.get("openWorldHint"),
                 ),
             )
         )
@@ -469,8 +472,9 @@ def build_app(
     allowed_hosts: list[str] | None = None,
     cap: RequestCap | None = None,
     row_budget: Any = None,
+    custom_routes: list[Route] | None = None,
 ) -> Any:
-    """Assemble the ASGI application serving the ten tools over StreamableHTTP.
+    """Assemble the ASGI application serving the eleven tools over StreamableHTTP.
 
     `allowed_hosts` is not optional in practice. The SDK enables DNS-rebinding
     protection by default and allows no host, so a deployed server that does not
@@ -570,7 +574,10 @@ def build_app(
     return server.streamable_http_app(
         auth=auth_settings,
         token_verifier=verifier,
-        custom_starlette_routes=[Route("/healthz", healthz, methods=["GET"])],
+        custom_starlette_routes=[
+            Route("/healthz", healthz, methods=["GET"]),
+            *(custom_routes or []),
+        ],
         transport_security=_transport_security(allowed_hosts),
     )
 

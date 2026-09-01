@@ -40,6 +40,8 @@ is binding — the decision is only approved with it.
 | 25 | Structural possession residuals | Approved 2026-08-26 — keep the conservative gate; no structural adjustment |
 | 26 | An HTTP transport alongside stdio | Approved 2026-08-27 — hosted and OAuth-authenticated; stdio unchanged and still the local default |
 | 48 | Public opening boundaries and R-9 execution | Approved 2026-09-02 — baseline limits preserved; Auth0 invite-only action unlinked |
+| 49 | Flywheel skills | Removed and banned by owner request on 2026-09-02 |
+| 50 | ChatGPT/OpenAI directory compatibility | Standards-first MCP metadata plus an optional isolated submission route |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -2681,6 +2683,70 @@ The owner evaluated boundary tightening (proposals to lower limits to 20 calls/m
 
 **Action executed (R-9).**
 The `Invite-only access` post-login Auth0 Action was unlinked from the active Login trigger flow in the Auth0 dashboard on 2026-09-02, opening the hosted MCP server to public logins while preserving the Action in the Library for rapid rollback if needed.
+
+## 49. Flywheel skills are removed and may not be inferred or invoked
+
+The repository copies of `define-goal`, `dispatch`, `factory-doctor`,
+`goals-status`, `ideate`, `loop-architect`, `process-inbox`, and `show-me` are
+removed. The same user-level skills were moved out of the active Codex skill
+directory into a recoverable quarantine. They are not part of this project's
+workflow and must not be invoked.
+
+**Why.** Decision 38 made `define-goal` opt-in after its broad trigger replaced
+ordinary implementation requests with queue administration. On 2026-09-02 the
+owner explicitly strengthened that boundary from opt-in to removal for the
+whole flywheel suite.
+
+**Condition.** Restoring any of these skills requires a new explicit owner
+decision. Their removal does not affect Supabase or other domain-specific skills.
+
+**What this does not establish.** A running Codex session can retain a skill
+catalog captured before the files moved. The filesystem ban applies to new
+discovery; the explicit owner prohibition governs the current session.
+
+## 50. ChatGPT is a thin adapter over the same standards-first MCP server
+
+The existing eleven-tool MCP registry remains the single source of truth for
+stdio and Streamable HTTP. Tool names, input schemas, handlers, and the hosted
+`/mcp` endpoint are unchanged. Every tool now publishes the complete standard
+read-only annotation set (`readOnlyHint: true`, `destructiveHint: false`, and
+`openWorldHint: false`) and the existing shared response envelope as an
+`outputSchema`. HTTP and stdio must continue publishing byte-identical tool
+lists, enforced by the versioned registry fingerprint and parity tests.
+
+OpenAI submission support is isolated in `openai_submission.py`. When
+`OPENAI_APPS_CHALLENGE_TOKEN` is non-blank, the hosted composition serves its
+exact value as plain text from `/.well-known/openai-apps-challenge`. When the
+variable is absent or blank, the route does not exist. The core registry
+contains no `openai/*` metadata and no ChatGPT-only `_meta` fields.
+
+**Why no UI.** OpenAI's current documentation says an MCP-only plugin is valid
+and custom UI is optional. It also directs new UI to the open MCP Apps standard
+before ChatGPT extensions. The eleven tools already return model-readable text
+and structured content sufficient to complete their workflows. A UI would add
+a frontend dependency tree, CSP, cache-versioned resources, and another review
+surface without being required for compatibility.
+
+**Why this is not vendor lock-in.** The annotations and `outputSchema` are MCP
+fields and reach every client equally. The only OpenAI-specific behavior is an
+optional well-known verification response outside `/mcp`; it neither changes
+initialization nor participates in tool calls.
+
+**Evidence.** Official OpenAI documentation read on 2026-09-02:
+
+- `https://developers.openai.com/plugins/build/mcp-server`
+- `https://developers.openai.com/plugins/build/chatgpt-ui`
+- `https://developers.openai.com/plugins/deploy/submission`
+- `https://developers.openai.com/plugins/deploy/app-review`
+
+**What is not established.** Local tests do not execute OpenAI's Scan Tools,
+complete domain verification, exercise the real ChatGPT OAuth flow, or obtain a
+directory review. Those are attended post-deployment checks. The optional route
+is readiness for a token supplied by the portal, not proof that a token was
+issued or accepted.
+
+**Approved.** The owner requested an MCP-first, platform-agnostic core with
+ChatGPT implemented only as a separate adapter on 2026-09-02.
 
 ## Rules to add to the project instruction file
 
