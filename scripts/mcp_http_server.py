@@ -10,6 +10,13 @@ Configuration, all required:
     MCP_INTROSPECTION_URL    the provider's token introspection endpoint
     MCP_CLIENT_ID            this server's client id at the provider
     MCP_CLIENT_SECRET        this server's client secret at the provider
+
+Optional:
+    MCP_OAUTH_PROXY_CLIENT_ID  the shared client id handed to URL-only clients.
+                               Set it and this server advertises itself as the
+                               authorization server and answers registration on
+                               the provider's behalf; leave it blank and those
+                               routes do not exist. See oauth_proxy.py.
 """
 
 from __future__ import annotations
@@ -41,6 +48,7 @@ from euroleague.mcp.http_app import (  # noqa: E402
 )
 from euroleague.mcp.identity import SERVER_INFO  # noqa: E402
 from euroleague.mcp.logging_setup import configure_logging  # noqa: E402
+from euroleague.mcp.oauth_proxy import oauth_proxy_routes  # noqa: E402
 from euroleague.mcp.openai_submission import openai_submission_routes  # noqa: E402
 from euroleague.mcp.pool import ConnectionPool  # noqa: E402
 from euroleague.mcp.ratelimit import RequestCap  # noqa: E402
@@ -67,7 +75,10 @@ def main() -> int:
         auth_settings=auth_settings,
         allowed_hosts=allowed_hosts,
         cap=RequestCap(),
-        custom_routes=openai_submission_routes(os.environ),
+        custom_routes=[
+            *oauth_proxy_routes(os.environ),
+            *openai_submission_routes(os.environ),
+        ],
     )
     logger.info("server_ready", extra={"host": server_host, "port": server_port})
     try:
