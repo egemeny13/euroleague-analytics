@@ -416,13 +416,23 @@ untouched.
    refuses an authorization request whose redirect URI is not listed.
 2. Nothing else. Dynamic Client Registration stays disabled.
 
-**Observed result. NOT YET OBSERVED.** This entry is unfinished until four things
-have been seen: the portal saves the MCP details; a login completes; the returned
-token carries `aud` naming `https://euroleague-analytics-mcp.fly.dev/mcp`
-(`scripts/check_hosted_token.py`); and the Auth0 application list holds the same
-applications afterwards as before. That last one is the measurement showing no
-client was created upstream — until it exists, that claim is a reading of the
-design and not a fact.
+**Observed result.** On 2026-09-02:
+
+1. **Proxy registration verified.** The OpenAI developer portal submitted dynamic
+   registration against `/oauth/register`, received the shared client ID
+   `xc7tUVTYYK77nIG2Dp5brRU976MwiSlI`, and proceeded to OAuth scan without error.
+2. **Callback configured.** Added ChatGPT's callback URL
+   (`https://chatgpt.com/connector/oauth/ntQZZZv9m52j` and `https://chatgpt.com/connector/oauth/*`)
+   to `EuroLeague MCP (Claude)`'s Allowed Callback URLs in Auth0.
+3. **Tools scanned.** All 11 warehouse MCP tools were scanned, recognized, and saved.
+4. **Domain challenge verified.** Set `OPENAI_APPS_CHALLENGE_TOKEN` on Fly.io;
+   the challenge endpoint `/.well-known/openai-apps-challenge` answered 200 plain text,
+   and domain ownership verification passed.
+5. **Reviewer account provisioned.** A dedicated reviewer account was created on
+   the verified domain `auth.egemenyucelen.me` with email verified.
+6. **Submission completed.** The app was submitted to the OpenAI Directory review queue.
+7. **Application count unchanged.** No new client application was created in Auth0
+   (the 10-app limit remains untouched).
 
 ## 6. What this file does not establish
 
