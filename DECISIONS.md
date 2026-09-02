@@ -2799,10 +2799,16 @@ this server's verifier requires a JWT naming this API.
 
 **What this gives up, stated rather than omitted.** Before this, connecting
 needed the URL *and* the client id. A URL-only client now gets the client id by
-asking, so that second gate is gone for any client that registers. The remaining
-controls are the provider's allowed-callback list, the post-login Action, and
-this server's audience and issuer checks - the same posture as the URL-only
-design of 2026-08-29, without its tenant cap.
+asking, so that second gate is gone for any client that registers.
+
+**Corrected on 2026-09-02, hours after this decision was written.** The first
+draft named "the post-login Action" among the remaining controls. It is not one:
+Decision 48 unlinked that Action from the Login trigger the same day, opening the
+server to public logins. Nobody is turned away at login now, so the honest list
+of what still stands is shorter than it read - the provider's allowed-callback
+list, this server's audience and issuer checks, and the rate and row budgets of
+Decision 48. Anyone who can sign in with the provider can reach the warehouse,
+which is what a public launch means and was already true before this shim.
 
 **What is not established.** No test here proves ChatGPT completes the flow.
 `tests/test_mcp_oauth_proxy.py` fixes the shape of the documents and the

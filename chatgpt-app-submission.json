@@ -1,0 +1,212 @@
+{
+  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app_info": {
+    "display_name": "EuroLeague Analytics",
+    "subtitle": "EuroLeague basketball stats",
+    "description": "Access validated EuroLeague and EuroCup basketball data including exact possession counts, four factors, five-man lineup on/off net ratings, and court shot charts.",
+    "category": "ENTERTAINMENT"
+  },
+  "tools": {
+    "el_describe_warehouse": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only retrieves loaded season coverage, game counts, date ranges, and data quality exclusion notes from the warehouse without modifying database state.",
+        "open_world_justification": "Does not interact with external third-party APIs or publish data to the public internet.",
+        "destructive_justification": "Does not delete records, overwrite stored data, or perform any destructive actions."
+      }
+    },
+    "el_find_games": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only searches and lists scheduled and completed games matching season, team, opponent, round, or date filters without altering records.",
+        "open_world_justification": "Does not send external network requests or modify publicly visible internet state.",
+        "destructive_justification": "Does not delete, overwrite, or mutate any game data or database records."
+      }
+    },
+    "el_get_boxscore": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only reads official player and team box scores and minutes reconstructions for a specified game without changing database state.",
+        "open_world_justification": "Does not communicate with outside services or publish data externally.",
+        "destructive_justification": "Does not delete, overwrite, or alter any player box score records."
+      }
+    },
+    "el_get_game": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only retrieves single-game box scores, Four Factors, exact possession counts, and offensive and defensive ratings without modifying stored data.",
+        "open_world_justification": "Does not interact with external systems or publish data to the open web.",
+        "destructive_justification": "Does not delete, overwrite, or mutate any game records or ratings."
+      }
+    },
+    "el_get_lineup_stats": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only queries five-man lineup possession counts, points scored and allowed, and net ratings without changing stored records.",
+        "open_world_justification": "Does not publish content or interact with outside networks or APIs.",
+        "destructive_justification": "Does not delete, overwrite, or alter any lineup data."
+      }
+    },
+    "el_get_play_by_play": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only fetches source-ordered play-by-play events with on-court lineups and score margins without altering the event log.",
+        "open_world_justification": "Does not connect to external third-party services or publish events online.",
+        "destructive_justification": "Does not delete, overwrite, or mutate any play-by-play records."
+      }
+    },
+    "el_get_player_on_off": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only computes team offensive, defensive, and net ratings with a specific player on versus off the court without mutating database state.",
+        "open_world_justification": "Does not perform external network calls or alter public web state.",
+        "destructive_justification": "Does not delete, overwrite, or modify any on-off performance metrics."
+      }
+    },
+    "el_get_player_stats": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only queries aggregated player totals, per-game statistics, and reconstructed minutes across a season without mutating state.",
+        "open_world_justification": "Does not transmit data to external services or alter public internet state.",
+        "destructive_justification": "Does not delete, overwrite, or modify player statistical data."
+      }
+    },
+    "el_get_possessions": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only reads reconstructed possession records and filtered clutch summaries without modifying database state.",
+        "open_world_justification": "Does not write to external systems or make outbound internet requests.",
+        "destructive_justification": "Does not delete or alter possession records or game data."
+      }
+    },
+    "el_get_shot_data": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only reads field goal and free throw attempt records with normalized court coordinates without modifying database tables.",
+        "open_world_justification": "Does not send external network traffic or update public third-party services.",
+        "destructive_justification": "Does not delete or overwrite any shot or coordinate data."
+      }
+    },
+    "el_get_team_stats": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only calculates and retrieves team season ratings, Four Factors, pace, and optional clutch metrics without writing to the database.",
+        "open_world_justification": "Does not make outbound network requests or modify external systems.",
+        "destructive_justification": "Does not delete or overwrite any team statistics or configuration."
+      }
+    }
+  },
+  "test_cases": [
+    {
+      "description": "Inspect available EuroLeague seasons and data coverage.",
+      "user_prompt": "Which EuroLeague seasons are available in the warehouse, and what data quality notes or exclusions exist?",
+      "file_attachment_urls": null,
+      "tools_triggered": "el_describe_warehouse",
+      "expected_output": "Returns a breakdown of loaded seasons with game counts, date ranges, completeness status, and data exclusions.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Retrieve team efficiency ratings and Four Factors for a season.",
+      "user_prompt": "What were Real Madrid's offensive rating, defensive rating, and Four Factors in the 2023-24 EuroLeague season (E2024)?",
+      "file_attachment_urls": null,
+      "tools_triggered": "el_get_team_stats",
+      "expected_output": "Returns Real Madrid's pace, offensive rating, defensive rating, and Four Factors per 100 possessions for season E2024.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Analyze 5-man lineup performance and net rating for a team.",
+      "user_prompt": "Show me Panathinaikos's most effective 5-man lineups in the 2023-24 season with at least 50 possessions.",
+      "file_attachment_urls": null,
+      "tools_triggered": "el_get_lineup_stats",
+      "expected_output": "Returns Panathinaikos's five-man lineups ranked by net rating per 100 possessions meeting the minimum possession threshold.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Measure a player's on-court versus off-court impact on team ratings.",
+      "user_prompt": "What was Mike James's on/off impact for Monaco in season E2024?",
+      "file_attachment_urls": null,
+      "tools_triggered": "el_get_player_on_off",
+      "expected_output": "Returns Monaco's offensive, defensive, and net ratings with Mike James on the floor compared to when he was on the bench.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Fetch field goal attempts with court coordinates for a team or player.",
+      "user_prompt": "Get the three-point shot attempts and court coordinates for Olympiacos in season E2024.",
+      "file_attachment_urls": null,
+      "tools_triggered": "el_get_shot_data",
+      "expected_output": "Returns three-point shot attempts with normalized half-court coordinates (coord_x, coord_y) and make/miss results.",
+      "expected_output_url": null
+    }
+  ],
+  "negative_test_cases": [
+    {
+      "description": "Do not trigger for NBA or non-EuroLeague basketball statistics requests.",
+      "user_prompt": "What were Nikola Jokic's playoff box scores and triple-double averages in the 2024 NBA Finals?",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because NBA statistics are outside its supported EuroLeague and EuroCup workflows.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not trigger for requests seeking raw broadcast video footage or optical player tracking data.",
+      "user_prompt": "Can you provide the 25fps optical player tracking coordinates and video replay clips for the EuroLeague championship game?",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because broadcast video footage and 25fps optical tracking data are explicitly out of scope.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not trigger for unrelated financial analysis or general programming tasks.",
+      "user_prompt": "Write a Python script to parse CSV files and calculate a 30-day moving average of stock prices.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because stock analysis and generic Python scripting are outside the app's scope.",
+      "expected_output_url": null
+    }
+  ]
+}
