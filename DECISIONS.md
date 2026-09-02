@@ -2748,6 +2748,71 @@ issued or accepted.
 **Approved.** The owner requested an MCP-first, platform-agnostic core with
 ChatGPT implemented only as a separate adapter on 2026-09-02.
 
+## 51. A URL-only client is served by a registration shim on this server, not by reopening registration at the provider
+
+**The problem, measured on 2026-09-02.** The OpenAI plugin submission portal
+refused to save the MCP details with:
+
+```
+Dynamic client registration failed: registration endpoint returned 400
+(Bad Request: dynamic client registration is disabled)
+```
+
+Three facts behind it, each checked rather than assumed:
+
+- `https://auth.egemenyucelen.me/.well-known/oauth-authorization-server`
+  advertises `registration_endpoint: https://auth.egemenyucelen.me/oidc/register`.
+- A `POST` to that endpoint answers **HTTP 400**. Registration was turned off on
+  2026-08-29, deliberately, and this decision does not reverse that.
+- `https://euroleague-analytics-mcp.fly.dev/.well-known/oauth-protected-resource/mcp`
+  names `https://auth.egemenyucelen.me` as the authorization server, so a client
+  reads the provider's document and stops there.
+
+ChatGPT accepts a server URL and offers no field for a client id. Claude Desktop
+works because the shared client id is typed into Advanced settings; ChatGPT has
+no equivalent, so registration is its only route to a client id.
+
+**The decision.** With `MCP_OAUTH_PROXY_CLIENT_ID` set, this server advertises
+itself as the authorization server and serves four routes in
+`src/euroleague/mcp/oauth_proxy.py`: RFC 8414 metadata at three spellings, a
+registration endpoint that answers every request with the one shared client id,
+and authorize and token endpoints that forward upstream. It mints no token,
+stores no client, and keeps no state. With the variable blank the routes do not
+exist and discovery points at the provider exactly as before.
+
+**What was rejected, and why.**
+
+- *Turn registration back on at the provider.* It is five minutes of work and it
+  restores both failures of 2026-08-29: every connector add creates a `tpc_`
+  application against a ten-application tenant cap, and "anyone can create an
+  application in your tenant without a token" becomes true again.
+- *An unauthenticated endpoint for ChatGPT.* The data is public, but the Action's
+  allowlist is currently the only control over who reaches the warehouse, and
+  this would remove it for one client.
+
+**Condition.** The shim forwards; it must never decide. If a future change makes
+it validate a credential, issue a token, or keep a client record, it has become
+an authorization server and needs a new decision. Two parameters are rewritten on
+the way through and no others: `client_id`, because the provider knows exactly
+one, and `audience`, because without it the provider issues an opaque token while
+this server's verifier requires a JWT naming this API.
+
+**What this gives up, stated rather than omitted.** Before this, connecting
+needed the URL *and* the client id. A URL-only client now gets the client id by
+asking, so that second gate is gone for any client that registers. The remaining
+controls are the provider's allowed-callback list, the post-login Action, and
+this server's audience and issuer checks - the same posture as the URL-only
+design of 2026-08-29, without its tenant cap.
+
+**What is not established.** No test here proves ChatGPT completes the flow.
+`tests/test_mcp_oauth_proxy.py` fixes the shape of the documents and the
+forwarding against a stubbed provider; it never contacts OpenAI or Auth0. The
+live checks are attended and belong in `docs/AUTH0_CONFIGURATION.md`: that the
+portal saves the MCP details, that a login completes, that the token returned
+carries `aud` naming `/mcp`, and that the application count at the provider is
+unchanged afterwards. Until that last one is observed, "no application is created
+upstream" is a reading of the design, not a measurement.
+
 ## Rules to add to the project instruction file
 
 ```

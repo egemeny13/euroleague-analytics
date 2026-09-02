@@ -44,6 +44,7 @@ from starlette.routing import Route
 
 from euroleague.mcp.identity import SERVER_INFO, SERVER_INSTRUCTIONS
 from euroleague.mcp.logging_setup import LOGGER_NAME
+from euroleague.mcp.oauth_proxy import PROXY_CLIENT_VARIABLE, proxy_base_url
 from euroleague.mcp.protocol import Tool
 from euroleague.mcp.ratelimit import RateLimitExceeded, RequestCap
 from euroleague.mcp.row_budget import DailyRowBudget, postgres_usage_store_from_env
@@ -329,8 +330,23 @@ def auth_from_env(values: Mapping[str, str]) -> tuple[TokenVerifier, AuthSetting
         issuer_url=values["MCP_ISSUER_URL"],
         required_scope=values.get("MCP_REQUIRED_SCOPE", DEFAULT_REQUIRED_SCOPE).strip() or None,
     )
+    # WHICH AUTHORIZATION SERVER THIS SERVER ADVERTISES, AND WHY IT IS NOT ALWAYS
+    # THE ONE THAT ISSUES THE TOKENS. The protected-resource document tells a
+    # client where to go to obtain a token. Normally that is the provider. The
+    # provider's own discovery document advertises a registration endpoint that
+    # answers 400, because registration was turned off deliberately, so a client
+    # that can only register - ChatGPT takes a URL and offers no client id field -
+    # never reaches a login screen. With MCP_OAUTH_PROXY_CLIENT_ID set, this
+    # server advertises itself and `oauth_proxy.py` answers registration with the
+    # shared client id before forwarding everything else upstream. The tokens
+    # still come from MCP_ISSUER_URL, which is why the verifier above is
+    # untouched: what a token must prove does not change. See DECISIONS.md item
+    # 51 and docs/AUTH0_CONFIGURATION.md.
+    advertised_issuer = values["MCP_ISSUER_URL"]
+    if values.get(PROXY_CLIENT_VARIABLE, "").strip():
+        advertised_issuer = proxy_base_url(values["MCP_RESOURCE_URL"])
     settings = AuthSettings(
-        issuer_url=values["MCP_ISSUER_URL"],  # type: ignore[arg-type]
+        issuer_url=advertised_issuer,  # type: ignore[arg-type]
         resource_server_url=values["MCP_RESOURCE_URL"],  # type: ignore[arg-type]
     )
     return verifier, settings

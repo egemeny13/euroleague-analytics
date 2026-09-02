@@ -173,3 +173,35 @@ def test_an_authenticated_http_server_builds_a_durable_row_budget_from_its_ident
     )
     assert build_app(_runner, allowed_hosts=[HOST], auth_settings=auth_settings) is not None
     assert seen
+
+
+AUTH_ENVIRONMENT = {
+    "MCP_ISSUER_URL": "https://issuer.example.com",
+    "MCP_RESOURCE_URL": "https://warehouse.example.com/mcp",
+    "MCP_INTROSPECTION_URL": "https://issuer.example.com/introspect",
+    "MCP_CLIENT_ID": "client-id",
+    "MCP_CLIENT_SECRET": "client-secret",
+    "MCP_USAGE_DATABASE_URL": "postgresql://el_usage_writer:writer-secret@example.com:5432/postgres",
+}
+
+
+def test_the_advertised_authorization_server_is_the_provider_by_default() -> None:
+    """With no registration shim configured, discovery points straight at the provider."""
+    _, auth_settings = auth_from_env(dict(AUTH_ENVIRONMENT))
+
+    assert str(auth_settings.issuer_url).rstrip("/") == "https://issuer.example.com"
+
+
+def test_the_advertised_authorization_server_becomes_this_server_when_the_shim_is_on() -> None:
+    """A URL-only client must be sent to our registration endpoint, not the provider's.
+
+    The provider's registration endpoint answers 400 by design. Advertising it is
+    what makes ChatGPT fail before a human sees a login screen.
+    """
+    verifier, auth_settings = auth_from_env(
+        dict(AUTH_ENVIRONMENT, MCP_OAUTH_PROXY_CLIENT_ID="shared-client-id")
+    )
+
+    assert str(auth_settings.issuer_url).rstrip("/") == "https://warehouse.example.com"
+    # The tokens still come from the provider, so the check on them must not move.
+    assert verifier.issuer_url == "https://issuer.example.com"

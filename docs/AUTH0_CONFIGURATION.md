@@ -377,6 +377,53 @@ the verified custom domain `https://auth.egemenyucelen.me` under the Production 
 The developer keys are retired and the single-tenant allowlist remains untouched.
 
 
+### 2026-09-02 — the OpenAI submission hit the closed registration endpoint
+
+**Symptom.** Saving the MCP details in the OpenAI plugin submission portal
+failed with:
+
+```
+MCP details save failed: Dynamic client registration failed: registration
+endpoint returned 400 (Bad Request: dynamic client registration is disabled)
+```
+
+**Cause, measured the same day rather than inferred.**
+
+```
+GET https://auth.egemenyucelen.me/.well-known/oauth-authorization-server
+  -> registration_endpoint: https://auth.egemenyucelen.me/oidc/register
+POST https://auth.egemenyucelen.me/oidc/register
+  -> HTTP 400
+GET https://euroleague-analytics-mcp.fly.dev/.well-known/oauth-protected-resource/mcp
+  -> authorization_servers: ["https://auth.egemenyucelen.me"]
+```
+
+Registration is off by the 2026-08-29 decision above, and the tenant still
+advertises the endpoint. ChatGPT offers no field for a client id, so unlike
+Claude Desktop it cannot be handed the shared one; registration is its only
+route to one. The connector therefore fails before anyone sees a login screen.
+
+**The fix chosen.** Decision 51. The MCP server advertises itself as the
+authorization server and answers registration with the existing shared client id,
+forwarding authorize and token upstream unchanged. The tenant setting stays off;
+no application is created by a connector add, so the ten-application cap is
+untouched.
+
+**What has to be configured at Auth0 for it to work.** The code does neither:
+
+1. Add ChatGPT's OAuth callback URL to the shared application's **Allowed
+   Callback URLs**. This is the control that survives the shim: the provider
+   refuses an authorization request whose redirect URI is not listed.
+2. Nothing else. Dynamic Client Registration stays disabled.
+
+**Observed result. NOT YET OBSERVED.** This entry is unfinished until four things
+have been seen: the portal saves the MCP details; a login completes; the returned
+token carries `aud` naming `https://euroleague-analytics-mcp.fly.dev/mcp`
+(`scripts/check_hosted_token.py`); and the Auth0 application list holds the same
+applications afterwards as before. That last one is the measurement showing no
+client was created upstream — until it exists, that claim is a reading of the
+design and not a fact.
+
 ## 6. What this file does not establish
 
 - **It is a record, not a verification.** Except where a line says "verified"
