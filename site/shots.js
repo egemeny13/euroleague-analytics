@@ -1,4 +1,4 @@
-/* The shot chart fills itself, then stops on the two shots that decided it.
+/* The shot chart fills itself, then stops on the shot that decided the game.
    Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md
 
    The coordinates are the league's own, in centimetres, and they are placed
@@ -13,27 +13,29 @@
    the baseline, and those stay: the drawing is widened to show them rather than
    the data being clipped to make the picture tidy.
 
-   The spotlight indices come from the data file. The sentences beside them live
-   in the page, so they can be translated with the rest of the page. */
+   The data file lists the game's notable shots; the page opens a card on the
+   last of them, which is the one that won it. The sentences in that card live
+   in the page, so they can be translated with the rest of the page. The card
+   opens once and then closes for good: a thing that keeps reappearing stops
+   being an event. */
 
 (function () {
   "use strict";
 
-  var STEP_MS = 24;        // between shots, once the section is on screen
-  var SETTLE_MS = 700;     // after the last shot, before the first spotlight
-  var SPOTLIGHT_MS = 3400; // how long each highlighted shot holds
-  var DOT_R = 21;          // centimetres on the court, not pixels on the screen
+  var STEP_MS = 24;      // between shots, once the section is on screen
+  var SETTLE_MS = 650;   // after the last shot, before the card opens
+  var CARD_MS = 5000;    // how long the card stays, then it closes for good
+  var DOT_R = 21;        // centimetres on the court, not pixels on the screen
 
   var court = document.getElementById("halfcourt");
   var marks = document.getElementById("shot-marks");
   var ring = document.getElementById("shot-spotlight");
   var counter = document.getElementById("shot-count");
-  var notes = document.getElementById("spotlights");
-  if (!court || !marks || !ring || !counter || !notes) return;
+  var card = document.getElementById("winner-card");
+  if (!court || !marks || !ring || !counter || !card) return;
 
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   var SVG_NS = "http://www.w3.org/2000/svg";
-  var dots = [];
 
   function place(shot) {
     var dot = document.createElementNS(SVG_NS, "circle");
@@ -42,59 +44,59 @@
     dot.setAttribute("r", DOT_R);
     dot.setAttribute("class", shot[2] ? "shot-made" : "shot-miss");
     marks.appendChild(dot);
-    dots.push(dot);
     return dot;
   }
 
-  function highlight(shot) {
-    ring.textContent = "";
+  /* The card is positioned from the shot's own coordinates, read back out of
+     the SVG viewBox, so it stays on the dot at any width. */
+  function positionCard(shot) {
+    var box = court.viewBox.baseVal;
+    var x = shot[0];
+    var y = 1000 - shot[1];   // the same mirror the drawing uses
+    card.style.left = (((x - box.x) / box.width) * 100).toFixed(3) + "%";
+    card.style.top = (((y - box.y) / box.height) * 100).toFixed(3) + "%";
+  }
+
+  function openCard(shot) {
+    positionCard(shot);
+
     var halo = document.createElementNS(SVG_NS, "circle");
     halo.setAttribute("cx", shot[0]);
     halo.setAttribute("cy", shot[1]);
-    halo.setAttribute("r", 62);
+    halo.setAttribute("r", 58);
     halo.setAttribute("class", "shot-halo");
     ring.appendChild(halo);
 
     var core = document.createElementNS(SVG_NS, "circle");
     core.setAttribute("cx", shot[0]);
     core.setAttribute("cy", shot[1]);
-    core.setAttribute("r", DOT_R + 3);
-    core.setAttribute("class", shot[2] ? "shot-made" : "shot-miss");
+    core.setAttribute("r", DOT_R + 4);
+    core.setAttribute("class", "shot-made");
     ring.appendChild(core);
-  }
 
-  function runSpotlights(shots, order) {
-    var step = 0;
-    (function next() {
-      if (step >= order.length) {
-        marks.classList.remove("is-dimmed");
-        ring.textContent = "";
-        Array.prototype.forEach.call(notes.children, function (item) {
-          item.classList.remove("is-active");
-        });
-        return;
-      }
-      var index = order[step];
-      var shot = shots[index];
-      if (shot) {
-        marks.classList.add("is-dimmed");
-        highlight(shot);
-        Array.prototype.forEach.call(notes.children, function (item, position) {
-          item.classList.toggle("is-active", position === step);
-        });
-      }
-      step += 1;
-      window.setTimeout(next, SPOTLIGHT_MS);
-    })();
+    marks.classList.add("is-dimmed");
+    card.hidden = false;
+    /* Two frames, so the browser has a layout to animate from. */
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        card.classList.add("is-open");
+      });
+    });
+
+    window.setTimeout(function close() {
+      card.classList.remove("is-open");
+      marks.classList.remove("is-dimmed");
+      ring.textContent = "";
+      window.setTimeout(function () { card.hidden = true; }, 400);
+    }, CARD_MS);
   }
 
   function drawOneByOne(shots, spotlight) {
     var i = 0;
     (function step() {
       if (i >= shots.length) {
-        if (spotlight.length) window.setTimeout(function () {
-          runSpotlights(shots, spotlight);
-        }, SETTLE_MS);
+        var chosen = shots[spotlight[spotlight.length - 1]];
+        if (chosen) window.setTimeout(function () { openCard(chosen); }, SETTLE_MS);
         return;
       }
       var dot = place(shots[i]);

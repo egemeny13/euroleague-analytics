@@ -177,21 +177,10 @@
           <span class="tally-label">shots placed</span>
         </p>
 
-        <!-- Two shots, in the order they happened. Both were read out of the
-             play-by-play rather than remembered. -->
-        <ol class="spotlights" id="spotlights">
-          <li data-spot="0">
-            <b>Martin ties it at 74.</b>
-            Twenty seconds left, two points from under the rim, assisted by Sloukas.
-          </li>
-          <li data-spot="1">
-            <b>Micic wins it at the buzzer.</b>
-            A three from 7.9 metres, straight on. It is the last event in the game file.
-          </li>
-        </ol>
       </div>
 
       <div class="claim-figure">
+        <div class="courtwrap">
         <!-- Drawn to FIBA dimensions in centimetres, the same units the source
              coordinates arrive in, so a shot lands where the league recorded it
              rather than where a hand-tuned transform puts it. -->
@@ -215,6 +204,27 @@
           <g id="shot-spotlight"></g>
           </g>
         </svg>
+
+        <!-- Opens once, over the shot it describes, five seconds after the
+             chart finishes filling. Its position is computed from that shot's
+             own coordinates, so it cannot drift away from the dot it points
+             at. Every fact in it was read out of the play-by-play. -->
+        <div class="callout" id="winner-card" hidden>
+          <span class="callout-leader" aria-hidden="true"></span>
+          <div class="callout-body">
+            <span class="callout-flag">Game winner</span>
+            <span class="callout-who">Vasilije Micic</span>
+            <span class="callout-what">
+              A three from <span class="figure">7.9 m</span> with the clock at zero —
+              the last event in the game.
+            </span>
+            <span class="callout-score">
+              <i style="--club:#0B2A4A"></i>Anadolu Efes <b>77</b>
+              <i style="--club:#C8102E"></i>Olympiacos <b>74</b>
+            </span>
+          </div>
+        </div>
+        </div>
         <p class="figure-note" id="shots-caption">
           Every field goal attempt in the game, from the archived response and
           verified against its own checksum. Free throws are missing on purpose:
