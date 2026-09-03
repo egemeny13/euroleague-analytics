@@ -478,3 +478,84 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   .caret { animation: none; opacity: 0; }
 }
+
+/* ---------- a claim and its evidence ----------
+   Left column states one thing. Right column shows only that thing. Nothing in
+   a section argues two points; the last attempt did and could not be read. */
+
+.claim {
+  padding: clamp(4rem, 10vw, 8.5rem) var(--gutter);
+  border-top: 1px solid var(--hairline);
+}
+
+.claim-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: clamp(2.5rem, 6vw, 5.5rem);
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.claim h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 3.4vw, 2.9rem);
+  line-height: 1.08;
+  letter-spacing: -0.033em;
+  max-width: 15ch;
+}
+
+.claim p {
+  margin: 1rem 0 0;
+  max-width: 38ch;
+  color: var(--ink-soft);
+}
+
+.tally {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: 1.9rem;
+}
+
+.tally-figure {
+  font-family: var(--figures);
+  font-weight: 500;
+  font-size: clamp(2rem, 3.6vw, 2.9rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--ball);
+  line-height: 1;
+}
+
+.tally-label {
+  font-size: 0.9rem;
+  color: var(--ink-faint);
+}
+
+.halfcourt {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Made shots are filled, misses are open. The only two states there are. */
+.shot-made { fill: var(--ball); fill-opacity: 0.88; }
+.shot-miss { fill: none; stroke: var(--ink-faint); stroke-width: 6; stroke-opacity: 0.5; }
+
+.figure-note {
+  margin: 1.25rem 0 0;
+  max-width: 60ch;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 860px) {
+  .claim-inner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .claim h2, .claim p { max-width: none; }
+}

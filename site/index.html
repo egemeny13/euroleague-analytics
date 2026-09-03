@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EuroLeague Analytics — European basketball for your AI assistant</title>
 <meta name="description" content="Connect EuroLeague play-by-play data to Claude, ChatGPT or Gemini and ask in your own words. Exact possessions, five-man lineups and shot locations, reconstructed from the play-by-play.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;600;700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,7 +14,7 @@
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="topbar">
-  <a class="wordmark" href="/">
+  <a class="wordmark" href="index.html">
     <span class="wordmark-mark" aria-hidden="true"></span>
     EuroLeague Analytics
   </a>
@@ -73,12 +71,14 @@
                Both the question and the answer hold their space from the first
                paint, so the window is a fixed object and the page underneath it
                never moves. -->
-          <div class="window-body" id="thread">
+          <div class="window-body" id="thread" data-question="Fenerbahçe'nin en iyi beşlisi hangisi?">
             <div class="from-you">
               <!-- The hidden copy reserves the bubble's final size, so the
-                   question types inside a bubble that never resizes. -->
+                   question types inside a bubble that never resizes. It is
+                   also where the question text lives: the script reads it from
+                   the markup rather than holding a sentence of its own. -->
               <p class="bubble-user">
-                <span class="ask-ghost" aria-hidden="true">Which five-man lineup wins games for Fenerbahce?</span>
+                <span class="ask-ghost" aria-hidden="true">Fenerbahçe'nin en iyi beşlisi hangisi?</span>
                 <span class="ask-typed" id="ask"></span>
               </p>
             </div>
@@ -112,8 +112,56 @@
     </div>
   </section>
 
+  <section class="claim" id="shots">
+    <div class="claim-inner">
+      <div class="claim-copy">
+        <h2>We know where every shot was taken.</h2>
+        <p>
+          Not a zone, not an estimate from a box score — the coordinate the
+          league recorded, for every attempt in the game.
+        </p>
+        <p class="tally">
+          <span class="tally-figure" id="shot-count">0</span>
+          <span class="tally-label">shots placed</span>
+        </p>
+      </div>
+
+      <div class="claim-figure">
+        <!-- Drawn to FIBA dimensions in centimetres, the same units the source
+             coordinates arrive in, so a shot lands where the league recorded it
+             rather than where a hand-tuned transform puts it. -->
+        <svg class="halfcourt" id="halfcourt" viewBox="-800 -160 1600 1260" aria-labelledby="shots-caption">
+          <!-- The source counts y upward from the baseline; a screen counts it
+               downward. One mirror on the whole drawing reconciles the two, so
+               the court and the shots stay in the source's own units and no
+               per-shot arithmetic can drift from the lines behind it. -->
+          <g transform="translate(0, 1000) scale(1, -1)">
+          <g fill="none" stroke="var(--hairline)" stroke-width="7">
+            <path d="M-750 0 H750"/>
+            <path d="M-750 0 V1100 M750 0 V1100"/>
+            <rect x="-245" y="0" width="490" height="580"/>
+            <circle cx="0" cy="580" r="180"/>
+            <path d="M-90 120 H90"/>
+            <circle cx="0" cy="157" r="22"/>
+            <path d="M-660 0 V299 M660 0 V299"/>
+            <path d="M-660 299 A675 675 0 0 0 660 299"/>
+          </g>
+          <g id="shot-marks"></g>
+          </g>
+        </svg>
+        <p class="figure-note" id="shots-caption">
+          One game, every field goal attempt. Free throws are missing on purpose:
+          they carry no location, only a placeholder value. The half court is
+          attack-relative, so the right side is the right of that team's own
+          attack rather than a corner of an arena.
+        </p>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <script src="hero.js" defer></script>
+<script src="shots.js" defer></script>
 </body>
 </html>

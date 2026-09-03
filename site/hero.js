@@ -33,11 +33,6 @@
     { name: "Gemini",  initial: "G",  tint: "#3B6FE0" }
   ];
 
-  /* Temporarily English. The design asks this in Turkish, to show that the
-     visitor can ask in their own language, but tests/test_english_only.py
-     fails on Turkish characters in any tracked file and that rule has not been
-     amended yet. See section 3 of the design record. */
-  var QUESTION = "Which five-man lineup wins games for Fenerbahce?";
   var TYPE_MS = 30;      // per character
   var HOLD_MS = 420;     // after the question, before the tool call
   var READ_MS = 4200;    // how long the finished answer stays before the next client
@@ -48,6 +43,12 @@
   var avatar = document.getElementById("app-avatar");
   var thread = document.getElementById("thread");
   if (!ask || !reply || !appName || !avatar || !thread) return;
+
+  /* The question is read from the markup, never held here. Copy belongs to the
+     page so it can be translated with the page; Decision 53 exempts pages from
+     the English-only scan and deliberately does not exempt this file. */
+  var QUESTION = thread.getAttribute("data-question") || "";
+  if (!QUESTION) return;
 
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   var index = 0;

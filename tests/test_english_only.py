@@ -92,8 +92,30 @@ _ENCODED_CONTROL_SAMPLE = (
 TURKISH_CONTROL_SAMPLE = base64.b64decode(_ENCODED_CONTROL_SAMPLE).decode("utf-8")
 
 
+def is_visitor_facing_page(rel_path: str) -> bool:
+    """True for the public website's pages, which carry product copy, not code.
+
+    `CLAUDE.md` requires English for code, comments, variable names, commit
+    messages, documentation, tool descriptions and test names. Website copy is
+    none of those: it is the text a visitor reads, and the launch design
+    (`docs/superpowers/specs/2026-09-04-launch-website-design.md`) has the site
+    served in Turkish to a Turkish reader. Decision 53 records the exemption.
+
+    It is deliberately narrow. Only `.html` pages under `site/` are exempt, and
+    only because those files hold the sentences a visitor reads. `site/*.js`
+    and `site/*.css` are code and stay English, comments included, so any copy
+    the scripts need must live in the page's markup rather than in a string
+    inside the script.
+    """
+    normalized = rel_path.replace("\\", "/")
+    return normalized.startswith("site/") and normalized.endswith(".html")
+
+
 def find_turkish_violations(text: str, rel_path: str = "") -> list[tuple[int, str, str]]:
     """Scan text for Turkish characters or words, returning (line_no, reason, line)."""
+    if is_visitor_facing_page(rel_path):
+        return []
+
     violations: list[tuple[int, str, str]] = []
     lines = text.splitlines()
 
@@ -175,6 +197,25 @@ def test_detector_would_fire_on_turkish_in_self_or_goal_file() -> None:
         fake_turkish_line, rel_path="docs/goals/028-english-only-guard.md"
     )
     assert len(violations_goal) > 0
+
+
+def test_the_website_exemption_covers_pages_and_nothing_else() -> None:
+    """Break caught: the site exemption widens until the English-only rule is gone.
+
+    Turkish copy is allowed in the pages a visitor reads and nowhere else. The
+    scripts and stylesheets that render those pages are code, so a Turkish
+    string placed in one of them - the easy accident, since a script is where a
+    developer reaches for a sentence - must still fail.
+    """
+    turkish_line = base64.b64decode(b"YnUgc2F0xLFyIHTDvHJrxYdlZGly").decode("utf-8")
+
+    assert find_turkish_violations(turkish_line, rel_path="site/index.html") == []
+    assert find_turkish_violations(turkish_line, rel_path="site/tr/index.html") == []
+
+    for code_path in ("site/hero.js", "site/style.css", "site/sw.js", "docs/LAUNCH_COPY.md"):
+        assert find_turkish_violations(turkish_line, rel_path=code_path), (
+            f"{code_path} is code, not visitor-facing copy, and must stay English"
+        )
 
 
 def test_all_tracked_files_are_english_only() -> None:

@@ -2872,6 +2872,46 @@ would now stop cleanly on an empty body instead of crashing.
 immutable archive only. The warehouse holds E2024, E2025 and the filling E2026;
 loading the rest is R-12, and it waits on the paid architecture.
 
+## 53. Website pages may carry Turkish; everything else stays English
+
+**The rule.** `CLAUDE.md` requires English for "all code, comments, variable
+names, commit messages, documentation, MCP tool descriptions, and test names.
+No exceptions." `tests/test_english_only.py` enforces it by scanning every
+tracked file for Turkish characters and words.
+
+**What it did not contemplate.** Product copy. The launch design
+(`docs/superpowers/specs/2026-09-04-launch-website-design.md`) has the site
+served in Turkish to a Turkish reader, and the hero's demo question asked in
+Turkish to show that a visitor can ask in their own language. Neither is code,
+a comment, a variable name, a commit message, documentation, a tool description
+or a test name. The rule as written still forbade them, because the test scans
+files rather than categories.
+
+**The decision, taken by the owner on 2026-09-04.** `.html` files under `site/`
+are exempt from the Turkish scan. Nothing else is.
+
+**The exemption is narrow on purpose, and the narrowness is the decision.**
+`site/*.js` and `site/*.css` are code and stay English, comments included. The
+consequence is deliberate: copy a script needs cannot live in a string inside
+the script, so `site/hero.js` reads the demo question from a `data-question`
+attribute in the markup. That is also the better arrangement — the sentence sits
+with the page it belongs to and travels with the translation, instead of hiding
+in a script the translator never opens.
+
+`test_the_website_exemption_covers_pages_and_nothing_else` pins both halves: a
+Turkish line in `site/index.html` and `site/tr/index.html` passes, and the same
+line in `site/hero.js`, `site/style.css` or a document still fails.
+
+**What was rejected.** Dropping the Turkish site. It would have reversed two
+decisions the owner took in the same session — an English-only site, and a site
+that greets a Turkish reader in Turkish — to preserve the wording of a rule
+whose reason does not reach product copy.
+
+**What this does not settle.** How the Turkish page is reached. The intent is
+to detect the browser's language and redirect to `/tr/`, keeping a small link
+back so a visitor is never trapped in a language they did not choose. Neither
+the page nor the redirect exists yet.
+
 ## Rules to add to the project instruction file
 
 ```

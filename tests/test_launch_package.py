@@ -180,8 +180,22 @@ def test_external_links_use_https() -> None:
                 raise AssertionError(f"In {filename}: insecure HTTP link found: '{href}'")
 
 
-def test_zero_trackers_and_scripts() -> None:
-    """The static site must not include external tracking scripts, CDNs, or analytics."""
+def test_zero_trackers_and_third_party_scripts() -> None:
+    """The site must load no script it does not ship itself.
+
+    This used to forbid every `<script src>` outright, which matched the old
+    site because the old site had no behaviour. The rebuilt hero types a
+    conversation and the shot chart places real coordinates, so first-party
+    scripts now exist and that blanket ban would have to be deleted rather than
+    tightened - the worst outcome, because the property actually worth keeping
+    is not "no scripts" but "nothing from anybody else".
+
+    So the rule is now what its name always said: a script must be a relative
+    path inside `site/`. Any absolute URL, protocol-relative URL, or path that
+    climbs out of the directory fails, whatever host it names. A visitor's
+    browser talks to this site and to nothing else - no CDN, no analytics, no
+    font host, nobody who could log the visit.
+    """
     for filename in HTML_FILES:
         content = (SITE_DIR / filename).read_text(encoding="utf-8")
         for pattern in FORBIDDEN_TRACKER_PATTERNS:
@@ -192,9 +206,16 @@ def test_zero_trackers_and_scripts() -> None:
 
         parser = LinkExtractor()
         parser.feed(content)
-        # There should be zero external scripts
         for script_src in parser.scripts:
-            raise AssertionError(f"In {filename}: unexpected external script found: {script_src}")
+            assert not re.match(r"(?:[a-z][a-z0-9+.-]*:)?//", script_src, re.IGNORECASE), (
+                f"In {filename}: script is loaded from another origin: {script_src}"
+            )
+            assert not script_src.startswith("/") and ".." not in script_src, (
+                f"In {filename}: script escapes the site directory: {script_src}"
+            )
+            assert (SITE_DIR / script_src).is_file(), (
+                f"In {filename}: script '{script_src}' is not shipped with the site"
+            )
 
 
 def test_launch_documentation_files_exist() -> None:
