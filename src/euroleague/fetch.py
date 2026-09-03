@@ -613,6 +613,18 @@ class ArchiveFetcher:
                     elif observation.http_status != 200:
                         self._counters.failed_targets += 1
                         outcome = f"HTTP {observation.http_status}"
+                    elif not observation.body.strip():
+                        # A 200 carrying no body is not a response, whatever the
+                        # status line says. Measured 2026-09-03: E2006 and every
+                        # older season answer all three game endpoints with 200
+                        # and zero bytes, while their schedules still list played
+                        # games. Caching that writes an empty file the archive
+                        # then tries to read as JSON, which raised JSONDecodeError
+                        # and killed the run. Counted as failed rather than as a
+                        # permanent 404, because a 404 is remembered and never
+                        # retried and an empty body is not that certain.
+                        self._counters.failed_targets += 1
+                        outcome = "empty body"
                     else:
                         self._cache_successful_observation(observation, path, game_response=True)
                         outcome = "fetched"

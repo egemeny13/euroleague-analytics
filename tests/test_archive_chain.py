@@ -136,10 +136,23 @@ def archived_season(
 def test_the_scan_runs_newest_first_and_stops_before_the_archived_seasons() -> None:
     """Break caught: the chain reaches for E2022+ and refetches what is already done."""
     assert HISTORICAL_SEASONS[0] == "E2021"
-    assert HISTORICAL_SEASONS[-1] == "E2003"
-    assert len(HISTORICAL_SEASONS) == 19
+    assert HISTORICAL_SEASONS[-1] == "E2007"
+    assert len(HISTORICAL_SEASONS) == 15
     assert "E2022" not in HISTORICAL_SEASONS
     assert "E2026" not in HISTORICAL_SEASONS
+
+
+def test_the_scan_stops_above_the_measured_floor_of_the_api() -> None:
+    """Break caught: the chain fetches seasons the API serves as empty bodies forever.
+
+    Measured on 2026-09-03, five gamecodes each (1, 5, 50, 120, 200) against the
+    Boxscore endpoint: E2007 answered 12-13 KB every time, while E2006, E2005,
+    E2004 and E2003 answered HTTP 200 with zero bytes every time. Their schedules
+    still list played games - E2006 lists 230 - so a season below the floor looks
+    fetchable and can never be finished.
+    """
+    for season_code in ("E2006", "E2005", "E2004", "E2003"):
+        assert season_code not in HISTORICAL_SEASONS
 
 
 def test_a_season_with_no_rows_at_all_is_the_next_one() -> None:
@@ -223,7 +236,7 @@ def test_unplayed_games_are_never_owed_a_response() -> None:
 
 
 def test_the_next_season_is_the_newest_incomplete_one() -> None:
-    """Break caught: the chain restarts at E2003 and abandons a half-done E2020."""
+    """Break caught: the chain restarts at the oldest season and abandons a half-done E2020."""
     storage = StorageDouble()
     connection = IndexConnection(
         {
@@ -239,7 +252,7 @@ def test_the_next_season_is_the_newest_incomplete_one() -> None:
 
 
 def test_the_scan_stops_at_the_first_incomplete_season() -> None:
-    """Break caught: every remaining season is scanned, 19 schedule downloads a run."""
+    """Break caught: every remaining season is scanned, 15 schedule downloads a run."""
     storage = StorageDouble()
     connection = IndexConnection({"E2021": archived_season(storage, "E2021", played=(1,))})
 

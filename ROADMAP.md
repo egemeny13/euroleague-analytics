@@ -1123,6 +1123,22 @@ implementation, a deployment, publication of the thread, or video recording.
 Those begin as separately attended work. The writing and pre-production are the
 long pole, and they wait on no code.
 
+### The historical archive is finished, at E2007. 2026-09-03.
+
+The unattended chain archived **E2021 back to E2007** and stopped. It stopped
+because the API stops: E2006 and every older season answer all three game
+endpoints with HTTP 200 and zero bytes, measured at five gamecodes per season on
+2026-09-03, while E2007 answered 12-13 KB every time. Their schedules still list
+played games, which is why Decision 8 read history as reaching E2003.
+
+Three changes followed, recorded as Decision 52: the season list ends at E2007,
+an empty body is a failed target rather than something cached and archived, and
+the chain's schedule is removed per Decision 31. Nothing about the launch or the
+warehouse depends on the four unreachable seasons.
+
+**Archived is not loaded.** E2007-E2021 sit in the immutable archive; the
+warehouse still holds E2024, E2025 and the filling E2026. That gap is R-12.
+
 ### R-12: load the historical seasons into a warehouse. Rehearsed and measured 2026-08-31.
 
 **Archiving a season does not make it queryable.** The chain stores exact response

@@ -288,6 +288,62 @@ def test_404_is_recorded_and_the_next_game_continues(tmp_path) -> None:
     assert summary.failed_targets == 0
 
 
+def test_an_empty_200_body_is_a_failure_and_is_never_cached_or_archived(tmp_path) -> None:
+    """Break caught: a zero-byte 200 is archived and the JSON checksum step crashes.
+
+    Measured on 2026-09-03 against the live API: every game endpoint for E2006
+    and older answers HTTP 200 with zero bytes. The fetcher treated that as a
+    success, wrote the empty file and handed it to the archive callback, which
+    tried to canonicalise it as JSON and raised `JSONDecodeError`, killing the
+    whole season run. An empty body is a failed target: nothing on disk, nothing
+    archived, and the next target still gets its request.
+    """
+    write_schedule(
+        tmp_path,
+        [
+            {"gameCode": 7, "played": True},
+            {"gameCode": 8, "played": True},
+        ],
+    )
+    for gamecode in (7, 8):
+        for endpoint in ("Boxscore", "PlaybyPlay"):
+            path = tmp_path / "E2025" / endpoint / f"{gamecode}.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"already cached")
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, b""),
+            StubResponse(200, {}, b"next game"),
+        ]
+    )
+    archived: list[bytes] = []
+
+    summary = make_fetcher(
+        tmp_path,
+        transport,
+        successful_observation=lambda observation: archived.append(observation.body),
+    ).fetch_season("E2025")
+
+    assert not (tmp_path / "E2025" / "Points" / "7.json").exists()
+    assert (tmp_path / "E2025" / "Points" / "8.json").read_bytes() == b"next game"
+    assert archived == [b"next game"]
+    assert summary.failed_targets == 1
+    assert summary.permanent_missing == 0
+    assert summary.fetched_files == 1
+
+
+def test_a_whitespace_only_200_body_is_treated_the_same_as_an_empty_one(tmp_path) -> None:
+    """Break caught: the guard tests `body == b""` and a body of one newline slips past."""
+    write_one_missing_points_target(tmp_path)
+    transport = RecordingTransport([StubResponse(200, {}, b"\r\n  ")])
+
+    summary = make_fetcher(tmp_path, transport).fetch_season("E2025")
+
+    assert not (tmp_path / "E2025" / "Points" / "7.json").exists()
+    assert summary.failed_targets == 1
+    assert summary.fetched_files == 0
+
+
 def test_unplayed_schedule_entries_complete_without_game_requests(tmp_path) -> None:
     """An unplayed game is a normal skip: it costs the schedule check and nothing more."""
     write_schedule(tmp_path, [{"gameCode": 9, "played": False}])
