@@ -68,35 +68,80 @@
           </div>
 
           <!-- Nothing in here is ever added or removed while the page is open.
-               Both the question and the answer hold their space from the first
-               paint, so the window is a fixed object and the page underneath it
-               never moves. -->
-          <div class="window-body" id="thread" data-question="Fenerbahçe'nin en iyi beşlisi hangisi?">
-            <div class="from-you">
-              <!-- The hidden copy reserves the bubble's final size, so the
-                   question types inside a bubble that never resizes. It is
-                   also where the question text lives: the script reads it from
-                   the markup rather than holding a sentence of its own. -->
-              <p class="bubble-user">
-                <span class="ask-ghost" aria-hidden="true">Fenerbahçe'nin en iyi beşlisi hangisi?</span>
-                <span class="ask-typed" id="ask"></span>
-              </p>
+               The three exchanges share one grid cell and the questions and
+               answers hold their space from the first paint, so the window is a
+               fixed object and the page underneath it never moves.
+
+               Each assistant gets its own question. Seeing the same sentence
+               three times reads as a loop; three different ones read as a tool
+               that answers whatever you bring it. -->
+          <div class="window-body" id="thread">
+
+            <div class="exchange" data-question="Fenerbahçe'nin en iyi beşlisi hangisi?">
+              <div class="from-you">
+                <!-- The hidden copy reserves the bubble's final size, so the
+                     question types inside a bubble that never resizes. It also
+                     holds the sentence: the script reads the question from the
+                     markup rather than carrying copy of its own. -->
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Fenerbahçe'nin en iyi beşlisi hangisi?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">reading the play-by-play</span></div>
+              <div class="reply">
+                <p class="reply-line">Their most efficient five this season:</p>
+                <ul class="lineup">
+                  <li><span class="jersey" style="--club:#12305B">7</span>Hall</li>
+                  <li><span class="jersey" style="--club:#12305B">10</span>Wilbekin</li>
+                  <li><span class="jersey" style="--club:#12305B">33</span>Motley</li>
+                  <li><span class="jersey" style="--club:#12305B">1</span>Biberović</li>
+                  <li><span class="jersey" style="--club:#12305B">21</span>Sanli</li>
+                </ul>
+                <p class="verdict">
+                  <span class="figure">+21.6</span> net rating
+                  <span class="qualifier">over 184 possessions together</span>
+                </p>
+              </div>
             </div>
 
-            <div class="reply" id="reply">
-              <p class="reply-line">Their most efficient five this season:</p>
-              <ul class="lineup">
-                <li><span class="jersey" style="--club:#12305B">7</span>Hall</li>
-                <li><span class="jersey" style="--club:#12305B">10</span>Wilbekin</li>
-                <li><span class="jersey" style="--club:#12305B">33</span>Motley</li>
-                <li><span class="jersey" style="--club:#12305B">1</span>Biberović</li>
-                <li><span class="jersey" style="--club:#12305B">21</span>Sanli</li>
-              </ul>
-              <p class="verdict">
-                <span class="figure">+21.6</span> net rating
-                <span class="qualifier">over 184 possessions together</span>
-              </p>
+            <div class="exchange" data-question="Who takes over in the clutch for Real Madrid?">
+              <div class="from-you">
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Who takes over in the clutch for Real Madrid?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">counting clutch possessions</span></div>
+              <div class="reply">
+                <p class="reply-line">In the last five minutes, within five points:</p>
+                <ul class="lineup">
+                  <li><span class="jersey" style="--club:#5B2C6F">14</span>Campazzo</li>
+                </ul>
+                <p class="verdict">
+                  <span class="figure">31%</span> of their clutch possessions ended with him
+                  <span class="qualifier">across 96 such possessions this season</span>
+                </p>
+              </div>
             </div>
+
+            <div class="exchange" data-question="Wie schnell spielt Bayern in dieser Saison?">
+              <div class="from-you">
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Wie schnell spielt Bayern in dieser Saison?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">counting possessions</span></div>
+              <div class="reply">
+                <p class="reply-line">Bayern's pace this season:</p>
+                <p class="verdict">
+                  <span class="figure">72.4</span> possessions per 40 minutes
+                  <span class="qualifier">counted from the event stream, not estimated from a box score</span>
+                </p>
+              </div>
+            </div>
+
           </div>
 
           <div class="window-input" aria-hidden="true">
@@ -120,17 +165,37 @@
           Not a zone, not an estimate from a box score — the coordinate the
           league recorded, for every attempt in the game.
         </p>
+
+        <div class="scoreline">
+          <span class="side"><i class="crest" style="--club:#C8102E"></i>Olympiacos<b>74</b></span>
+          <span class="side"><i class="crest" style="--club:#0B2A4A"></i>Anadolu Efes<b>77</b></span>
+          <span class="scoreline-meta">Final Four semi-final, 19 May 2022</span>
+        </div>
+
         <p class="tally">
           <span class="tally-figure" id="shot-count">0</span>
           <span class="tally-label">shots placed</span>
         </p>
+
+        <!-- Two shots, in the order they happened. Both were read out of the
+             play-by-play rather than remembered. -->
+        <ol class="spotlights" id="spotlights">
+          <li data-spot="0">
+            <b>Martin ties it at 74.</b>
+            Twenty seconds left, two points from under the rim, assisted by Sloukas.
+          </li>
+          <li data-spot="1">
+            <b>Micic wins it at the buzzer.</b>
+            A three from 7.9 metres, straight on. It is the last event in the game file.
+          </li>
+        </ol>
       </div>
 
       <div class="claim-figure">
         <!-- Drawn to FIBA dimensions in centimetres, the same units the source
              coordinates arrive in, so a shot lands where the league recorded it
              rather than where a hand-tuned transform puts it. -->
-        <svg class="halfcourt" id="halfcourt" viewBox="-800 -160 1600 1260" aria-labelledby="shots-caption">
+        <svg class="halfcourt" id="halfcourt" viewBox="-860 -200 1720 1340" aria-labelledby="shots-caption">
           <!-- The source counts y upward from the baseline; a screen counts it
                downward. One mirror on the whole drawing reconciles the two, so
                the court and the shots stay in the source's own units and no
@@ -147,13 +212,16 @@
             <path d="M-660 299 A675 675 0 0 0 660 299"/>
           </g>
           <g id="shot-marks"></g>
+          <g id="shot-spotlight"></g>
           </g>
         </svg>
         <p class="figure-note" id="shots-caption">
-          One game, every field goal attempt. Free throws are missing on purpose:
-          they carry no location, only a placeholder value. The half court is
-          attack-relative, so the right side is the right of that team's own
-          attack rather than a corner of an arena.
+          Every field goal attempt in the game, from the archived response and
+          verified against its own checksum. Free throws are missing on purpose:
+          they carry no location, only a placeholder value. A few attempts sit
+          behind the baseline, which is where the league recorded them. The half
+          court is attack-relative, so the right side is the right of that team's
+          own attack rather than a corner of an arena.
         </p>
       </div>
     </div>

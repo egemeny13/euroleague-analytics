@@ -559,3 +559,145 @@ h1 {
   }
   .claim h2, .claim p { max-width: none; }
 }
+
+/* ---------- the game behind the chart ---------- */
+
+.scoreline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.4rem;
+  margin-top: 1.6rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.side {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+.side b {
+  font-family: var(--figures);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.15rem;
+}
+
+/* A club is identified by its colour and its name. No crest is reproduced. */
+.crest {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--club);
+  flex: none;
+}
+
+.scoreline-meta {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+}
+
+.spotlights {
+  list-style: none;
+  margin: 1.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.spotlights li {
+  padding: 0.7rem 0.95rem;
+  border-left: 2px solid var(--hairline);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  transition: border-color 320ms ease, color 320ms ease, background 320ms ease;
+}
+.spotlights li b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: var(--ink-faint);
+  transition: color 320ms ease;
+}
+.spotlights li.is-active {
+  border-left-color: var(--ball);
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+}
+.spotlights li.is-active b { color: var(--ink); }
+
+/* While one shot is being talked about, the rest step back. */
+#shot-marks { transition: opacity 320ms ease; }
+#shot-marks.is-dimmed { opacity: 0.22; }
+
+.shot-halo {
+  fill: none;
+  stroke: var(--ball);
+  stroke-width: 5;
+  stroke-opacity: 0.55;
+}
+
+/* ---------- three exchanges, one window ----------
+   They share a single grid cell, so the window is as tall as the tallest of
+   them from the first paint and never resizes when one replaces another. */
+
+.window-body {
+  display: grid;
+}
+.window-body > .exchange {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.window-body > .exchange.is-current {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* The middle beat: the thing the visitor is being asked to connect, doing the
+   work. Named the way a person would name it - never by a function name. */
+.working {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+.working.is-shown { visibility: visible; opacity: 1; }
+
+.working-what {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.working-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ball);
+  animation: pulse 1.15s ease-in-out infinite;
+}
+.working.is-done .working-dot { animation: none; background: #16A34A; }
+.working.is-done .working-state { opacity: 0.65; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(0.7); opacity: 0.45; }
+  50%      { transform: scale(1);   opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working-dot { animation: none; }
+}
