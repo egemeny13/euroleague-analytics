@@ -2819,6 +2819,59 @@ carries `aud` naming `/mcp`, and that the application count at the provider is
 unchanged afterwards. Until that last one is observed, "no application is created
 upstream" is a reading of the design, not a measurement.
 
+## 52. The historical archive stops at E2007, and the chain that filled it is switched off
+
+**The problem, 2026-09-03.** The unattended chain (Decision 31) archived E2021
+back to E2007 and then failed three scheduled runs in a row, each within a
+minute of starting:
+
+```
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+  ... src/euroleague/archive.py, in canonical_json_bytes: value = json.loads(body)
+```
+
+**The measurement behind it.** Twenty-five requests to the live API, five
+gamecodes each (1, 5, 50, 120, 200) against `Boxscore`:
+
+| Season | HTTP | body |
+|---|---|---|
+| E2007 | 200 | 12,187 - 13,663 bytes, every gamecode |
+| E2006 | 200 | **0 bytes, every gamecode** |
+| E2005 | 200 | **0 bytes, every gamecode** |
+| E2004 | 200 | **0 bytes, every gamecode** |
+| E2003 | 200 | **0 bytes, every gamecode** |
+
+Decision 8 read the API as serving E2003 through E2026. That reading came from
+the `Schedule` endpoint, which is real and unchanged - E2006's schedule lists 230
+played games. The game data behind those schedules is not served. A season below
+E2007 therefore looks fetchable to the chooser, is picked on every run, and can
+never be finished.
+
+**The decision, three parts.**
+
+1. **`HISTORICAL_SEASONS` ends at E2007.** The floor is measured, not assumed;
+   moving it needs a fresh measurement, not an edit.
+2. **An empty body is a failed target, never a cached one.** A 200 with a
+   zero-length or whitespace-only body is no longer written to the cache and no
+   longer handed to the archive callback. It counts as `failed_targets` rather
+   than as a permanent 404, because a 404 is remembered and never retried and an
+   empty body does not earn that certainty.
+3. **The chain's `schedule:` trigger is removed.** Decision 31 said to disable
+   this workflow when no unarchived season remained; that day is today.
+   `workflow_dispatch` stays for a season later found short, and the live-window
+   guards stay with it.
+
+**What this does not establish.** It does not prove E2006 and older are
+permanently absent upstream - only that they were empty on 2026-09-03, at five
+gamecodes per season. If they are ever published, the floor is a one-line change
+plus a new measurement. It also does not touch the manual
+`historical-archive.yml`, which still fetches any season a human names, and
+would now stop cleanly on an empty body instead of crashing.
+
+**What is archived is still not loaded.** E2007 through E2021 are in the
+immutable archive only. The warehouse holds E2024, E2025 and the filling E2026;
+loading the rest is R-12, and it waits on the paid architecture.
+
 ## Rules to add to the project instruction file
 
 ```

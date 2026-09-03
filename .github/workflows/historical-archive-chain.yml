@@ -11,7 +11,7 @@
 # The manual workflow is untouched and still works. This one runs beside it.
 #
 # WHAT REPLACES THE HUMAN. The operator was never really choosing - the order is
-# newest first back to E2003 - they were noticing when something came back wrong.
+# newest first back to E2007 - they were noticing when something came back wrong.
 # Two steps do that noticing here:
 #
 #   * scripts/next_archive_season.py refuses to guess. It picks the newest season
@@ -30,23 +30,25 @@
 name: Historical archive chain
 
 on:
-  # The gap from 00:00 to 06:00 UTC is not an oversight, and it guards a
-  # different failure from the clock check inside the job. Both are needed.
+  # THE SCHEDULE IS GONE, AND THAT IS THE CHAIN FINISHING RATHER THAN BREAKING.
+  # Decision 31 said to disable this workflow once no unarchived season remained,
+  # and Decision 52 records the day it arrived: E2021 back to E2007 are archived,
+  # and E2006 and older are not fetchable at all - the API answers every game
+  # endpoint for them with HTTP 200 and zero bytes, measured 2026-09-03. A cron
+  # here would now wake ten times a day to fetch nothing.
   #
-  #   * THIS GAP guards the moment a run *joins the queue*. The nightly E2026 job
-  #     runs at 03:43 UTC in the same concurrency group, and GitHub cancels a
-  #     *pending* run when a newer one joins that group. A chain run requested at
-  #     04:00 while the live run is still waiting its turn would not delay the
-  #     live run - it would cancel it. No cron fires between 00:00 and 06:00, so
-  #     no chain run can be that newer arrival.
+  # If a season is ever found short, dispatch this by hand. Two guards survive
+  # for that run and are why the chooser still checks the clock:
   #
+  #   * The nightly E2026 job runs at 03:43 UTC in the same concurrency group,
+  #     and GitHub cancels a *pending* run when a newer one joins that group. A
+  #     chain run queued at 04:00 while the live run waits its turn would cancel
+  #     it rather than delay it.
   #   * blocks_the_live_job() in src/euroleague/archive_chain.py guards the moment
-  #     a run *starts*, which is not the same moment. A run requested at midnight
-  #     can sit pending behind a two-hour fetch and begin at 01:40, finishing at
-  #     about 04:00 with the live job stuck behind it. Only the job knows when it
-  #     actually started, so the chooser checks the clock and picks nothing.
-  schedule:
-    - cron: "0 0,6,8,10,12,14,16,18,20,22 * * *"
+  #     a run *starts*, which is not the same moment. A run can sit pending behind
+  #     a two-hour fetch and begin at 01:40, finishing at about 04:00 with the
+  #     live job stuck behind it. Only the job knows when it actually started, so
+  #     the chooser checks the clock and picks nothing.
   workflow_dispatch:
 
 permissions:
@@ -86,7 +88,7 @@ jobs:
           python -m pip install -e .
 
       # Reads the archive; fetches nothing. An empty `season` output means either
-      # that every season from E2021 back to E2003 is archived, or that this run
+      # that every season from E2021 back to E2007 is archived, or that this run
       # started inside the window reserved for the nightly E2026 job - the step's
       # own log line says which. Either way the run stops rather than finding
       # something to do. --ignore-live-window is for a supervised manual run and

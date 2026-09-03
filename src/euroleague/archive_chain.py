@@ -8,7 +8,8 @@ that condition, recorded as Decision 31, because nineteen seasons at two hours
 each is thirty-eight hours of somebody typing a season code every two hours.
 
 WHAT THE HUMAN WAS ACTUALLY DOING. Not choosing - the order was never in doubt,
-it is newest first back to E2003. They were noticing: that a season came back
+it is newest first back to the oldest season the API actually serves. They were
+noticing: that a season came back
 short, that the same season came round twice, that a batch had gone wrong. This
 module has to notice instead, so it is deliberately suspicious.
 
@@ -34,10 +35,20 @@ from typing import Any
 from euroleague.archive import ArchiveIndexEntry, current_archive_entries
 
 # Newest first, and stopping at E2021 because E2022 through E2025 are archived
-# already. Decision 8 measured the API as serving E2003 through E2026, with
-# E2003-E2025 complete; probing began at E2003, so this is a floor rather than a
-# proven start of history. A season added below E2003 is a decision, not an edit.
-HISTORICAL_SEASONS: tuple[str, ...] = tuple(f"E{year}" for year in range(2021, 2002, -1))
+# already.
+#
+# THE OLD END WAS E2003, AND IT WAS WRONG. Decision 8 read the API as serving
+# E2003 through E2026, because it asked the Schedule endpoint. The schedules are
+# real: E2006 lists 230 played games. The game data behind them is not. Measured
+# 2026-09-03 on the live API, five gamecodes each (1, 5, 50, 120, 200) against
+# Boxscore: E2007 returned 12-13 KB every time; E2006, E2005, E2004 and E2003
+# returned HTTP 200 with zero bytes every time. A season below this floor can
+# therefore never be finished, and the chain would pick it again on every run
+# forever. Decision 52 records the measurement and the floor.
+#
+# Raising or lowering this floor is a decision, not an edit, and it needs a
+# fresh measurement rather than a hope that the API has backfilled.
+HISTORICAL_SEASONS: tuple[str, ...] = tuple(f"E{year}" for year in range(2021, 2006, -1))
 
 # The three endpoints a standard fetch retrieves per game. `GameStats` is
 # deliberately absent: it exists only for E2024 and E2025, where it came from the
@@ -213,7 +224,7 @@ def next_season_to_archive(
     """The newest unfinished season, or None when every one of them is finished.
 
     The scan stops at the first unfinished season rather than surveying all
-    nineteen. That keeps a run to one or two schedule downloads, and it means a
+    fifteen. That keeps a run to one or two schedule downloads, and it means a
     season left half-archived by an interrupted run is resumed before the chain
     moves on to an older one.
     """

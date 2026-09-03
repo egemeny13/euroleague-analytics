@@ -45,10 +45,8 @@ def _job_body(text: str) -> str:
 
 
 def _cron_hours(text: str) -> list[int]:
-    crons = re.findall(r'-\s*cron:\s*"([^"]+)"', text)
-    assert crons, "the chain is scheduled; a missing cron means it never runs"
     hours: list[int] = []
-    for cron in crons:
+    for cron in re.findall(r'-\s*cron:\s*"([^"]+)"', text):
         fields = cron.split()
         assert len(fields) == 5, f"malformed cron {cron!r}"
         for hour in fields[1].split(","):
@@ -62,14 +60,29 @@ def test_the_chain_cannot_run_beside_the_live_fetcher() -> None:
     assert "cancel-in-progress: false" in _text(CHAIN)
 
 
-def test_no_chain_run_starts_inside_the_live_job_window() -> None:
-    """Break caught: a queued chain run cancels the pending nightly live run.
+def test_the_chain_no_longer_runs_on_a_schedule() -> None:
+    """Break caught: the finished backfill keeps waking up and failing in public.
+
+    Every season the API serves is archived - E2021 back to E2007, measured
+    2026-09-03 - so a scheduled run has nothing left to fetch. Decision 31 said
+    to disable this workflow when that day came, and Decision 52 records the day.
+    `workflow_dispatch` stays: a season found short is re-run by hand.
+    """
+    text = _text(CHAIN)
+    assert not re.search(r"^  schedule:", text, re.MULTILINE), (
+        "the backfill is finished; a cron here fetches nothing and fails loudly"
+    )
+    assert "workflow_dispatch:" in text
+
+
+def test_any_reinstated_cron_still_leaves_the_live_job_its_window() -> None:
+    """Break caught: the chain is switched back on at an hour that cancels the live run.
 
     GitHub cancels a *pending* run when a newer one joins the same concurrency
     group. A chain run queueing after 03:43 UTC would therefore displace a live
-    run that is waiting its turn - not delay it, cancel it. Every start hour must
-    leave the live job a clear window: midnight (finishing well before 03:43 at
-    the measured 2 to 2.5 hours a season) or 06:00 onwards.
+    run that is waiting its turn - not delay it, cancel it. This test holds no
+    opinion on whether the chain is scheduled; it says that if somebody schedules
+    it again, the hours must still be midnight or 06:00 onwards.
     """
     for hour in _cron_hours(_text(CHAIN)):
         assert hour == 0 or hour >= LIVE_CRON_HOUR + 3, (
@@ -77,7 +90,7 @@ def test_no_chain_run_starts_inside_the_live_job_window() -> None:
         )
 
 
-def test_the_scheduled_run_cannot_override_the_live_window_check() -> None:
+def test_a_dispatched_run_cannot_override_the_live_window_check() -> None:
     """Break caught: the clock guard is bypassed by a flag and stops guarding anything.
 
     The cron gap and `blocks_the_live_job` guard different moments - joining the
