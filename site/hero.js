@@ -6,9 +6,11 @@
    uses a different one has to see their own before they believe it.
 
    What it deliberately is not: a copy of anybody's interface. Each assistant is
-   named in text and drawn as a neutral initial. Naming a product to say we work
-   with it is fair use; dressing our page up as that product is not, and it
-   would imply an endorsement none of them has given.
+   named in text and carries its own brand colour, which identifies it the way a
+   club colour identifies a club. No logo is reproduced and no interface is
+   imitated. Naming a product to say we work with it is fair use; dressing our
+   page up as that product is not, and it would imply an endorsement none of
+   them has given.
 
    Three things it must not do:
      - run for somebody who asked for less motion (it renders finished instead)
@@ -26,9 +28,9 @@
      path it needs. Nothing is listed here that the compatibility matrix does
      not already claim. */
   var CLIENTS = [
-    { name: "Claude",  initial: "C", tint: "#1A1512" },
-    { name: "ChatGPT", initial: "G", tint: "#2B2A28" },
-    { name: "Gemini",  initial: "G", tint: "#1F2430" }
+    { name: "Claude",  initial: "C",  tint: "#C15F3C" },
+    { name: "ChatGPT", initial: "CG", tint: "#0F8A6E" },
+    { name: "Gemini",  initial: "G",  tint: "#3B6FE0" }
   ];
 
   /* Temporarily English. The design asks this in Turkish, to show that the
@@ -54,20 +56,19 @@
   function setClient(client) {
     appName.textContent = client.name;
     avatar.textContent = client.initial;
-    avatar.style.background = client.tint;
+    avatar.style.setProperty("--tint", client.tint);
   }
 
   function clear() {
     window.clearTimeout(timer);
     ask.textContent = "";
-    reply.hidden = true;
-    reply.style.opacity = "";
+    reply.classList.remove("is-shown");
   }
 
   function showFinished() {
     setClient(CLIENTS[0]);
     ask.textContent = QUESTION;
-    reply.hidden = false;
+    reply.classList.add("is-shown");
   }
 
   function typeQuestion(done) {
@@ -92,14 +93,7 @@
   }
 
   function revealAnswer() {
-    reply.hidden = false;
-    reply.animate(
-      [
-        { opacity: 0, transform: "translateY(6px)" },
-        { opacity: 1, transform: "none" }
-      ],
-      { duration: 420, easing: "cubic-bezier(.2,.6,.2,1)", fill: "both" }
-    );
+    reply.classList.add("is-shown");
     timer = window.setTimeout(nextClient, READ_MS);
   }
 

@@ -37,8 +37,8 @@
          furniture rather than as a court. Nothing here moves. -->
     <svg class="courtlines" viewBox="0 0 560 620" fill="none" aria-hidden="true" focusable="false">
       <g stroke="currentColor" stroke-width="2.5">
-        <path d="M0 46 H63 M0 574 H63"/>
-        <path d="M63 46 A270 270 0 0 1 63 574"/>
+        <path d="M0 46 H119.6 M0 574 H119.6"/>
+        <path d="M119.6 46 A270 270 0 0 1 119.6 574"/>
         <rect x="0" y="212" width="232" height="196"/>
         <circle cx="232" cy="310" r="72"/>
         <path d="M25 274 V346"/>
@@ -69,19 +69,21 @@
             <span class="window-state"><i class="live-dot" aria-hidden="true"></i>EuroLeague Analytics connected</span>
           </div>
 
+          <!-- Nothing in here is ever added or removed while the page is open.
+               Both the question and the answer hold their space from the first
+               paint, so the window is a fixed object and the page underneath it
+               never moves. -->
           <div class="window-body" id="thread">
-            <!-- The hidden copy reserves the bubble's final size, so the
-                 question types inside a bubble that never resizes. -->
-            <p class="bubble-user">
-              <span class="ask-ghost" aria-hidden="true">Which five-man lineup wins games for Fenerbahce?</span>
-              <span class="ask-typed" id="ask"></span>
-            </p>
-
-            <div class="reply" id="reply" hidden>
-              <p class="tool-call" aria-label="Tool call">
-                <span class="tool-tick" aria-hidden="true"></span>
-                Called <code>el_get_lineup_stats</code>
+            <div class="from-you">
+              <!-- The hidden copy reserves the bubble's final size, so the
+                   question types inside a bubble that never resizes. -->
+              <p class="bubble-user">
+                <span class="ask-ghost" aria-hidden="true">Which five-man lineup wins games for Fenerbahce?</span>
+                <span class="ask-typed" id="ask"></span>
               </p>
+            </div>
+
+            <div class="reply" id="reply">
               <p class="reply-line">Their most efficient five this season:</p>
               <ul class="lineup">
                 <li><span class="jersey" style="--club:#12305B">7</span>Hall</li>
