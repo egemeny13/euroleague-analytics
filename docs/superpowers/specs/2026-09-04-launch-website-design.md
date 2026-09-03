@@ -48,10 +48,19 @@ is accepted; the site does not try to explain what an AI assistant is.
 
 **English site, with a Turkish switch. English thread.**
 
-The Turkish text is **written, not translated.** "Nothing to download" does not
-become "İndirilecek bir şey yok"; it becomes something closer to "you are not
-installing an app, you connect the AI you already use, once". Two authored texts,
-one switch between them.
+The Turkish text is **written, not translated.** A literal rendering of "nothing
+to download" says nothing useful in Turkish; the sentence that works there is
+closer to "you are not installing an app, you connect the AI you already use,
+once". Two authored texts, one switch between them.
+
+**This collides with an existing rule and the collision is unresolved.**
+`tests/test_english_only.py` fails on any tracked file containing Turkish
+characters, which is `CLAUDE.md`'s "no exceptions" rule expressed as a test.
+Turkish product copy under `site/` cannot exist while that test scans it. The
+options are to exempt visitor-facing copy under `site/` from the character scan
+while keeping the rule everywhere else, or to abandon the Turkish text. Awaiting
+the owner; until then the site ships English only and the hero's demo question
+is asked in English rather than Turkish.
 
 English is the default. The switch remembers the visitor's choice.
 
@@ -65,8 +74,8 @@ paragraph exists so nobody reads the Turkish strings as a rule violation.
 **Sub-line:** *Connect once, then ask in your own words — every lineup, every
 shot, every second on court. **No app, no spreadsheet.***
 
-Chosen over a curiosity-led headline ("Which five actually wins Fenerbahçe
-games?") because the older reader has to understand *what this is* before being
+Chosen over a curiosity-led headline (naming a club and asking which five wins
+its games) because the older reader has to understand *what this is* before being
 teased, and the younger reader is caught by the demo regardless.
 
 **Beside it, a conversation that types itself.** No play button, no click. The

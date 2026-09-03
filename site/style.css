@@ -8,17 +8,23 @@
         arriving, because that is the product. */
 
 :root {
-  --paper:      #FBFBFC;
-  --ink:        #10151C;
-  --ink-soft:   #5C6875;
-  --ink-faint:  #97A2AF;
-  --hairline:   #E7EAEF;
+  /* Warm neutrals: the same paper the ball is played on, not a screen white.
+     Every one of these is an orange desaturated almost to grey, which is what
+     lets the single saturated orange below stay loud. */
+  --paper:      #FDFAF6;
+  --paper-deep: #F7F1E9;
+  --ink:        #1A1512;
+  --ink-soft:   #6B5F55;
+  --ink-faint:  #A09284;
+  --hairline:   #EBE2D7;
   --surface:    #FFFFFF;
 
-  /* The one accent. Reserved for measured values. */
+  /* The one saturated colour on the page. Reserved for measured values and
+     for the single action we want taken. Nothing decorative is ever this. */
   --ball:       #EA580C;
+  --ball-deep:  #C2410C;
 
-  --court:      rgba(16, 21, 28, 0.055);
+  --court:      rgba(26, 21, 18, 0.06);
 
   --display: "Gabarito", ui-sans-serif, system-ui, sans-serif;
   --text:    "Figtree", ui-sans-serif, system-ui, sans-serif;
@@ -135,10 +141,12 @@ body {
 }
 .quiet-link:hover { color: var(--ink); text-decoration: underline; }
 
+/* Orange is the measured value and the one action worth taking. Those are the
+   only two things it is ever used for. */
 .button-solid {
   display: inline-block;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--ball);
+  color: #fff;
   font-family: var(--text);
   font-weight: 600;
   font-size: 0.9rem;
@@ -147,7 +155,7 @@ body {
   border-radius: 999px;
   text-decoration: none;
 }
-.button-solid:hover { background: #000; }
+.button-solid:hover { background: var(--ball-deep); }
 
 .button-lg {
   font-size: 1rem;
@@ -229,16 +237,36 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1rem;
+  padding: 0.7rem 0.95rem;
   border-bottom: 1px solid var(--hairline);
-  background: #FCFDFE;
+  background: #FDFCFB;
 }
 
+/* The assistant is named in text and drawn as a neutral initial. We do not
+   reproduce anyone's logo or copy anyone's interface: naming a product to say
+   we work with it is fair, dressing up as it is not. */
 .window-app {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-family: var(--display);
   font-weight: 600;
   font-size: 0.85rem;
   color: var(--ink);
+}
+
+.app-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  flex: none;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  transition: background 260ms ease;
 }
 
 .window-state {
@@ -290,6 +318,44 @@ h1 {
 @keyframes blink { 50% { opacity: 0; } }
 
 .reply { margin-top: 1.1rem; }
+
+/* The assistant reaching for a tool is the part a reader does not expect and
+   the part that explains what was installed. It is content, not chrome. */
+.tool-call {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.85rem;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.tool-call code {
+  font-family: var(--figures);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  background: var(--paper-deep);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
+.tool-tick {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid #16A34A;
+  position: relative;
+}
+.tool-tick::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 1.5px;
+  width: 3.5px;
+  height: 6px;
+  border: solid #16A34A;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
 
 .reply-line {
   margin: 0;
@@ -348,6 +414,49 @@ h1 {
   margin-top: 0.2rem;
   font-size: 0.85rem;
   color: var(--ink-faint);
+}
+
+/* An input row, because a chat window without one does not look like a place
+   you could type. It is inert on purpose: the box that actually answers is
+   further down the page. */
+.window-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0.9rem 0.9rem;
+  padding: 0.6rem 0.55rem 0.6rem 0.85rem;
+  border: 1px solid var(--hairline);
+  border-radius: 11px;
+  background: var(--paper);
+}
+
+.window-placeholder {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.window-send {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 7px;
+  background: var(--hairline);
+  position: relative;
+}
+.window-send::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border: solid var(--ink-faint);
+  border-width: 1.5px 1.5px 0 0;
+  transform: rotate(-45deg);
 }
 
 .demo-caption {

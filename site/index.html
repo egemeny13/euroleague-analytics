@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EuroLeague Analytics — European basketball for your AI assistant</title>
-<meta name="description" content="Connect EuroLeague play-by-play data to Claude or ChatGPT and ask in your own words. Exact possessions, five-man lineups and shot locations, reconstructed from the play-by-play.">
+<meta name="description" content="Connect EuroLeague play-by-play data to Claude, ChatGPT or Gemini and ask in your own words. Exact possessions, five-man lineups and shot locations, reconstructed from the play-by-play.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,6 @@
     EuroLeague Analytics
   </a>
   <nav class="topnav" aria-label="Main">
-    <button class="lang" type="button" id="lang-toggle" aria-live="polite">Türkçe</button>
     <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Source</a>
     <a class="button-solid" href="#connect">Connect</a>
   </nav>
@@ -63,7 +62,10 @@
       <div class="hero-demo">
         <figure class="window" aria-labelledby="demo-caption">
           <div class="window-bar">
-            <span class="window-app">Claude</span>
+            <span class="window-app">
+              <span class="app-avatar" id="app-avatar" aria-hidden="true"></span>
+              <span id="app-name">Claude</span>
+            </span>
             <span class="window-state"><i class="live-dot" aria-hidden="true"></i>EuroLeague Analytics connected</span>
           </div>
 
@@ -71,11 +73,15 @@
             <!-- The hidden copy reserves the bubble's final size, so the
                  question types inside a bubble that never resizes. -->
             <p class="bubble-user">
-              <span class="ask-ghost" aria-hidden="true">Fenerbahçe'nin en iyi beşlisi hangisi?</span>
+              <span class="ask-ghost" aria-hidden="true">Which five-man lineup wins games for Fenerbahce?</span>
               <span class="ask-typed" id="ask"></span>
             </p>
 
             <div class="reply" id="reply" hidden>
+              <p class="tool-call" aria-label="Tool call">
+                <span class="tool-tick" aria-hidden="true"></span>
+                Called <code>el_get_lineup_stats</code>
+              </p>
               <p class="reply-line">Their most efficient five this season:</p>
               <ul class="lineup">
                 <li><span class="jersey" style="--club:#12305B">7</span>Hall</li>
@@ -90,9 +96,15 @@
               </p>
             </div>
           </div>
+
+          <div class="window-input" aria-hidden="true">
+            <span class="window-placeholder">Ask about any team, lineup or possession</span>
+            <span class="window-send"></span>
+          </div>
         </figure>
         <figcaption class="demo-caption" id="demo-caption">
-          A recorded answer from the warehouse. Ask in whatever language you speak.
+          A recorded answer from the warehouse. Works the same in any assistant
+          that speaks MCP.
         </figcaption>
       </div>
     </div>

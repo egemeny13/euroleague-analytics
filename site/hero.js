@@ -1,10 +1,14 @@
-/* The hero conversation types itself once, on load.
+/* The hero conversation types itself, then moves to the next assistant.
    Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md
 
-   This is the only animation on the page that nobody asked for, and it earns
-   that by being the explanation: a visitor who watches it understands that the
-   product lives inside an assistant they already have, without reading a word
-   about connectors or protocols.
+   Why it cycles: a single assistant in the window says "this works with that
+   one". The product works with any client that speaks MCP, and a visitor who
+   uses a different one has to see their own before they believe it.
+
+   What it deliberately is not: a copy of anybody's interface. Each assistant is
+   named in text and drawn as a neutral initial. Naming a product to say we work
+   with it is fair use; dressing our page up as that product is not, and it
+   would imply an endorsement none of them has given.
 
    Three things it must not do:
      - run for somebody who asked for less motion (it renders finished instead)
@@ -16,23 +20,57 @@
 (function () {
   "use strict";
 
-  var QUESTION = "Fenerbahçe'nin en iyi beşlisi hangisi?";
+  /* Verified against docs/CLIENT_COMPATIBILITY.md. Claude and Gemini are
+     recorded there as live-verified; ChatGPT is recorded as expected from the
+     published Apps SDK specification, and Decision 51 covers the registration
+     path it needs. Nothing is listed here that the compatibility matrix does
+     not already claim. */
+  var CLIENTS = [
+    { name: "Claude",  initial: "C", tint: "#1A1512" },
+    { name: "ChatGPT", initial: "G", tint: "#2B2A28" },
+    { name: "Gemini",  initial: "G", tint: "#1F2430" }
+  ];
+
+  /* Temporarily English. The design asks this in Turkish, to show that the
+     visitor can ask in their own language, but tests/test_english_only.py
+     fails on Turkish characters in any tracked file and that rule has not been
+     amended yet. See section 3 of the design record. */
+  var QUESTION = "Which five-man lineup wins games for Fenerbahce?";
   var TYPE_MS = 30;      // per character
-  var HOLD_MS = 420;     // pause after the question, before the answer
+  var HOLD_MS = 420;     // after the question, before the tool call
+  var READ_MS = 4200;    // how long the finished answer stays before the next client
 
   var ask = document.getElementById("ask");
   var reply = document.getElementById("reply");
-  if (!ask || !reply) return;
+  var appName = document.getElementById("app-name");
+  var avatar = document.getElementById("app-avatar");
+  var thread = document.getElementById("thread");
+  if (!ask || !reply || !appName || !avatar || !thread) return;
 
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var index = 0;
+  var timer = null;
 
-  function showFinished() {
-    ask.textContent = QUESTION;
-    reply.hidden = false;
-    reply.style.opacity = "1";
+  function setClient(client) {
+    appName.textContent = client.name;
+    avatar.textContent = client.initial;
+    avatar.style.background = client.tint;
   }
 
-  function type() {
+  function clear() {
+    window.clearTimeout(timer);
+    ask.textContent = "";
+    reply.hidden = true;
+    reply.style.opacity = "";
+  }
+
+  function showFinished() {
+    setClient(CLIENTS[0]);
+    ask.textContent = QUESTION;
+    reply.hidden = false;
+  }
+
+  function typeQuestion(done) {
     var caret = document.createElement("span");
     caret.className = "caret";
     caret.setAttribute("aria-hidden", "true");
@@ -45,11 +83,11 @@
     (function step() {
       if (i >= QUESTION.length) {
         caret.remove();
-        window.setTimeout(revealAnswer, HOLD_MS);
+        timer = window.setTimeout(done, HOLD_MS);
         return;
       }
       text.nodeValue = QUESTION.slice(0, ++i);
-      window.setTimeout(step, TYPE_MS);
+      timer = window.setTimeout(step, TYPE_MS);
     })();
   }
 
@@ -62,6 +100,16 @@
       ],
       { duration: 420, easing: "cubic-bezier(.2,.6,.2,1)", fill: "both" }
     );
+    timer = window.setTimeout(nextClient, READ_MS);
+  }
+
+  function nextClient() {
+    index = (index + 1) % CLIENTS.length;
+    clear();
+    setClient(CLIENTS[index]);
+    timer = window.setTimeout(function () {
+      typeQuestion(revealAnswer);
+    }, 260);
   }
 
   function start() {
@@ -69,22 +117,26 @@
       showFinished();
       return;
     }
-    type();
+    setClient(CLIENTS[0]);
+    typeQuestion(revealAnswer);
   }
 
-  // Only once it is actually on screen.
+  /* Off screen it does not run: an animation nobody is looking at is only a
+     battery cost. */
   if ("IntersectionObserver" in window) {
-    var seen = false;
+    var running = false;
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
-        if (entry.isIntersecting && !seen) {
-          seen = true;
-          io.disconnect();
+        if (entry.isIntersecting && !running) {
+          running = true;
           start();
+        } else if (!entry.isIntersecting && running) {
+          running = false;
+          window.clearTimeout(timer);
         }
       });
     }, { threshold: 0.2 });
-    io.observe(document.getElementById("thread"));
+    io.observe(thread);
   } else {
     start();
   }
