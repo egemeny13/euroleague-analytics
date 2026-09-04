@@ -960,12 +960,12 @@ h1 {
 }
 
 .unit-verdict {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: clamp(1.5rem, 4vw, 3rem);
-  margin-top: 1.5rem;
-  padding-top: 1.3rem;
+  display: grid;
+  grid-template-columns: auto auto minmax(8rem, 1fr);
+  align-items: end;
+  gap: 1rem;
+  margin-top: 1.35rem;
+  padding-top: 1.15rem;
   border-top: 1px solid var(--hairline);
 }
 
@@ -1018,16 +1018,10 @@ h1 {
   color: var(--ink-faint);
 }
 
-/* The third column of the row, not a line of its own. `flex-basis: 100%` used
-   to force it onto its own line, which spent a whole row on one short sentence;
-   it now shares the row with the two figures and wraps under them only when the
-   row genuinely runs out of width.
-
-   It still reserves its height whether or not there is anything to say. A
-   caption that appears and disappears would move everything below it every few
-   seconds. */
+/* The third column shares the compact evidence row with the two figures. It
+   still reserves its height whether or not there is anything to say, because
+   an appearing caption would move the copy every few seconds. */
 .unit-swap {
-  flex: 1 1 11rem;
   margin: 0;
   min-height: 1.3em;
   font-size: 0.85rem;
@@ -1038,6 +1032,11 @@ h1 {
 @media (max-width: 860px) {
   .claim-flip .claim-copy { order: 1; }
   .claim-flip .claim-figure { order: 2; }
+}
+
+@media (max-width: 520px) {
+  .unit-verdict { grid-template-columns: auto auto; }
+  .unit-swap { grid-column: 1 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1764,8 +1763,8 @@ main, .topbar { position: relative; z-index: 1; }
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   align-items: start;
-  gap: clamp(2rem, 5vw, 4.5rem);
-  margin-top: clamp(2.75rem, 5vw, 4.5rem);
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+  margin-top: clamp(2rem, 3.5vw, 3.25rem);
 }
 /* The copy and the window swap sides on the middle case. The COLUMNS swap with
    them - ordering alone would have left the window in the narrow column and
@@ -1798,24 +1797,32 @@ main, .topbar { position: relative; z-index: 1; }
 .deep-body {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  padding: 1.25rem 1.35rem 1.4rem;
+  gap: 0.7rem;
+  padding: 1.1rem 1.25rem 1.25rem;
 }
 
-/* One call: what was run, what it was given, what came back. The arguments and
-   the result are the evidence under the sentence, so they are set in the
-   figures face and kept quiet - they are there to be checked, not read. */
-.deep-call { display: flex; flex-direction: column; gap: 0.4rem; }
-.deep-args,
-.deep-back {
-  margin: 0 0 0 0.4rem;
-  font-family: var(--figures);
-  font-size: 0.76rem;
-  line-height: 1.5;
+/* The visitor needs to see that the assistant is working with this warehouse,
+   not the implementation names and arguments behind that work. One restrained
+   thought replaces the internal transcript; the exact calls remain beside the
+   case in source comments so the figures can still be replayed. */
+.deep-thought {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
   color: var(--ink-faint);
 }
-.deep-back { color: var(--ink-soft); }
-.deep-back b { font-weight: 500; color: var(--ball); }
+.deep-thought::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ball);
+}
+.deep-thought span { color: var(--ink-soft); font-weight: 600; }
 
 .deep-body .reply-line {
   margin: 0 0 0.7rem;

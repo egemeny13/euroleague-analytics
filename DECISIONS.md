@@ -3365,9 +3365,16 @@ here, rather than what comes straight from the server?* He is right, and it is
 the difference between the section working and not. Raw tool output is a picture
 of homework. What a visitor is deciding whether to connect is an assistant that
 chains the calls they would have made next, distrusts a number built on 43
-possessions, and says what it left out. So each window shows **the calls and the
-reading**, and the three are three different kinds of thinking rather than three
-of the same:
+possessions, and says what it left out. The three are three different kinds of
+thinking rather than three of the same.
+
+**Amended after the owner's preview review on 2026-09-05.** The first version
+put tool names, arguments and returned rows directly in every window. The owner
+found that technical chrome confusing and asked for the same small, polite
+thinking beat used in the hero. Each window now shows one human-readable
+thinking step and the reading. The exact calls and arguments remain recorded in
+source comments for replay, but they are maintainer evidence rather than
+visitor-facing interface:
 
 | | Question | What it demonstrates |
 |---|---|---|
@@ -3380,6 +3387,8 @@ questions were put to `scripts/mcp_server.py` over its own stdio transport - the
 same registry, validation, row budget and response envelope a connected
 assistant gets. Tool names, arguments, counts, ratings and caveats are what was
 returned; the prose is a reading of those returns and adds no quantity to them.
+Only the counts, ratings, caveats and reading are presented to visitors; the
+implementation names and arguments are deliberately not UI.
 
 **The condition, and it is the whole reason this is a decision.** These numbers
 are a snapshot of E2024 and E2025 as loaded on 2026-09-05. **When the loaded
@@ -3388,7 +3397,8 @@ the section is wrong and must be re-run against the server, not edited by hand.*
 A page that says "every figure below is what came back" and then carries a stale
 figure is worse than one that never claimed it. The three cases are reproducible:
 `el_get_possessions`, `el_get_lineup_stats`, `el_describe_warehouse` and
-`el_get_team_stats` with the arguments printed under each call.
+`el_get_team_stats` with the arguments recorded beside each case in the HTML
+source.
 
 **Cross-checked against the section below it.** `#how` says 732 games loaded and
 53 held back. The server: E2024 308 used of 330, 22 excluded; E2025 371 of 402,
@@ -3407,7 +3417,7 @@ display the author did not own.
 
 **What this does not establish.** That the prose is what any other assistant
 would say - it is one reading of a set of returns, written to be checkable
-against the calls printed beside it rather than to be authoritative. And it does
+against the replay record rather than to be authoritative. And it does
 not establish that the live `#ask` chips further up the page will ever answer
 questions of this shape: those run a locked allowlist of recorded answers, and
 Decision 6's live endpoint is still unbuilt.

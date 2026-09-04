@@ -368,3 +368,29 @@ def test_readme_tool_table_lists_every_registered_tool() -> None:
     assert int(claimed.group(1)) == len(TOOL_NAMES), (
         f"README claims {claimed.group(1)} tools; the registry serves {len(TOOL_NAMES)}"
     )
+
+
+def test_lineup_metrics_share_the_copy_column() -> None:
+    """The live figures must use the space below the short lineup explanation."""
+    index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
+    lineup = index_text.split('id="lineups"', 1)[1].split('id="ask"', 1)[0]
+
+    copy_start = lineup.index('<div class="claim-copy">')
+    figure_start = lineup.index('<div class="claim-figure">')
+    verdict = lineup.index('<div class="unit-verdict">')
+
+    assert copy_start < verdict < figure_start, (
+        "The lineup metrics must sit below the copy instead of adding height under the court"
+    )
+
+
+def test_hard_questions_show_thinking_without_technical_call_chrome() -> None:
+    """Each case gets one human-readable thought, not an internal tool transcript."""
+    index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
+    deep = index_text.split('id="deep"', 1)[1].split('id="how"', 1)[0]
+
+    assert deep.count('class="deep-thought"') == 3
+    for technical_class in ("deep-call", "toolcall-name", "deep-args", "deep-back"):
+        assert technical_class not in deep, (
+            f"The hard-question examples still expose technical UI: {technical_class}"
+        )

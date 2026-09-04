@@ -326,17 +326,32 @@
       <div class="claim-copy">
         <h2>Ask which five actually work together.</h2>
         <p>
-          Any team, any combination. Here four Fenerbahce players stay on the
-          floor and only the fifth changes — and the team turns over.
+          Four Fenerbahce players stay. Swap Birch for Baldwin, and the team
+          turns over.
         </p>
         <p class="figure-note figure-note-tight">
-          Every answer carries the possessions behind it, so you can tell a real
-          edge from a small sample.
+          Every answer shows the possessions behind it, so a small sample
+          cannot hide.
         </p>
         <p class="figure-note">
-          Positions are the club's registration. Where each player stands is a
-          convention — the source knows only Guard, Forward, Center.
+          The club supplies each position; the spots on this floor are
+          illustrative.
         </p>
+
+        <div class="unit-verdict">
+          <!-- The live figures use the space below the short explanation. They
+               used to add a second row below the court, leaving this column
+               empty while making the whole section taller. -->
+          <div class="unit-metric">
+            <span class="unit-figure" id="unit-net">—</span>
+            <span class="unit-label">net rating</span>
+          </div>
+          <div class="unit-metric">
+            <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
+            <span class="unit-label">possessions together</span>
+          </div>
+          <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
+        </div>
       </div>
 
       <div class="claim-figure">
@@ -384,23 +399,6 @@
           <div class="floor-players" id="floor-players"></div>
 
           <p class="floor-empty" id="floor-empty" hidden>No centre on the floor</p>
-        </div>
-
-        <div class="unit-verdict">
-          <!-- Three things on ONE row, left to right: the net rating, the
-               possessions behind it, and what changed on the floor. The swap
-               line had its own full-width line under the numbers, then its own
-               line above them; both spent a whole row on one short sentence.
-               It is the third column now and the row costs what one row costs. -->
-          <div class="unit-metric">
-            <span class="unit-figure" id="unit-net">—</span>
-            <span class="unit-label">net rating</span>
-          </div>
-          <div class="unit-metric">
-            <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
-            <span class="unit-label">possessions together</span>
-          </div>
-          <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
         </div>
 
       </div>
@@ -591,11 +589,11 @@
 
        WHY THE ANSWERS ARE PROSE AND NOT JSON. The owner's point, and he is
        right: raw tool output is a picture of homework, not of a product. What
-       a visitor is buying is the READING - an assistant that chains the calls
-       you would have made next, distrusts a number built on 43 possessions,
-       and says what it left out. So each window shows the calls AND the
-       reading, and the three are deliberately three different kinds of
-       thinking rather than three of the same.
+       a visitor is buying is the READING - an assistant that asks the next
+       question, distrusts a number built on 43 possessions, and says what it
+       left out. Each window therefore shows one quiet, human-readable thinking
+       step and the reading. Exact calls stay in source comments for replay;
+       they are evidence for maintainers, not interface for visitors.
 
        They are HTML rather than screenshots. Same window component as the
        hero, so it is sharp at any size, selectable, translatable with the rest
@@ -606,13 +604,12 @@
       <div class="deep-head on-court">
         <h2>Ask it something hard.</h2>
         <p class="deep-lede">
-          The interesting part is not the data coming back. It is what an
-          assistant does with it — the second question it asks itself, the
-          answer it withdraws, and the thing it tells you it left out.
+          The hard part is the reading: asking the next question, rejecting a
+          weak answer, and naming what was left out.
         </p>
         <p class="figure-note">
-          Three real sessions against the running server. Every tool name,
-          argument, figure and caveat below is what came back.
+          Three real sessions against the running server. Every figure and
+          caveat below came back from it.
         </p>
       </div>
 
@@ -641,35 +638,11 @@
               if I loosen the definition? And tell me whether the number is trustworthy.</p>
             </div>
 
-            <div class="deep-call">
-              <div class="toolcall is-done">
-                <span class="toolcall-spinner"></span>
-                <span class="toolcall-name">el_get_possessions</span>
-                <span class="toolcall-source">EuroLeague Analytics</span>
-              </div>
-              <p class="deep-args">season E2025 · team Fenerbahce · aggregate</p>
-              <p class="deep-back">2,949 possessions · 3,325 points · <b>112.75</b> per 100</p>
-            </div>
-
-            <div class="deep-call">
-              <div class="toolcall is-done">
-                <span class="toolcall-spinner"></span>
-                <span class="toolcall-name">el_get_possessions</span>
-                <span class="toolcall-source">EuroLeague Analytics</span>
-              </div>
-              <p class="deep-args">…· max_seconds_remaining 300 · max_margin 5</p>
-              <p class="deep-back">159 possessions · 185 points · <b>116.35</b> per 100</p>
-            </div>
-
-            <div class="deep-call">
-              <div class="toolcall is-done">
-                <span class="toolcall-spinner"></span>
-                <span class="toolcall-name">el_get_possessions</span>
-                <span class="toolcall-source">EuroLeague Analytics</span>
-              </div>
-              <p class="deep-args">…· max_seconds_remaining 120 · max_margin 3</p>
-              <p class="deep-back">43 possessions · 62 points · <b>144.19</b> per 100</p>
-            </div>
+            <!-- Repro source: el_get_possessions for E2025 Fenerbahce at the
+                 full-season, 300-second/5-point and 120-second/3-point cuts. -->
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> comparing three clutch thresholds
+            </p>
 
             <div class="reply is-shown">
               <p class="reply-line">Over the whole season Fenerbahce scored 112.8 per 100
@@ -714,27 +687,11 @@
               <p class="bubble-user">Which is Panathinaikos's best five this season?</p>
             </div>
 
-            <div class="deep-call">
-              <div class="toolcall is-done">
-                <span class="toolcall-spinner"></span>
-                <span class="toolcall-name">el_get_lineup_stats</span>
-                <span class="toolcall-source">EuroLeague Analytics</span>
-              </div>
-              <p class="deep-args">season E2025 · team Panathinaikos · min_possessions 25</p>
-              <p class="deep-back">Hernangomez · Holmes · Nunn · Osman · Shorts —
-              54 possessions · <b>+76.59</b> net</p>
-            </div>
-
-            <div class="deep-call">
-              <div class="toolcall is-done">
-                <span class="toolcall-spinner"></span>
-                <span class="toolcall-name">el_get_lineup_stats</span>
-                <span class="toolcall-source">EuroLeague Analytics</span>
-              </div>
-              <p class="deep-args">…· min_possessions 100</p>
-              <p class="deep-back">1 unit clears the bar · 133 possessions ·
-              <b>+7.55</b> net</p>
-            </div>
+            <!-- Repro source: el_get_lineup_stats for E2025 Panathinaikos at
+                 minimum-possession thresholds 25 and 100. -->
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> checking the sample behind each lineup
+            </p>
 
             <div class="reply is-shown">
               <p class="reply-line">My first answer was not an answer. At a 25-possession
@@ -778,37 +735,11 @@
               anything you are not telling me?</p>
             </div>
 
-            <div class="deep-call">
-              <div class="toolcall is-done">
-                <span class="toolcall-spinner"></span>
-                <span class="toolcall-name">el_describe_warehouse</span>
-                <span class="toolcall-source">EuroLeague Analytics</span>
-              </div>
-              <p class="deep-args">no arguments</p>
-              <p class="deep-back">732 games loaded · 2 seasons</p>
-            </div>
-
-            <div class="deep-call">
-              <div class="toolcall is-done">
-                <span class="toolcall-spinner"></span>
-                <span class="toolcall-name">el_get_team_stats</span>
-                <span class="toolcall-source">EuroLeague Analytics</span>
-              </div>
-              <p class="deep-args">season E2024</p>
-              <p class="deep-back">308 used · <b>22 excluded</b> — possession_gate 14 ·
-              off_court_attribution 7 · minutes_mismatch 2</p>
-            </div>
-
-            <div class="deep-call">
-              <div class="toolcall is-done">
-                <span class="toolcall-spinner"></span>
-                <span class="toolcall-name">el_get_team_stats</span>
-                <span class="toolcall-source">EuroLeague Analytics</span>
-              </div>
-              <p class="deep-args">season E2025</p>
-              <p class="deep-back">371 used · <b>31 excluded</b> — possession_gate 17 ·
-              off_court_attribution 12 · minutes_mismatch 3 · substitution_state 1</p>
-            </div>
+            <!-- Repro source: el_describe_warehouse, then el_get_team_stats
+                 for E2024 and E2025 with the default exclusion policy. -->
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> checking coverage and exclusions
+            </p>
 
             <div class="reply is-shown">
               <p class="reply-line">732 games are loaded across two seasons and 53 of them
