@@ -39,11 +39,16 @@
     { name: "Gemini",  initial: "G",  tint: "#3B6FE0" }
   ];
 
-  var TYPE_MS = 30;      // per character
+  /* The question types at the speed of somebody who knows what they want to
+     ask, not at the speed of a teleprinter. It was 30 ms a character, which is
+     about a second and a half spent on a sentence the visitor has already read
+     to the end. The time saved is not saved: it is given to READ_MS, so the
+     ANSWER - the thing this window exists to show - is on screen longer. */
+  var TYPE_MS = 16;      // per character
   var ASK_HOLD_MS = 380; // after the question, before the lookup starts
   var WORK_MS = 1250;    // how long the lookup shows
   var THINK_MS = 620;    // the assistant's own pause before answering
-  var READ_MS = 4600;    // the finished answer, before the next assistant
+  var READ_MS = 5200;    // the finished answer, before the next assistant
 
   var thread = document.getElementById("thread");
   var appName = document.getElementById("app-name");

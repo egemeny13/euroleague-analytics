@@ -1721,6 +1721,47 @@ main, .topbar { position: relative; z-index: 1; }
 }
 .how-note .quiet-link { margin-left: 0.3rem; }
 
+/* The marker, used exactly once on the page.
+
+   It is NOT the orange. The palette above reserves that for measured values
+   and for the action we want taken, and this phrase is neither - it is a
+   statement about where the numbers come from. The band is the same hairline
+   the court is drawn in, so the mark belongs to the page rather than shouting
+   over it.
+
+   Drawn as a background that grows from the left, which is the direction a pen
+   moves, and sitting a little low and a little uneven because a marker does
+   not stop at the cap height. The text itself never moves: only the band
+   behind it arrives. */
+.marker {
+  /* The band is a background on the text itself rather than a box behind it,
+     and `box-decoration-break: clone` is what makes that the right choice: the
+     phrase is long enough to wrap, and a single absolutely-positioned rectangle
+     would span from the start of the first line to the end of the second and
+     paint a block over everything between. Cloned, each line gets its own band,
+     which is what a pen would leave. */
+  padding: 0 0.15em;
+  border-radius: 3px;
+  color: var(--ink-soft);
+  background-image: linear-gradient(var(--hairline), var(--hairline));
+  background-repeat: no-repeat;
+  /* Low, and shorter than the line: a marker does not stop at the cap height
+     and does not reach the line above. */
+  background-position: 0 84%;
+  background-size: 0 0.92em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: background-size 620ms cubic-bezier(.2, .7, .3, 1), color 420ms ease;
+}
+.marker.is-marked {
+  color: var(--ink);
+  background-size: 100% 0.92em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker { transition: none; }
+}
+
 /* ---------- footer ---------- */
 
 .footer {
