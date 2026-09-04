@@ -1,14 +1,19 @@
 # Shot coordinates: what is settled, what is not, and what to do next
 
-**Status:** open. Written 2026-09-04 at the owner's request, to hold the state of
-a question we stopped in the middle of rather than finished.
+**Status:** narrowed and closed to the extent measurement can close it, 2026-09-04.
+Written earlier the same day to hold a question we had stopped in the middle of;
+updated after five court features were located in the data.
 
-**Why it is open:** the owner does not accept the distance the coordinates imply
-for one shot, and pointed out that EuroLeague's own shot chart for the same game
-looks wrong to him too. Either the source's coordinates are imprecise and we
-would have to measure and correct that ourselves across every season and every
-game, or the site stops presenting coordinates as distances. Nothing here
-chooses between those.
+**Where it stands.** The coordinate *frame* is settled: centimetres, origin at
+the ring, FIBA scale, no offset, confirmed against five court features from
+1.25 m to 12.4 m — two of which are physical boundaries the data cannot satisfy
+by being merely self-consistent. See Decision 57 and section 1 below.
+
+**What is still open, and permanently.** Whether whoever recorded an individual
+shot put it on the right spot. That needs a reference outside the feed, the only
+available one is video, and video is out of scope for this project on copyright
+grounds. So the site takes route A in section 3: plot the coordinates, print no
+distance in metres.
 
 ---
 
@@ -42,6 +47,31 @@ which depends on `x` alone):
 | Arc, along the axis | 683 | 675 | 1.012 |
 
 Both within one lattice step. The units are centimetres on both axes.
+
+### Five court features, from 1.25 m to 12.4 m, all at scale 1.000
+
+Decision 57. Both loaded seasons, 93,269 shots. Two come from the source's own
+`zone` column, three from the edges of the distribution itself:
+
+| Anchor | Data | Court | Ratio |
+|---|---|---|---|
+| Sideline — outer edge of the `|x|` distribution | 740 | 750 | 0.987 |
+| Baseline — smallest recorded `y` | −138 | −157.5 | — |
+| Restricted area — `|x|` limit of zone `A` | 125 | 125 | 1.000 |
+| Free-throw line — `y` ceiling of zones `D`/`E` | 420 | 422.5 | 0.994 |
+| Half-court line — where zone `J` begins | 1242 | 1242.5 | 1.000 |
+
+All inside the 6.4 cm lattice. The withdrawn 0.955 scale would put the sideline
+edge at 716 and the half-court boundary at 1186; a 30 cm inward offset would put
+them at 720 and 1212. Neither appears, so **there is no global scale error and no
+global offset**, and the two candidate error shapes that could not be separated
+before are now both excluded.
+
+The zone anchors are the vendor's own labels computed from these same
+coordinates, so on their own they only show the vendor's geometry matches ours.
+The sideline and baseline edges are different in kind: nobody shoots from outside
+the court, so the outer edge of the distribution has to land just inside the
+physical line, and it does.
 
 ### The coordinates are on a lattice, not continuous
 
@@ -87,12 +117,13 @@ Two things are true at once and neither has been reconciled:
   That chart is drawn from the same coordinates. If it is wrong, the error is
   upstream of this project and is inherited rather than introduced.
 
-**Not measured:** whether the source's coordinates are accurate to the metre at
-all. Everything above establishes that they are *internally* consistent — the
-line lands where FIBA puts it — but a shot placed on the wrong spot by the
-recorder is still on the lattice and still on the correct side of the line. An
-accounting identity is not a validation, and this identity would survive a
-recorder who is systematically 50 cm out at long range.
+**Not measured, and not measurable here:** whether the recorder put this
+particular shot on the right spot. The five anchors settle the frame, not the
+aim. They are read off tens of thousands of shots, and errors that are not
+one-directional average away, so every anchor above would still land if the
+recorder were systematically 50 cm out at long range. An accounting identity is
+not a validation; a physical boundary is a stronger one, and it is still a
+statement about the population rather than about one shot.
 
 ### The 0.37 % residual
 
@@ -124,7 +155,10 @@ arc", which is true on every reading.
 "9.4 m". **Benefit:** nothing on the page can be wrong about a quantity nobody
 has validated.
 
-### B. Measure the source's error and correct it, everywhere
+**Chosen, 2026-09-04.** The owner picked route A after the five anchors were
+measured. Route B is closed below rather than left pending.
+
+### B. Measure the source's error and correct it, everywhere — CLOSED
 
 Establish ground truth for a set of shots, measure the source's deviation, and
 apply a correction across every season and every game — which is the owner's own
@@ -146,7 +180,13 @@ framing and the reason this is not a small task.
 4. **A decision about what gets stored.** Corrected coordinates are a derived
    value and must not overwrite `raw_shot`, which is the source's own record.
 
-**Until 1 exists, 2 to 4 cannot start.** That is the honest blocker.
+**How it closed.** Item 2 was answered by measurement and the answer is *no
+error*: five court features from 1.25 m to 12.4 m land at scale 1.000 with no
+offset, so there is nothing global left to correct and items 3 and 4 have no
+subject. Item 1 was never about the frame; it was about per-shot placement, and
+the only reference that could settle that is video, which this project does not
+touch. **A route whose remaining half needs evidence that will never exist is
+closed, not blocked.**
 
 ---
 
@@ -163,8 +203,11 @@ framing and the reason this is not a small task.
 
 ## 5. What this document does not establish
 
-It does not establish that the coordinates are accurate, only that they are
-consistent with the court's own geometry to within a 6.4 cm lattice. It does not
+It does not establish that any individual shot is on the right spot, only that
+the frame those shots are recorded in reproduces the court's own geometry — its
+lines, and the physical limits of where a shot can come from — to within a 6.4 cm
+lattice. Nothing here rules out a recorder whose long-range aim is biased in a
+way that averages out across a season. It does not
 establish that EuroLeague's chart is wrong; that is the owner's reading of a
 picture and has not been measured. It does not cover `COORD_X`'s attack-relative
 sign, which was settled earlier and is untouched. And it covers E2024 and E2025,

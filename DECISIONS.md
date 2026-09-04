@@ -3192,6 +3192,79 @@ plotted coordinates by the measured ratio or drawing the court to the data
 rather than to FIBA, and both change what the picture claims to be. That choice
 is not taken here.
 
+## 57. The coordinate frame is settled by five anchors; per-shot accuracy is not, and cannot be
+
+**Decided 2026-09-04, after Decision 56 was withdrawn.** The site continues to
+print no distance in metres. What changes is the reason, which is now a
+measurement rather than an open question.
+
+**What was still open.** Decision 56's withdrawal left the frame resting on one
+feature — the three-point line — read along two axes that sit 15 cm apart. The
+open document asked for "a third constraint at a very different radius", because
+660 and 675 are too close together to tell a uniform scale from a constant
+offset.
+
+**Four more anchors, found in the source's own `zone` column and in the edges of
+the distribution.** Both loaded seasons, 93,269 shots with coordinates:
+
+| Anchor | Where the data puts it | Where the court puts it | Ratio |
+|---|---|---|---|
+| Sideline — the outer edge of the `|x|` distribution | 740 | 750 | 0.987 |
+| Baseline — the smallest recorded `y` | −138 | −157.5 | — |
+| Restricted area — the `|x|` limit of zone `A` | 125 | 125 | 1.000 |
+| Free-throw line — the `y` ceiling of zones `D`/`E` | 420 | 422.5 | 0.994 |
+| Half-court line — where zone `J` begins | 1242 | 1242.5 | 1.000 |
+
+Every one is inside the 6.4 cm recording lattice, and they span 1.25 m to
+12.4 m. Under the withdrawn 0.955 scale the sideline edge would fall at 716 and
+the half-court boundary at 1186; under a 30 cm inward offset, 720 and 1212.
+Neither appears. **There is no global scale error and no global offset to
+correct.**
+
+**Why two of these are evidence from outside the feed.** The vendor computes the
+`zone` label, so zone boundaries agreeing with FIBA prove only that the vendor's
+own geometry matches ours — worth having, but circular on its own. The sideline
+and baseline edges are not: nobody shoots from outside the court, so the outer
+edge of a 93,269-shot distribution has to land just inside the physical line, and
+it does. That is a constraint the data cannot satisfy by being self-consistent.
+
+**Zone `J` is the strongest single reading.** It is the source's own label for
+"beyond half court", it contains 130 attempts, and it begins at exactly
+`y = 1242` against a half-court line 1242.5 cm from the ring. A frame anchored on
+the ring reproduces a court feature 12.4 m away to half a centimetre.
+
+**A correction to the withdrawn text.** Decision 56 called the sideline
+"inconclusive, since attempts are recorded out to `|x| = 740` where both models
+predict the sideline should appear near 716". That was backwards: shots recorded
+at 740 under a model that maps the sideline to 716 are shots from outside the
+court, which refutes the model rather than failing to test it. The evidence
+against the 4.5 % was already in hand and was read as neutral.
+
+**What this does not establish, and what no measurement here can.** It says
+nothing about whether an individual shot was placed on the right spot by
+whoever recorded it. A recorder systematically 50 cm out at long range produces
+exactly this table: every anchor still lands, because anchors are read off tens
+of thousands of shots and errors that are not one-directional average away.
+Validating a single placement needs something outside the feed — video — and
+video is out of scope for this project on copyright grounds.
+
+**Therefore route B in `docs/SHOT_COORDINATE_GEOMETRY.md` is closed, not
+pending.** It asked for a ground truth, a shape for the error, a per-season
+measurement, and a storage decision. The shape is now known to be *no error*, and
+the ground truth its remaining half would need does not exist and will not. The
+site keeps route A: plot the coordinates, which only requires the frame this
+decision settles, and print no figure in metres.
+
+**What the card says and why.** "A three from well beyond the arc." Micic's shot
+is at `(69, 941)`, 9.44 m from the ring, in a frame now demonstrated to extend
+past 12 m. The wording is not a hedge against a broken coordinate system; it is
+a hedge against the one thing still unvalidated, which is the recorder's aim on
+that single shot.
+
+**Still unexamined:** the 0.37 % residual — 345 shots that disagree with the
+league's own two-or-three flag. Decision 56 was built out of those rows. Anyone
+returning to per-shot accuracy should start there.
+
 ## Rules to add to the project instruction file
 
 ```
