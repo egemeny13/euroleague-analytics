@@ -3102,6 +3102,63 @@ estimate. And it is measured on E2024 and E2025, with the single E2021 game the
 site shows checked separately; a season loaded later is a season to re-check,
 not a season to assume.
 
+## 56. Shot coordinates are about 4.5 % inside the court's own metres, so the site prints no distance
+
+**How it was found, 2026-09-04.** Decision 55 corrected the origin and the owner
+still refused the result: Micic's shot cannot be 9.4 m, the line is 6.75 m at
+the top of the arc, most threes should be around 7 m. He then proposed the check
+that settles it - look at MADE shots either side of the three-point line and see
+where two becomes three.
+
+**The line, located from the data in two independent directions.** Both loaded
+seasons. Along the court axis (`|x| <= 120`), attempts by lattice row: twos thin
+out to a single attempt at `y = 633`; rows 639, 646 and 652 are empty; threes
+begin at 658 and reach 258 attempts by 702. In the corner (`y <= 100`), which
+depends on `x` alone and on no assumption about `y` at all: the last two sits at
+`|x| = 627`, the first three at 633, and the count reaches 807 by 677.
+
+| Boundary | Where the data puts it | Where FIBA puts it | Ratio |
+|---|---|---|---|
+| Arc, along the axis | ~645 | 675 | 0.956 |
+| Corner line, in x | ~630 | 660 | 0.955 |
+
+The two agree to one part in a thousand, and they are measured along different
+axes. The coordinate system is internally consistent and about 4.5 % smaller
+than the court it describes.
+
+**What that 4.5 % is, is not settled.** A uniform scale of 0.955 fits, and so
+does a constant inward offset of about 30 cm, because 660 and 675 are too close
+together for these two constraints to separate them. A third constraint at a
+very different radius would separate them; the sideline is the obvious
+candidate and is inconclusive, since attempts are recorded out to `|x| = 740`
+where both models predict the sideline should appear near 716.
+
+**The decision: the site prints no distance in metres.** The card on Micic's
+buzzer-beater said 7.9 m, then 9.4 m. Under the two corrections above the same
+shot is 9.74 m or 9.87 m. A figure that moves by 20 cm depending on an
+unresolved question is not a measurement, and this project does not ship those.
+The card now says the shot was a three from well beyond the arc, which is true
+on every reading - it is roughly 2.7 m past the line whichever correction is
+applied.
+
+**Why 8.2 m was not possible.** Putting this shot at 8.2 m requires shrinking
+every coordinate by 13 %. That drags the median three-point attempt from 7.33 m
+to 6.37 m and the closest threes to 5.93 m, inside a 6.75 m line. The owner's
+own estimate of the typical three - around 7 m - is what rules his estimate of
+this shot out.
+
+**What is still true from Decision 55.** The origin is the ring and not the
+baseline; that was measured on 93,269 shots and is unaffected by a scale, since
+a scale cannot move 2,214 shots from behind the baseline to in front of it.
+
+**What this does not establish, and what it leaves broken.** The chart draws the
+arc at the FIBA 675 while the data's line sits near 645, so a shot recorded
+between those two radii is drawn on the wrong side of the line. In the game the
+site shows, that is one attempt of 59. Fixing it means either scaling the
+plotted coordinates by the measured ratio or drawing the court to the data
+rather than to FIBA, and both change what the picture claims to be. That choice
+is not taken here.
+
 ## Rules to add to the project instruction file
 
 ```
