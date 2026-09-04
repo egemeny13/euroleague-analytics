@@ -1729,6 +1729,109 @@ main, .topbar { position: relative; z-index: 1; }
 
 /* ---------- what is behind it ---------- */
 
+/* ---------- ask it something hard ----------
+
+   Three cases, each a block of copy beside a window, alternating side to side
+   so the eye has somewhere to go on the way down. The owner asked for the
+   windows LARGE and said the page may get much longer for it; they take the
+   wider of the two columns and the section is the tallest on the site.
+
+   The window is the same component as the hero's. Nothing here is a screenshot:
+   a PNG of a conversation goes stale silently, cannot be translated with the
+   rest of the page, and blurs on a display the author did not own. */
+.deep {
+  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
+}
+.deep-inner { max-width: 1180px; margin: 0 auto; }
+
+.deep-head { max-width: 640px; }
+.deep-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 3.6vw, 2.8rem);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+.deep-lede {
+  margin: 1rem 0 0;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.deep-case {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  margin-top: clamp(2.75rem, 5vw, 4.5rem);
+}
+/* The copy and the window swap sides on the middle case. The COLUMNS swap with
+   them - ordering alone would have left the window in the narrow column and
+   made the middle case's evidence smaller than the other two, which is the
+   opposite of what was asked for. Source order stays copy-then-window, so a
+   screen reader and a phone both read the claim before the evidence for it. */
+.deep-case-flip {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+.deep-case-flip .deep-copy { order: 2; }
+.deep-case-flip .deep-window { order: 1; }
+
+.deep-copy { padding-top: 0.4rem; }
+.deep-copy h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.deep-copy p {
+  margin: 0.8rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+.deep-window { margin: 0; }
+.deep-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.25rem 1.35rem 1.4rem;
+}
+
+/* One call: what was run, what it was given, what came back. The arguments and
+   the result are the evidence under the sentence, so they are set in the
+   figures face and kept quiet - they are there to be checked, not read. */
+.deep-call { display: flex; flex-direction: column; gap: 0.4rem; }
+.deep-args,
+.deep-back {
+  margin: 0 0 0 0.4rem;
+  font-family: var(--figures);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+.deep-back { color: var(--ink-soft); }
+.deep-back b { font-weight: 500; color: var(--ball); }
+
+.deep-body .reply-line {
+  margin: 0 0 0.7rem;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+.deep-body .reply-line:last-of-type { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  .deep-case,
+  .deep-case-flip { grid-template-columns: minmax(0, 1fr); }
+  /* On one column the swap would put the window above its own claim. */
+  .deep-case-flip .deep-copy { order: 0; }
+  .deep-case-flip .deep-window { order: 0; }
+}
+
 .how {
   padding: clamp(2.75rem, 5vw, 5rem) var(--gutter);
 }

@@ -574,6 +574,264 @@
     </div>
   </section>
 
+  <!-- ================= FOR THE READER WHO WANTS THE HARD VERSION =========
+
+       It sits BELOW Connect on purpose. Section 1 of the design record says
+       anything that does not move a visitor toward connecting is pushed past
+       the point where only a curious reader goes, and this is that reader.
+
+       WHAT IS IN THESE THREE WINDOWS IS REAL, and that is the whole point of
+       the section. Every question below was put to the running MCP server over
+       its own stdio transport - the same registry, the same validation, the
+       same response envelope a connected assistant gets - and every figure,
+       every tool name, every argument and every caveat is what came back.
+       Nothing here was composed to look good. If one of these numbers changes
+       when the season reloads, this section is wrong and has to be re-run;
+       scripts/mcp_server.py is how it was produced.
+
+       WHY THE ANSWERS ARE PROSE AND NOT JSON. The owner's point, and he is
+       right: raw tool output is a picture of homework, not of a product. What
+       a visitor is buying is the READING - an assistant that chains the calls
+       you would have made next, distrusts a number built on 43 possessions,
+       and says what it left out. So each window shows the calls AND the
+       reading, and the three are deliberately three different kinds of
+       thinking rather than three of the same.
+
+       They are HTML rather than screenshots. Same window component as the
+       hero, so it is sharp at any size, selectable, translatable with the rest
+       of the page, and it cannot drift out of date the way a PNG silently
+       does. -->
+  <section class="deep" id="deep">
+    <div class="deep-inner">
+      <div class="deep-head on-court">
+        <h2>Ask it something hard.</h2>
+        <p class="deep-lede">
+          The interesting part is not the data coming back. It is what an
+          assistant does with it — the second question it asks itself, the
+          answer it withdraws, and the thing it tells you it left out.
+        </p>
+        <p class="figure-note">
+          Three real sessions against the running server. Every tool name,
+          argument, figure and caveat below is what came back.
+        </p>
+      </div>
+
+      <article class="deep-case">
+        <div class="deep-copy on-court">
+          <h3>It asks the next question for you.</h3>
+          <p>
+            One threshold is an opinion. A useful answer moves the threshold and
+            shows you what happens, then tells you where the number stops being
+            worth quoting.
+          </p>
+        </div>
+
+        <figure class="window deep-window">
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
+          </div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">Fenerbahce look good late in games. Check it — how do
+              they score in the last two minutes with the margin inside three? Does it hold
+              if I loosen the definition? And tell me whether the number is trustworthy.</p>
+            </div>
+
+            <div class="deep-call">
+              <div class="toolcall is-done">
+                <span class="toolcall-spinner"></span>
+                <span class="toolcall-name">el_get_possessions</span>
+                <span class="toolcall-source">EuroLeague Analytics</span>
+              </div>
+              <p class="deep-args">season E2025 · team Fenerbahce · aggregate</p>
+              <p class="deep-back">2,949 possessions · 3,325 points · <b>112.75</b> per 100</p>
+            </div>
+
+            <div class="deep-call">
+              <div class="toolcall is-done">
+                <span class="toolcall-spinner"></span>
+                <span class="toolcall-name">el_get_possessions</span>
+                <span class="toolcall-source">EuroLeague Analytics</span>
+              </div>
+              <p class="deep-args">…· max_seconds_remaining 300 · max_margin 5</p>
+              <p class="deep-back">159 possessions · 185 points · <b>116.35</b> per 100</p>
+            </div>
+
+            <div class="deep-call">
+              <div class="toolcall is-done">
+                <span class="toolcall-spinner"></span>
+                <span class="toolcall-name">el_get_possessions</span>
+                <span class="toolcall-source">EuroLeague Analytics</span>
+              </div>
+              <p class="deep-args">…· max_seconds_remaining 120 · max_margin 3</p>
+              <p class="deep-back">43 possessions · 62 points · <b>144.19</b> per 100</p>
+            </div>
+
+            <div class="reply is-shown">
+              <p class="reply-line">Over the whole season Fenerbahce scored 112.8 per 100
+              possessions. Narrow to the last five minutes within five points and it rises
+              to 116.4, over 159 possessions. Narrow again — last two minutes, within
+              three — and it jumps to 144.2.</p>
+              <p class="reply-line">Be careful with that last one. It rests on 43
+              possessions, about half a game's worth, and five of them straddled a
+              substitution. The direction is real; the size of it is not established. These
+              are counted possessions, not a box-score estimate, so do not compare the
+              figure with a pace number from anywhere else.</p>
+              <p class="verdict">
+                <span class="figure">144.2</span> per 100 in the clutch
+                <span class="qualifier">on 43 possessions — which is why it says so</span>
+              </p>
+            </div>
+          </div>
+        </figure>
+      </article>
+
+      <article class="deep-case deep-case-flip">
+        <div class="deep-copy on-court">
+          <h3>It takes its own answer back.</h3>
+          <p>
+            Every lineup response carries the possessions behind it and a
+            warning that small samples are noise. An assistant that reads its
+            own tool output will act on that — and the second answer is the
+            real one.
+          </p>
+        </div>
+
+        <figure class="window deep-window">
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
+          </div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">Which is Panathinaikos's best five this season?</p>
+            </div>
+
+            <div class="deep-call">
+              <div class="toolcall is-done">
+                <span class="toolcall-spinner"></span>
+                <span class="toolcall-name">el_get_lineup_stats</span>
+                <span class="toolcall-source">EuroLeague Analytics</span>
+              </div>
+              <p class="deep-args">season E2025 · team Panathinaikos · min_possessions 25</p>
+              <p class="deep-back">Hernangomez · Holmes · Nunn · Osman · Shorts —
+              54 possessions · <b>+76.59</b> net</p>
+            </div>
+
+            <div class="deep-call">
+              <div class="toolcall is-done">
+                <span class="toolcall-spinner"></span>
+                <span class="toolcall-name">el_get_lineup_stats</span>
+                <span class="toolcall-source">EuroLeague Analytics</span>
+              </div>
+              <p class="deep-args">…· min_possessions 100</p>
+              <p class="deep-back">1 unit clears the bar · 133 possessions ·
+              <b>+7.55</b> net</p>
+            </div>
+
+            <div class="reply is-shown">
+              <p class="reply-line">My first answer was not an answer. At a 25-possession
+              threshold the best Panathinaikos unit is Hernangomez–Holmes–Nunn–Osman–Shorts
+              at +76.6 net, over 54 possessions. That is about a quarter of a game. A number
+              like that is noise wearing a suit.</p>
+              <p class="reply-line">Raise the bar to 100 possessions and exactly one unit
+              survives: Grant–Hayes-Davis–Lessort–Nunn–Osman, +7.55 over 133 possessions.
+              That is the only five-man number here I would repeat out loud.</p>
+              <p class="verdict">
+                <span class="figure">+7.6</span> net rating
+                <span class="qualifier">over 133 possessions — the one unit that qualifies</span>
+              </p>
+            </div>
+          </div>
+        </figure>
+      </article>
+
+      <article class="deep-case">
+        <div class="deep-copy on-court">
+          <h3>It tells you what it left out.</h3>
+          <p>
+            Games that fail a validation invariant are held back from every
+            answer, and the response says how many and why. Nothing is deleted
+            and you can ask for them — but you are told before you quote a
+            number, not after.
+          </p>
+        </div>
+
+        <figure class="window deep-window">
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
+          </div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">How many games is all of this built on — and is there
+              anything you are not telling me?</p>
+            </div>
+
+            <div class="deep-call">
+              <div class="toolcall is-done">
+                <span class="toolcall-spinner"></span>
+                <span class="toolcall-name">el_describe_warehouse</span>
+                <span class="toolcall-source">EuroLeague Analytics</span>
+              </div>
+              <p class="deep-args">no arguments</p>
+              <p class="deep-back">732 games loaded · 2 seasons</p>
+            </div>
+
+            <div class="deep-call">
+              <div class="toolcall is-done">
+                <span class="toolcall-spinner"></span>
+                <span class="toolcall-name">el_get_team_stats</span>
+                <span class="toolcall-source">EuroLeague Analytics</span>
+              </div>
+              <p class="deep-args">season E2024</p>
+              <p class="deep-back">308 used · <b>22 excluded</b> — possession_gate 14 ·
+              off_court_attribution 7 · minutes_mismatch 2</p>
+            </div>
+
+            <div class="deep-call">
+              <div class="toolcall is-done">
+                <span class="toolcall-spinner"></span>
+                <span class="toolcall-name">el_get_team_stats</span>
+                <span class="toolcall-source">EuroLeague Analytics</span>
+              </div>
+              <p class="deep-args">season E2025</p>
+              <p class="deep-back">371 used · <b>31 excluded</b> — possession_gate 17 ·
+              off_court_attribution 12 · minutes_mismatch 3 · substitution_state 1</p>
+            </div>
+
+            <div class="reply is-shown">
+              <p class="reply-line">732 games are loaded across two seasons and 53 of them
+              are held back: 22 in 2024-25 and 31 in 2025-26. Take this season — 371 of 402
+              are used. Seventeen of the 31 failed the possession gate, twelve had a
+              statistical event attributed to a player believed to be off court, three
+              disagreed with the official box score on minutes, and one had a substitution
+              state I could not resolve.</p>
+              <p class="reply-line">I did not have to go looking for that. Every answer
+              carries it, so I cannot quote you a number without being told what is missing
+              from it. The games are not deleted and you can ask me to include them — but
+              then I would say so.</p>
+              <p class="verdict">
+                <span class="figure">679</span> of 732 games used
+                <span class="qualifier">and the 53 left out are named, not hidden</span>
+              </p>
+            </div>
+          </div>
+        </figure>
+      </article>
+    </div>
+  </section>
+
   <section class="how" id="how">
     <div class="how-inner on-court">
       <h2>What is behind it.</h2>

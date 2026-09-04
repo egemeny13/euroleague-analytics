@@ -3353,6 +3353,65 @@ measured shift, so the page carries its own provenance.
   explicitly — so this defect reaches drawings and nothing else. That was already
   true of Decision 55's error and is why both were confined to a picture.
 
+## 59. The launch site's "Ask it something hard" section is transcript, not copy
+
+**Decided 2026-09-05.** The owner asked for a section aimed at the reader who
+wants the advanced version: long, hard prompts and the answers to them, laid out
+as three large visuals with their explanations, alternating side to side.
+
+**His correction is what shaped it.** The first plan was to show the answers the
+server gives. He pushed back: *is the AI's interpretation not the important part
+here, rather than what comes straight from the server?* He is right, and it is
+the difference between the section working and not. Raw tool output is a picture
+of homework. What a visitor is deciding whether to connect is an assistant that
+chains the calls they would have made next, distrusts a number built on 43
+possessions, and says what it left out. So each window shows **the calls and the
+reading**, and the three are three different kinds of thinking rather than three
+of the same:
+
+| | Question | What it demonstrates |
+|---|---|---|
+| 1 | Fenerbahce's clutch scoring, at three thresholds | It asks the next question, then names the point where the number stops being worth quoting |
+| 2 | Panathinaikos's best five | It withdraws its own first answer after reading its own tool's warning |
+| 3 | How many games this is built on | It reports what was excluded before being asked |
+
+**Every figure in that section came back from the running server.** The
+questions were put to `scripts/mcp_server.py` over its own stdio transport - the
+same registry, validation, row budget and response envelope a connected
+assistant gets. Tool names, arguments, counts, ratings and caveats are what was
+returned; the prose is a reading of those returns and adds no quantity to them.
+
+**The condition, and it is the whole reason this is a decision.** These numbers
+are a snapshot of E2024 and E2025 as loaded on 2026-09-05. **When the loaded
+seasons change - a new season, a reload, a game leaving or entering quarantine -
+the section is wrong and must be re-run against the server, not edited by hand.**
+A page that says "every figure below is what came back" and then carries a stale
+figure is worse than one that never claimed it. The three cases are reproducible:
+`el_get_possessions`, `el_get_lineup_stats`, `el_describe_warehouse` and
+`el_get_team_stats` with the arguments printed under each call.
+
+**Cross-checked against the section below it.** `#how` says 732 games loaded and
+53 held back. The server: E2024 308 used of 330, 22 excluded; E2025 371 of 402,
+31 excluded. 308 + 371 = 679 used, 22 + 31 = 53 held back, 679 + 53 = 732. The
+two sections cannot drift apart without one of them failing this arithmetic.
+
+**Placement: below Connect.** Section 1 of the design record pushes anything that
+does not move a visitor toward connecting past the point where only a curious
+reader goes, and this section is written for exactly that reader. It roughly
+doubles the page height, which the owner accepted explicitly.
+
+**HTML, not screenshots**, which is the same choice made for every other figure
+on this site. A PNG of a conversation goes stale silently, cannot be translated
+with the rest of the page when the Turkish version is authored, and blurs on a
+display the author did not own.
+
+**What this does not establish.** That the prose is what any other assistant
+would say - it is one reading of a set of returns, written to be checkable
+against the calls printed beside it rather than to be authoritative. And it does
+not establish that the live `#ask` chips further up the page will ever answer
+questions of this shape: those run a locked allowlist of recorded answers, and
+Decision 6's live endpoint is still unbuilt.
+
 ## Rules to add to the project instruction file
 
 ```
