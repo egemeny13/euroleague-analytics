@@ -158,7 +158,9 @@
            fills at the moment the card opens rather than before it. */
         if (bar) {
           bar.classList.add("is-settling");
-          if (barLabel) barLabel.textContent = "The last event of the game";
+          /* Not "the last event": the spotlight is the shot that decided the
+             game, and in this one a missed attempt follows it. */
+          if (barLabel) barLabel.textContent = "The shot that won the title";
           setBar(100);
         }
         var chosen = shots[spotlight[spotlight.length - 1]];

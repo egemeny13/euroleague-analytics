@@ -3265,6 +3265,94 @@ that single shot.
 league's own two-or-three flag. Decision 56 was built out of those rows. Anyone
 returning to per-shot accuracy should start there.
 
+## 58. Some games are recorded a metre out, and a game must be checked against its season before it is drawn
+
+**Decided 2026-09-04.** The owner looked at EuroLeague's own shot charts for
+other games, said those looked normal to him, and asked whether the problem was
+the *game* the launch site had chosen rather than the coordinates. It was. This
+is the third time on this question that his reading of a picture was right and
+the measurement had been aimed somewhere else.
+
+**The measurement.** Every archived `Points` response for E2021 and E2022 — 627
+games, 30,899 three-point attempts — read from the immutable archive with
+checksums verified. Nothing was re-fetched.
+
+The season is healthy. E2021's median three-point attempt sits 721 cm from the
+ring, E2022's 726 cm, against 733 cm for E2024 and E2025, and all five Decision
+57 anchors hold in both. **The game the site was drawing is not.**
+
+| | E2021 season | E2021 game 328 | Shift |
+|---|---|---|---|
+| Top of the key, `\|x\| <= 200` | 734 cm | 814 cm | **+80** |
+| Wings, `200 < \|x\| <= 500` | 730 cm | 814 cm | **+84** |
+| **Corners, `\|y\| <= 150`** | 686 cm | 686 cm | **0** |
+
+**Why that table is the proof and the raw median was not.** A game's median can
+move because the teams took different shots. This one did not: corner attempts
+are 10.2 % of the game against 12.1 % of the season, and every region is
+compared with the same region. The corners are exactly right and everything else
+is 80 cm out. That is the signature of a recording error rather than a shooting
+pattern, because **the sideline pins a corner attempt in place** — there is no
+court further out to put it on — while a shot at the top of the key can be
+dragged as deep as the operator likes.
+
+**It is one-directional, which rules out noise.** Per-game median shift against
+the season median, 627 games with at least 20 attempts:
+
+| p5 | p25 | median | p75 | p95 | min | max |
+|---|---|---|---|---|---|---|
+| −30 | −17 | +0 | +25 | +64 | **−43** | **+124** |
+
+No game is more than 43 cm below its season. 49 games (7.8 %) are more than
+50 cm above, 24 (3.8 %) more than 75 cm, and 11 (1.8 %) more than a metre.
+Sampling noise is symmetric; this is not.
+
+**It is not the arena.** Grouping by venue over both seasons gives a 111 cm
+spread, which looks like an arena effect until the 2022 Final Four is read on its
+own: four games, one building, one weekend — game 327 at +103, game 328 at +94,
+game 329 at **−10**, game 330 at +75. A property of the hall cannot switch off
+for the third-place game. The unit of the defect is the game, and by implication
+whoever recorded it.
+
+**What changes on the site.** The launch page now draws E2022 game 330, the 2023
+championship game, whose non-corner threes sit 3 cm *inside* its season median —
+rank 199 of 328. The spotlight is Sergio Llull's `(-238, 432)`, a two from
+**4.93 m** with the clock reading 00:03, for the 79-78 lead Olympiacos did not
+take back. Micic's `(69, 941)` is not withdrawn as a coordinate; it is simply
+from a game we can now show is badly recorded.
+
+**The card prints the distance, which Decision 57 declined to do.** What changed
+is that there is now a check at the level of the thing being drawn. Decision 57
+validated the frame across a whole season; it could not say whether one game sat
+inside that frame. This does, and the figure is written to a tenth of a metre
+because the source records on a 6.4 cm lattice.
+
+**The check is code, not a note.** `scripts/build_site_shot_chart.py` builds
+`site/data/shots.json` from the archive and **refuses** a game whose non-corner
+three-point attempts sit more than 40 cm outside its season's median. Run against
+E2021 game 328 it exits with that message; against E2022 game 330 it reports
+−3 cm and builds. The limit is a judgement, set between the +25 cm that a quarter
+of games exceed and the +50 cm that only 7.8 % do. The file also records the
+measured shift, so the page carries its own provenance.
+
+**What this does not establish.**
+
+- **Not the cause.** Operator, software, or arena calibration on the night — the
+  measurement locates the defect at the game and stops there.
+- **Not the shape.** A uniform outward scale, a radial offset, and a coarse click
+  grid all fit; separating them needs work not done here.
+- **Not a correction.** Nothing is rescaled and no stored value changes. Bad games
+  are identified and, for the site, refused.
+- **Not per-shot accuracy.** Decision 57's limit still stands. A clean game is a
+  population-level result; it does not certify one attempt inside it.
+- **Only two seasons.** E2021 and E2022. E2024 and E2025 are loaded and unchecked
+  for this, and the fifteen older archived seasons are unmeasured. The rate above
+  is a rate for two seasons, not for the archive.
+- **Nothing in the warehouse is affected.** No stored metric and no MCP tool
+  derives a distance or a shot type from coordinates — `tools.py` says so
+  explicitly — so this defect reaches drawings and nothing else. That was already
+  true of Decision 55's error and is why both were confined to a picture.
+
 ## Rules to add to the project instruction file
 
 ```

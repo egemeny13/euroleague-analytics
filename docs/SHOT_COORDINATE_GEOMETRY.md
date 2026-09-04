@@ -9,11 +9,16 @@ the ring, FIBA scale, no offset, confirmed against five court features from
 1.25 m to 12.4 m — two of which are physical boundaries the data cannot satisfy
 by being merely self-consistent. See Decision 57 and section 1 below.
 
+**What the frame does not cover.** Individual games. Decision 58 measured 627 of
+them and found the recording varies by up to +124 cm at the median, one-sided,
+with the unit of the defect being the game. The game the site used to draw was
+one of the bad ones, which is what the owner had been seeing all along.
+
 **What is still open, and permanently.** Whether whoever recorded an individual
 shot put it on the right spot. That needs a reference outside the feed, the only
 available one is video, and video is out of scope for this project on copyright
-grounds. So the site takes route A in section 3: plot the coordinates, print no
-distance in metres.
+grounds. The site therefore prints one distance, on one shot, in a game checked
+against its season — and treats that as the limit rather than the licence.
 
 ---
 
@@ -94,28 +99,47 @@ measured.
 
 ---
 
+### The game varies, and some games are recorded a metre out
+
+Decision 58, and the answer to the question section 2 used to hold open. Every
+archived `Points` response for E2021 and E2022 — 627 games, 30,899 three-point
+attempts — measured per game against its own season:
+
+| p5 | p25 | median | p75 | p95 | min | max |
+|---|---|---|---|---|---|---|
+| −30 | −17 | +0 | +25 | +64 | **−43 cm** | **+124 cm** |
+
+One-sided: nothing sits more than 43 cm below its season, while 7.8 % of games
+sit more than 50 cm above and 1.8 % more than a metre. In the worst of them the
+corner attempts are exactly normal and everything else is 80 cm out, which is
+what a recording error looks like — the sideline pins a corner shot in place and
+a shot at the top of the key can be dragged as deep as the operator likes. It is
+not the arena: within one weekend in one hall, three of the 2022 Final Four games
+sit at +103, +94 and +75 and the fourth at −10.
+
+**The unit of the defect is the game.** A season being sound says nothing about
+one game inside it, which is why `scripts/build_site_shot_chart.py` refuses to
+draw a game whose non-corner threes sit more than 40 cm outside its season's
+median.
+
+---
+
 ## 2. What is not settled
 
-### The shot on the launch site
+### The shot the launch site used to show
 
-Micic's buzzer-beater, E2021 game 328, read from the source `Points` response:
-minute 40, `3FGM`, `COORD_X = 69`, `COORD_Y = 941`, score becoming 74-77. From
-the ring that is **9.44 m**.
+Micic's buzzer-beater, E2021 game 328, `(69, 941)`, 9.44 m from the ring. The
+owner never accepted it and was right: **that game is one of the badly recorded
+ones** — seventh worst of 299 in its season, +93 cm on its non-corner threes.
+His other reading was right too, that EuroLeague's own chart for the game looks
+wrong; it is drawn from the same coordinates, so the defect is inherited rather
+than introduced.
 
-The owner's position: it cannot be more than about 8.2 m. His other shots in the
-same game come out at 7.43, 7.60 and 8.21 m, and the 8.21 m one is at minute 27,
-which may be the shot he is remembering.
-
-Two things are true at once and neither has been reconciled:
-
-- **8.2 m is not reachable by any global correction.** Shrinking every
-  coordinate by the 13 % needed drags the median three from 7.33 m to 6.37 m
-  and the closest threes to 5.93 m, inside a 6.75 m line.
-- **The owner reports that EuroLeague's own shot chart for this game looks
-  wrong to him as well**, at
-  `euroleaguebasketball.net/tr/euroleague/game-center/2021-22/olympiacos-piraeus-anadolu-efes-istanbul/E2021/328/#shooting-chart`.
-  That chart is drawn from the same coordinates. If it is wrong, the error is
-  upstream of this project and is inherited rather than introduced.
+His 8.2 m estimate is still not reachable by any global correction — shrinking
+every coordinate by the 13 % required drags the median three from 7.33 m to
+6.37 m, inside a 6.75 m line — and the size of this game's error is not
+established, only its existence and its rough magnitude. The site now draws
+E2022 game 330 instead, which sits 3 cm inside its season's median.
 
 **Not measured, and not measurable here:** whether the recorder put this
 particular shot on the right spot. The five anchors settle the frame, not the
@@ -135,10 +159,15 @@ look at those rows first.
 
 ### Whether the recording is stable across seasons, arenas and vendors
 
-Not measured. The corner line was checked per season and agrees, but nothing has
-been checked per arena, per competition, or against the older seasons that are
-archived and not loaded. E2021 — the season the launch site draws from — has had
-only its single displayed game checked.
+Partly answered, and worse than expected. Per game it is **not** stable: see the
+Decision 58 table above. Per season it is: E2021 at 721 cm, E2022 at 726 cm,
+E2024 and E2025 at 733 cm, all five anchors holding in each. Per arena the
+question is closed as a wrong question — the 111 cm spread between arena medians
+collapses when one weekend in one building produces +103, +94, +75 and −10.
+
+Still unmeasured: the per-game shift in E2024 and E2025, the same across
+competitions, and every one of the fifteen older archived seasons. The rate
+quoted above is a rate for two seasons, not for the archive.
 
 ---
 
@@ -147,16 +176,16 @@ only its single displayed game checked.
 ### A. Change what the site claims
 
 Stop presenting coordinates as distances. Plot them, which only needs them to be
-internally consistent, and never print a figure in metres. This is where the
-site stands today: the card on Micic's shot says "a three from well beyond the
-arc", which is true on every reading.
+internally consistent, and never print a figure in metres.
 
-**Cost:** the page loses a concrete number, and "beyond the arc" is weaker than
-"9.4 m". **Benefit:** nothing on the page can be wrong about a quantity nobody
-has validated.
+**Cost:** the page loses a concrete number. **Benefit:** nothing on the page can
+be wrong about a quantity nobody has validated.
 
-**Chosen, 2026-09-04.** The owner picked route A after the five anchors were
-measured. Route B is closed below rather than left pending.
+**Chosen, 2026-09-04, then amended the same day.** The owner picked route A after
+the five anchors were measured, and amended it once Decision 58 added a check at
+the level of the *game* rather than the season: the page prints one distance,
+4.9 m, on one shot, in a game measured against its season. Route B is closed
+below rather than left pending.
 
 ### B. Measure the source's error and correct it, everywhere — CLOSED
 
@@ -194,10 +223,16 @@ closed, not blocked.**
 
 - The half-court is drawn to FIBA dimensions with the ring at the origin.
 - Shots are plotted with no transform: no scale factor, no offset.
-- No distance in metres is printed anywhere.
-- One attempt of the 59 threes in the displayed game renders inside the drawn
-  arc — Larkin at `(31, 639)`, 6.40 m. It is one of the 0.37 % residual, not a
-  drawing error.
+- The game drawn is **E2022 game 330**, built by
+  `scripts/build_site_shot_chart.py`, which refuses any game more than 40 cm
+  outside its season. This one is 3 cm inside it.
+- All 124 attempts land on the side of the drawn line the league's own flag puts
+  them on — nought disagreements, against the 0.37 % season rate. The previous
+  game had one.
+- **One distance is printed**: 4.9 m, on Llull's shot, to a tenth of a metre
+  because the lattice is 6.4 cm. It rests on Decision 57 for the frame and
+  Decision 58 for the game, and on nothing at all for the recorder's aim on that
+  single attempt.
 
 ---
 
