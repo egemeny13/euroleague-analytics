@@ -443,6 +443,25 @@ nobody and be finished by the time anyone looked. That is the same defect as the
 unreachable shot card, wearing a different hat, and both are now handled the
 same way.
 
+## 15c. The hero asks in English only, 2026-09-04
+
+Section 4 said the hero question is asked in Turkish and answered in English, to
+show that a visitor can ask in their own language. The built page went further
+and used three languages, one per assistant: Turkish, English, German.
+
+**The owner's note on the preview, pinned to the typed question, translated: he
+wants it always to be written in English here.** All three now read in English.
+
+**What that gives up.** The multilingual questions were the only place the page
+showed, rather than said, that the tool answers whatever language you bring it.
+Nothing replaces that demonstration; the claim is simply not made.
+
+**What it gains.** A visitor who reads only English no longer watches two of the
+three questions type themselves in a language they cannot read, which is two
+beats of a four-beat animation spent on a sentence that means nothing to them.
+The three questions now differ by what they ask rather than by what language
+they are in, which is what section 4 wanted from them in the first place.
+
 ## 16. What is left
 
 1. **The live endpoint.** Section 6's locked route: an allowlist of question

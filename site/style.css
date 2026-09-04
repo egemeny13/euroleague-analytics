@@ -1018,12 +1018,12 @@ h1 {
   color: var(--ink-faint);
 }
 
-/* Its own line under the two figures, and it holds that line whether or not
+/* Its own line ABOVE the two figures, and it holds that line whether or not
    there is anything to say. A caption that appears and disappears would move
    everything below it every few seconds. */
 .unit-swap {
   flex-basis: 100%;
-  margin: 0.4rem 0 0;
+  margin: 0 0 0.2rem;
   min-height: 1.3em;
   font-size: 0.85rem;
   color: var(--ink-soft);
