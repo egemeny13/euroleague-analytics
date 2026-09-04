@@ -2912,6 +2912,51 @@ to detect the browser's language and redirect to `/tr/`, keeping a small link
 back so a visitor is never trapped in a language they did not choose. Neither
 the page nor the redirect exists yet.
 
+## 54. The launch package's claim tests guard consistency, not a fixed set of sentences
+
+Two tests in `tests/test_launch_package.py` were written against the old
+website and failed the moment it was rebuilt. Neither was deleted; both were
+changed to guard the property that still matters, and this records what moved.
+
+**`test_verified_claims_consistency` required four figures on every surface.**
+732 games, 107,311 possessions, 41,524 coordinates, 99.54 % minutes — README,
+sponsor brief and the site each had to carry all four. That was a reasonable
+proxy while the site was a page of claims. The rebuilt site deliberately has no
+statistics row: the owner's objection was that a visitor who does not yet know
+what the product is cannot be moved by "107,311 possessions", and that a row of
+big numbers under a headline is the clearest tell of a generated page. Requiring
+the figures would have forced back onto the page exactly what the design removed.
+
+The test now says: **the two documents whose job is to state the numbers still
+must state them, and any figure the site does state must be the verified one.**
+A stale `730 games` or `99.4%` fails wherever anybody writes it. The site keeps
+one required figure, 732, because how many games are loaded is the single
+coverage claim the page makes.
+
+**`test_public_launch_copy_does_not_claim_the_running_archive_is_complete`
+required every public surface to disclose a running backfill.** The backfill is
+not running: the chain reached the oldest season the API serves and stopped on
+2026-09-03 (item 52). The disclosure requirement is dropped, because keeping it
+would require the page to describe something that is over.
+
+**The overclaim patterns were re-aimed at the two claims that can still be
+false.** First, `23 seasons`: that was the count before E2006 and older were
+measured as empty at every game endpoint, and a public surface still saying it
+is selling four seasons that do not exist upstream. Second, copy that blurs
+archived with loaded — E2007 to E2021 are in the immutable archive, while the
+warehouse a visitor can query holds E2024, E2025 and the filling E2026.
+
+**One live document was wrong and is corrected.** `docs/SPONSOR_ONE_PAGER.md`
+offered a sponsor "all 23 seasons loaded & indexed". It now says 20, names the
+range as E2007 to E2026, and cites the measurement. The historical reports that
+mention 23 are left alone: they are records of what was projected at the time
+and rewriting them would be falsifying the log rather than correcting a claim.
+
+**What this does not establish.** That the remaining figures are current. 732,
+107,311, 41,524 and 99.54 % were verified when they were written and this test
+only holds surfaces to each other; none of them is re-measured against the
+warehouse on every run, and E2026 is loading nightly behind them.
+
 ## Rules to add to the project instruction file
 
 ```

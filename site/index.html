@@ -313,7 +313,94 @@
     </div>
   </section>
 
+  <!-- ACCESS IS STILL INVITE-ONLY UNTIL R-9. A visitor who follows these steps
+       before the Auth0 Action is switched off is refused at the sign-in screen.
+       This section must not go live before that happens; see section 7 of
+       docs/superpowers/specs/2026-09-04-launch-website-design.md. -->
+  <section class="connect" id="connect">
+    <div class="connect-inner">
+      <h2>Connect it once.</h2>
+      <p class="connect-lede">
+        One address, added to your assistant as a connector, then a sign-in.
+        There is nothing to install and nothing to configure afterwards.
+      </p>
+
+      <div class="address">
+        <code id="server-url">https://euroleague-analytics-mcp.fly.dev/mcp</code>
+        <button class="copy" type="button" id="copy-url" data-copied="Copied">Copy</button>
+      </div>
+
+      <ol class="steps">
+        <li>
+          <h3>In Claude</h3>
+          <p>Settings, then Connectors, then Add custom connector. Paste the
+             address and sign in with Google.</p>
+        </li>
+        <li>
+          <h3>In ChatGPT</h3>
+          <p>Settings, then Connectors, then Add. Paste the same address and
+             sign in with Google.</p>
+        </li>
+        <li>
+          <h3>Anywhere else</h3>
+          <p>Any client that speaks MCP takes the same address over Streamable
+             HTTP. Gemini, Cursor, Zed and the MCP Inspector are all known to
+             work; the repository lists what has been tested against what.</p>
+        </li>
+      </ol>
+
+      <p class="connect-note">
+        Free to use. Read-only: eleven tools that answer questions and none that
+        change anything.
+      </p>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="how-inner">
+      <h2>What is behind it.</h2>
+
+      <dl class="facts">
+        <div>
+          <dt>732</dt>
+          <dd>games loaded, across 2024-25 and 2025-26, with 2026-27 filling
+              nightly</dd>
+        </div>
+        <div>
+          <dt>53</dt>
+          <dd>games held back because they failed a validation check, and left
+              out of every answer unless you ask for them</dd>
+        </div>
+        <div>
+          <dt>11</dt>
+          <dd>tools, all read-only, all documented in the repository</dd>
+        </div>
+      </dl>
+
+      <p class="how-note">
+        Counting statistics are the official box score. Possessions, lineups,
+        on/off and every per-100 rate are this project's own reconstruction from
+        the play-by-play, and every answer says which it gave you.
+        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Read the source</a>
+      </p>
+    </div>
+  </section>
+
 </main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <span>EuroLeague Analytics</span>
+    <nav aria-label="Footer">
+      <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Source</a>
+      <a class="quiet-link" href="privacy.html">Privacy</a>
+      <a class="quiet-link" href="support.html">Support</a>
+    </nav>
+    <span class="footer-note">
+      Not affiliated with Euroleague Basketball. Data from their public API.
+    </span>
+  </div>
+</footer>
 
 <script src="hero.js" defer></script>
 <script src="shots.js" defer></script>

@@ -119,3 +119,23 @@
          would tell the visitor nothing they can act on. */
     });
 })();
+
+/* The address is the whole of the setup, so copying it should not require
+   selecting text in a code block. */
+(function () {
+  "use strict";
+  var button = document.getElementById("copy-url");
+  var url = document.getElementById("server-url");
+  if (!button || !url || !navigator.clipboard) return;
+  button.addEventListener("click", function () {
+    navigator.clipboard.writeText(url.textContent.trim()).then(function () {
+      var original = button.textContent;
+      button.textContent = button.getAttribute("data-copied");
+      button.classList.add("is-done");
+      window.setTimeout(function () {
+        button.textContent = original;
+        button.classList.remove("is-done");
+      }, 1600);
+    });
+  });
+})();

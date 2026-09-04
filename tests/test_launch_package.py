@@ -260,46 +260,72 @@ def test_privacy_policy_accurately_discloses_durable_row_budget_and_providers() 
 
 
 def test_verified_claims_consistency() -> None:
-    """Numerical claims in README, site, and sponsor doc must match verified constants."""
+    """A figure quoted anywhere must be the verified one, and must not disagree.
+
+    This used to require every surface to carry all four figures, which was a
+    reasonable proxy while the site was a page of claims. The rebuilt site
+    deliberately has no statistics row - a visitor who does not yet know what
+    the product is cannot be moved by "107,311 possessions" - so requiring the
+    figure would force copy back onto the page that the design removed.
+
+    What still matters, and is what this now checks: nobody may quote a
+    different number. Each figure is optional per surface and exact where it
+    appears, so a stale 730 or 99.4% fails wherever somebody writes it.
+    """
     readme_text = Path("README.md").read_text(encoding="utf-8")
     index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
     sponsor_text = Path("docs/SPONSOR_ONE_PAGER.md").read_text(encoding="utf-8")
 
-    # 732 games across loaded seasons
-    assert "732" in readme_text, "README missing 732 games count"
-    assert "732" in index_text, "index.html missing 732 games count"
-    assert "732" in sponsor_text, "SPONSOR_ONE_PAGER missing 732 games count"
+    # (verified value, the pattern that would be a competing claim)
+    verified = (
+        ("732", re.compile(r"7[0-9]{2} games", re.IGNORECASE)),
+        ("107,311", re.compile(r"10[0-9],[0-9]{3} possessions", re.IGNORECASE)),
+        ("41,524", re.compile(r"4[0-9],[0-9]{3} (?:verified )?coordinates", re.IGNORECASE)),
+        ("99.54%", re.compile(r"99\.[0-9]{1,2}%", re.IGNORECASE)),
+    )
 
-    # 107,311 total possessions
-    assert "107,311" in readme_text, "README missing 107,311 possession count"
-    assert "107,311" in index_text, "index.html missing 107,311 possession count"
-    assert "107,311" in sponsor_text, "SPONSOR_ONE_PAGER missing 107,311 possession count"
+    # The two documents whose job is to state the numbers still must state them.
+    for name, text in (("README", readme_text), ("SPONSOR_ONE_PAGER", sponsor_text)):
+        for value, _competing in verified:
+            assert value in text, f"{name} missing {value}"
 
-    # 41,524 verified real coordinates in E2024
-    assert "41,524" in readme_text, "README missing 41,524 verified coordinates count"
-    assert "41,524" in index_text, "index.html missing 41,524 verified coordinates count"
-    assert "41,524" in sponsor_text, "SPONSOR_ONE_PAGER missing 41,524 verified coordinates count"
+    # The site may say as much or as little as the design calls for, but a
+    # figure it does state has to be the verified one.
+    for value, competing in verified:
+        for match in competing.finditer(index_text):
+            assert value in match.group(0), (
+                f"index.html quotes {match.group(0)!r}, which is not the verified {value}"
+            )
 
-    # 99.54% minute accuracy
-    assert "99.54%" in readme_text, "README missing 99.54% minute accuracy"
-    assert "99.54%" in index_text, "index.html missing 99.54% minute accuracy"
-    assert "99.54%" in sponsor_text, "SPONSOR_ONE_PAGER missing 99.54% minute accuracy"
+    assert "732" in index_text, (
+        "index.html should still say how many games are loaded; it is the one "
+        "coverage claim the page makes"
+    )
 
 
 def test_public_launch_copy_does_not_claim_the_running_archive_is_complete() -> None:
     """The historical chain is still running, so completion copy would be false."""
+    # Archived is not loaded. E2007 to E2021 are in the immutable archive; the
+    # warehouse a visitor queries holds E2024, E2025 and the filling E2026, and
+    # copy that blurs the two promises data nobody can query.
     forbidden = (
-        re.compile(r"23 seasons.{0,40}archived", re.IGNORECASE | re.DOTALL),
-        re.compile(r"all\s+21\s+historical\s+seasons.{0,40}archived", re.IGNORECASE),
-        re.compile(r"seasons\s+archived", re.IGNORECASE),
+        # 23 was the season count before 2026-09-03, when E2006 and older were
+        # measured as empty at every game endpoint. Twenty is the true figure,
+        # and a public surface still saying 23 is selling four seasons that do
+        # not exist upstream.
+        re.compile(r"23\s+seasons", re.IGNORECASE),
+        # Archived is not loaded. E2007 to E2021 sit in the immutable archive;
+        # the warehouse a visitor queries holds E2024, E2025 and the filling
+        # E2026, and copy that blurs the two promises data nobody can query.
+        re.compile(r"every\s+season.{0,30}(?:loaded|queryable)", re.IGNORECASE),
+        re.compile(r"all\s+seasons.{0,30}(?:loaded|queryable)", re.IGNORECASE),
     )
 
-    for path in ARCHIVE_STATUS_SURFACES:
-        text = path.read_text(encoding="utf-8")
-        lowered = text.lower()
-        assert "archive" in lowered and "backfill" in lowered, (
-            f"{path} must disclose the running archive backfill"
-        )
+    # Until 2026-09-03 every one of these surfaces had to disclose that the
+    # archive backfill was still running. It is not: the chain reached the
+    # oldest season the API serves and stopped (Decision 52). Requiring the
+    # disclosure now would require the page to describe something that is over,
+    # so the requirement is dropped and only the overclaim check below stays.
 
     for path in OVERCLAIM_SURFACES:
         text = path.read_text(encoding="utf-8")
