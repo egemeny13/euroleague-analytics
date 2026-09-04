@@ -3052,12 +3052,54 @@ comes from the event action code, never from distance" - and `queries.py`
 repeats it. No stored metric, no tool response and no test was affected. The
 error lived entirely in a drawing.
 
+**The first check was not enough, and the owner caught that too.** Comparing a
+geometric classification with the league's flag only asks whether each shot is
+on the correct SIDE of the line. It cannot see a scale error: if every
+coordinate were 20 % too large, every three would still be outside the arc and
+every two inside, and the agreement would still be 99.6 %. The owner looked at
+the corrected chart and said the threes were still too far out - *most threes
+should be around 7 m, the line is 6.75 m at the top of the arc* - which is a
+question about distance, not about sides. Three further measurements answer it.
+
+**The arc, fitted rather than assumed.** The boundary between twos and threes is
+the line. Taking the first percentile of three-point attempts in each 50 cm band
+of `|x|` and fitting a circle centred on the court axis, over E2024 and E2025:
+
+- with the centre free: ring at `y = 35`, radius 651 cm, 3.7 cm rms;
+- with the radius fixed at the EuroLeague 675 cm: ring at `y = 7.5`, 5.8 cm rms.
+
+Twelve bands, residuals under 6 cm. The origin is the ring to within about 8 cm,
+and the units are centimetres on both axes.
+
+**The distances are ordinary.** All 38,546 three-point attempts across the two
+seasons, measured from the ring:
+
+| p5 | p25 | median | p75 | p95 | beyond 9 m |
+|---|---|---|---|---|---|
+| 6.82 m | 7.05 m | **7.33 m** | 7.74 m | 8.62 m | 2.7 % |
+
+The nearest threes sit at 6.82 m against a 6.75 m line, and the median is 7.33 m
+- which is the number the owner predicted from memory before any of this was
+measured.
+
+**The shot the site shows.** Micic's buzzer-beater is `(69, 941)`, read back
+from the source `Points` response for E2021 game 328: minute 40, `3FGM`, score
+becoming 74-77. From the ring that is **9.44 m**, in the top 2.7 % of threes and
+not typical - which is the point of putting it on the page. His three other
+made threes in the same game come out at 7.43, 7.60 and 8.21 m, and his two
+close attempts at 0.87 and 1.50 m. A layup at 0.87 m from the ring is only
+possible on this reading; on the baseline reading the same shot would sit on the
+baseline behind the backboard.
+
 **What this does not establish.** It does not explain the residual 0.37 %. Those
 345 shots disagree with the league's own flag under the correct origin too, and
 they are unexamined: they may be recording error, corner-line edge cases, or a
 rule this classification does not model. It also says nothing about `COORD_X`,
-whose attack-relative sign was already recorded and is untouched. And it is
-measured on E2024 and E2025 only; a season loaded later is a season to re-check,
+whose attack-relative sign was already recorded and is untouched. The arc fit
+uses the first percentile of threes as the boundary, which sits slightly inside
+the true line, so the free-centre radius of 651 cm is a floor rather than an
+estimate. And it is measured on E2024 and E2025, with the single E2021 game the
+site shows checked separately; a season loaded later is a season to re-check,
 not a season to assume.
 
 ## Rules to add to the project instruction file
