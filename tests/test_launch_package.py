@@ -394,3 +394,16 @@ def test_hard_questions_show_thinking_without_technical_call_chrome() -> None:
         assert technical_class not in deep, (
             f"The hard-question examples still expose technical UI: {technical_class}"
         )
+
+
+def test_page_background_keeps_only_the_sideline_system() -> None:
+    """The page frame keeps its rails and section ticks, without court furniture."""
+    index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
+    background = index_text.split('<div class="courtgrid"', 1)[1].split('<main id="main">', 1)[0]
+    stylesheet = (SITE_DIR / "style.css").read_text(encoding="utf-8")
+
+    assert 'class="rail rail-left"' in background
+    assert 'class="rail rail-right"' in background
+    assert "<svg" not in background
+    assert "halfway" not in background
+    assert ".claim::before" in stylesheet

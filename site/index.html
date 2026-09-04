@@ -27,47 +27,6 @@
 <div class="courtgrid" aria-hidden="true">
   <span class="rail rail-left"></span>
   <span class="rail rail-right"></span>
-  <span class="halfway"><span></span></span>
-
-  <!-- The two ends of the court. Between them the rails are its sidelines and
-       the circle at mid-page is the centre circle, so the whole page is one
-       court seen end to end rather than a stack of separate pages.
-
-       Both ends are drawn in centimetres to FIBA dimensions, the same units and
-       the same numbers as the shot chart in the section below: the court is
-       1500 wide, the key 490 by 580, the ring 157.5 from the baseline, the
-       three-point corners 90 in from each sideline and the arc 675 from the
-       ring. The viewBox crops the half short of its 1400, so this is the near
-       end of a real court rather than a squashed one. The previous version
-       guessed these and put the three-point line in the wrong place.
-
-       THE CROP HAS TO CLEAR THE ARC. The arc is 675 from a ring 157.5 off the
-       baseline, so its far point is 832.5 from the baseline. A 760-tall frame
-       cuts the top off it, which is exactly what it looked like: a
-       three-point line with its middle missing. The frame is 860 tall, and the
-       bottom end's starts at -100 so the same clearance sits on its own side of
-       the baseline. Change the arc and this number has to be re-derived. -->
-  <svg class="court-end court-end-top" viewBox="0 0 1500 860" fill="none">
-    <g stroke="currentColor" stroke-width="2">
-      <rect x="505" y="0" width="490" height="580"/>
-      <circle cx="750" cy="580" r="180"/>
-      <path d="M660 120 H840"/>
-      <circle cx="750" cy="157.5" r="22.5"/>
-      <path d="M90 0 V299 M1410 0 V299"/>
-      <path d="M90 299 A675 675 0 0 0 1410 299"/>
-    </g>
-  </svg>
-
-  <svg class="court-end court-end-bottom" viewBox="0 -100 1500 860" fill="none">
-    <g stroke="currentColor" stroke-width="2">
-      <rect x="505" y="180" width="490" height="580"/>
-      <circle cx="750" cy="180" r="180"/>
-      <path d="M660 640 H840"/>
-      <circle cx="750" cy="602.5" r="22.5"/>
-      <path d="M90 760 V461 M1410 760 V461"/>
-      <path d="M90 461 A675 675 0 0 1 1410 461"/>
-    </g>
-  </svg>
 </div>
 
 <main id="main">

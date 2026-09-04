@@ -384,11 +384,13 @@ the text field would be. Answers are read from `site/data/asks.json` today; the
 approved live endpoint is still to be built, and every chip already carries the
 `id` it will send.
 
-**One court runs the length of the page.** Two rails are its sidelines, the
-circle at mid-page is the centre circle, keys and arcs sit at both ends, and
-each section boundary nicks the sideline. This replaced the court that sat in
-the hero's corner, and it is what stopped the sections reading as separate pages
-stacked on each other.
+**The sideline system runs the length of the page.** Two rails frame the
+content and each section boundary nicks them with a short outward mark. The
+first version also drew keys, three-point arcs and a centre circle behind the
+page. After reviewing the finished page on 2026-09-05, the owner removed that
+interior court furniture: it competed with the content while the side rails did
+the useful work of holding the sections together. The rails and boundary marks
+remain; the background inside them is clear.
 
 **Palette and type.** Warm neutrals on a near-white paper; one saturated orange
 (`#EA580C`) used for exactly two things, a measured value and the one action
