@@ -57,12 +57,50 @@ def test_a_season_code_that_is_not_one_is_refused_before_anything_is_requested(c
     assert "season code" in capsys.readouterr().err.lower()
 
 
-def test_missing_credentials_stop_the_run_rather_than_producing_a_partial_one(capsys) -> None:
-    """No database settings means no run at all, not a fetch with nowhere to put it."""
+def test_missing_credentials_stop_the_run_rather_than_producing_a_partial_one(
+    monkeypatch, capsys
+) -> None:
+    """No database settings means no run at all, not a fetch with nowhere to put it.
+
+    The .env file is emptied here rather than trusted to be absent, because on
+    the owner's own machine it is present and this test would otherwise pass or
+    fail depending on whose checkout it ran in.
+    """
     module = _load_script_module()
+    monkeypatch.setattr(module, "load_env_file", dict)
+    for name in ("DATABASE_URL", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"):
+        monkeypatch.delenv(name, raising=False)
 
     assert module.main(["E2025"]) == 1
     assert "Missing required live setting(s)" in capsys.readouterr().err
+
+
+def test_an_exported_variable_beats_the_env_file(monkeypatch, tmp_path) -> None:
+    """A repository secret must not be overridable by a .env left in a checkout.
+
+    This is the same precedence `DatabaseSettings.from_env` already keeps. It is
+    asserted here too because this script builds its own mapping, and a mapping
+    merged the other way round would look identical until the day a stale file
+    silently redirected a production write.
+    """
+    module = _load_script_module()
+    seen: dict[str, str] = {}
+
+    monkeypatch.setattr(
+        module,
+        "load_env_file",
+        lambda *_a, **_k: {"DATABASE_URL": "postgresql://from-the-file/none"},
+    )
+    monkeypatch.setenv("DATABASE_URL", "postgresql://from-the-environment/none")
+
+    def capture(values):
+        seen.update(values)
+        raise ValueError("Missing required live setting(s): stop here")
+
+    monkeypatch.setattr(module, "live_runtime_settings", capture)
+
+    assert module.main(["E2025", "--cache-root", str(tmp_path)]) == 1
+    assert seen["DATABASE_URL"] == "postgresql://from-the-environment/none"
 
 
 class _Recorder:

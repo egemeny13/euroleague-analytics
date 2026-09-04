@@ -35,7 +35,7 @@ import requests
 
 from euroleague.archive import SupabaseStorage, archive_successful_observation
 from euroleague.cache import ResponseCache
-from euroleague.config import live_runtime_settings
+from euroleague.config import live_runtime_settings, load_env_file
 from euroleague.fetch import DEFAULT_CACHE_ROOT, ArchiveFetcher, validate_season_code
 from euroleague.roster import load_cached_roster
 
@@ -98,8 +98,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Not a season code: {error}", file=sys.stderr)
         return 2
 
+    # A real environment variable wins over the file, never the other way round.
+    # In CI the credentials arrive as repository secrets and a stray .env left
+    # in a checkout must not be able to redirect the run; on the owner's own
+    # machine there are no exported variables and the file is the only source.
+    environment = {**load_env_file(), **os.environ}
+
     try:
-        database_settings, storage_settings = live_runtime_settings(os.environ)
+        database_settings, storage_settings = live_runtime_settings(environment)
     except Exception as error:
         print(f"Missing required live setting(s): {error}", file=sys.stderr)
         return 1

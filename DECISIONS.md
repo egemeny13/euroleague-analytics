@@ -2923,6 +2923,29 @@ one of them would put two writers on the same season's roster. If the live job
 ever stops owning a season, that name comes out of `LIVE_SEASONS` — as a
 decision, not as a convenience.
 
+**What the load measured, 2026-09-04.** E2025 loaded 383 registrations across
+20 clubs, E2024 loaded 326 across 18, each from exactly one archived response,
+and E2026's 223 were untouched. Joined through `person_game_link`, 351 of the
+E2025 players who appear in a box score can be given a position and 306 of the
+E2024 ones.
+
+**A position belongs to a registration, not to a player.** The join returns more
+rows than players — 360 for 351 in E2025 — because a player who moves club
+mid-season has two registrations. In three cases across the two seasons the two
+registrations do not agree:
+
+| Player | First registration | Second registration |
+|---|---|---|
+| Wenyen Gabriel | Forward, Maccabi, Oct-Dec 2024 | **Center**, Panathinaikos, Dec 2024-Jun 2025 |
+| Filip Petrusev | Center, Olympiacos, Oct 2024 | **Forward**, Crvena Zvezda, Oct 2024-Jun 2025 |
+| Bruno Caboclo | Forward, Hapoel, Sep-Dec 2025 | **Center**, Dubai, Jan-Jun 2026 |
+
+None of those is a defect. Each is a transfer, and the new club registered the
+player at a different position. The consequence is a rule: a lookup keyed on
+player alone silently picks one of two true answers. Any position lookup must be
+scoped by club, or by the date the registration covers, and anything that
+publishes a position must be able to say which registration it came from.
+
 **What this does not establish.**
 
 - **It does not put five positions on the floor.** The source publishes three
