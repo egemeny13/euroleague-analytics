@@ -1384,58 +1384,90 @@ main, .topbar { position: relative; z-index: 1; }
    is, and leaves it strongest at the top and bottom edges where nothing is
    written. Nothing is deleted: the court is still a whole court, it simply
    stops competing with the words. */
+/* One strength, and no opacity of its own. It used to be drawn at 0.85, which
+   made the ends of the court a slightly different line from the rails that
+   join them - the same court drawn in two weights. The ground layer above is
+   what keeps it off the words now, so the drawing itself has no reason to be
+   quieter than the rest of the drawing. */
 .court-end {
   position: absolute;
   left: max(var(--gutter), calc(50% - 640px));
   right: max(var(--gutter), calc(50% - 640px));
   width: auto;
   color: var(--hairline);
-  opacity: 0.85;
 }
 
-/* A clearing in the ground, not a box on top of it.
+/* ---------- THE ONE RULE FOR TEXT OVER THE COURT ----------
 
-   Fading the court by height was the first attempt and it cannot work: the
-   text sits in the same band as the busiest part of the drawing, so any fade
-   that spares the words also erases the key and the arc. What works is the
-   other way round - the court is drawn in full, and the paper the words are
-   printed on rises up behind them and stops the lines where they would cross a
-   letter.
+   Three layers, and every block on the page obeys the same one rather than
+   each section being patched where it happened to look wrong. Which places
+   look wrong changes with the window width, so a per-section fix is a fix that
+   holds today and fails on somebody else's screen.
 
-   It is a radial gradient rather than a rectangle so there is no visible edge:
-   a line entering the text fades rather than being cut, which reads as depth
-   instead of as a panel sitting on top. Same colour as the page, so nothing
-   new appears - only the court stops appearing. */
-.how-inner,
-.footer-inner,
-.hero-copy {
+     1. The court. Drawn in full, at one strength, never dimmed.
+     2. The ground. An opaque plate of the page's own colour, behind any block
+        of text that sits over the drawing.
+     3. The text. On its own ground, at full contrast.
+
+   WHAT THIS REPLACED, and why it had to go. The first version was a radial
+   gradient: solid in the middle, transparent by the edge of an ellipse much
+   larger than the text. That does not hide a line, it DISSOLVES one - the arc
+   entered the hero and thinned away to nothing in open paper, several hundred
+   pixels from any letter. The owner read it as the court lines being washed
+   out, which is exactly what it was.
+
+   A line that fades out in mid-air reads as a mistake. A line that disappears
+   behind an object reads as depth. So the plate is now opaque across the whole
+   block and feathers over about 40px at its edges - short enough that the line
+   clearly goes BEHIND something, soft enough that there is no panel edge.
+
+   The feather is built from two masks intersected rather than from a blur,
+   because a blur paints outside the element's own box: at the page gutter that
+   spills past the edge and puts a horizontal scrollbar on the whole site,
+   which is the same failure the old -4.5rem inset caused. A mask cannot paint
+   outside the box it masks.
+
+   `--ground` is the plate's colour and defaults to the page. A section with a
+   background of its own sets it, so the plate never shows up as a lighter
+   patch on a darker band. */
+.on-court {
   position: relative;
 }
-.how-inner::before,
-.footer-inner::before,
-.hero-copy::before {
+.on-court::before {
+  /* How far the plate takes to disappear at its edges. Long enough that there
+     is no visible boundary, short enough that a line reads as passing behind
+     the block rather than as evaporating. */
+  --fade: 40px;
   content: "";
   position: absolute;
-  /* The horizontal reach has to stay inside the gutter, which is 4rem at the
-     narrowest desktop width. -4.5rem pushed the clearing past the page edge
-     and put a horizontal scrollbar on the whole site. */
-  inset: -3.5rem -2.5rem;
+  inset: -1.75rem -1.5rem;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(
-    ellipse at center,
-    var(--paper) 0%,
-    var(--paper) 55%,
-    rgba(253, 250, 246, 0) 100%
-  );
+  background: var(--ground, var(--paper));
+  -webkit-mask-image:
+    linear-gradient(to right,  transparent 0, #000 var(--fade), #000 calc(100% - var(--fade)), transparent 100%),
+    linear-gradient(to bottom, transparent 0, #000 var(--fade), #000 calc(100% - var(--fade)), transparent 100%);
+  mask-image:
+    linear-gradient(to right,  transparent 0, #000 var(--fade), #000 calc(100% - var(--fade)), transparent 100%),
+    linear-gradient(to bottom, transparent 0, #000 var(--fade), #000 calc(100% - var(--fade)), transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
+
+/* A section with its own background tells the plate what colour to be. */
+.ask { --ground: var(--paper-deep); }
 .court-end-top { top: 0; }
 .court-end-bottom { bottom: 0; }
 
 @media (max-width: 860px) {
   /* On a phone the court would be all there is. The sidelines alone still
-     frame the page; the ends are dropped. */
-  .court-end, .halfway { display: none; }
+     frame the page; the ends are dropped.
+
+     The ground goes with them. With no drawing behind the text it has nothing
+     to hide, and it would cost something to keep: the gutter falls to 20px at
+     the narrowest width while the plate reaches 24px past the text on each
+     side, which is four pixels of horizontal scrollbar across the whole site. */
+  .court-end, .halfway, .on-court::before { display: none; }
 }
 
 /* ---------- connect ---------- */
