@@ -216,6 +216,15 @@
                the court and the shots stay in the source's own units and no
                per-shot arithmetic can drift from the lines behind it. -->
           <g transform="translate(0, 1000) scale(1, -1)">
+          <!-- Out of bounds, drawn rather than left blank.
+
+               Four of this game's attempts were recorded behind the baseline,
+               the furthest 50 cm back. They are real and they stay. Against an
+               empty background they read as dots that had escaped the drawing;
+               against a floor that visibly continues past the line they read
+               as what they are - shots the league recorded behind the
+               baseline. The band explains them instead of hiding them. -->
+          <rect class="out-of-bounds" x="-750" y="-95" width="1500" height="95"/>
           <g fill="none" stroke="var(--hairline)" stroke-width="7">
             <path d="M-750 0 H750"/>
             <path d="M-750 0 V1100 M750 0 V1100"/>
@@ -264,10 +273,12 @@
           </div>
         </div>
 
+        <!-- Short, but neither claim may be dropped: free throws are absent for
+             a reason, and the four dots behind the baseline are real. A caption
+             that omits either is tidier and false. -->
         <p class="figure-note" id="shots-caption">
-          Every field goal attempt in the game. Free throws have no coordinates,
-          so they are not here. Four attempts were recorded just behind the
-          baseline and are drawn where the league put them.
+          Every field goal attempt. Free throws have no coordinates; the dots
+          behind the baseline are where the league put them.
         </p>
       </div>
     </div>
@@ -346,10 +357,9 @@
           <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
         </div>
 
-        <p class="figure-note figure-note-tight">
-          Positions are the club's own registration for this season. Where each
-          player stands is a convention — the source records Guard, Forward and
-          Center, and nothing finer.
+        <p class="figure-note">
+          Positions are the club's registration. Where each player stands is a
+          convention — the source knows only Guard, Forward, Center.
         </p>
       </div>
     </div>

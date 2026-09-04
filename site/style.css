@@ -485,13 +485,16 @@ h1 {
 
 .claim {
   padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
-  border-top: 1px solid var(--hairline);
 }
 
+/* The two columns start together. Centring the copy against a tall court left
+   the heading floating at the court's midpoint with nothing above it to explain
+   the gap; starting both at the same line reads as one row rather than two
+   things that happen to be side by side. */
 .claim-inner {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-  align-items: center;
+  align-items: start;
   gap: clamp(2.5rem, 6vw, 5.5rem);
   max-width: 1180px;
   margin: 0 auto;
@@ -540,6 +543,13 @@ h1 {
   display: block;
 }
 
+/* The floor past the baseline. Faint enough to be ground, present enough that
+   a dot sitting on it is obviously outside the line rather than adrift. */
+.out-of-bounds {
+  fill: var(--court);
+  stroke: none;
+}
+
 /* Made shots are filled, misses are open. The only two states there are. */
 .shot-made { fill: var(--ball); fill-opacity: 0.88; }
 .shot-miss { fill: none; stroke: var(--ink-faint); stroke-width: 6; stroke-opacity: 0.5; }
@@ -549,7 +559,7 @@ h1 {
    filling with is measured values. It disappears once the chart is complete:
    a finished bar sitting under a finished chart is furniture. */
 .chartbar {
-  margin: 1.5rem 0 0;
+  margin: 0.9rem 0 0;
   opacity: 0;
   transition: opacity 260ms ease;
 }
@@ -584,11 +594,21 @@ h1 {
   transition: width 650ms cubic-bezier(.4, 0, .2, 1);
 }
 
+/* A caption is a footnote, not a paragraph. It was set at 60ch and ran the
+   width of the figure, which made two sentences of provenance look like the
+   point of the section. Narrow measure, smaller, closer to what it annotates. */
+/* A caption is a footnote, not a paragraph. It was three lines at 60ch under a
+   figure twice that wide, so it read as the point of the section and left a
+   band of dead space beside it. Two lines at most, set smaller, running the
+   width it is annotating rather than a column of its own. */
 .figure-note {
-  margin: 1.25rem 0 0;
-  max-width: 60ch;
-  font-size: 0.82rem;
-  line-height: 1.6;
+  margin: 0.8rem 0 0;
+  /* Runs the width of the figure it annotates. A narrower measure would be
+     easier to read as prose, but this is one sentence of provenance and the
+     column of dead space beside it cost more than the line length saves. */
+  max-width: none;
+  font-size: 0.78rem;
+  line-height: 1.55;
   color: var(--ink-faint);
 }
 
@@ -817,7 +837,7 @@ h1 {
 .claim-flip .claim-copy { order: 2; }
 .claim-flip .claim-figure { order: 1; }
 
-.figure-note-tight { margin-top: 1.4rem; max-width: 40ch; }
+.figure-note-tight { margin-top: 1.1rem; max-width: 38ch; }
 
 /* ---------- the floor ----------
    The substitution is drawn on a court because the substitution is a change of
@@ -1044,7 +1064,6 @@ h1 {
 
 .ask {
   padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
-  border-top: 1px solid var(--hairline);
   background: var(--paper-deep);
 }
 
@@ -1170,22 +1189,43 @@ body { position: relative; }
 .rail-left  { left: max(var(--gutter), calc(50% - 640px)); }
 .rail-right { right: max(var(--gutter), calc(50% - 640px)); }
 
-/* Where a section ends, the sideline is nicked - the same device a court uses
-   to mark a hash. It is what turns two long lines into a measured thing. */
-.claim, .ask { position: relative; }
+/* WHERE ONE SECTION ENDS: the throw-in line, not a rule across the page.
+
+   A real court has one. It is a short mark on each sideline, 8.325 m from the
+   endline, and a throw-in in the last two minutes is taken from it. That
+   distance is not a coincidence of this page's arithmetic: the ring is 157.5
+   from the baseline and the arc is 675 from the ring, so the top of the
+   three-point arc is 157.5 + 675 = 832.5 - the same 8.325 m. The mark and the
+   top of the arc line up on a real floor, which is why the owner asked for this
+   one and not for a divider.
+
+   It replaces a hairline that ran the full width of the page. That rule
+   separated sections the way a horizontal rule separates anything, which is to
+   say it said nothing; this says "sideline" and marks the change at the same
+   time.
+
+   The length is chosen to be legible, not scaled. A real mark reaches 0.15 m
+   onto a 15 m floor - a hundredth of the width, about 11px here - which at this
+   size would read as dirt on the screen rather than as a mark. */
+.claim, .ask, .connect, .how, .footer { position: relative; }
 .claim::before, .claim::after,
-.ask::before {
+.ask::before, .ask::after,
+.connect::before, .connect::after,
+.how::before, .how::after,
+.footer::before, .footer::after {
   content: "";
   position: absolute;
-  top: -3px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--paper);
-  border: 1px solid var(--hairline);
+  top: 0;
+  width: 34px;
+  height: 1px;
+  background: var(--ink-faint);
 }
-.claim::before, .ask::before { left: max(var(--gutter), calc(50% - 640px)); transform: translateX(-2.5px); }
-.claim::after { right: max(var(--gutter), calc(50% - 640px)); transform: translateX(2.5px); }
+.claim::before, .ask::before, .connect::before, .how::before, .footer::before {
+  left: max(var(--gutter), calc(50% - 640px));
+}
+.claim::after, .ask::after, .connect::after, .how::after, .footer::after {
+  right: max(var(--gutter), calc(50% - 640px));
+}
 
 main, .topbar { position: relative; z-index: 1; }
 
@@ -1208,12 +1248,17 @@ main, .topbar { position: relative; z-index: 1; }
   height: 1px;
   background: var(--hairline);
 }
+/* The centre circle marks the halfway point of the court the page is drawn as.
+   It was filled with paper, so it punched an opaque disc out of everything
+   behind it and showed nothing of its own - the owner's words: it stays hidden
+   in the background. No fill, and a mark on the halfway line where the two
+   meet, which is how a centre circle is actually read. */
 .halfway span {
   width: clamp(120px, 16vw, 210px);
   aspect-ratio: 1;
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--ink-faint);
   border-radius: 50%;
-  background: var(--paper);
+  background: none;
 }
 
 /* ---------- the ask window ---------- */
@@ -1325,6 +1370,16 @@ main, .topbar { position: relative; z-index: 1; }
   border-style: dashed;
 }
 
+/* The court is the page's ground, and ground stays behind the thing standing
+   on it. At full strength it ran the arc and the key straight through the
+   sentences in "What is behind it" and through the footer, and a hairline
+   crossing a letterform is not a background - it is noise the reader has to
+   read around.
+
+   The mask fades the drawing towards the middle of the page, where the text
+   is, and leaves it strongest at the top and bottom edges where nothing is
+   written. Nothing is deleted: the court is still a whole court, it simply
+   stops competing with the words. */
 .court-end {
   position: absolute;
   left: max(var(--gutter), calc(50% - 640px));
@@ -1332,6 +1387,43 @@ main, .topbar { position: relative; z-index: 1; }
   width: auto;
   color: var(--hairline);
   opacity: 0.85;
+}
+
+/* A clearing in the ground, not a box on top of it.
+
+   Fading the court by height was the first attempt and it cannot work: the
+   text sits in the same band as the busiest part of the drawing, so any fade
+   that spares the words also erases the key and the arc. What works is the
+   other way round - the court is drawn in full, and the paper the words are
+   printed on rises up behind them and stops the lines where they would cross a
+   letter.
+
+   It is a radial gradient rather than a rectangle so there is no visible edge:
+   a line entering the text fades rather than being cut, which reads as depth
+   instead of as a panel sitting on top. Same colour as the page, so nothing
+   new appears - only the court stops appearing. */
+.how-inner,
+.footer-inner,
+.hero-copy {
+  position: relative;
+}
+.how-inner::before,
+.footer-inner::before,
+.hero-copy::before {
+  content: "";
+  position: absolute;
+  /* The horizontal reach has to stay inside the gutter, which is 4rem at the
+     narrowest desktop width. -4.5rem pushed the clearing past the page edge
+     and put a horizontal scrollbar on the whole site. */
+  inset: -3.5rem -2.5rem;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    var(--paper) 0%,
+    var(--paper) 55%,
+    rgba(253, 250, 246, 0) 100%
+  );
 }
 .court-end-top { top: 0; }
 .court-end-bottom { bottom: 0; }
@@ -1347,7 +1439,6 @@ main, .topbar { position: relative; z-index: 1; }
 .connect {
   position: relative;
   padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
-  border-top: 1px solid var(--hairline);
 }
 .connect-inner { max-width: 780px; margin: 0 auto; }
 
@@ -1560,7 +1651,6 @@ main, .topbar { position: relative; z-index: 1; }
 
 .how {
   padding: clamp(2.75rem, 5vw, 5rem) var(--gutter);
-  border-top: 1px solid var(--hairline);
 }
 .how-inner { max-width: 780px; margin: 0 auto; }
 
@@ -1601,7 +1691,6 @@ main, .topbar { position: relative; z-index: 1; }
   position: relative;
   z-index: 1;
   padding: 2.5rem var(--gutter) 3rem;
-  border-top: 1px solid var(--hairline);
 }
 .footer-inner {
   max-width: 1180px;
