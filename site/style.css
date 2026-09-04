@@ -819,67 +819,137 @@ h1 {
 
 .figure-note-tight { margin-top: 1.4rem; max-width: 40ch; }
 
-.unit {
+/* ---------- the floor ----------
+   The substitution is drawn on a court because the substitution is a change of
+   shape, not a change of name. Birch is the only centre in the strong five and
+   Baldwin is a guard, so taking one off for the other empties the paint - and
+   an empty paint is a thing you can see, where "-34.1" is a thing you have to
+   be told.
+
+   Positions are measured; spots are a convention. The figure note under this
+   says so, and nothing in here may quietly imply otherwise. */
+
+.floor {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 14px;
-  padding: 1.6rem 1.7rem 1.5rem;
-  box-shadow: 0 1px 2px rgba(26, 21, 18, 0.03), 0 22px 45px -34px rgba(26, 21, 18, 0.4);
+  border-radius: 12px;
+  padding: 0.75rem;
+  /* A marker walking on or off travels past the sideline. Nothing it does may
+     end up drawn on the page outside this card. */
+  overflow: hidden;
 }
 
-.unit-names {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.floor-court {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-.unit-names li {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.62rem 0;
-  border-bottom: 1px solid var(--hairline);
-  font-family: var(--display);
-  font-weight: 500;
-  font-size: clamp(1.05rem, 1.7vw, 1.35rem);
-  letter-spacing: -0.02em;
+/* Lit only when it empties. It is the one thing on this court that reacts, so
+   it is the one thing the eye is sent to. */
+.floor-paint {
+  fill: transparent;
+  transition: fill 520ms ease;
 }
-.unit-names li:last-child { border-bottom: 0; }
+.floor-paint.is-empty { fill: rgba(234, 88, 12, 0.10); }
 
-/* Club colour and shirt number, both from our own data. No crest. */
-.unit-jersey {
-  width: 26px;
-  height: 26px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--club);
-  color: #fff;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.72rem;
-  display: grid;
-  place-items: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* The changing player keeps one row to himself, so the substitution moves one
-   name instead of resorting the list under the reader. */
-.unit-slot { position: relative; }
-.unit-names li.is-changed .unit-jersey { background: var(--ball); }
-.unit-names li.is-entering { animation: slot-in 480ms cubic-bezier(.2,.7,.3,1) both; }
-.unit-names li.is-leaving {
+.floor-players {
   position: absolute;
-  left: 0;
-  right: 0;
-  animation: slot-out 480ms cubic-bezier(.4,0,.2,1) both;
+  /* Matches the .floor padding, so a percentage here is a percentage of the
+     court rather than of the card around it. */
+  inset: 0.75rem;
   pointer-events: none;
 }
 
-@keyframes slot-in  { from { opacity: 0; transform: translateY(-12px); } }
-@keyframes slot-out { to   { opacity: 0; transform: translateY(12px); } }
+/* Each marker is positioned by its centre, and left/top are what move. The
+   transition is on the position itself, so a player walks rather than jumps -
+   which is the whole difference between this and the version it replaces. */
+.player {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+  transition:
+    left 620ms cubic-bezier(.4, 0, .2, 1),
+    top 620ms cubic-bezier(.4, 0, .2, 1),
+    opacity 380ms ease;
+}
+
+.player-disc {
+  display: grid;
+  place-items: center;
+  width: clamp(28px, 3.4vw, 38px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--club);
+  color: #fff;
+  font-family: var(--figures);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 0 rgba(26, 21, 18, 0.18);
+  transition: background 380ms ease, transform 380ms ease;
+}
+
+.player-name {
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.player-role {
+  font-size: 0.66rem;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--ink-faint);
+}
+
+/* Off the floor: still drawn, at the side, faded. Removing the marker would
+   make the substitute appear from nowhere; leaving it there is what makes
+   arriving read as arriving. */
+.player.is-off {
+  opacity: 0;
+}
+
+/* The two players the substitution is about carry the measured-value colour
+   while they are moving, and only while they are moving. */
+.player.is-leaving .player-disc,
+.player.is-arriving .player-disc {
+  background: var(--ball);
+  transform: scale(1.12);
+}
+
+/* Scoped to .floor so it outranks `.claim p`, which sets the section's body
+   colour and was turning this white-on-orange badge into grey-on-orange. */
+.floor .floor-empty {
+  position: absolute;
+  left: 50%;
+  bottom: 1.1rem;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: var(--ball);
+  color: #fff;
+  max-width: none;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  /* The names stop fitting between five markers long before the court does. */
+  .player-name, .player-role { display: none; }
+}
 
 .unit-verdict {
   display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   gap: clamp(1.5rem, 4vw, 3rem);
   margin-top: 1.5rem;
   padding-top: 1.3rem;
@@ -909,8 +979,12 @@ h1 {
   color: var(--ink-faint);
 }
 
+/* Its own line under the two figures, and it holds that line whether or not
+   there is anything to say. A caption that appears and disappears would move
+   everything below it every few seconds. */
 .unit-swap {
-  margin: 1.1rem 0 0;
+  flex-basis: 100%;
+  margin: 0.4rem 0 0;
   min-height: 1.3em;
   font-size: 0.85rem;
   color: var(--ink-soft);
@@ -922,7 +996,9 @@ h1 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .unit-names li { animation: none; }
+  /* The markers still get placed, they just stop travelling to get there. */
+  .player { transition: none; }
+  .floor-paint { transition: none; }
 }
 
 /* ---------- the one place the visitor acts ---------- */

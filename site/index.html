@@ -281,25 +281,69 @@
       </div>
 
       <div class="claim-figure">
-        <!-- Two real units, one substitution apart. The names, the possession
-             counts and the ratings are filled in from data/lineups.json, which
-             was produced by the same query the MCP server answers with. -->
-        <div class="unit" id="unit">
-          <ol class="unit-names" id="unit-names"></ol>
+        <!-- Two real units, one substitution apart, on the floor.
+             Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md
 
-          <div class="unit-verdict">
-            <div class="unit-metric">
-              <span class="unit-figure" id="unit-net">—</span>
-              <span class="unit-label">net rating</span>
-            </div>
-            <div class="unit-metric">
-              <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
-              <span class="unit-label">possessions together</span>
-            </div>
+             THE TWO KINDS OF THING IN THIS PICTURE, and they must not be
+             confused. Each player's POSITION is the league's own record - the
+             club's E2025 registration, joined to the game player id through
+             person_game_link (Decision 53). Each player's SPOT on the floor is
+             a convention: the ordinary arrangement of two guards, two forwards
+             and a centre. The caption says which is which, because a diagram
+             that looks measured and is not is worse than no diagram.
+
+             The source publishes three positions and nothing finer, so this is
+             not a 1-through-5 reading and must never be drawn as one.
+
+             What the picture is for: Birch is the only centre in the strong
+             five, and Baldwin is a guard. The substitution therefore does not
+             swap like for like - it takes the centre off the floor and leaves
+             the paint empty. That is the shape behind the number. -->
+        <div class="floor" id="floor">
+          <svg class="floor-court" viewBox="-820 -60 1640 1160" fill="none" aria-hidden="true">
+            <!-- The same FIBA numbers as the shot chart above, mirrored the
+                 same way, so the two sections are one court and not two
+                 drawings that happen to look alike. -->
+            <g transform="translate(0, 1000) scale(1, -1)">
+              <g stroke="var(--hairline)" stroke-width="7">
+                <path d="M-750 0 H750"/>
+                <path d="M-750 0 V1060 M750 0 V1060"/>
+                <circle cx="0" cy="580" r="180"/>
+                <path d="M-90 120 H90"/>
+                <circle cx="0" cy="157" r="22"/>
+                <path d="M-660 0 V299 M660 0 V299"/>
+                <path d="M-660 299 A675 675 0 0 0 660 299"/>
+              </g>
+              <!-- The paint is its own element so it can be lit when it
+                   empties. Nothing else on this court changes. -->
+              <rect class="floor-paint" id="floor-paint"
+                    x="-245" y="0" width="490" height="580"
+                    stroke="var(--hairline)" stroke-width="7"/>
+            </g>
+          </svg>
+
+          <div class="floor-players" id="floor-players"></div>
+
+          <p class="floor-empty" id="floor-empty" hidden>No centre on the floor</p>
+        </div>
+
+        <div class="unit-verdict">
+          <div class="unit-metric">
+            <span class="unit-figure" id="unit-net">—</span>
+            <span class="unit-label">net rating</span>
           </div>
-
+          <div class="unit-metric">
+            <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
+            <span class="unit-label">possessions together</span>
+          </div>
           <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
         </div>
+
+        <p class="figure-note figure-note-tight">
+          Positions are the club's own registration for this season. Where each
+          player stands is a convention — the source records Guard, Forward and
+          Center, and nothing finer.
+        </p>
       </div>
     </div>
   </section>

@@ -1,1 +1,150 @@
-{"season":"E2025","team":{"code":"ULK","name":"Fenerbahce","colour":"#12305B"},"source":"el_get_lineup_stats, the same query the MCP server answers with.","coverage":{"games_included":371,"excluded_games":31},"pair":[{"players":["Biberovic","Birch","Hall","Horton-Tucker","Melli"],"possessions":214,"net_rating":24.49,"offensive_rating":111.21,"defensive_rating":86.73,"numbers":["13","92","20","8","4"]},{"players":["Baldwin","Biberovic","Hall","Horton-Tucker","Melli"],"possessions":64,"net_rating":-34.11,"offensive_rating":79.69,"defensive_rating":113.79,"numbers":["2","13","20","8","4"]}],"shared":["Biberovic","Hall","Horton-Tucker","Melli"],"swap":{"out":"Birch","in":"Baldwin"}}
+{
+  "season": "E2025",
+  "team": {
+    "code": "ULK",
+    "name": "Fenerbahce",
+    "colour": "#12305B"
+  },
+  "source": "el_get_lineup_stats, the same query the MCP server answers with.",
+  "coverage": {
+    "games_included": 371,
+    "excluded_games": 31
+  },
+  "pair": [
+    {
+      "players": [
+        "Biberovic",
+        "Birch",
+        "Hall",
+        "Horton-Tucker",
+        "Melli"
+      ],
+      "possessions": 214,
+      "net_rating": 24.49,
+      "offensive_rating": 111.21,
+      "defensive_rating": 86.73,
+      "numbers": [
+        "13",
+        "92",
+        "20",
+        "8",
+        "4"
+      ]
+    },
+    {
+      "players": [
+        "Baldwin",
+        "Biberovic",
+        "Hall",
+        "Horton-Tucker",
+        "Melli"
+      ],
+      "possessions": 64,
+      "net_rating": -34.11,
+      "offensive_rating": 79.69,
+      "defensive_rating": 113.79,
+      "numbers": [
+        "2",
+        "13",
+        "20",
+        "8",
+        "4"
+      ]
+    }
+  ],
+  "shared": [
+    "Biberovic",
+    "Hall",
+    "Horton-Tucker",
+    "Melli"
+  ],
+  "swap": {
+    "out": "Birch",
+    "in": "Baldwin"
+  },
+  "players": {
+    "Baldwin": {
+      "player_id": "P009863",
+      "number": "2",
+      "position": "Guard",
+      "height_cm": 193
+    },
+    "Biberovic": {
+      "player_id": "P006961",
+      "number": "13",
+      "position": "Forward",
+      "height_cm": 201
+    },
+    "Birch": {
+      "player_id": "P007182",
+      "number": "92",
+      "position": "Center",
+      "height_cm": 206
+    },
+    "Hall": {
+      "player_id": "P011205",
+      "number": "20",
+      "position": "Guard",
+      "height_cm": 196
+    },
+    "Horton-Tucker": {
+      "player_id": "P014124",
+      "number": "8",
+      "position": "Guard",
+      "height_cm": 193
+    },
+    "Melli": {
+      "player_id": "P002849",
+      "number": "4",
+      "position": "Forward",
+      "height_cm": 205
+    }
+  },
+  "position_source": "roster_registration, the club's own E2025 registration, joined to the game player id through person_game_link. The source publishes three positions - Guard, Forward, Center - and nothing finer.",
+  "spots": {
+    "strong": {
+      "Hall": [
+        -330,
+        800
+      ],
+      "Horton-Tucker": [
+        330,
+        800
+      ],
+      "Biberovic": [
+        -560,
+        430
+      ],
+      "Melli": [
+        560,
+        430
+      ],
+      "Birch": [
+        0,
+        330
+      ]
+    },
+    "weak": {
+      "Hall": [
+        -420,
+        830
+      ],
+      "Baldwin": [
+        0,
+        900
+      ],
+      "Horton-Tucker": [
+        420,
+        830
+      ],
+      "Biberovic": [
+        -600,
+        400
+      ],
+      "Melli": [
+        600,
+        400
+      ]
+    }
+  }
+}

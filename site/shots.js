@@ -201,18 +201,32 @@
       return;
     }
 
+    /* Two conditions, not one. A section can be inside the layout viewport of
+       a tab nobody is looking at - open the page in a background tab and the
+       observer still reports it as intersecting - and the sequence would run
+       and finish there, which is the same defect as before wearing a different
+       hat. It has to be on screen AND the tab has to be the visible one. */
     var started = false;
+    var visible = false;
+
+    function settle() {
+      if (visible && document.visibilityState === "visible") {
+        resume();
+        if (!started) {
+          started = true;
+          drawOneByOne(shots, data.spotlight || []);
+        }
+      } else {
+        pause();
+      }
+    }
+
+    document.addEventListener("visibilitychange", settle);
+
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          resume();
-          if (!started) {
-            started = true;
-            drawOneByOne(shots, data.spotlight || []);
-          }
-        } else {
-          pause();
-        }
+        visible = entry.isIntersecting;
+        settle();
       });
     }, { threshold: 0.45 });
     io.observe(court);

@@ -395,6 +395,54 @@ stacked on each other.
 worth taking. Gabarito, Figtree and IBM Plex Mono, self-hosted, sixteen faces,
 latin and latin-ext. The page makes zero third-party requests.
 
+## 15b. The lineup section became a floor, 2026-09-04
+
+**What was wrong with it.** The section showed five names in a list and replaced
+one of them. The owner's words, reading the built page: the substitution
+animation is very bad, it should not happen in one go, and Baldwin and Birch
+play different positions so the shape on the floor changes. He was right on the
+substance and not only on the animation. A name changing in a list is not the
+claim this section makes. The claim is that one change turns a unit from +24.5
+to -34.1, and the reason is visible only if you can see that the change takes
+the centre off the floor.
+
+**Why it could not be built before.** Positions were not in the warehouse for
+this season. `roster_registration` held E2026 only, and of the five players
+named here just two are in an E2026 roster - Birch and Melli left the
+competition. Loading E2024 and E2025 was done first, as its own task, and is
+Decision 53.
+
+**What is measured and what is convention.** Each player's POSITION is the
+league's own record: his club's E2025 registration, joined to the game player id
+through `person_game_link`. Each player's SPOT on the floor is a convention -
+the ordinary arrangement of two guards, two forwards and a centre. The figure
+note under the court says exactly that, in those words, because a diagram that
+looks measured and is not is worse than no diagram at all.
+
+The source publishes three buckets, Guard, Forward and Center, and nothing
+finer. This is therefore not a 1-through-5 reading of a lineup and must never be
+drawn as one.
+
+**The shape, which is the whole point.**
+
+| | Guards | Forwards | Centres |
+|---|---|---|---|
+| Birch on the floor | 2 | 2 | **1** |
+| Baldwin on instead | 3 | 2 | **0** |
+
+**Four beats, not one.** Birch leaves and nothing else moves, so what is
+happening is unmistakable. The four who stay open up, because there is no longer
+a centre to play through, and the paint lights and is labelled empty. Baldwin
+arrives into the space at the top. Only then does the number change - after the
+reader has been shown why, rather than before.
+
+**Two conditions gate the motion, not one.** On screen and in the visible tab.
+A section inside the layout viewport of a background tab still reports itself as
+intersecting, so a page opened in a background tab would play its sequences to
+nobody and be finished by the time anyone looked. That is the same defect as the
+unreachable shot card, wearing a different hat, and both are now handled the
+same way.
+
 ## 16. What is left
 
 1. **The live endpoint.** Section 6's locked route: an allowlist of question
