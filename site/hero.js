@@ -85,6 +85,11 @@
   }
 
   function typeInto(p, done) {
+    /* Start from empty every time. The section stops when it scrolls out of
+       view and starts again when it comes back, and without this the second
+       run appended a second copy of the sentence to the first one. */
+    p.typed.textContent = "";
+
     var caret = document.createElement("span");
     caret.className = "caret";
     caret.setAttribute("aria-hidden", "true");
@@ -106,6 +111,7 @@
 
   function play() {
     show(index);
+    reset(exchanges[index]);
     var p = parts(exchanges[index]);
 
     typeInto(p, function lookUp() {

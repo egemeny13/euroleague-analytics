@@ -31,26 +31,34 @@
 
   <!-- The two ends of the court. Between them the rails are its sidelines and
        the circle at mid-page is the centre circle, so the whole page is one
-       court seen end to end rather than a stack of separate pages. -->
+       court seen end to end rather than a stack of separate pages.
+
+       Both ends are drawn in centimetres to FIBA dimensions, the same units and
+       the same numbers as the shot chart in the section below: the court is
+       1500 wide, the key 490 by 580, the ring 157.5 from the baseline, the
+       three-point corners 90 in from each sideline and the arc 675 from the
+       ring. The viewBox crops the half at 760, so this is the near end of a
+       real court rather than a squashed one. The previous version guessed
+       these and put the three-point line in the wrong place. -->
   <svg class="court-end court-end-top" viewBox="0 0 1500 760" fill="none">
     <g stroke="currentColor" stroke-width="2">
-      <rect x="505" y="0" width="490" height="440"/>
-      <circle cx="750" cy="440" r="150"/>
-      <path d="M660 60 H840"/>
-      <circle cx="750" cy="120" r="34"/>
-      <path d="M170 0 V210 M1330 0 V210"/>
-      <path d="M170 210 A660 660 0 0 0 1330 210"/>
+      <rect x="505" y="0" width="490" height="580"/>
+      <circle cx="750" cy="580" r="180"/>
+      <path d="M660 120 H840"/>
+      <circle cx="750" cy="157.5" r="22.5"/>
+      <path d="M90 0 V299 M1410 0 V299"/>
+      <path d="M90 299 A675 675 0 0 0 1410 299"/>
     </g>
   </svg>
 
   <svg class="court-end court-end-bottom" viewBox="0 0 1500 760" fill="none">
     <g stroke="currentColor" stroke-width="2">
-      <rect x="505" y="320" width="490" height="440"/>
-      <circle cx="750" cy="320" r="150"/>
-      <path d="M660 700 H840"/>
-      <circle cx="750" cy="640" r="34"/>
-      <path d="M170 760 V550 M1330 760 V550"/>
-      <path d="M170 550 A660 660 0 0 1 1330 550"/>
+      <rect x="505" y="180" width="490" height="580"/>
+      <circle cx="750" cy="180" r="180"/>
+      <path d="M660 640 H840"/>
+      <circle cx="750" cy="602.5" r="22.5"/>
+      <path d="M90 760 V461 M1410 760 V461"/>
+      <path d="M90 461 A675 675 0 0 1 1410 461"/>
     </g>
   </svg>
 </div>
@@ -195,7 +203,7 @@
         <!-- Drawn to FIBA dimensions in centimetres, the same units the source
              coordinates arrive in, so a shot lands where the league recorded it
              rather than where a hand-tuned transform puts it. -->
-        <svg class="halfcourt" id="halfcourt" viewBox="-860 -200 1720 1340" aria-labelledby="shots-caption">
+        <svg class="halfcourt" id="halfcourt" viewBox="-820 -140 1640 1250" aria-labelledby="shots-caption">
           <!-- The source counts y upward from the baseline; a screen counts it
                downward. One mirror on the whole drawing reconciles the two, so
                the court and the shots stay in the source's own units and no
@@ -236,9 +244,23 @@
           </div>
         </div>
         </div>
+
+        <!-- The bar is the anticipation. Without it the chart fills in under
+             three seconds with no warning and the card that follows arrives
+             out of nowhere; with it the visitor can see that something is
+             being built and that it has an end. It reaches full at the moment
+             the card opens, not at the last shot. -->
+        <div class="chartbar" id="chart-bar">
+          <p class="chartbar-label" id="chart-label">Placing every attempt in the game</p>
+          <div class="chartbar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="chart-track">
+            <span class="chartbar-fill" id="chart-fill"></span>
+          </div>
+        </div>
+
         <p class="figure-note" id="shots-caption">
           Every field goal attempt in the game. Free throws have no coordinates,
-          so they are not here.
+          so they are not here. Four attempts were recorded just behind the
+          baseline and are drawn where the league put them.
         </p>
       </div>
     </div>
@@ -316,13 +338,21 @@
   <!-- ACCESS IS STILL INVITE-ONLY UNTIL R-9. A visitor who follows these steps
        before the Auth0 Action is switched off is refused at the sign-in screen.
        This section must not go live before that happens; see section 7 of
-       docs/superpowers/specs/2026-09-04-launch-website-design.md. -->
+       docs/superpowers/specs/2026-09-04-launch-website-design.md.
+
+       Every claim in here is taken from docs/CLIENT_COMPATIBILITY.md and
+       docs/CHATGPT_APP_SUBMISSION.md and says which of the two kinds of claim
+       it is. "Verified" means somebody connected that client and called a tool.
+       "Expected" means the client's own published specification says this
+       works and nobody here has run it. Those are not the same sentence and
+       the page must not print them as if they were. -->
   <section class="connect" id="connect">
     <div class="connect-inner">
       <h2>Connect it once.</h2>
       <p class="connect-lede">
-        One address, added to your assistant as a connector, then a sign-in.
-        There is nothing to install and nothing to configure afterwards.
+        There is one address, and it is the whole of the setup. Any assistant
+        that speaks MCP takes it — there is nothing to install, and nothing to
+        configure afterwards.
       </p>
 
       <div class="address">
@@ -330,28 +360,76 @@
         <button class="copy" type="button" id="copy-url" data-copied="Copied">Copy</button>
       </div>
 
-      <ol class="steps">
-        <li>
-          <h3>In Claude</h3>
-          <p>Settings, then Connectors, then Add custom connector. Paste the
-             address and sign in with Google.</p>
-        </li>
-        <li>
-          <h3>In ChatGPT</h3>
-          <p>Settings, then Connectors, then Add. Paste the same address and
-             sign in with Google.</p>
-        </li>
-        <li>
-          <h3>Anywhere else</h3>
-          <p>Any client that speaks MCP takes the same address over Streamable
-             HTTP. Gemini, Cursor, Zed and the MCP Inspector are all known to
-             work; the repository lists what has been tested against what.</p>
-        </li>
-      </ol>
+      <div class="clients">
+        <div class="client-tabs" role="tablist" aria-label="Choose your assistant">
+          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true">Claude</button>
+          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="false">ChatGPT</button>
+          <button class="client-tab" type="button" role="tab" id="tab-gemini" aria-controls="panel-gemini" aria-selected="false">Gemini</button>
+          <button class="client-tab" type="button" role="tab" id="tab-editor" aria-controls="panel-editor" aria-selected="false">Editors &amp; CLIs</button>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
+          <p class="client-status client-status-verified">Verified — connected and answering</p>
+          <ol class="howto">
+            <li>Open <b>Settings</b>, then <b>Connectors</b>.</li>
+            <li>Choose <b>Add custom connector</b> and paste the address above.</li>
+            <li>Sign in with Google when Claude opens the sign-in window.</li>
+            <li>Ask it something. Eleven tools appear under the connector's name.</li>
+          </ol>
+          <p class="howto-alt">
+            In Claude Code instead:
+            <code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code>
+          </p>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
+          <p class="client-status client-status-review">In review — submitted to the ChatGPT app directory on 2 September 2026</p>
+          <p class="client-note">
+            Once it is approved you will add it by name, with no address to
+            paste. Until then it connects the developer way, and the server
+            already speaks everything the Apps SDK asks for.
+          </p>
+          <ol class="howto">
+            <li>Turn on <b>Developer mode</b> in <b>Settings → Connectors</b>.</li>
+            <li>Choose <b>Create</b>, paste the address, and pick <b>OAuth</b>.</li>
+            <li>Sign in with Google.</li>
+          </ol>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
+          <p class="client-status client-status-verified">Verified — connected and answering, in both the CLI and Antigravity</p>
+          <ol class="howto">
+            <li>In the Gemini CLI: <code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></li>
+            <li>In Antigravity: add the same address under <b>MCP servers</b>.</li>
+            <li>Check it with <code>gemini mcp list</code> — it should report connected.</li>
+          </ol>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-editor" aria-labelledby="tab-editor" hidden>
+          <p class="client-status client-status-expected">Expected from each client's published MCP specification — not yet run here</p>
+          <p class="client-note">
+            Cursor, Codex, Windsurf, Zed, Continue.dev and Goose all take a
+            remote MCP server the same way. One block in that client's own
+            configuration file:
+          </p>
+<pre class="howto-code"><code>{
+  "mcpServers": {
+    "euroleague-analytics": {
+      "url": "https://euroleague-analytics-mcp.fly.dev/mcp"
+    }
+  }
+}</code></pre>
+          <p class="client-note">
+            The MCP Inspector is verified against the same address, and is the
+            fastest way to see the eleven tools before wiring up a client.
+          </p>
+        </div>
+      </div>
 
       <p class="connect-note">
         Free to use. Read-only: eleven tools that answer questions and none that
         change anything.
+        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics/blob/master/docs/CLIENT_COMPATIBILITY.md">The full compatibility matrix</a>
       </p>
     </div>
   </section>

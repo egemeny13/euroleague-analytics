@@ -9,22 +9,30 @@
 
    Free throws never appear. They carry (-1, -1), a sentinel standing in for a
    location the source does not have, and plotting it would print a row of
-   phantom shots behind the baseline. A handful of real attempts do sit behind
-   the baseline, and those stay: the drawing is widened to show them rather than
-   the data being clipped to make the picture tidy.
+   phantom shots behind the baseline. Four real attempts in this game do sit
+   behind the baseline, the furthest 50 cm back, and those stay: the frame is
+   drawn to show them rather than the data being clipped to make the picture
+   tidy. The caption says so.
 
    The data file lists the game's notable shots; the page opens a card on the
    last of them, which is the one that won it. The sentences in that card live
    in the page, so they can be translated with the rest of the page. The card
    opens once and then closes for good: a thing that keeps reappearing stops
-   being an event. */
+   being an event.
+
+   Every wait in here is measured in time the section spends ON SCREEN, not in
+   wall clock time. The first version used plain timers, so a visitor who spent
+   a few seconds in the hero arrived to find the chart already full and the card
+   already gone for good - the one moment this section exists for, missed, with
+   no way to get it back. Scrolling away now pauses the sequence mid-shot, and
+   scrolling back resumes it where it stopped. */
 
 (function () {
   "use strict";
 
-  var STEP_MS = 24;      // between shots, once the section is on screen
+  var STEP_MS = 26;      // between shots, once the section is on screen
   var SETTLE_MS = 650;   // after the last shot, before the card opens
-  var CARD_MS = 5000;    // how long the card stays, then it closes for good
+  var CARD_MS = 6000;    // on-screen time the card stays, then it closes for good
   var DOT_R = 21;        // centimetres on the court, not pixels on the screen
 
   var court = document.getElementById("halfcourt");
@@ -32,10 +40,53 @@
   var ring = document.getElementById("shot-spotlight");
   var counter = document.getElementById("shot-count");
   var card = document.getElementById("winner-card");
+  var bar = document.getElementById("chart-bar");
+  var barTrack = document.getElementById("chart-track");
+  var barFill = document.getElementById("chart-fill");
+  var barLabel = document.getElementById("chart-label");
   if (!court || !marks || !ring || !counter || !card) return;
 
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   var SVG_NS = "http://www.w3.org/2000/svg";
+
+  /* ---- a clock that only runs while the section is being looked at ----
+     One pending step at a time, which is all this sequence ever has. Pausing
+     banks the time already served, so resuming does not restart the wait. */
+  var pending = null;   // { fn: function, left: milliseconds }
+  var armedAt = 0;
+  var handle = null;
+  var onScreen = false;
+
+  function arm() {
+    armedAt = Date.now();
+    handle = window.setTimeout(function () {
+      var due = pending;
+      pending = null;
+      handle = null;
+      if (due) due.fn();
+    }, pending.left);
+  }
+
+  function after(ms, fn) {
+    pending = { fn: fn, left: ms };
+    if (onScreen) arm();
+  }
+
+  function pause() {
+    onScreen = false;
+    if (handle === null) return;
+    window.clearTimeout(handle);
+    handle = null;
+    pending.left = Math.max(0, pending.left - (Date.now() - armedAt));
+  }
+
+  function resume() {
+    if (onScreen) return;
+    onScreen = true;
+    if (pending && handle === null) arm();
+  }
+
+  /* ---- drawing ---- */
 
   function place(shot) {
     var dot = document.createElementNS(SVG_NS, "circle");
@@ -45,6 +96,12 @@
     dot.setAttribute("class", shot[2] ? "shot-made" : "shot-miss");
     marks.appendChild(dot);
     return dot;
+  }
+
+  function setBar(percent) {
+    if (!barFill) return;
+    barFill.style.width = percent.toFixed(2) + "%";
+    if (barTrack) barTrack.setAttribute("aria-valuenow", String(Math.round(percent)));
   }
 
   /* The card is positioned from the shot's own coordinates, read back out of
@@ -83,20 +140,32 @@
       });
     });
 
-    window.setTimeout(function close() {
+    after(CARD_MS, function close() {
       card.classList.remove("is-open");
       marks.classList.remove("is-dimmed");
       ring.textContent = "";
       window.setTimeout(function () { card.hidden = true; }, 400);
-    }, CARD_MS);
+    });
   }
 
   function drawOneByOne(shots, spotlight) {
     var i = 0;
+    if (bar) bar.classList.add("is-running");
+
     (function step() {
       if (i >= shots.length) {
+        /* The bar runs the last of the way to full during the pause, so it
+           fills at the moment the card opens rather than before it. */
+        if (bar) {
+          bar.classList.add("is-settling");
+          if (barLabel) barLabel.textContent = "The last event of the game";
+          setBar(100);
+        }
         var chosen = shots[spotlight[spotlight.length - 1]];
-        if (chosen) window.setTimeout(function () { openCard(chosen); }, SETTLE_MS);
+        after(SETTLE_MS, function () {
+          if (bar) bar.classList.remove("is-running", "is-settling");
+          if (chosen) openCard(chosen);
+        });
         return;
       }
       var dot = place(shots[i]);
@@ -108,7 +177,9 @@
         { duration: 360, easing: "cubic-bezier(.2,.8,.3,1)", fill: "both" }
       );
       counter.textContent = String(++i);
-      window.setTimeout(step, STEP_MS);
+      /* Held short of full: the remaining sliver belongs to the pause. */
+      setBar((i / shots.length) * 92);
+      after(STEP_MS, step);
     })();
   }
 
@@ -129,14 +200,21 @@
       drawAll(shots);
       return;
     }
+
+    var started = false;
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
         if (entry.isIntersecting) {
-          io.disconnect();
-          drawOneByOne(shots, data.spotlight || []);
+          resume();
+          if (!started) {
+            started = true;
+            drawOneByOne(shots, data.spotlight || []);
+          }
+        } else {
+          pause();
         }
       });
-    }, { threshold: 0.3 });
+    }, { threshold: 0.45 });
     io.observe(court);
   }
 
