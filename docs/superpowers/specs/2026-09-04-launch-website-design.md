@@ -473,9 +473,3 @@ they are in, which is what section 4 wanted from them in the first place.
 4. **Fine detail.** The owner has a list and is holding it until v1 is agreed.
 5. **A pull request.** `feat/launch-site` has never been reviewed, and merging
    it publishes the site: `pages.yml` republishes on any change to `site/**`.
-6. **`site/_mascots.html` must be deleted before that merge.** It is a scratch
-   comparison of the three mascot directions, tracked only so the owner can open
-   it on the branch preview and point at one. It is not linked from anywhere,
-   but `pages.yml` publishes everything under `site/`, so merging with it in
-   place puts a working notes page on the public site. Delete it in the same
-   pull request that lands the chosen character.
