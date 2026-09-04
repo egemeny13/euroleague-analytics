@@ -203,6 +203,14 @@
           <span class="tally-label">shots placed</span>
         </p>
 
+        <!-- The caption lives with the copy, not under the figure. Beneath the
+             court it sat in a column of its own with dead space either side;
+             here it closes the paragraph it belongs to. -->
+        <p class="figure-note" id="shots-caption">
+          Every field goal attempt, placed at the coordinate the league
+          recorded. Free throws have none, so they are absent.
+        </p>
+
       </div>
 
       <div class="claim-figure">
@@ -210,30 +218,38 @@
         <!-- Drawn to FIBA dimensions in centimetres, the same units the source
              coordinates arrive in, so a shot lands where the league recorded it
              rather than where a hand-tuned transform puts it. -->
-        <svg class="halfcourt" id="halfcourt" viewBox="-820 -140 1640 1250" aria-labelledby="shots-caption">
-          <!-- The source counts y upward from the baseline; a screen counts it
-               downward. One mirror on the whole drawing reconciles the two, so
-               the court and the shots stay in the source's own units and no
-               per-shot arithmetic can drift from the lines behind it. -->
-          <g transform="translate(0, 1000) scale(1, -1)">
-          <!-- Out of bounds, drawn rather than left blank.
+        <svg class="halfcourt" id="halfcourt" viewBox="-820 20 1640 1180" aria-labelledby="shots-caption">
+          <!-- THE ORIGIN IS THE RING, NOT THE BASELINE.
 
-               Four of this game's attempts were recorded behind the baseline,
-               the furthest 50 cm back. They are real and they stay. Against an
-               empty background they read as dots that had escaped the drawing;
-               against a floor that visibly continues past the line they read
-               as what they are - shots the league recorded behind the
-               baseline. The band explains them instead of hiding them. -->
-          <rect class="out-of-bounds" x="-750" y="-95" width="1500" height="95"/>
+               This court was drawn 157.5 cm out of place until 2026-09-04. The
+               assumption was that the league's y counts from the baseline. It
+               counts from the ring, and the data says so without being asked:
+               every row carries the league's own two-or-three flag, which owes
+               nothing to any geometry we choose, so the two can be compared.
+
+               Measured over both loaded seasons, 93,269 shots with coordinates:
+
+                 y from the baseline   26,403 disagreements   28.3 %
+                 y from the ring          345 disagreements    0.37 %
+
+               And the reading that settles it: on the ring origin, ZERO shots
+               in either season fall behind the baseline. On the old one, 2,214
+               did - which is what put dots outside the court and made the
+               drawing look wrong. They were never outside it.
+
+               Everything below is therefore measured from the ring at (0, 0):
+               the baseline is 157.5 behind it, the arc is 675 around it, and a
+               shot is placed with no arithmetic of ours at all. -->
+          <g transform="translate(0, 1000) scale(1, -1)">
           <g fill="none" stroke="var(--hairline)" stroke-width="7">
-            <path d="M-750 0 H750"/>
-            <path d="M-750 0 V1100 M750 0 V1100"/>
-            <rect x="-245" y="0" width="490" height="580"/>
-            <circle cx="0" cy="580" r="180"/>
-            <path d="M-90 120 H90"/>
-            <circle cx="0" cy="157" r="22"/>
-            <path d="M-660 0 V299 M660 0 V299"/>
-            <path d="M-660 299 A675 675 0 0 0 660 299"/>
+            <path d="M-750 -157.5 H750"/>
+            <path d="M-750 -157.5 V942.5 M750 -157.5 V942.5"/>
+            <rect x="-245" y="-157.5" width="490" height="580"/>
+            <circle cx="0" cy="422.5" r="180"/>
+            <path d="M-90 -37.5 H90"/>
+            <circle cx="0" cy="0" r="22.5"/>
+            <path d="M-660 -157.5 V141.5 M660 -157.5 V141.5"/>
+            <path d="M-660 141.5 A675 675 0 0 0 660 141.5"/>
           </g>
           <g id="shot-marks"></g>
           <g id="shot-spotlight"></g>
@@ -249,8 +265,12 @@
           <div class="callout-body">
             <span class="callout-flag">Game winner</span>
             <span class="callout-who">Vasilije Micic</span>
+            <!-- 9.4 m, not the 7.9 m this said until the origin was corrected.
+                 Micic's shot is at (69, 941); measured from the ring that is
+                 9.44 m. The old figure came from measuring it from the
+                 baseline, which is the same error the court was drawn with. -->
             <span class="callout-what">
-              A three from <span class="figure">7.9 m</span> with the clock at zero —
+              A three from <span class="figure">9.4 m</span> with the clock at zero —
               the last event in the game.
             </span>
             <span class="callout-score">
@@ -276,10 +296,6 @@
         <!-- Short, but neither claim may be dropped: free throws are absent for
              a reason, and the four dots behind the baseline are real. A caption
              that omits either is tidier and false. -->
-        <p class="figure-note" id="shots-caption">
-          Every field goal attempt. Free throws have no coordinates; the dots
-          behind the baseline are where the league put them.
-        </p>
       </div>
     </div>
   </section>
@@ -295,6 +311,10 @@
         <p class="figure-note figure-note-tight">
           Every answer carries the possessions behind it, so you can tell a real
           edge from a small sample.
+        </p>
+        <p class="figure-note">
+          Positions are the club's registration. Where each player stands is a
+          convention — the source knows only Guard, Forward, Center.
         </p>
       </div>
 
@@ -357,10 +377,6 @@
           <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
         </div>
 
-        <p class="figure-note">
-          Positions are the club's registration. Where each player stands is a
-          convention — the source knows only Guard, Forward, Center.
-        </p>
       </div>
     </div>
   </section>

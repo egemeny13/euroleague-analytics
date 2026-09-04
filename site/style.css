@@ -543,13 +543,6 @@ h1 {
   display: block;
 }
 
-/* The floor past the baseline. Faint enough to be ground, present enough that
-   a dot sitting on it is obviously outside the line rather than adrift. */
-.out-of-bounds {
-  fill: var(--court);
-  stroke: none;
-}
-
 /* Made shots are filled, misses are open. The only two states there are. */
 .shot-made { fill: var(--ball); fill-opacity: 0.88; }
 .shot-miss { fill: none; stroke: var(--ink-faint); stroke-width: 6; stroke-opacity: 0.5; }
@@ -1218,13 +1211,18 @@ body { position: relative; }
   top: 0;
   width: 34px;
   height: 1px;
-  background: var(--ink-faint);
+  /* The same hairline as the rails and the court. It was drawn in --ink-faint,
+     which made it darker than every other line on the page and read as a
+     different kind of thing. A court line is a court line. */
+  background: var(--hairline);
 }
+/* Outside the sideline, not inside it: the mark sits off the floor so nothing
+   ever reaches into the column the content occupies. */
 .claim::before, .ask::before, .connect::before, .how::before, .footer::before {
-  left: max(var(--gutter), calc(50% - 640px));
+  right: calc(100% - max(var(--gutter), calc(50% - 640px)));
 }
 .claim::after, .ask::after, .connect::after, .how::after, .footer::after {
-  right: max(var(--gutter), calc(50% - 640px));
+  left: calc(100% - max(var(--gutter), calc(50% - 640px)));
 }
 
 main, .topbar { position: relative; z-index: 1; }

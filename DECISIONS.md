@@ -3002,6 +3002,64 @@ ready to launch, and nothing about R-9, which is still open. It also does not
 make Vercel a deployment target for anything but this static directory - the
 hosted MCP server is on Fly and is not touched by any of this.
 
+## 55. `COORD_Y` is measured from the ring, not from the baseline
+
+**How it was found, 2026-09-04.** The owner, looking at the launch site's shot
+chart, twice reported dots sitting outside the court, and then refused the
+explanation. In translation: there is a mistake here, this cannot be right,
+perhaps EuroLeague's court dimensions do not match the ones we are using, or
+perhaps their basket is not in the same place as ours. He was right, and the
+site's own caption had been arguing the opposite for two commits.
+
+**Why it was testable without any new data.** Every `raw_shot` row carries the
+league's own `action_code`, which says two or three. That flag owes nothing to
+any geometry this project chose, so a court drawn in the right place must agree
+with it and a court drawn in the wrong place must not.
+
+**The measurement.** Both loaded seasons, every shot with a coordinate, free
+throw sentinels excluded. A shot is classified from FIBA geometry - the corner
+line 90 in from each sideline, the arc 675 from the ring - under two readings of
+the y axis, and compared with the league's flag:
+
+| Season | Shots | y from the baseline | y from the ring |
+|---|---|---|---|
+| E2024 | 41,524 | 11,898 disagree (28.65 %) | 155 disagree (0.37 %) |
+| E2025 | 51,745 | 14,505 disagree (28.03 %) | 190 disagree (0.37 %) |
+| **Total** | **93,269** | **26,403 (28.31 %)** | **345 (0.37 %)** |
+
+**The reading that settles it.** Under the ring origin, **zero** shots in either
+season fall behind the baseline. Under the baseline origin, 2,214 do. Those
+2,214 were the dots outside the court. They were never outside it.
+
+**The decision.** `COORD_Y` is the distance from the ring, along the court axis.
+The baseline is at `y = -157.5`. Anything that draws a court around these
+coordinates, or measures a distance from them, uses the ring as the origin.
+
+**What was wrong because of it, and is now corrected.**
+
+- The launch site's half-court was drawn 157.5 cm out of place.
+- The card on Micic's buzzer-beater said *"a three from 7.9 m"*. Measured from
+  the ring, (69, 941) is **9.44 m**. The card now says 9.4 m.
+- `site/data/shots.json` described its own units as "distance from the
+  baseline". That description is what the drawing was built from.
+- A band drawn behind the baseline to explain the stray dots was invented to
+  explain an artefact, and is removed.
+
+**What was NOT wrong, and this is the part that matters.** Nothing in the
+warehouse and nothing in the MCP server computes a distance or a shot type from
+coordinates. `src/euroleague/mcp/tools.py` states it explicitly - "Shot type
+comes from the event action code, never from distance" - and `queries.py`
+repeats it. No stored metric, no tool response and no test was affected. The
+error lived entirely in a drawing.
+
+**What this does not establish.** It does not explain the residual 0.37 %. Those
+345 shots disagree with the league's own flag under the correct origin too, and
+they are unexamined: they may be recording error, corner-line edge cases, or a
+rule this classification does not model. It also says nothing about `COORD_X`,
+whose attack-relative sign was already recorded and is untouched. And it is
+measured on E2024 and E2025 only; a season loaded later is a season to re-check,
+not a season to assume.
+
 ## Rules to add to the project instruction file
 
 ```
