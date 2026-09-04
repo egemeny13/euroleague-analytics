@@ -3102,7 +3102,40 @@ estimate. And it is measured on E2024 and E2025, with the single E2021 game the
 site shows checked separately; a season loaded later is a season to re-check,
 not a season to assume.
 
-## 56. Shot coordinates are about 4.5 % inside the court's own metres, so the site prints no distance
+## 56. WITHDRAWN — the claimed 4.5 % scale error was a misreading of the boundary
+
+**WITHDRAWN THE SAME DAY, 2026-09-04.** The scale error described below does
+not exist. It came from locating the three-point line at the FIRST attempt
+recorded on any lattice row, rather than at the row where the distribution
+actually begins. Read the second way, against the same two tables:
+
+| Boundary | First stray attempt | Where the distribution starts | FIBA |
+|---|---|---|---|
+| Corner line, in x | 633 (1 attempt) | **658** (49, then 81, 336, 807) | 660 |
+| Arc, along the axis | 658 (1 attempt) | **683** (31, then 94, 150, 258) | 675 |
+
+Ratios to FIBA of 0.997 and 1.012, both inside the 6.4 cm lattice step. The
+coordinates are centimetres and the court is where FIBA puts it. Decision 55
+stands unchanged and unqualified.
+
+The mistake is worth keeping visible: a handful of rows disagree with the
+league's own flag - the 0.37 % residual Decision 55 already named and left
+unexamined - and reading the boundary off those instead of off the mass of the
+distribution produced a confident, self-consistent 4.5 % that was not there. Two
+independent axes agreeing to one part in a thousand felt like proof. They agreed
+because both were making the same mistake.
+
+**What survives.** Only the decision not to print a distance on the card, and it
+now rests on a different and smaller reason: the lattice is 6.4 cm, a few rows
+near the line are unexplained, and the owner does not accept the figure. That is
+an open question, recorded in `docs/SHOT_COORDINATE_GEOMETRY.md`, not a settled
+correction. Restoring the figure is a decision for the owner and is not taken
+here.
+
+---
+
+*The withdrawn reasoning follows, kept because the record of how a wrong number
+was reached is worth more than a clean page.*
 
 **How it was found, 2026-09-04.** Decision 55 corrected the origin and the owner
 still refused the result: Micic's shot cannot be 9.4 m, the line is 6.75 m at
