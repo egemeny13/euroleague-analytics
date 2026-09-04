@@ -2957,6 +2957,51 @@ and rewriting them would be falsifying the log rather than correcting a claim.
 only holds surfaces to each other; none of them is re-measured against the
 warehouse on every run, and E2026 is loading nightly behind them.
 
+## 54. The launch site gets a Vercel preview, and the preview is not a second home
+
+**The problem, 2026-09-04.** The site is designed by looking at it, and the
+owner had moved to controlling this session from another device, where
+`localhost` does not exist. The work sat on an unmerged branch with no address
+anybody could open.
+
+**What was already there.** A Vercel project, `website-prototype`, linked to
+this GitHub repository and already watching `feat/launch-site`. It had built
+commit `e97d1f1` and failed:
+
+```
+Error: No entrypoint found in "/vercel/path0". Set package.json "main" to a
+server file, or add one of: app.js, ... server.js, ...
+```
+
+Vercel had detected a Node application at the repository root. There is no Node
+application anywhere in this repository; the site is static files under `site/`.
+`vercel.json` now says so: no framework, no install, no build, and `site` as the
+output directory.
+
+**The decision, and its boundary.** Vercel publishes **branch previews only**.
+The site's home is GitHub Pages at `egemenyucelen.me`, published by `pages.yml`
+on any change to `site/**` on master, and that does not change. Two publishers
+of one site is a question - "which one is live?" - that must have a written
+answer before it is asked, and the answer is: Pages is the site, Vercel is a
+window onto a branch.
+
+**The condition.** No custom domain is ever attached to the Vercel project. The
+moment one is, the boundary above stops being true and this decision has to be
+re-taken rather than quietly outgrown.
+
+**Why the preview is safe to exist before R-9.** Access is still invite-only,
+and a stranger who follows the connect instructions today is refused at the
+sign-in screen. The Vercel project has SSO protection enabled for all
+deployments except custom domains, so a preview is visible to the account owner
+and to nobody else. That is a setting, not a promise: if it is ever turned off
+while R-9 is open, the preview becomes a public page giving instructions that
+fail.
+
+**What this does not establish.** It says nothing about whether the site is
+ready to launch, and nothing about R-9, which is still open. It also does not
+make Vercel a deployment target for anything but this static directory - the
+hosted MCP server is on Fly and is not touched by any of this.
+
 ## Rules to add to the project instruction file
 
 ```
