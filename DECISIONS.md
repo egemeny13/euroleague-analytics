@@ -2872,6 +2872,74 @@ would now stop cleanly on an empty body instead of crashing.
 immutable archive only. The warehouse holds E2024, E2025 and the filling E2026;
 loading the rest is R-12, and it waits on the paid architecture.
 
+## 53. Finished seasons' rosters are loaded by a script that fetches one response
+
+**The problem, 2026-09-04.** The launch website's lineup section shows one
+Fenerbahce substitution — Birch out, Baldwin in — and the claim it makes is that
+a single change turns the unit from +24.5 to −34.1 per 100 possessions. Showing
+*why* means showing that the shape on the floor changes, and that needs each
+player's position.
+
+The warehouse already held positions. `roster_registration` has `position_code`
+and `position_name`, the parser and loader are tested, and `person_game_link`
+already bridges v2 person codes to game player IDs for E2024 and E2025 with no
+contradictions. What it did not hold was any roster older than the current
+season:
+
+| Season | Roster responses archived | Registrations loaded |
+|---|---|---|
+| E2026 | 8 | 223, across 19 clubs |
+| E2025 | **0** | **0** |
+| E2024 | **0** | **0** |
+
+Of the five players the website names, only Horton-Tucker and Biberovic are in
+the E2026 roster at all. Birch and Melli are in no E2026 roster — they left the
+competition — and "Hall" resolves to two different players, neither at
+Fenerbahce.
+
+**The measurement, 2026-09-04.** The v2 people endpoint does serve finished
+seasons. Two requests, no warehouse involved:
+
+| Season | HTTP | rows | reported total | players (`type == "J"`) | with a position |
+|---|---|---|---|---|---|
+| E2025 | 200 | 1,055 | 1,055 | 383 | 383 |
+| E2024 | 200 | 883 | 883 | 326 | 326 |
+
+Every one of the six players the website needs is in the E2025 response with a
+position, and each one already maps to exactly one `player_id` in
+`person_game_link` across 35 to 43 games.
+
+**Why a new script rather than the existing one.** `fetch_archive.py --archive
+--include-roster` would also load a roster, but it restores that season's whole
+game archive from Supabase Storage and walks every played game to get there.
+That is a season's worth of network and storage traffic for one response, and a
+mistake inside it can be a season-sized mistake. `scripts/load_season_roster.py`
+requests exactly one URL, archives it, parses it, and loads it. Its tests assert
+that no other endpoint is reachable from it.
+
+**The condition.** The live seasons are refused by name. E2026 and SC2026 have
+their roster refreshed by the nightly live job, and a hand-started run against
+one of them would put two writers on the same season's roster. If the live job
+ever stops owning a season, that name comes out of `LIVE_SEASONS` — as a
+decision, not as a convenience.
+
+**What this does not establish.**
+
+- **It does not put five positions on the floor.** The source publishes three
+  buckets — Guard, Forward, Center — and nothing finer. E2025 breaks down as 164
+  guards, 130 forwards and 89 centers. Any 1-through-5 reading of a lineup is an
+  interpretation this data does not support, and the website must not print one.
+- **It does not make a position a fact about a game.** A registration is a
+  season-level record with a start and an end date. It says what a club
+  registered a player as, not where he stood in any possession. Where the
+  website states a position it must say which of the two it means.
+- **It does not link anything.** The person-code-to-player-id bridge is
+  `person_game_link` and is untouched here; Decision 24's prohibition on
+  constructing a player ID from a person code stands unchanged.
+- **It measures nothing about seasons nobody has fetched.** E2023 and older were
+  not requested. The script accepts them; whether the endpoint answers for them
+  is unmeasured.
+
 ## Rules to add to the project instruction file
 
 ```
