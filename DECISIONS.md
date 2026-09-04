@@ -2872,6 +2872,558 @@ would now stop cleanly on an empty body instead of crashing.
 immutable archive only. The warehouse holds E2024, E2025 and the filling E2026;
 loading the rest is R-12, and it waits on the paid architecture.
 
+## 53. Website pages may carry Turkish; everything else stays English
+
+**The rule.** `CLAUDE.md` requires English for "all code, comments, variable
+names, commit messages, documentation, MCP tool descriptions, and test names.
+No exceptions." `tests/test_english_only.py` enforces it by scanning every
+tracked file for Turkish characters and words.
+
+**What it did not contemplate.** Product copy. The launch design
+(`docs/superpowers/specs/2026-09-04-launch-website-design.md`) has the site
+served in Turkish to a Turkish reader, and the hero's demo question asked in
+Turkish to show that a visitor can ask in their own language. Neither is code,
+a comment, a variable name, a commit message, documentation, a tool description
+or a test name. The rule as written still forbade them, because the test scans
+files rather than categories.
+
+**The decision, taken by the owner on 2026-09-04.** `.html` files under `site/`
+are exempt from the Turkish scan. Nothing else is.
+
+**The exemption is narrow on purpose, and the narrowness is the decision.**
+`site/*.js` and `site/*.css` are code and stay English, comments included. The
+consequence is deliberate: copy a script needs cannot live in a string inside
+the script, so `site/hero.js` reads the demo question from a `data-question`
+attribute in the markup. That is also the better arrangement — the sentence sits
+with the page it belongs to and travels with the translation, instead of hiding
+in a script the translator never opens.
+
+`test_the_website_exemption_covers_pages_and_nothing_else` pins both halves: a
+Turkish line in `site/index.html` and `site/tr/index.html` passes, and the same
+line in `site/hero.js`, `site/style.css` or a document still fails.
+
+**What was rejected.** Dropping the Turkish site. It would have reversed two
+decisions the owner took in the same session — an English-only site, and a site
+that greets a Turkish reader in Turkish — to preserve the wording of a rule
+whose reason does not reach product copy.
+
+**What this does not settle.** How the Turkish page is reached. The intent is
+to detect the browser's language and redirect to `/tr/`, keeping a small link
+back so a visitor is never trapped in a language they did not choose. Neither
+the page nor the redirect exists yet.
+
+## 54. The launch package's claim tests guard consistency, not a fixed set of sentences
+
+Two tests in `tests/test_launch_package.py` were written against the old
+website and failed the moment it was rebuilt. Neither was deleted; both were
+changed to guard the property that still matters, and this records what moved.
+
+**`test_verified_claims_consistency` required four figures on every surface.**
+732 games, 107,311 possessions, 41,524 coordinates, 99.54 % minutes — README,
+sponsor brief and the site each had to carry all four. That was a reasonable
+proxy while the site was a page of claims. The rebuilt site deliberately has no
+statistics row: the owner's objection was that a visitor who does not yet know
+what the product is cannot be moved by "107,311 possessions", and that a row of
+big numbers under a headline is the clearest tell of a generated page. Requiring
+the figures would have forced back onto the page exactly what the design removed.
+
+The test now says: **the two documents whose job is to state the numbers still
+must state them, and any figure the site does state must be the verified one.**
+A stale `730 games` or `99.4%` fails wherever anybody writes it. The site keeps
+one required figure, 732, because how many games are loaded is the single
+coverage claim the page makes.
+
+**`test_public_launch_copy_does_not_claim_the_running_archive_is_complete`
+required every public surface to disclose a running backfill.** The backfill is
+not running: the chain reached the oldest season the API serves and stopped on
+2026-09-03 (item 52). The disclosure requirement is dropped, because keeping it
+would require the page to describe something that is over.
+
+**The overclaim patterns were re-aimed at the two claims that can still be
+false.** First, `23 seasons`: that was the count before E2006 and older were
+measured as empty at every game endpoint, and a public surface still saying it
+is selling four seasons that do not exist upstream. Second, copy that blurs
+archived with loaded — E2007 to E2021 are in the immutable archive, while the
+warehouse a visitor can query holds E2024, E2025 and the filling E2026.
+
+**One live document was wrong and is corrected.** `docs/SPONSOR_ONE_PAGER.md`
+offered a sponsor "all 23 seasons loaded & indexed". It now says 20, names the
+range as E2007 to E2026, and cites the measurement. The historical reports that
+mention 23 are left alone: they are records of what was projected at the time
+and rewriting them would be falsifying the log rather than correcting a claim.
+
+**What this does not establish.** That the remaining figures are current. 732,
+107,311, 41,524 and 99.54 % were verified when they were written and this test
+only holds surfaces to each other; none of them is re-measured against the
+warehouse on every run, and E2026 is loading nightly behind them.
+
+## 54. The launch site gets a Vercel preview, and the preview is not a second home
+
+**The problem, 2026-09-04.** The site is designed by looking at it, and the
+owner had moved to controlling this session from another device, where
+`localhost` does not exist. The work sat on an unmerged branch with no address
+anybody could open.
+
+**What was already there.** A Vercel project, `website-prototype`, linked to
+this GitHub repository and already watching `feat/launch-site`. It had built
+commit `e97d1f1` and failed:
+
+```
+Error: No entrypoint found in "/vercel/path0". Set package.json "main" to a
+server file, or add one of: app.js, ... server.js, ...
+```
+
+Vercel had detected a Node application at the repository root. There is no Node
+application anywhere in this repository; the site is static files under `site/`.
+`vercel.json` now says so: no framework, no install, no build, and `site` as the
+output directory.
+
+**The decision, and its boundary.** Vercel publishes **branch previews only**.
+The site's home is GitHub Pages at `euroleague.egemenyucelen.me`, published by
+`pages.yml` on any change to `site/**` on master. On 2026-09-05, the owner chose
+the product subdomain so the apex `egemenyucelen.me` remains available for a
+separate personal site. Two publishers
+of one site is a question - "which one is live?" - that must have a written
+answer before it is asked, and the answer is: Pages is the site, Vercel is a
+window onto a branch.
+
+**The condition.** No custom domain is ever attached to the Vercel project. The
+moment one is, the boundary above stops being true and this decision has to be
+re-taken rather than quietly outgrown.
+
+**Why the preview is safe to exist before R-9.** Access is still invite-only,
+and a stranger who follows the connect instructions today is refused at the
+sign-in screen. The Vercel project has SSO protection enabled for all
+deployments except custom domains, so a preview is visible to the account owner
+and to nobody else. That is a setting, not a promise: if it is ever turned off
+while R-9 is open, the preview becomes a public page giving instructions that
+fail.
+
+**What this does not establish.** It says nothing about whether the site is
+ready to launch, and nothing about R-9, which is still open. It also does not
+make Vercel a deployment target for anything but this static directory - the
+hosted MCP server is on Fly and is not touched by any of this.
+
+## 55. `COORD_Y` is measured from the ring, not from the baseline
+
+**How it was found, 2026-09-04.** The owner, looking at the launch site's shot
+chart, twice reported dots sitting outside the court, and then refused the
+explanation. In translation: there is a mistake here, this cannot be right,
+perhaps EuroLeague's court dimensions do not match the ones we are using, or
+perhaps their basket is not in the same place as ours. He was right, and the
+site's own caption had been arguing the opposite for two commits.
+
+**Why it was testable without any new data.** Every `raw_shot` row carries the
+league's own `action_code`, which says two or three. That flag owes nothing to
+any geometry this project chose, so a court drawn in the right place must agree
+with it and a court drawn in the wrong place must not.
+
+**The measurement.** Both loaded seasons, every shot with a coordinate, free
+throw sentinels excluded. A shot is classified from FIBA geometry - the corner
+line 90 in from each sideline, the arc 675 from the ring - under two readings of
+the y axis, and compared with the league's flag:
+
+| Season | Shots | y from the baseline | y from the ring |
+|---|---|---|---|
+| E2024 | 41,524 | 11,898 disagree (28.65 %) | 155 disagree (0.37 %) |
+| E2025 | 51,745 | 14,505 disagree (28.03 %) | 190 disagree (0.37 %) |
+| **Total** | **93,269** | **26,403 (28.31 %)** | **345 (0.37 %)** |
+
+**The reading that settles it.** Under the ring origin, **zero** shots in either
+season fall behind the baseline. Under the baseline origin, 2,214 do. Those
+2,214 were the dots outside the court. They were never outside it.
+
+**The decision.** `COORD_Y` is the distance from the ring, along the court axis.
+The baseline is at `y = -157.5`. Anything that draws a court around these
+coordinates, or measures a distance from them, uses the ring as the origin.
+
+**What was wrong because of it, and is now corrected.**
+
+- The launch site's half-court was drawn 157.5 cm out of place.
+- The card on Micic's buzzer-beater said *"a three from 7.9 m"*. Measured from
+  the ring, (69, 941) is **9.44 m**. The card now says 9.4 m.
+- `site/data/shots.json` described its own units as "distance from the
+  baseline". That description is what the drawing was built from.
+- A band drawn behind the baseline to explain the stray dots was invented to
+  explain an artefact, and is removed.
+
+**What was NOT wrong, and this is the part that matters.** Nothing in the
+warehouse and nothing in the MCP server computes a distance or a shot type from
+coordinates. `src/euroleague/mcp/tools.py` states it explicitly - "Shot type
+comes from the event action code, never from distance" - and `queries.py`
+repeats it. No stored metric, no tool response and no test was affected. The
+error lived entirely in a drawing.
+
+**The first check was not enough, and the owner caught that too.** Comparing a
+geometric classification with the league's flag only asks whether each shot is
+on the correct SIDE of the line. It cannot see a scale error: if every
+coordinate were 20 % too large, every three would still be outside the arc and
+every two inside, and the agreement would still be 99.6 %. The owner looked at
+the corrected chart and said the threes were still too far out - *most threes
+should be around 7 m, the line is 6.75 m at the top of the arc* - which is a
+question about distance, not about sides. Three further measurements answer it.
+
+**The arc, fitted rather than assumed.** The boundary between twos and threes is
+the line. Taking the first percentile of three-point attempts in each 50 cm band
+of `|x|` and fitting a circle centred on the court axis, over E2024 and E2025:
+
+- with the centre free: ring at `y = 35`, radius 651 cm, 3.7 cm rms;
+- with the radius fixed at the EuroLeague 675 cm: ring at `y = 7.5`, 5.8 cm rms.
+
+Twelve bands, residuals under 6 cm. The origin is the ring to within about 8 cm,
+and the units are centimetres on both axes.
+
+**The distances are ordinary.** All 38,546 three-point attempts across the two
+seasons, measured from the ring:
+
+| p5 | p25 | median | p75 | p95 | beyond 9 m |
+|---|---|---|---|---|---|
+| 6.82 m | 7.05 m | **7.33 m** | 7.74 m | 8.62 m | 2.7 % |
+
+The nearest threes sit at 6.82 m against a 6.75 m line, and the median is 7.33 m
+- which is the number the owner predicted from memory before any of this was
+measured.
+
+**The shot the site shows.** Micic's buzzer-beater is `(69, 941)`, read back
+from the source `Points` response for E2021 game 328: minute 40, `3FGM`, score
+becoming 74-77. From the ring that is **9.44 m**, in the top 2.7 % of threes and
+not typical - which is the point of putting it on the page. His three other
+made threes in the same game come out at 7.43, 7.60 and 8.21 m, and his two
+close attempts at 0.87 and 1.50 m. A layup at 0.87 m from the ring is only
+possible on this reading; on the baseline reading the same shot would sit on the
+baseline behind the backboard.
+
+**What this does not establish.** It does not explain the residual 0.37 %. Those
+345 shots disagree with the league's own flag under the correct origin too, and
+they are unexamined: they may be recording error, corner-line edge cases, or a
+rule this classification does not model. It also says nothing about `COORD_X`,
+whose attack-relative sign was already recorded and is untouched. The arc fit
+uses the first percentile of threes as the boundary, which sits slightly inside
+the true line, so the free-centre radius of 651 cm is a floor rather than an
+estimate. And it is measured on E2024 and E2025, with the single E2021 game the
+site shows checked separately; a season loaded later is a season to re-check,
+not a season to assume.
+
+## 56. WITHDRAWN — the claimed 4.5 % scale error was a misreading of the boundary
+
+**WITHDRAWN THE SAME DAY, 2026-09-04.** The scale error described below does
+not exist. It came from locating the three-point line at the FIRST attempt
+recorded on any lattice row, rather than at the row where the distribution
+actually begins. Read the second way, against the same two tables:
+
+| Boundary | First stray attempt | Where the distribution starts | FIBA |
+|---|---|---|---|
+| Corner line, in x | 633 (1 attempt) | **658** (49, then 81, 336, 807) | 660 |
+| Arc, along the axis | 658 (1 attempt) | **683** (31, then 94, 150, 258) | 675 |
+
+Ratios to FIBA of 0.997 and 1.012, both inside the 6.4 cm lattice step. The
+coordinates are centimetres and the court is where FIBA puts it. Decision 55
+stands unchanged and unqualified.
+
+The mistake is worth keeping visible: a handful of rows disagree with the
+league's own flag - the 0.37 % residual Decision 55 already named and left
+unexamined - and reading the boundary off those instead of off the mass of the
+distribution produced a confident, self-consistent 4.5 % that was not there. Two
+independent axes agreeing to one part in a thousand felt like proof. They agreed
+because both were making the same mistake.
+
+**What survives.** Only the decision not to print a distance on the card, and it
+now rests on a different and smaller reason: the lattice is 6.4 cm, a few rows
+near the line are unexplained, and the owner does not accept the figure. That is
+an open question, recorded in `docs/SHOT_COORDINATE_GEOMETRY.md`, not a settled
+correction. Restoring the figure is a decision for the owner and is not taken
+here.
+
+---
+
+*The withdrawn reasoning follows, kept because the record of how a wrong number
+was reached is worth more than a clean page.*
+
+**How it was found, 2026-09-04.** Decision 55 corrected the origin and the owner
+still refused the result: Micic's shot cannot be 9.4 m, the line is 6.75 m at
+the top of the arc, most threes should be around 7 m. He then proposed the check
+that settles it - look at MADE shots either side of the three-point line and see
+where two becomes three.
+
+**The line, located from the data in two independent directions.** Both loaded
+seasons. Along the court axis (`|x| <= 120`), attempts by lattice row: twos thin
+out to a single attempt at `y = 633`; rows 639, 646 and 652 are empty; threes
+begin at 658 and reach 258 attempts by 702. In the corner (`y <= 100`), which
+depends on `x` alone and on no assumption about `y` at all: the last two sits at
+`|x| = 627`, the first three at 633, and the count reaches 807 by 677.
+
+| Boundary | Where the data puts it | Where FIBA puts it | Ratio |
+|---|---|---|---|
+| Arc, along the axis | ~645 | 675 | 0.956 |
+| Corner line, in x | ~630 | 660 | 0.955 |
+
+The two agree to one part in a thousand, and they are measured along different
+axes. The coordinate system is internally consistent and about 4.5 % smaller
+than the court it describes.
+
+**What that 4.5 % is, is not settled.** A uniform scale of 0.955 fits, and so
+does a constant inward offset of about 30 cm, because 660 and 675 are too close
+together for these two constraints to separate them. A third constraint at a
+very different radius would separate them; the sideline is the obvious
+candidate and is inconclusive, since attempts are recorded out to `|x| = 740`
+where both models predict the sideline should appear near 716.
+
+**The decision: the site prints no distance in metres.** The card on Micic's
+buzzer-beater said 7.9 m, then 9.4 m. Under the two corrections above the same
+shot is 9.74 m or 9.87 m. A figure that moves by 20 cm depending on an
+unresolved question is not a measurement, and this project does not ship those.
+The card now says the shot was a three from well beyond the arc, which is true
+on every reading - it is roughly 2.7 m past the line whichever correction is
+applied.
+
+**Why 8.2 m was not possible.** Putting this shot at 8.2 m requires shrinking
+every coordinate by 13 %. That drags the median three-point attempt from 7.33 m
+to 6.37 m and the closest threes to 5.93 m, inside a 6.75 m line. The owner's
+own estimate of the typical three - around 7 m - is what rules his estimate of
+this shot out.
+
+**What is still true from Decision 55.** The origin is the ring and not the
+baseline; that was measured on 93,269 shots and is unaffected by a scale, since
+a scale cannot move 2,214 shots from behind the baseline to in front of it.
+
+**What this does not establish, and what it leaves broken.** The chart draws the
+arc at the FIBA 675 while the data's line sits near 645, so a shot recorded
+between those two radii is drawn on the wrong side of the line. In the game the
+site shows, that is one attempt of 59. Fixing it means either scaling the
+plotted coordinates by the measured ratio or drawing the court to the data
+rather than to FIBA, and both change what the picture claims to be. That choice
+is not taken here.
+
+## 57. The coordinate frame is settled by five anchors; per-shot accuracy is not, and cannot be
+
+**Decided 2026-09-04, after Decision 56 was withdrawn.** The site continues to
+print no distance in metres. What changes is the reason, which is now a
+measurement rather than an open question.
+
+**What was still open.** Decision 56's withdrawal left the frame resting on one
+feature — the three-point line — read along two axes that sit 15 cm apart. The
+open document asked for "a third constraint at a very different radius", because
+660 and 675 are too close together to tell a uniform scale from a constant
+offset.
+
+**Four more anchors, found in the source's own `zone` column and in the edges of
+the distribution.** Both loaded seasons, 93,269 shots with coordinates:
+
+| Anchor | Where the data puts it | Where the court puts it | Ratio |
+|---|---|---|---|
+| Sideline — the outer edge of the `|x|` distribution | 740 | 750 | 0.987 |
+| Baseline — the smallest recorded `y` | −138 | −157.5 | — |
+| Restricted area — the `|x|` limit of zone `A` | 125 | 125 | 1.000 |
+| Free-throw line — the `y` ceiling of zones `D`/`E` | 420 | 422.5 | 0.994 |
+| Half-court line — where zone `J` begins | 1242 | 1242.5 | 1.000 |
+
+Every one is inside the 6.4 cm recording lattice, and they span 1.25 m to
+12.4 m. Under the withdrawn 0.955 scale the sideline edge would fall at 716 and
+the half-court boundary at 1186; under a 30 cm inward offset, 720 and 1212.
+Neither appears. **There is no global scale error and no global offset to
+correct.**
+
+**Why two of these are evidence from outside the feed.** The vendor computes the
+`zone` label, so zone boundaries agreeing with FIBA prove only that the vendor's
+own geometry matches ours — worth having, but circular on its own. The sideline
+and baseline edges are not: nobody shoots from outside the court, so the outer
+edge of a 93,269-shot distribution has to land just inside the physical line, and
+it does. That is a constraint the data cannot satisfy by being self-consistent.
+
+**Zone `J` is the strongest single reading.** It is the source's own label for
+"beyond half court", it contains 130 attempts, and it begins at exactly
+`y = 1242` against a half-court line 1242.5 cm from the ring. A frame anchored on
+the ring reproduces a court feature 12.4 m away to half a centimetre.
+
+**A correction to the withdrawn text.** Decision 56 called the sideline
+"inconclusive, since attempts are recorded out to `|x| = 740` where both models
+predict the sideline should appear near 716". That was backwards: shots recorded
+at 740 under a model that maps the sideline to 716 are shots from outside the
+court, which refutes the model rather than failing to test it. The evidence
+against the 4.5 % was already in hand and was read as neutral.
+
+**What this does not establish, and what no measurement here can.** It says
+nothing about whether an individual shot was placed on the right spot by
+whoever recorded it. A recorder systematically 50 cm out at long range produces
+exactly this table: every anchor still lands, because anchors are read off tens
+of thousands of shots and errors that are not one-directional average away.
+Validating a single placement needs something outside the feed — video — and
+video is out of scope for this project on copyright grounds.
+
+**Therefore route B in `docs/SHOT_COORDINATE_GEOMETRY.md` is closed, not
+pending.** It asked for a ground truth, a shape for the error, a per-season
+measurement, and a storage decision. The shape is now known to be *no error*, and
+the ground truth its remaining half would need does not exist and will not. The
+site keeps route A: plot the coordinates, which only requires the frame this
+decision settles, and print no figure in metres.
+
+**What the card says and why.** "A three from well beyond the arc." Micic's shot
+is at `(69, 941)`, 9.44 m from the ring, in a frame now demonstrated to extend
+past 12 m. The wording is not a hedge against a broken coordinate system; it is
+a hedge against the one thing still unvalidated, which is the recorder's aim on
+that single shot.
+
+**Still unexamined:** the 0.37 % residual — 345 shots that disagree with the
+league's own two-or-three flag. Decision 56 was built out of those rows. Anyone
+returning to per-shot accuracy should start there.
+
+## 58. Some games are recorded a metre out, and a game must be checked against its season before it is drawn
+
+**Decided 2026-09-04.** The owner looked at EuroLeague's own shot charts for
+other games, said those looked normal to him, and asked whether the problem was
+the *game* the launch site had chosen rather than the coordinates. It was. This
+is the third time on this question that his reading of a picture was right and
+the measurement had been aimed somewhere else.
+
+**The measurement.** Every archived `Points` response for E2021 and E2022 — 627
+games, 30,899 three-point attempts — read from the immutable archive with
+checksums verified. Nothing was re-fetched.
+
+The season is healthy. E2021's median three-point attempt sits 721 cm from the
+ring, E2022's 726 cm, against 733 cm for E2024 and E2025, and all five Decision
+57 anchors hold in both. **The game the site was drawing is not.**
+
+| | E2021 season | E2021 game 328 | Shift |
+|---|---|---|---|
+| Top of the key, `\|x\| <= 200` | 734 cm | 814 cm | **+80** |
+| Wings, `200 < \|x\| <= 500` | 730 cm | 814 cm | **+84** |
+| **Corners, `\|y\| <= 150`** | 686 cm | 686 cm | **0** |
+
+**Why that table is the proof and the raw median was not.** A game's median can
+move because the teams took different shots. This one did not: corner attempts
+are 10.2 % of the game against 12.1 % of the season, and every region is
+compared with the same region. The corners are exactly right and everything else
+is 80 cm out. That is the signature of a recording error rather than a shooting
+pattern, because **the sideline pins a corner attempt in place** — there is no
+court further out to put it on — while a shot at the top of the key can be
+dragged as deep as the operator likes.
+
+**It is one-directional, which rules out noise.** Per-game median shift against
+the season median, 627 games with at least 20 attempts:
+
+| p5 | p25 | median | p75 | p95 | min | max |
+|---|---|---|---|---|---|---|
+| −30 | −17 | +0 | +25 | +64 | **−43** | **+124** |
+
+No game is more than 43 cm below its season. 49 games (7.8 %) are more than
+50 cm above, 24 (3.8 %) more than 75 cm, and 11 (1.8 %) more than a metre.
+Sampling noise is symmetric; this is not.
+
+**It is not the arena.** Grouping by venue over both seasons gives a 111 cm
+spread, which looks like an arena effect until the 2022 Final Four is read on its
+own: four games, one building, one weekend — game 327 at +103, game 328 at +94,
+game 329 at **−10**, game 330 at +75. A property of the hall cannot switch off
+for the third-place game. The unit of the defect is the game, and by implication
+whoever recorded it.
+
+**What changes on the site.** The launch page now draws E2022 game 330, the 2023
+championship game, whose non-corner threes sit 3 cm *inside* its season median —
+rank 199 of 328. The spotlight is Sergio Llull's `(-238, 432)`, a two from
+**4.93 m** with the clock reading 00:03, for the 79-78 lead Olympiacos did not
+take back. Micic's `(69, 941)` is not withdrawn as a coordinate; it is simply
+from a game we can now show is badly recorded.
+
+**The card prints the distance, which Decision 57 declined to do.** What changed
+is that there is now a check at the level of the thing being drawn. Decision 57
+validated the frame across a whole season; it could not say whether one game sat
+inside that frame. This does, and the figure is written to a tenth of a metre
+because the source records on a 6.4 cm lattice.
+
+**The check is code, not a note.** `scripts/build_site_shot_chart.py` builds
+`site/data/shots.json` from the archive and **refuses** a game whose non-corner
+three-point attempts sit more than 40 cm outside its season's median. Run against
+E2021 game 328 it exits with that message; against E2022 game 330 it reports
+−3 cm and builds. The limit is a judgement, set between the +25 cm that a quarter
+of games exceed and the +50 cm that only 7.8 % do. The file also records the
+measured shift, so the page carries its own provenance.
+
+**What this does not establish.**
+
+- **Not the cause.** Operator, software, or arena calibration on the night — the
+  measurement locates the defect at the game and stops there.
+- **Not the shape.** A uniform outward scale, a radial offset, and a coarse click
+  grid all fit; separating them needs work not done here.
+- **Not a correction.** Nothing is rescaled and no stored value changes. Bad games
+  are identified and, for the site, refused.
+- **Not per-shot accuracy.** Decision 57's limit still stands. A clean game is a
+  population-level result; it does not certify one attempt inside it.
+- **Only two seasons.** E2021 and E2022. E2024 and E2025 are loaded and unchecked
+  for this, and the fifteen older archived seasons are unmeasured. The rate above
+  is a rate for two seasons, not for the archive.
+- **Nothing in the warehouse is affected.** No stored metric and no MCP tool
+  derives a distance or a shot type from coordinates — `tools.py` says so
+  explicitly — so this defect reaches drawings and nothing else. That was already
+  true of Decision 55's error and is why both were confined to a picture.
+
+## 59. The launch site's "Ask it something hard" section is transcript, not copy
+
+**Decided 2026-09-05.** The owner asked for a section aimed at the reader who
+wants the advanced version: long, hard prompts and the answers to them, laid out
+as three large visuals with their explanations, alternating side to side.
+
+**His correction is what shaped it.** The first plan was to show the answers the
+server gives. He pushed back: *is the AI's interpretation not the important part
+here, rather than what comes straight from the server?* He is right, and it is
+the difference between the section working and not. Raw tool output is a picture
+of homework. What a visitor is deciding whether to connect is an assistant that
+chains the calls they would have made next, distrusts a number built on 43
+possessions, and says what it left out. The three are three different kinds of
+thinking rather than three of the same.
+
+**Amended after the owner's preview review on 2026-09-05.** The first version
+put tool names, arguments and returned rows directly in every window. The owner
+found that technical chrome confusing and asked for the same small, polite
+thinking beat used in the hero. Each window now shows one human-readable
+thinking step and the reading. The exact calls and arguments remain recorded in
+source comments for replay, but they are maintainer evidence rather than
+visitor-facing interface:
+
+| | Question | What it demonstrates |
+|---|---|---|
+| 1 | Fenerbahce's clutch scoring, at three thresholds | It asks the next question, then names the point where the number stops being worth quoting |
+| 2 | Panathinaikos's best five | It withdraws its own first answer after reading its own tool's warning |
+| 3 | How many games this is built on | It reports what was excluded before being asked |
+
+**Every figure in that section came back from the running server.** The
+questions were put to `scripts/mcp_server.py` over its own stdio transport - the
+same registry, validation, row budget and response envelope a connected
+assistant gets. Tool names, arguments, counts, ratings and caveats are what was
+returned; the prose is a reading of those returns and adds no quantity to them.
+Only the counts, ratings, caveats and reading are presented to visitors; the
+implementation names and arguments are deliberately not UI.
+
+**The condition, and it is the whole reason this is a decision.** These numbers
+are a snapshot of E2024 and E2025 as loaded on 2026-09-05. **When the loaded
+seasons change - a new season, a reload, a game leaving or entering quarantine -
+the section is wrong and must be re-run against the server, not edited by hand.**
+A page that says "every figure below is what came back" and then carries a stale
+figure is worse than one that never claimed it. The three cases are reproducible:
+`el_get_possessions`, `el_get_lineup_stats`, `el_describe_warehouse` and
+`el_get_team_stats` with the arguments recorded beside each case in the HTML
+source.
+
+**Cross-checked against the section below it.** `#how` says 732 games loaded and
+53 held back. The server: E2024 308 used of 330, 22 excluded; E2025 371 of 402,
+31 excluded. 308 + 371 = 679 used, 22 + 31 = 53 held back, 679 + 53 = 732. The
+two sections cannot drift apart without one of them failing this arithmetic.
+
+**Placement: below Connect.** Section 1 of the design record pushes anything that
+does not move a visitor toward connecting past the point where only a curious
+reader goes, and this section is written for exactly that reader. It roughly
+doubles the page height, which the owner accepted explicitly.
+
+**HTML, not screenshots**, which is the same choice made for every other figure
+on this site. A PNG of a conversation goes stale silently, cannot be translated
+with the rest of the page when the Turkish version is authored, and blurs on a
+display the author did not own.
+
+**What this does not establish.** That the prose is what any other assistant
+would say - it is one reading of a set of returns, written to be checkable
+against the replay record rather than to be authoritative. And it does
+not establish that the live `#ask` chips further up the page will ever answer
+questions of this shape: those run a locked allowlist of recorded answers, and
+Decision 6's live endpoint is still unbuilt.
+
 ## Rules to add to the project instruction file
 
 ```

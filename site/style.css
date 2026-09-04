@@ -1,1740 +1,1805 @@
-/* ==========================================================================
-   EuroLeague Analytics — 6-Beat Product Stylesheet with Video & AI Onboarding
-   ========================================================================== */
+/* EuroLeague Analytics — launch site
+   Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md
+
+   Two rules this file exists to keep:
+     1. Colour means something. Orange is data and nothing else; blue is a club.
+        There is no decorative colour anywhere.
+     2. Motion is data. The only thing that moves on its own is the answer
+        arriving, because that is the product. */
 
 :root {
-  --bg-page: #F9F9FA;
-  --surface: #FFFFFF;
-  --text-primary: #121316;
-  --text-secondary: #61656E;
-  --orange-accent: #E2541A;
-  --orange-tint: #FDF3EE;
-  --divider: #E5E6EA;
-  --green-indicator: #22C55E;
+  /* Warm neutrals: the same paper the ball is played on, not a screen white.
+     Every one of these is an orange desaturated almost to grey, which is what
+     lets the single saturated orange below stay loud. */
+  --paper:      #FDFAF6;
+  --paper-deep: #F7F1E9;
+  --ink:        #1A1512;
+  --ink-soft:   #6B5F55;
+  --ink-faint:  #A09284;
+  --hairline:   #EBE2D7;
+  --surface:    #FFFFFF;
 
-  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  /* The one saturated colour on the page. Reserved for measured values and
+     for the single action we want taken. Nothing decorative is ever this. */
+  --ball:       #EA580C;
+  --ball-deep:  #C2410C;
 
-  --max-width: 1060px;
-  --header-height: 64px;
+  --court:      rgba(26, 21, 18, 0.06);
+
+  --display: "Gabarito", ui-sans-serif, system-ui, sans-serif;
+  --text:    "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --figures: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --gutter: clamp(1.25rem, 5vw, 5.5rem);
+  --measure: 62ch;
 }
 
-/* Base Reset */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
-html {
-  background-color: var(--bg-page);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  scroll-behavior: smooth;
-}
+html { -webkit-text-size-adjust: 100%; }
 
 body {
-  width: 100%;
-  min-height: 100vh;
-  background-color: var(--bg-page);
-  color: var(--text-primary);
-  overflow-x: hidden;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--text);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Utilities */
-.mono-meta {
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-}
-
-.text-orange {
-  color: var(--orange-accent) !important;
-}
-
-.text-dark {
-  color: var(--text-primary) !important;
-}
-
-/* Magic UI Highlighter Component Styles */
-.highlighter {
-  position: relative;
-  display: inline-block;
-  white-space: nowrap;
-  z-index: 1;
-}
-
-.highlighter::before {
-  content: '';
-  position: absolute;
-  left: -4px;
-  right: -4px;
-  bottom: 2px;
-  height: 38%;
-  background: linear-gradient(104deg, rgba(226, 84, 26, 0.18) 0.9%, rgba(226, 84, 26, 0.28) 2.4%, rgba(245, 158, 11, 0.22) 98%);
-  border-radius: 4px;
-  z-index: -1;
-  transform: rotate(-0.5deg);
-  transition: transform 0.3s ease, background 0.3s ease;
-}
-
-.highlighter-brush {
-  position: relative;
-  display: inline-block;
-  padding: 0 4px;
-  background-image: linear-gradient(120deg, rgba(226, 84, 26, 0.14) 0%, rgba(245, 158, 11, 0.22) 100%);
-  background-repeat: no-repeat;
-  background-size: 100% 45%;
-  background-position: 0 88%;
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
   border-radius: 3px;
-  transition: background-size 0.3s ease;
 }
 
-.highlighter-brush:hover {
-  background-size: 100% 75%;
+.skip {
+  position: absolute;
+  left: -9999px;
+}
+.skip:focus {
+  left: var(--gutter);
+  top: 0.75rem;
+  z-index: 10;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  text-decoration: none;
 }
 
-/* ==========================================================================
-   FIXED SITE HEADER
-   ========================================================================== */
+/* ---------- top bar ---------- */
 
-.site-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--header-height);
-  background-color: rgba(249, 249, 250, 0.96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--divider);
-  z-index: 1000;
+.topbar {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
-}
-
-.nav-container {
-  max-width: var(--max-width);
-  width: 100%;
-  margin: 0 auto;
-  padding: 0 32px;
-  display: flex;
   justify-content: space-between;
-  align-items: center;
+  gap: 1rem;
+  padding: 1.4rem var(--gutter);
 }
 
-.nav-brand {
-  display: flex;
+.wordmark {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.6rem;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(0.88rem, 3vw, 1rem);
+  letter-spacing: -0.02em;
+  color: var(--ink);
   text-decoration: none;
-  color: var(--text-primary);
+  white-space: nowrap;
 }
 
-.court-dot-icon {
-  width: 8px;
-  height: 8px;
+/* A ball seam, not a logo: two arcs in a circle. */
+.wordmark-mark {
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
-  background-color: var(--orange-accent);
-}
-
-.brand-text {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.nav-link {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.15s ease;
-}
-
-.nav-link:hover {
-  color: var(--text-primary);
-}
-
-.nav-cta {
-  color: var(--orange-accent);
-  font-weight: 600;
-}
-
-.nav-github {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-/* ==========================================================================
-   PAGE CONTAINER & ACT SECTIONS
-   ========================================================================== */
-
-.page-container {
-  width: 100%;
-}
-
-.act {
-  width: 100%;
-  padding: 100px 0;
-  border-bottom: 1px solid var(--divider);
-  display: flex;
-  justify-content: center;
-}
-
-.act-inner {
-  max-width: var(--max-width);
-  width: 100%;
-  padding: 0 32px;
-}
-
-.section-lead-title {
-  margin-bottom: 40px;
-}
-
-.act-title {
-  font-size: clamp(2rem, 3.6vw, 2.75rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  color: var(--text-primary);
-  max-width: 840px;
-}
-
-.act-subtitle {
-  font-size: 1.0625rem;
-  color: var(--text-secondary);
-  margin-top: 10px;
-  line-height: 1.5;
-}
-
-/* ==========================================================================
-   ACT 1: HERO
-   ========================================================================== */
-
-.act-hero {
+  border: 1.5px solid var(--ink);
   position: relative;
   overflow: hidden;
-  padding-top: calc(var(--header-height) + 64px);
-  padding-bottom: 80px;
-  min-height: calc(88vh);
+}
+.wordmark-mark::before,
+.wordmark-mark::after {
+  content: "";
+  position: absolute;
+  inset: -30% -55%;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+}
+.wordmark-mark::after { inset: -30% -55%; transform: translateX(55%); }
+.wordmark-mark::before { transform: translateX(-55%); }
+
+.topnav {
   display: flex;
   align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.75rem);
 }
 
-.hero-canvas {
+.lang {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+.lang:hover { color: var(--ink); }
+
+.quiet-link {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+.quiet-link:hover { color: var(--ink); text-decoration: underline; }
+
+/* Orange is the measured value and the one action worth taking. Those are the
+   only two things it is ever used for. */
+.button-solid {
+  display: inline-block;
+  background: var(--ball);
+  color: #fff;
+  font-family: var(--text);
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.7rem 1.15rem;
+  border-radius: 999px;
+  text-decoration: none;
+}
+.button-solid:hover { background: var(--ball-deep); }
+
+.button-lg {
+  font-size: 1rem;
+  padding: 0.95rem 1.7rem;
+}
+
+/* ---------- hero ---------- */
+
+.hero {
+  position: relative;
+  padding: clamp(2.25rem, 5vw, 4.5rem) var(--gutter) clamp(3rem, 5.5vw, 5.5rem);
+  overflow: hidden;
+}
+
+/* Static. The court is structure, not an effect. */
+.courtlines {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  left: -24%;
+  bottom: -46%;
+  width: min(76%, 860px);
+  height: auto;
+  color: var(--court);
   pointer-events: none;
-  z-index: 1;
-  opacity: 0.5;
 }
 
 .hero-inner {
   position: relative;
-  z-index: 2;
-  width: 100%;
-}
-
-.hero-grid {
   display: grid;
-  grid-template-columns: 1.12fr 1fr;
-  gap: 44px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
   align-items: center;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  max-width: 1180px;
+  margin: 0 auto;
 }
 
-.hero-text-col {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.hero-headline {
-  font-size: clamp(2.35rem, 4.2vw, 3.75rem);
+h1 {
+  margin: 0;
+  font-family: var(--display);
   font-weight: 600;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-  color: var(--text-primary);
-  margin-bottom: 18px;
+  font-size: clamp(2.4rem, 5.1vw, 4rem);
+  line-height: 1.04;
+  letter-spacing: -0.037em;
+  text-wrap: balance;
 }
 
-.hero-text-cursor {
-  display: inline-block;
-  width: 3px;
-  height: 0.9em;
-  background-color: var(--orange-accent);
-  vertical-align: -0.05em;
-  margin-left: 4px;
-  animation: hero-blink 0.75s infinite;
+.lede {
+  margin: 1.15rem 0 0;
+  max-width: 34ch;
+  font-size: clamp(1rem, 1.2vw, 1.1rem);
+  color: var(--ink-soft);
 }
+.lede strong { color: var(--ink); font-weight: 600; }
 
-@keyframes hero-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.hero-lead {
-  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
-  line-height: 1.5;
-  color: var(--text-secondary);
-  margin-bottom: 24px;
-  max-width: 520px;
-}
-
-.hero-actions-group {
+.actions {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 32px;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
 }
 
-.hero-action-btn {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  text-decoration: none;
-  padding: 11px 22px;
-  transition: all 0.15s ease;
+/* ---------- the assistant window ---------- */
+
+.hero-demo { min-width: 0; }
+
+.window {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(16, 21, 28, 0.03),
+    0 22px 45px -30px rgba(16, 21, 28, 0.35);
+}
+
+.window-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.95rem;
+  border-bottom: 1px solid var(--hairline);
+  background: #FDFCFB;
+}
+
+/* The assistant is named in text and drawn as a neutral initial. We do not
+   reproduce anyone's logo or copy anyone's interface: naming a product to say
+   we work with it is fair, dressing up as it is not. */
+.window-app {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border-radius: 4px;
+  gap: 0.5rem;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--ink);
 }
 
-.hero-action-primary {
-  background-color: var(--orange-accent);
-  color: #FFFFFF;
-  border: 1px solid var(--orange-accent);
-}
-
-.hero-action-primary:hover {
-  background-color: #cc4712;
-  border-color: #cc4712;
-  transform: translateY(-1px);
-}
-
-.hero-action-secondary {
-  background-color: var(--surface);
-  color: var(--text-primary);
-  border: 1px solid var(--divider);
-}
-
-.hero-action-secondary:hover {
-  border-color: var(--text-secondary);
-  transform: translateY(-1px);
-}
-
-.hero-conduit-guide {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.conduit-line-track {
-  width: 40px;
-  height: 2px;
-  background-color: var(--divider);
-  position: relative;
-  overflow: hidden;
-}
-
-.conduit-line-pip {
-  width: 12px;
-  height: 100%;
-  background-color: var(--orange-accent);
-  position: absolute;
-  left: -12px;
-  animation: conduit-stream 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-@keyframes conduit-stream {
-  0% { left: -12px; }
-  100% { left: 40px; }
-}
-
-.scroll-label {
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-}
-
-/* ==========================================================================
-   HERO AI ASSISTANT MEDIA COMPOSITE (SAFARI DESKTOP + MOBILE MOCKUP)
-   ========================================================================== */
-
-.hero-media-col {
-  width: 100%;
-  position: relative;
-}
-
-/* 1. Desktop Safari Frame */
-.assistant-media-window.safari-frame {
-  background-color: var(--surface);
-  border: 1px solid var(--divider);
-  box-shadow: 0 20px 50px -10px rgba(18, 19, 22, 0.09), 0 0 0 1px rgba(18, 19, 22, 0.03);
-  border-radius: 10px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 2;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.assistant-media-window.safari-frame:hover {
-  box-shadow: 0 24px 60px -10px rgba(18, 19, 22, 0.12), 0 0 0 1px rgba(18, 19, 22, 0.05);
-}
-
-.safari-header {
-  background-color: #F3F4F6;
-  border-bottom: 1px solid var(--divider);
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.safari-controls {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.safari-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.safari-dot.red { background-color: #FF5F56; border: 0.5px solid #E0443E; }
-.safari-dot.yellow { background-color: #FFBD2E; border: 0.5px solid #DEA123; }
-.safari-dot.green { background-color: #27C93F; border: 0.5px solid #1AAB29; }
-
-.safari-nav-buttons {
-  display: flex;
-  gap: 6px;
-  color: #8C909A;
-  margin-right: 2px;
-}
-
-.safari-nav-btn {
-  display: block;
-}
-
-.safari-nav-btn.disabled {
-  opacity: 0.4;
-}
-
-.safari-address-bar {
-  flex: 1;
-  background-color: #FFFFFF;
-  border: 1px solid #E2E4E9;
+/* Each assistant carries its own brand colour, which is identification rather
+   than decoration — the same reasoning that puts a club's colour on a jersey
+   chip. No logo is reproduced and no interface is imitated. */
+.app-avatar {
+  width: 20px;
+  height: 20px;
   border-radius: 6px;
-  padding: 4px 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 260px;
-  margin: 0 auto;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-}
-
-.safari-lock-icon {
-  color: #10B981;
-  flex-shrink: 0;
-}
-
-.safari-url {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-primary);
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.safari-url-sub {
-  color: #94A3B8;
-  font-weight: 400;
-}
-
-.safari-actions {
-  display: flex;
-  align-items: center;
-}
-
-.safari-badge {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--orange-accent);
-  background-color: var(--orange-tint);
-  border: 1px solid rgba(226, 84, 26, 0.2);
-  padding: 3px 8px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.pulse-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background-color: var(--orange-accent);
-  animation: pulse-glow 1.5s infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-
-/* 2. Floating iPhone Mobile Mockup */
-.hero-mobile-mockup {
-  position: absolute;
-  right: -24px;
-  bottom: -32px;
-  width: 200px;
-  z-index: 10;
-  filter: drop-shadow(0 20px 30px rgba(18, 19, 22, 0.16));
-  transform: rotate(-1.5deg);
-  transition: transform 0.3s ease, filter 0.3s ease;
-  animation: float-subtle 4s ease-in-out infinite alternate;
-}
-
-.hero-mobile-mockup:hover {
-  transform: rotate(0deg) translateY(-4px);
-  filter: drop-shadow(0 26px 40px rgba(18, 19, 22, 0.22));
-}
-
-@keyframes float-subtle {
-  0% { transform: rotate(-1.5deg) translateY(0); }
-  100% { transform: rotate(-1.5deg) translateY(-8px); }
-}
-
-.mobile-mockup-inner {
-  background-color: #FFFFFF;
-  border: 3.5px solid #1E2024;
-  border-radius: 28px;
-  overflow: hidden;
-  padding: 10px 10px 14px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
-}
-
-.mobile-notch-area {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 4px;
-}
-
-.dynamic-island {
-  width: 56px;
-  height: 12px;
-  background-color: #000000;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 6px;
-}
-
-.island-lens {
-  width: 4px;
-  height: 4px;
-  background-color: #1A1A24;
-  border-radius: 50%;
-}
-
-.mobile-status-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 4px 6px;
-  font-size: 0.625rem;
-  font-weight: 600;
-  color: #1E2024;
-}
-
-.mobile-icons {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.mobile-net {
-  font-size: 0.5625rem;
+  flex: none;
+  background: var(--tint, var(--ink));
+  color: #fff;
+  font-size: 0.64rem;
   font-weight: 700;
-  color: #4B5563;
+  display: grid;
+  place-items: center;
+  transition: background 300ms ease;
 }
 
-.mobile-batt {
-  width: 14px;
-  height: 7px;
-  border: 1px solid #1E2024;
-  border-radius: 2px;
-  padding: 0.5px;
-  display: inline-block;
-}
-
-.batt-level {
-  display: block;
-  width: 80%;
-  height: 100%;
-  background-color: #1E2024;
-  border-radius: 1px;
-}
-
-.mobile-app-header {
-  display: flex;
-  justify-content: space-between;
+.window-state {
+  display: inline-flex;
   align-items: center;
-  padding: 4px 4px 6px;
-  border-bottom: 0.5px solid #E5E7EB;
-  margin-bottom: 8px;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
 }
 
-.mobile-agent-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.mobile-agent-dot {
-  width: 5px;
-  height: 5px;
+.live-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background-color: #D97706;
+  background: #16A34A;
+  flex: none;
 }
 
-.mobile-agent-title {
-  font-size: 0.625rem;
-  font-weight: 600;
-  color: #111827;
+.window-body {
+  padding: 1.35rem 1.35rem 1.5rem;
 }
 
-.mobile-mcp-tag {
-  font-family: var(--font-mono);
-  font-size: 0.5rem;
-  color: var(--orange-accent);
-  background-color: var(--orange-tint);
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-weight: 600;
-}
-
-.mobile-dialog-body {
+/* Your message sits on the right, the assistant answers on the left, because
+   that is where a person expects to find each of them. */
+.from-you {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 100px;
+  justify-content: flex-end;
 }
 
-.mobile-bubble {
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 0.625rem;
-  line-height: 1.35;
+.bubble-user {
+  margin: 0;
+  display: inline-grid;
+  max-width: 66%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  padding: 0.6rem 0.9rem;
+  border-radius: 15px 15px 5px 15px;
+  text-align: left;
 }
 
-.mobile-user {
-  align-self: flex-end;
-  background-color: #F3F4F6;
-  color: #1F2937;
-  font-weight: 500;
-  border-bottom-right-radius: 2px;
-  max-width: 90%;
-}
+/* Both copies occupy the same cell: the hidden one holds the size open. */
+.bubble-user > span { grid-area: 1 / 1; }
+.ask-ghost { visibility: hidden; }
 
-.mobile-assistant {
-  align-self: flex-start;
-  background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-bottom-left-radius: 2px;
-  color: #111827;
-  max-width: 95%;
-}
-
-.mobile-source-tag {
-  font-family: var(--font-mono);
-  font-size: 0.5rem;
-  color: var(--orange-accent);
-  margin-bottom: 2px;
-  font-weight: 600;
-}
-
-.mobile-reply {
-  font-size: 0.5625rem;
-  color: #374151;
-}
-
-.mobile-home-indicator {
-  width: 48px;
-  height: 3px;
-  background-color: #1E2024;
-  border-radius: 10px;
-  margin: 8px auto 0;
-}
-
-.media-conversation-body {
-  padding: 22px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 260px;
-  justify-content: flex-start;
-}
-
-.user-media-msg {
-  align-self: flex-end;
-  max-width: 90%;
-}
-
-.user-bubble-inner {
-  background-color: var(--bg-page);
-  border: 1px solid var(--divider);
-  padding: 12px 16px;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  border-radius: 12px 12px 2px 12px;
-  line-height: 1.4;
-}
-
-.media-cursor {
+.caret {
   display: inline-block;
   width: 2px;
   height: 1em;
-  background-color: var(--orange-accent);
-  vertical-align: -0.1em;
-  margin-left: 2px;
-  animation: hero-blink 0.6s infinite;
+  margin-left: 1px;
+  background: currentColor;
+  vertical-align: -0.15em;
+  animation: blink 1.05s steps(2, start) infinite;
 }
+@keyframes blink { 50% { opacity: 0; } }
 
-.media-tool-activity {
+/* Present from the first paint and merely invisible, so the answer arriving
+   changes nothing about the page's height. */
+.reply {
+  margin-top: 1.1rem;
+  visibility: hidden;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 420ms cubic-bezier(.2,.6,.2,1),
+              transform 420ms cubic-bezier(.2,.6,.2,1);
+}
+.reply.is-shown {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+}
+
+.reply-line {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.lineup {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.8rem 0 0;
+  padding: 0;
+}
+
+.lineup li {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-  background-color: var(--bg-page);
-  border: 1px solid var(--divider);
-  padding: 6px 14px;
-  border-radius: 20px;
-  align-self: flex-start;
+  gap: 0.45rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  font-size: 0.87rem;
 }
 
-.media-tool-activity.is-active {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.tool-spinner {
-  width: 8px;
-  height: 8px;
+/* Club colour, jersey number: both from our own data. No crests. */
+.jersey {
+  width: 22px;
+  height: 22px;
+  flex: none;
   border-radius: 50%;
-  border: 1.5px solid var(--orange-accent);
-  border-top-color: transparent;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.tool-status-text {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.assistant-media-msg {
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
-}
-
-.assistant-media-msg.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.assistant-lead-text {
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-  line-height: 1.45;
-}
-
-.media-mini-stat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.mini-stat-card {
-  background-color: var(--bg-page);
-  border: 1px solid var(--divider);
-  padding: 10px 14px;
-  border-radius: 4px;
-}
-
-.mini-label {
-  font-size: 0.6875rem;
+  background: var(--club);
+  color: #fff;
+  font-family: var(--display);
   font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  margin-bottom: 2px;
+  font-size: 0.68rem;
+  display: grid;
+  place-items: center;
 }
 
-.mini-val {
-  font-size: 1.1875rem;
-  font-weight: 700;
-  font-feature-settings: "tnum" 1;
+.verdict {
+  margin: 0.95rem 0 0;
+  font-size: 0.98rem;
 }
 
-.mini-sub {
-  font-size: 0.6875rem;
-  color: var(--text-secondary);
-  margin-top: 2px;
+.figure {
+  font-family: var(--figures);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ball);
 }
 
-/* ==========================================================================
-   ACT 2: WHAT WOULD YOU ASK?
-   ========================================================================== */
-
-.act-possibilities {
-  position: relative;
-  overflow: hidden;
-  padding: 100px 0;
+/* The number never travels without the population it was measured over. */
+.qualifier {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
 }
 
-.possibilities-inner {
-  position: relative;
-  z-index: 2;
-}
-
-.possibilities-stream {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 64px;
-  padding: 20px 0 40px 0;
-  min-height: 650px;
-}
-
-.stream-spine-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.spine-line-active {
-  stroke-dashoffset: 100;
-  animation: spine-pulse 12s linear infinite;
-}
-
-.stream-node {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-  max-width: 740px;
-  transition: transform 0.25s ease;
-}
-
-.node-left {
-  align-self: flex-start;
-  margin-left: 20px;
-}
-
-.node-right {
-  align-self: flex-end;
-  margin-right: 20px;
-  max-width: 700px;
-}
-
-.node-wide {
-  align-self: center;
-  max-width: 860px;
-  width: 100%;
-  margin: 10px 0;
-}
-
-.node-bullet-marker {
-  width: 28px;
-  height: 28px;
-  position: relative;
-  flex-shrink: 0;
-  margin-top: 6px;
+/* An input row, because a chat window without one does not look like a place
+   you could type. It is inert on purpose: the box that actually answers is
+   further down the page. */
+.window-input {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0.9rem 0.9rem;
+  padding: 0.6rem 0.55rem 0.6rem 0.85rem;
+  border: 1px solid var(--hairline);
+  border-radius: 11px;
+  background: var(--paper);
 }
 
-.node-ring {
+.window-placeholder {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.window-send {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  border: 1.5px solid var(--divider);
-  background: var(--bg-page);
-  transition: all 0.3s ease;
+  flex: none;
+  border-radius: 7px;
+  background: var(--hairline);
+  position: relative;
 }
-
-.node-core {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--orange-accent);
+.window-send::after {
+  content: "";
   position: absolute;
-  transition: transform 0.3s ease;
+  left: 9px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border: solid var(--ink-faint);
+  border-width: 1.5px 1.5px 0 0;
+  transform: rotate(-45deg);
 }
 
-.stream-node.is-visible .node-ring {
-  border-color: var(--orange-accent);
-  background-color: var(--orange-tint);
-  box-shadow: 0 0 12px rgba(226, 84, 26, 0.2);
+.demo-caption {
+  margin: 0.9rem 0 0;
+  max-width: 44ch;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-faint);
 }
 
-.node-content-block {
-  background-color: var(--surface);
-  border: 1px solid var(--divider);
-  padding: 28px 34px;
-  width: 100%;
-  box-shadow: 0 4px 20px rgba(18, 19, 22, 0.02);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+/* ---------- narrow screens ----------
+   Short headline, then the whole window, then the explanation, then the
+   action: on a phone the animation is worth more than the sentence. */
+
+@media (max-width: 860px) {
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: 1.6rem;
+  }
+  .hero-copy { display: contents; }
+  h1 { order: 1; }
+  .hero-demo { order: 2; }
+  .lede { order: 3; margin-top: 0; max-width: none; }
+  .actions { order: 4; margin-top: 0.5rem; }
+  .window-body { min-height: 0; }
 }
 
-.node-content-block:hover {
-  border-color: rgba(226, 84, 26, 0.35);
-  box-shadow: 0 6px 24px rgba(18, 19, 22, 0.04);
-  transform: translateY(-2px);
+@media (max-width: 460px) {
+  .topnav .quiet-link { display: none; }
+  body { font-size: 16px; }
 }
 
-.node-category-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
+@media (prefers-reduced-motion: reduce) {
+  .caret { animation: none; opacity: 0; }
 }
 
-.node-cat-label {
-  font-size: 0.75rem;
+/* ---------- a claim and its evidence ----------
+   Left column states one thing. Right column shows only that thing. Nothing in
+   a section argues two points; the last attempt did and could not be read. */
+
+.claim {
+  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
+}
+
+/* The two columns start together. Centring the copy against a tall court left
+   the heading floating at the court's midpoint with nothing above it to explain
+   the gap; starting both at the same line reads as one row rather than two
+   things that happen to be side by side. */
+.claim-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: start;
+  gap: clamp(2.5rem, 6vw, 5.5rem);
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.claim h2 {
+  margin: 0;
+  font-family: var(--display);
   font-weight: 600;
-  color: var(--orange-accent);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: clamp(1.9rem, 3.4vw, 2.9rem);
+  line-height: 1.08;
+  letter-spacing: -0.033em;
+  max-width: 15ch;
 }
 
-.kinetic-prompt-text {
-  font-size: clamp(1.1875rem, 2vw, 1.5rem);
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--text-primary);
-  letter-spacing: -0.018em;
-  margin-bottom: 18px;
+.claim p {
+  margin: 1rem 0 0;
+  max-width: 38ch;
+  color: var(--ink-soft);
 }
 
-.node-micro-result {
+.tally {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding-top: 16px;
-  border-top: 1px solid var(--divider);
-  font-size: 0.875rem;
-  color: var(--text-secondary);
+  gap: 0.6rem;
+  margin-top: 1.9rem;
 }
 
-.micro-res-tag {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.micro-res-val {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 0.9375rem;
-}
-
-.micro-res-subtext {
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-}
-
-.node-curiosity-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--divider);
-  font-size: 0.875rem;
-  color: var(--orange-accent);
+.tally-figure {
+  font-family: var(--figures);
   font-weight: 500;
+  font-size: clamp(2rem, 3.6vw, 2.9rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--ball);
+  line-height: 1;
 }
 
-.hint-arrow {
-  font-size: 1.125rem;
-  transition: transform 0.2s ease;
+.tally-label {
+  font-size: 0.9rem;
+  color: var(--ink-faint);
 }
 
-.node-content-block:hover .hint-arrow {
-  transform: translateX(4px);
-}
-
-/* ==========================================================================
-   ACT 3: SEE IT IN ACTION (VIDEO SHOWCASE)
-   ========================================================================== */
-
-.act-video-showcase {
-  padding: 100px 0;
-}
-
-.video-presentation-container {
+.halfcourt {
   width: 100%;
-}
-
-.video-media-stage {
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
-  background-color: var(--surface);
-  border: 1px solid var(--divider);
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 16px 40px rgba(18, 19, 22, 0.05);
-}
-
-.showcase-video-player {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
 }
 
-.video-cover-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(249, 249, 250, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  transition: opacity 0.35s ease;
-  z-index: 5;
-}
+/* Made shots are filled, misses are open. The only two states there are. */
+.shot-made { fill: var(--ball); fill-opacity: 0.88; }
+.shot-miss { fill: none; stroke: var(--ink-faint); stroke-width: 6; stroke-opacity: 0.5; }
 
-.video-cover-overlay.is-hidden {
+/* The progress bar under the shot chart. It is a hairline that fills, in the
+   one colour this page reserves for measured values, because what it is
+   filling with is measured values. It disappears once the chart is complete:
+   a finished bar sitting under a finished chart is furniture. */
+.chartbar {
+  margin: 0.9rem 0 0;
   opacity: 0;
-  pointer-events: none;
+  transition: opacity 260ms ease;
+}
+.chartbar.is-running,
+.chartbar.is-settling { opacity: 1; }
+
+.chartbar-label {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
 }
 
-.court-background-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.play-action-circle {
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  background-color: var(--orange-accent);
-  color: #FFFFFF;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(226, 84, 26, 0.35);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.chartbar-track {
   position: relative;
-  z-index: 10;
-}
-
-.play-action-circle:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 28px rgba(226, 84, 26, 0.45);
-}
-
-.video-cover-caption {
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  position: relative;
-  z-index: 10;
-}
-
-/* ==========================================================================
-   ACT 4: USE IT WITH YOUR AI (ONBOARDING & CLIENT PICKER)
-   ========================================================================== */
-
-.act-onboarding {
-  padding: 100px 0;
-}
-
-/* ==========================================================================
-   21st.dev Logos3 / INFINITE AI LOGO MARQUEE
-   ========================================================================== */
-
-.ai-logo-marquee-strip {
-  margin-bottom: 32px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.marquee-caption {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-align: center;
-  letter-spacing: -0.01em;
-}
-
-.marquee-container {
-  width: 100%;
-  overflow: hidden;
-  position: relative;
-  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
-  padding: 8px 0;
-}
-
-.marquee-track {
-  display: flex;
-  gap: 12px;
-  width: max-content;
-  animation: marquee-scroll 30s linear infinite;
-}
-
-.marquee-track:hover {
-  animation-play-state: paused;
-}
-
-@keyframes marquee-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(calc(-50% - 6px)); }
-}
-
-.marquee-logo-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--surface);
-  border: 1px solid var(--divider);
-  padding: 8px 14px;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(18, 19, 22, 0.02);
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.marquee-logo-card:hover {
-  color: var(--text-primary);
-  border-color: rgba(226, 84, 26, 0.35);
-  background-color: var(--orange-tint);
-  transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(226, 84, 26, 0.08);
-}
-
-.marquee-svg-icon {
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
-}
-
-.marquee-logo-card:hover .marquee-svg-icon {
-  transform: scale(1.1);
-  color: var(--orange-accent);
-}
-
-.marquee-logo-name {
-  font-size: 0.8125rem;
-  font-weight: 500;
-}
-
-.client-onboarding-wrapper {
-  background-color: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
-  box-shadow: 0 12px 36px rgba(18, 19, 22, 0.04);
+  height: 2px;
+  background: var(--hairline);
   overflow: hidden;
 }
 
-.client-tabs-nav {
-  display: flex;
-  flex-wrap: wrap;
-  background-color: var(--bg-page);
-  border-bottom: 1px solid var(--divider);
-  padding: 10px 14px;
-  gap: 6px;
+.chartbar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--ball);
 }
 
-.client-tab-btn {
-  background: none;
-  border: 1px solid transparent;
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
+/* While shots are landing the width is set per shot and should follow with no
+   easing of its own. The final run to full is the one deliberate glide, and it
+   lasts exactly as long as the pause before the card opens. */
+.chartbar.is-settling .chartbar-fill {
+  transition: width 650ms cubic-bezier(.4, 0, .2, 1);
 }
 
-.client-tab-btn:hover {
-  color: var(--text-primary);
-  background-color: rgba(229, 230, 234, 0.5);
-}
-
-.client-tab-btn.is-active {
-  background-color: var(--surface);
-  color: var(--orange-accent);
-  font-weight: 600;
-  border-color: var(--divider);
-  box-shadow: 0 2px 8px rgba(18, 19, 22, 0.04);
-}
-
-.client-instruction-container {
-  padding: 36px 40px;
-  min-height: 220px;
-}
-
-.client-panel {
-  display: none;
-  flex-direction: column;
-  gap: 20px;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.client-panel.is-active {
-  display: flex;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.panel-highlight-action {
-  margin-bottom: 10px;
-}
-
-.cursor-deeplink-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--orange-accent);
-  color: #FFFFFF;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  padding: 12px 24px;
-  border-radius: 6px;
-  text-decoration: none;
-  transition: transform 0.15s ease, background-color 0.15s ease;
-}
-
-.cursor-deeplink-btn:hover {
-  background-color: #cc4712;
-  transform: translateY(-1px);
-}
-
-.panel-divider-or {
-  display: flex;
-  align-items: center;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 4px 0 12px 0;
-}
-
-.panel-step-row {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.step-num {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background-color: var(--orange-tint);
-  border: 1px solid rgba(226, 84, 26, 0.3);
-  color: var(--orange-accent);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.step-content {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-}
-
-.step-text {
-  font-size: 0.9375rem;
-  color: var(--text-primary);
-  line-height: 1.5;
-}
-
-.copy-box-group {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--bg-page);
-  border: 1px solid var(--divider);
-  padding: 10px 16px;
-  border-radius: 6px;
-  gap: 16px;
-}
-
-.copyable-value {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  word-break: break-all;
-}
-
-.snippet-copy-btn {
-  background-color: var(--surface);
-  border: 1px solid var(--divider);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  padding: 6px 14px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.snippet-copy-btn:hover {
-  border-color: var(--orange-accent);
-  color: var(--orange-accent);
-}
-
-.snippet-copy-btn.copied {
-  background-color: var(--orange-accent);
-  color: #FFFFFF;
-  border-color: var(--orange-accent);
-}
-
-/* ==========================================================================
-   ACT 5: TRUST
-   ========================================================================== */
-
-.act-trust {
-  padding: 100px 0;
-}
-
-.trust-stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.trust-stat-card {
-  background-color: var(--surface);
-  border: 1px solid var(--divider);
-  padding: 32px 36px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.trust-num {
-  font-size: clamp(2.5rem, 4vw, 3.5rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--text-primary);
-  font-feature-settings: "tnum" 1;
-}
-
-.trust-desc {
-  font-size: 0.9375rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.trust-assurance-bar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 20px 24px;
-  background-color: var(--surface);
-  border: 1px solid var(--divider);
-  border-left: 3px solid var(--orange-accent);
-}
-
-.assurance-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--orange-accent);
-  flex-shrink: 0;
-}
-
-.assurance-text {
-  font-size: 0.9375rem;
-  color: var(--text-primary);
-  line-height: 1.5;
-  margin: 0;
-}
-
-/* ==========================================================================
-   ACT 6: FINAL RESOLUTION
-   ========================================================================== */
-
-.act-connect {
-  padding-bottom: 70px;
-}
-
-.connect-inner {
-  max-width: 860px;
-}
-
-.connect-lead-block {
-  margin-bottom: 32px;
-}
-
-.connect-title {
-  font-size: clamp(2.25rem, 3.8vw, 3rem);
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  color: var(--text-primary);
-  margin-bottom: 10px;
-}
-
-.connect-subtitle {
-  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.footer-links-strip {
-  display: flex;
-  gap: 36px;
-  margin-bottom: 54px;
-  padding-bottom: 28px;
-  border-bottom: 1px solid var(--divider);
-}
-
-.footer-link {
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.footer-link:hover {
-  color: var(--orange-accent);
-}
-
-.terminal-footer {
-  padding-top: 6px;
-}
-
-.footer-colophon {
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-}
-
-/* ==========================================================================
-   REVEAL ANIMATIONS (NORMAL FLUID SCROLL)
-   ========================================================================== */
-
-.reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
-}
-
-.reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.delay-1 {
-  transition-delay: 0.1s;
-}
-
-.delay-2 {
-  transition-delay: 0.2s;
-}
-
-.delay-3 {
-  transition-delay: 0.3s;
-}
-
-/* ==========================================================================
-   RESPONSIVE LAYOUTS
-   ========================================================================== */
-
-@media (max-width: 960px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
-    gap: 36px;
-  }
-
-  .hero-mobile-mockup {
-    right: 12px;
-    bottom: -20px;
-    width: 170px;
-  }
-}
-
-@media (max-width: 640px) {
-  .hero-mobile-mockup {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    margin: 18px auto 0;
-    width: 210px;
-    transform: none;
-    animation: none;
-  }
+/* A caption is a footnote, not a paragraph. It was set at 60ch and ran the
+   width of the figure, which made two sentences of provenance look like the
+   point of the section. Narrow measure, smaller, closer to what it annotates. */
+/* A caption is a footnote, not a paragraph. It was three lines at 60ch under a
+   figure twice that wide, so it read as the point of the section and left a
+   band of dead space beside it. Two lines at most, set smaller, running the
+   width it is annotating rather than a column of its own. */
+.figure-note {
+  margin: 0.8rem 0 0;
+  /* Runs the width of the figure it annotates. A narrower measure would be
+     easier to read as prose, but this is one sentence of provenance and the
+     column of dead space beside it cost more than the line length saves. */
+  max-width: none;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--ink-faint);
 }
 
 @media (max-width: 860px) {
-  .nav-container,
-  .act-inner {
-    padding: 0 20px;
-  }
-  
-  .act {
-    padding: 70px 0;
-  }
-  
-  .act-hero {
-    padding-top: calc(var(--header-height) + 36px);
-    padding-bottom: 50px;
-  }
-
-  .client-instruction-container {
-    padding: 24px 20px;
-  }
-
-  .copy-box-group {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .stream-node {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    max-width: 100% !important;
-  }
-
-  .node-content-block {
-    padding: 22px 18px;
-  }
-
-  .trust-stats-grid {
+  .claim-inner {
     grid-template-columns: 1fr;
+    gap: 2rem;
   }
-
-  .footer-links-strip {
-    flex-direction: column;
-    gap: 16px;
-  }
+  .claim h2, .claim p { max-width: none; }
 }
 
-/* Accessibility: Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-  .reveal {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-  }
-  .spine-line-active,
-  .conduit-line-pip,
-  .hero-text-cursor,
-  .media-cursor {
-    animation: none !important;
-  }
-}
+/* ---------- the game behind the chart ---------- */
 
-/* ==========================================================================
-   Subpage Compatibility (support.html & privacy.html)
-   ========================================================================== */
-.container {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-.nav-wrapper {
+.scoreline {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.4rem;
+  margin-top: 1.6rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.side {
+  display: inline-flex;
   align-items: center;
-  padding: 16px 0;
+  gap: 0.55rem;
+  font-size: 0.98rem;
+  color: var(--ink);
 }
-
-.brand {
-  font-weight: 700;
-  font-size: 1.125rem;
-  color: var(--text-primary);
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.brand-badge {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  background: var(--orange-tint);
-  color: var(--orange-accent);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
-  border: 1px solid rgba(226, 84, 26, 0.2);
-}
-
-nav ul {
-  display: flex;
-  gap: 20px;
-  list-style: none;
-}
-
-nav ul li a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 0.9375rem;
+.side b {
+  font-family: var(--figures);
   font-weight: 500;
-  transition: color 0.15s ease;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.15rem;
 }
 
-nav ul li a:hover {
-  color: var(--orange-accent);
+/* A club is identified by its colour and its name. No crest is reproduced. */
+.crest {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--club);
+  flex: none;
 }
 
-.page-content {
-  padding: 48px 0 80px;
-  max-width: 800px;
+.scoreline-meta {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
 }
 
-.page-content h1 {
-  font-size: 2.25rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  margin-bottom: 8px;
+/* While one shot is being talked about, the rest step back. */
+#shot-marks { transition: opacity 320ms ease; }
+#shot-marks.is-dimmed { opacity: 0.22; }
+
+.shot-halo {
+  fill: none;
+  stroke: var(--ball);
+  stroke-width: 5;
+  stroke-opacity: 0.55;
 }
 
-.page-meta {
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-  margin-bottom: 32px;
+/* ---------- three exchanges, one window ----------
+   They share a single grid cell, so the window is as tall as the tallest of
+   them from the first paint and never resizes when one replaces another. */
+
+.window-body {
+  display: grid;
+}
+.window-body > .exchange {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.window-body > .exchange.is-current {
+  visibility: visible;
+  opacity: 1;
 }
 
-.page-content h2 {
-  font-size: 1.375rem;
+/* The middle beat: the thing the visitor is being asked to connect, doing the
+   work. Named the way a person would name it - never by a function name. */
+.working {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+.working.is-shown { visibility: visible; opacity: 1; }
+
+.working-what {
   font-weight: 600;
-  letter-spacing: -0.02em;
-  margin-top: 36px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--divider);
-  padding-bottom: 8px;
+  color: var(--ink-soft);
 }
 
-.page-content h3 {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  margin-top: 24px;
-  margin-bottom: 8px;
+.working-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ball);
+  animation: pulse 1.15s ease-in-out infinite;
+}
+.working.is-done .working-dot { animation: none; background: #16A34A; }
+.working.is-done .working-state { opacity: 0.65; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(0.7); opacity: 0.45; }
+  50%      { transform: scale(1);   opacity: 1; }
 }
 
-.page-content p {
-  color: var(--text-secondary);
-  line-height: 1.65;
-  margin-bottom: 16px;
+@media (prefers-reduced-motion: reduce) {
+  .working-dot { animation: none; }
 }
 
-.page-content ul, .page-content ol {
-  color: var(--text-secondary);
-  line-height: 1.65;
-  margin-bottom: 20px;
-  padding-left: 24px;
+/* ---------- the shot that decided it ----------
+   One card, once, over the dot it describes. It is placed from that shot's own
+   coordinates rather than from a hand-picked offset, so it cannot drift away
+   from the thing it points at when the chart is resized. */
+
+.courtwrap { position: relative; }
+
+.callout {
+  position: absolute;
+  width: min(17rem, 74%);
+  transform: translate(-50%, 0);
+  opacity: 0;
+  transition: opacity 340ms ease, transform 340ms cubic-bezier(.2,.7,.3,1);
+  pointer-events: none;
+}
+.callout.is-open {
+  opacity: 1;
+  transform: translate(-50%, 0.4rem);
 }
 
-.page-content li {
-  margin-bottom: 8px;
+/* The line from the card up to the shot, so the two are one object. */
+.callout-leader {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 1px;
+  height: 2.1rem;
+  background: linear-gradient(to bottom, transparent, var(--ball));
+  opacity: 0.55;
 }
 
-.page-content code {
-  font-family: var(--font-mono);
-  font-size: 0.875em;
+.callout-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   background: var(--surface);
-  border: 1px solid var(--divider);
-  padding: 2px 6px;
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--ball);
+  border-radius: 9px;
+  padding: 0.8rem 0.95rem 0.85rem;
+  box-shadow: 0 18px 38px -26px rgba(26, 21, 18, 0.5);
+}
+
+.callout-flag {
+  align-self: flex-start;
+  background: var(--ball);
+  color: #fff;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.7rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  padding: 0.28rem 0.5rem;
   border-radius: 4px;
-  color: var(--text-primary);
 }
 
-.alert-box {
-  background: var(--orange-tint);
-  border: 1px solid rgba(226, 84, 26, 0.25);
+.callout-who {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.12rem;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.callout-what {
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.callout-score {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--hairline);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.callout-score i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--club);
+  flex: none;
+}
+.callout-score b {
+  font-family: var(--figures);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  margin-right: 0.35rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .callout { transition: none; }
+}
+
+/* ---------- one substitution ---------- */
+
+/* The claim sits on the right here and the evidence on the left, so two
+   full-width sections in a row do not read as the same section twice. */
+.claim-flip .claim-inner { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); }
+.claim-flip .claim-copy { order: 2; }
+.claim-flip .claim-figure { order: 1; }
+
+.figure-note-tight { margin-top: 1.1rem; max-width: 38ch; }
+
+/* ---------- the floor ----------
+   The substitution is drawn on a court because the substitution is a change of
+   shape, not a change of name. Birch is the only centre in the strong five and
+   Baldwin is a guard, so taking one off for the other empties the paint - and
+   an empty paint is a thing you can see, where "-34.1" is a thing you have to
+   be told.
+
+   Positions are measured; spots are a convention. The figure note under this
+   says so, and nothing in here may quietly imply otherwise. */
+
+.floor {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 0.75rem;
+  /* A marker walking on or off travels past the sideline. Nothing it does may
+     end up drawn on the page outside this card. */
+  overflow: hidden;
+}
+
+.floor-court {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Lit only when it empties. It is the one thing on this court that reacts, so
+   it is the one thing the eye is sent to. */
+.floor-paint {
+  fill: transparent;
+  transition: fill 520ms ease;
+}
+.floor-paint.is-empty { fill: rgba(234, 88, 12, 0.10); }
+
+.floor-players {
+  position: absolute;
+  /* Matches the .floor padding, so a percentage here is a percentage of the
+     court rather than of the card around it. */
+  inset: 0.75rem;
+  pointer-events: none;
+}
+
+/* Each marker is positioned by its centre, and left/top are what move. The
+   transition is on the position itself, so a player walks rather than jumps -
+   which is the whole difference between this and the version it replaces. */
+.player {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+  transition:
+    left 620ms cubic-bezier(.4, 0, .2, 1),
+    top 620ms cubic-bezier(.4, 0, .2, 1),
+    opacity 380ms ease;
+}
+
+.player-disc {
+  display: grid;
+  place-items: center;
+  width: clamp(28px, 3.4vw, 38px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--club);
+  color: #fff;
+  font-family: var(--figures);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 0 rgba(26, 21, 18, 0.18);
+  transition: background 380ms ease, transform 380ms ease;
+}
+
+.player-name {
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.player-role {
+  font-size: 0.66rem;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--ink-faint);
+}
+
+/* Off the floor: still drawn, at the side, faded. Removing the marker would
+   make the substitute appear from nowhere; leaving it there is what makes
+   arriving read as arriving. */
+.player.is-off {
+  opacity: 0;
+}
+
+/* The two players the substitution is about carry the measured-value colour
+   while they are moving, and only while they are moving. */
+.player.is-leaving .player-disc,
+.player.is-arriving .player-disc {
+  background: var(--ball);
+  transform: scale(1.12);
+}
+
+/* Scoped to .floor so it outranks `.claim p`, which sets the section's body
+   colour and was turning this white-on-orange badge into grey-on-orange. */
+.floor .floor-empty {
+  position: absolute;
+  left: 50%;
+  bottom: 1.1rem;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: var(--ball);
+  color: #fff;
+  max-width: none;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  /* The names stop fitting between five markers long before the court does. */
+  .player-name, .player-role { display: none; }
+}
+
+.unit-verdict {
+  display: grid;
+  grid-template-columns: auto auto minmax(8rem, 1fr);
+  align-items: end;
+  gap: 1rem;
+  margin-top: 1.35rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--hairline);
+}
+
+/* The number leaves upward and the new one drops in, and the metric behind it
+   pulses once. The text is swapped at the 30% mark, where the figure is
+   invisible, so the reader never sees the change itself - only the arrival.
+   SWAP_OUT_MS in lineups.js is that mark and the two have to agree. */
+@keyframes figure-swap {
+  0%   { transform: translateY(0);       opacity: 1; }
+  29%  { transform: translateY(-0.32em); opacity: 0; }
+  30%  { transform: translateY(0.38em);  opacity: 0; }
+  60%  { transform: translateY(0);       opacity: 1; }
+  74%  { transform: translateY(0) scale(1.06); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes figure-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.22); }
+  70%  { box-shadow: 0 0 0 14px rgba(234, 88, 12, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
+}
+
+.unit-metric { border-radius: 8px; }
+.unit-metric.is-changing { animation: figure-pulse 760ms ease-out; }
+.unit-figure.is-changing {
+  animation: figure-swap 640ms cubic-bezier(.4, 0, .2, 1);
+  transform-origin: left center;
+}
+
+.unit-figure {
+  display: block;
+  font-family: var(--figures);
+  font-weight: 500;
+  font-size: clamp(2.1rem, 4vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ball);
+  transition: color 380ms ease;
+}
+/* Both numbers are measured, so both are the measured-value colour. Muting the
+   negative one would be the page taking a side about which unit is the real
+   Fenerbahce, which is exactly the judgement the reader is here to make. */
+.unit-figure-quiet { color: var(--ink); font-size: clamp(1.5rem, 2.6vw, 2rem); }
+
+.unit-label {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+}
+
+/* The third column shares the compact evidence row with the two figures. It
+   still reserves its height whether or not there is anything to say, because
+   an appearing caption would move the copy every few seconds. */
+.unit-swap {
+  margin: 0;
+  min-height: 1.3em;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 860px) {
+  .claim-flip .claim-copy { order: 1; }
+  .claim-flip .claim-figure { order: 2; }
+}
+
+@media (max-width: 520px) {
+  .unit-verdict { grid-template-columns: auto auto; }
+  .unit-swap { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The markers still get placed, they just stop travelling to get there, and
+     the figures still change, they just stop announcing it. */
+  .player { transition: none; }
+  .floor-paint { transition: none; }
+  .unit-figure.is-changing,
+  .unit-metric.is-changing { animation: none; }
+}
+
+/* THE SECTION RHYTHM, measured rather than felt, 2026-09-04.
+   Every section carried 128px of padding above and below on a 1280px screen,
+   so 256px of nothing sat between any two of them. On the owner's 1536 by 730
+   screen that was 272px - more than a third of the viewport spent on emptiness
+   between one claim and the next. The scale is now 5.5vw capped at 5.5rem,
+   which is a gap of about 170px: still air, no longer a wait.
+
+   These four paddings are one decision and move together. Changing one of them
+   alone reintroduces the uneven rhythm they exist to keep. */
+
+/* ---------- the one place the visitor acts ---------- */
+
+.ask {
+  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
+  background: var(--paper-deep);
+}
+
+.ask-inner { max-width: 780px; margin: 0 auto; }
+
+.ask h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(2rem, 3.6vw, 3rem);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+
+.ask-lede {
+  margin: 1rem 0 0;
+  max-width: 46ch;
+  color: var(--ink-soft);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 2rem;
+}
+
+.chip {
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.6rem 1.05rem;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+}
+.chip:hover { border-color: var(--ink-faint); }
+.chip.is-chosen {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.ask-answer {
+  margin-top: 1.6rem;
+  min-height: 9.5rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 1.4rem 1.5rem;
+}
+
+.ask-empty { margin: 0; color: var(--ink-faint); font-size: 0.92rem; }
+
+.ask-working {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+.ask-line { margin: 0 0 0.7rem; font-size: 1rem; }
+
+.ask-verdict {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.9rem 0 0;
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
+.ask-figure {
+  font-family: var(--figures);
+  font-weight: 500;
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ball);
+}
+
+.ask-qualifier {
+  margin: 0.55rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+.ask .lineup { margin-top: 0; }
+.ask .lineup li { background: var(--paper); }
+
+/* ---------- sidelines, the length of the page ----------
+   The two rails frame the content and the short outward ticks mark section
+   boundaries. Interior court furniture was removed after the owner found the
+   arcs, keys and centre circle too busy behind the content. */
+
+body { position: relative; }
+
+.courtgrid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--hairline);
+}
+.rail-left  { left: max(var(--gutter), calc(50% - 640px)); }
+.rail-right { right: max(var(--gutter), calc(50% - 640px)); }
+
+/* WHERE ONE SECTION ENDS: the throw-in line, not a rule across the page.
+
+   A real court has one. It is a short mark on each sideline, 8.325 m from the
+   endline, and a throw-in in the last two minutes is taken from it. That
+   distance is not a coincidence of this page's arithmetic: the ring is 157.5
+   from the baseline and the arc is 675 from the ring, so the top of the
+   three-point arc is 157.5 + 675 = 832.5 - the same 8.325 m. The mark and the
+   top of the arc line up on a real floor, which is why the owner asked for this
+   one and not for a divider.
+
+   It replaces a hairline that ran the full width of the page. That rule
+   separated sections the way a horizontal rule separates anything, which is to
+   say it said nothing; this says "sideline" and marks the change at the same
+   time.
+
+   The length is chosen to be legible, not scaled. A real mark reaches 0.15 m
+   onto a 15 m floor - a hundredth of the width, about 11px here - which at this
+   size would read as dirt on the screen rather than as a mark. */
+.claim, .ask, .connect, .how, .footer { position: relative; }
+.claim::before, .claim::after,
+.ask::before, .ask::after,
+.connect::before, .connect::after,
+.how::before, .how::after,
+.footer::before, .footer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 34px;
+  height: 1px;
+  /* The same hairline as the rails and the court. It was drawn in --ink-faint,
+     which made it darker than every other line on the page and read as a
+     different kind of thing. A court line is a court line. */
+  background: var(--hairline);
+}
+/* Outside the sideline, not inside it: the mark sits off the floor so nothing
+   ever reaches into the column the content occupies. */
+.claim::before, .ask::before, .connect::before, .how::before, .footer::before {
+  right: calc(100% - max(var(--gutter), calc(50% - 640px)));
+}
+.claim::after, .ask::after, .connect::after, .how::after, .footer::after {
+  left: calc(100% - max(var(--gutter), calc(50% - 640px)));
+}
+
+main, .topbar { position: relative; z-index: 1; }
+
+/* ---------- the ask window ---------- */
+
+.ask-window { margin-top: 2rem; }
+
+/* A transcript, so it scrolls its own box rather than growing the page under
+   the visitor's cursor. The floor keeps the window from collapsing before the
+   first question; the ceiling keeps a long conversation from pushing the chips
+   off the screen, which is where the next question comes from. */
+.ask-body {
+  display: block;
+  min-height: 12rem;
+  max-height: 26rem;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.ask-body > * + * { margin-top: 1.1rem; }
+.ask-body .reply { margin-top: 0.75rem; }
+
+/* The tool call. A connected assistant really does pick one of the eleven
+   el_* tools and run it, so this row is a report, not an ornament. */
+.toolcall {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.8rem;
+  font-family: var(--figures);
+  color: var(--ink-faint);
+  background: var(--paper-deep);
+  border: 1px solid var(--hairline);
   border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 24px;
+  padding: 0.5rem 0.75rem;
+}
+.toolcall-name { color: var(--ink-soft); }
+.toolcall-source {
+  margin-left: auto;
+  font-family: var(--text);
+  font-size: 0.76rem;
 }
 
-.alert-box p {
-  color: var(--text-primary);
-  margin-bottom: 0;
+.toolcall-spinner {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-faint);
+  border-top-color: transparent;
+  animation: toolspin 700ms linear infinite;
+}
+.toolcall.is-done .toolcall-spinner {
+  border: 0;
+  background: #16A34A;
+  animation: none;
 }
 
+@keyframes toolspin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .toolcall-spinner { animation: none; }
+  .ask-body { scroll-behavior: auto; }
+  /* He is still there, he is just still. */
+  .mascot-eyes, .mascot-body { animation: none; }
+}
+
+/* The invitation, and the one thing on the page that is waiting for you. */
+.ask-empty {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  margin: 0;
+}
+
+.mascot {
+  flex: none;
+  width: 78px;
+  height: 78px;
+  overflow: visible;
+}
+
+.ask-invite { margin: 0; }
+.ask-invite b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--ink);
+}
+.ask-invite span {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--ink-faint);
+}
+
+/* Waiting, not performing. Two slow movements, both small enough that they
+   register at the edge of vision rather than asking to be watched: a breath,
+   and a glance that keeps coming back to you. The page's other motion happens
+   ONCE and stops, and this is the deliberate exception - a character that
+   stops moving is a character that has left, and the whole job here is to look
+   like somebody is still there. */
+@keyframes mascot-glance {
+  0%, 42%   { transform: translateX(0); }
+  52%, 74%  { transform: translateX(2.2px); }
+  84%, 100% { transform: translateX(-1.6px); }
+}
+@keyframes mascot-breathe {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2.5px); }
+}
+.mascot-eyes { animation: mascot-glance 4.6s ease-in-out infinite; }
+.mascot-body { animation: mascot-breathe 3.8s ease-in-out infinite; }
+
+.ask-working {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+/* The chips live where the text field would be: suggestions, and the only
+   input this window can safely accept. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.9rem 1rem 1rem;
+  border-top: 1px solid var(--hairline);
+  background: var(--paper);
+}
+
+.chip {
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+}
+.chip:hover { border-color: var(--ink-faint); color: var(--ink); }
+/* Spent, not disabled. It stays clickable, and the mark is only a record of
+   what has already been asked. */
+.chip.is-asked {
+  color: var(--ink-faint);
+  background: var(--paper-deep);
+  border-style: dashed;
+}
+
+
+/* ---------- connect ---------- */
+
+.connect {
+  position: relative;
+  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
+}
+.connect-inner { max-width: 780px; margin: 0 auto; }
+
+.connect h2, .how h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(2rem, 3.6vw, 3rem);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+
+.connect-lede {
+  margin: 1rem 0 0;
+  max-width: 48ch;
+  color: var(--ink-soft);
+}
+
+.address {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding: 0.75rem 0.75rem 0.75rem 1.05rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+}
+.address code {
+  font-family: var(--figures);
+  font-size: clamp(0.78rem, 1.5vw, 0.95rem);
+  color: var(--ink);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.copy {
+  margin-left: auto;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  padding: 0.5rem 0.95rem;
+  cursor: pointer;
+  flex: none;
+}
+.copy:hover { background: #000; }
+.copy.is-done { background: #16A34A; }
+
+/* One panel per client, because the four setups are genuinely different and a
+   single averaged instruction would be wrong for all of them. Each panel says
+   which kind of claim it is making before it says anything else: verified means
+   somebody connected that client and called a tool; expected means the client's
+   own specification says this works and nobody here has run it. */
+.clients { margin-top: 2rem; }
+
+.client-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.client-tab {
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 0.85rem;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+.client-tab:hover { color: var(--ink); }
+.client-tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--ball);
+}
+
+.client-panel {
+  padding: 1.5rem 0 0;
+}
+
+.client-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.client-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.client-status-verified { color: #15803D; }
+.client-status-verified::before { background: #16A34A; }
+/* Amber, and it is the only amber on the page: it means a claim that has not
+   been run yet, and nothing else is allowed to borrow it. */
+.client-status-review,
+.client-status-expected { color: #92400E; }
+.client-status-review::before,
+.client-status-expected::before { background: #D97706; }
+
+.client-note {
+  margin: 1rem 0 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  max-width: 56ch;
+}
+
+.howto {
+  list-style: none;
+  counter-reset: howto;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+  max-width: 56ch;
+}
+/* The number hangs in the margin and the step reads as one sentence.
+   This was a grid with a 1.6rem marker column, copied from the block-level
+   list it replaced. Grid makes every child its own item, and these steps are
+   inline content - "Open ", <b>Settings</b>, ", then ", <b>Connectors</b> - so
+   each fragment was laid into the next cell and the sentence came apart, one
+   bold word per line, overlapping the line above. Inline content needs inline
+   flow; the marker gets out of the way instead. */
+.howto li {
+  counter-increment: howto;
+  position: relative;
+  padding-left: 2.3rem;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.howto li::before {
+  content: counter(howto);
+  position: absolute;
+  left: 0;
+  top: 0.08em;
+  width: 1.6rem;
+  font-family: var(--figures);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+.howto b { color: var(--ink); font-weight: 600; }
+
+/* Inline code is for short things only - a command name, a flag. A long
+   command in here breaks mid-word and its box splits across two lines with a
+   border down the middle of a URL, so long commands are block-level instead
+   (.howto-code below). `break-word` rather than `break-all`: it breaks a word
+   only when the word alone will not fit, which is what stops a short token
+   being chopped for no reason. */
+.howto code,
+.howto-alt code {
+  font-family: var(--figures);
+  font-size: 0.82em;
+  background: var(--paper-deep);
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 0.1em 0.4em;
+  overflow-wrap: break-word;
+}
+
+/* The Gemini steps are numbered across a code block, so the second list has to
+   carry on counting rather than start again at one. */
+.howto-continued { counter-reset: howto 1; }
+
+.howto-alt {
+  margin: 1.4rem 0 0;
+  font-size: 0.88rem;
+  color: var(--ink-faint);
+  max-width: 56ch;
+}
+
+/* One command per line, never broken with a backslash continuation: that is a
+   shell-ism that fails in PowerShell and survives a copy badly. A command too
+   wide for the card scrolls inside the card instead, which is the one place
+   horizontal scrolling is the right answer. */
+.howto-code {
+  margin: 1.1rem 0 0;
+  padding: 1rem 1.15rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow-x: auto;
+  font-family: var(--figures);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+.howto-code code { font: inherit; }
+
+.connect-note {
+  margin: 1.6rem 0 0;
+  font-size: 0.88rem;
+  color: var(--ink-faint);
+}
+
+/* ---------- what is behind it ---------- */
+
+/* ---------- ask it something hard ----------
+
+   Three cases, each a block of copy beside a window, alternating side to side
+   so the eye has somewhere to go on the way down. The owner asked for the
+   windows LARGE and said the page may get much longer for it; they take the
+   wider of the two columns and the section is the tallest on the site.
+
+   The window is the same component as the hero's. Nothing here is a screenshot:
+   a PNG of a conversation goes stale silently, cannot be translated with the
+   rest of the page, and blurs on a display the author did not own. */
+.deep {
+  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
+}
+.deep-inner { max-width: 1180px; margin: 0 auto; }
+
+.deep-head { max-width: 640px; }
+.deep-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 3.6vw, 2.8rem);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+.deep-lede {
+  margin: 1rem 0 0;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.deep-case {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+  margin-top: clamp(2rem, 3.5vw, 3.25rem);
+}
+/* The copy and the window swap sides on the middle case. The COLUMNS swap with
+   them - ordering alone would have left the window in the narrow column and
+   made the middle case's evidence smaller than the other two, which is the
+   opposite of what was asked for. Source order stays copy-then-window, so a
+   screen reader and a phone both read the claim before the evidence for it. */
+.deep-case-flip {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+.deep-case-flip .deep-copy { order: 2; }
+.deep-case-flip .deep-window { order: 1; }
+
+.deep-copy { padding-top: 0.4rem; }
+.deep-copy h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.deep-copy p {
+  margin: 0.8rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+.deep-window { margin: 0; }
+.deep-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+/* The visitor needs to see that the assistant is working with this warehouse,
+   not the implementation names and arguments behind that work. One restrained
+   thought replaces the internal transcript; the exact calls remain beside the
+   case in source comments so the figures can still be replayed. */
+.deep-thought {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--ink-faint);
+}
+.deep-thought::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ball);
+}
+.deep-thought span { color: var(--ink-soft); font-weight: 600; }
+
+.deep-body .reply-line {
+  margin: 0 0 0.7rem;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+.deep-body .reply-line:last-of-type { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  .deep-case,
+  .deep-case-flip { grid-template-columns: minmax(0, 1fr); }
+  /* On one column the swap would put the window above its own claim. */
+  .deep-case-flip .deep-copy { order: 0; }
+  .deep-case-flip .deep-window { order: 0; }
+}
+
+.how {
+  padding: clamp(2.75rem, 5vw, 5rem) var(--gutter);
+}
+.how-inner { max-width: 780px; margin: 0 auto; }
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1.6rem 2.5rem;
+  margin: 2rem 0 0;
+}
+.facts dt {
+  font-family: var(--figures);
+  font-weight: 500;
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ball);
+}
+.facts dd {
+  margin: 0.6rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.how-note {
+  margin: 2.2rem 0 0;
+  max-width: 62ch;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--ink-faint);
+}
+.how-note .quiet-link { margin-left: 0.3rem; }
+
+/* The marker, used exactly once on the page.
+
+   It is NOT the orange. The palette above reserves that for measured values
+   and for the action we want taken, and this phrase is neither - it is a
+   statement about where the numbers come from. The band is the same hairline
+   the court is drawn in, so the mark belongs to the page rather than shouting
+   over it.
+
+   Drawn as a background that grows from the left, which is the direction a pen
+   moves, and sitting a little low and a little uneven because a marker does
+   not stop at the cap height. The text itself never moves: only the band
+   behind it arrives. */
+.marker {
+  /* The band is a background on the text itself rather than a box behind it,
+     and `box-decoration-break: clone` is what makes that the right choice: the
+     phrase is long enough to wrap, and a single absolutely-positioned rectangle
+     would span from the start of the first line to the end of the second and
+     paint a block over everything between. Cloned, each line gets its own band,
+     which is what a pen would leave. */
+  padding: 0 0.15em;
+  border-radius: 3px;
+  color: var(--ink-soft);
+  background-image: linear-gradient(var(--hairline), var(--hairline));
+  background-repeat: no-repeat;
+  /* Low, and shorter than the line: a marker does not stop at the cap height
+     and does not reach the line above. */
+  background-position: 0 84%;
+  background-size: 0 0.92em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: background-size 620ms cubic-bezier(.2, .7, .3, 1), color 420ms ease;
+}
+.marker.is-marked {
+  color: var(--ink);
+  background-size: 100% 0.92em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker { transition: none; }
+}
+
+/* ---------- footer ---------- */
+
+.footer {
+  position: relative;
+  z-index: 1;
+  padding: 2.5rem var(--gutter) 3rem;
+}
+.footer-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.9rem 1.6rem;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer nav { display: flex; gap: 1.2rem; }
+.footer-note { flex-basis: 100%; }

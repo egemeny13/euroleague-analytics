@@ -70,12 +70,12 @@ Fully open source (MIT).
 ### Tweet 4 — Call to Action & Connection Links
 * **Purpose**: Provide frictionless next steps for analysts, developers, and AI users to connect the server.
 * **Character Count**: 252 / 280 chars
-* **Media Attachment**: None (relies on OpenGraph rich preview card from `https://egemenyucelen.me`)
+* **Media Attachment**: None (relies on OpenGraph rich preview card from `https://euroleague.egemenyucelen.me`)
 
 ```text
 Connect it to Claude Desktop, Cursor, or any MCP client:
 
-🌐 Landing & Docs: https://egemenyucelen.me
+🌐 Landing & Docs: https://euroleague.egemenyucelen.me
 💻 GitHub: https://github.com/egemeny13/euroleague-analytics
 
 Built for basketball analysts, data engineers, and AI developers. Feedback is welcome! 🏀🤖
@@ -99,7 +99,7 @@ Instead of relying on crude box-score formulas (such as FGA - ORB + TO + 0.44*FT
 
 The entire codebase, database schema migrations, and evaluation suite are open source under the MIT License.
 
-🌐 Website & Connection Guide: https://egemenyucelen.me
+🌐 Website & Connection Guide: https://euroleague.egemenyucelen.me
 💻 GitHub Repository: https://github.com/egemeny13/euroleague-analytics
 
 #BasketballAnalytics #EuroLeague #DataEngineering #MCP #OpenSource #DataScience #Python #PostgreSQL

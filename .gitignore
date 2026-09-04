@@ -45,3 +45,6 @@ venv/
 # Stray pytest basetemp from a Codex sandbox run. The repo convention is .tmp/;
 # this directory is owned by the sandbox user and cannot be deleted unelevated.
 .pytest-tmp/
+
+# Visual brainstorming companion sessions (local, disposable)
+.superpowers/

@@ -1,6 +1,6 @@
 # Owner Launch Checklist & Operational Steps
 
-A chronological, actionable reference guide for the repository owner to prepare, configure, and execute the public launch of EuroLeague Analytics (`egemenyucelen.me`).
+A chronological, actionable reference guide for the repository owner to prepare, configure, and execute the public launch of EuroLeague Analytics (`euroleague.egemenyucelen.me`).
 
 ---
 
@@ -38,7 +38,7 @@ publication.
 
 ---
 
-## 1. Domain & Static Site Setup (`egemenyucelen.me`)
+## 1. Domain & Static Site Setup (`euroleague.egemenyucelen.me`)
 
 The static site lives in `/site` and requires zero server-side compute.
 
@@ -47,17 +47,13 @@ Configure the DNS zone for `egemenyucelen.me`:
 
 | Type | Host / Name | Target / Value | TTL |
 |---|---|---|---|
-| **A** | `@` | `185.199.108.153` | 300 / Auto |
-| **A** | `@` | `185.199.109.153` | 300 / Auto |
-| **A** | `@` | `185.199.110.153` | 300 / Auto |
-| **A** | `@` | `185.199.111.153` | 300 / Auto |
-| **CNAME** | `www` | `egemeny13.github.io.` | 300 / Auto |
+| **CNAME** | `euroleague` | `egemeny13.github.io.` | 300 / Auto |
 
 ### GitHub Pages Activation
 1. Navigate to **GitHub Repository Settings &rarr; Pages**.
-2. **Build and deployment**: Source &rarr; Deploy from a branch.
-3. Select branch `master`, folder `/site` (or configure a dedicated `gh-pages` deployment action).
-4. Under **Custom domain**, enter `egemenyucelen.me` and click **Save**.
+2. **Build and deployment**: Source &rarr; GitHub Actions.
+3. Confirm `.github/workflows/pages.yml` deploys the `site/` artifact from `master`.
+4. Under **Custom domain**, enter `euroleague.egemenyucelen.me` and click **Save**.
 5. Once DNS resolves, check **Enforce HTTPS**.
 
 ---
@@ -78,10 +74,10 @@ Perform these steps in the Auth0 Dashboard (`dev-ew0k6i4pmarjvgkn`) before makin
 
 ### Step 2.2: Tenant Support URL and Email
 1. In **Auth0 Dashboard &rarr; Settings &rarr; General**:
-   - **Support URL**: `https://egemenyucelen.me/support.html`
+   - **Support URL**: `https://euroleague.egemenyucelen.me/support.html`
    - **Support Email**: `egemenyucelen@gmail.com`
-   - **Privacy Policy URL**: `https://egemenyucelen.me/privacy.html`
-   - **Terms of Service URL**: `https://egemenyucelen.me/support.html`
+   - **Privacy Policy URL**: `https://euroleague.egemenyucelen.me/privacy.html`
+   - **Terms of Service URL**: `https://euroleague.egemenyucelen.me/support.html`
 
 ### Step 2.3: Remove Vestigial Localhost Callbacks
 1. In **Auth0 Dashboard &rarr; Applications &rarr; Applications**:

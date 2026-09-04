@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/egemeny13/euroleague-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/egemeny13/euroleague-analytics/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Website](https://img.shields.io/badge/Website-egemenyucelen.me-blue)](https://egemenyucelen.me)
+[![Website](https://img.shields.io/badge/Website-euroleague.egemenyucelen.me-blue)](https://euroleague.egemenyucelen.me)
 [![Launch Media](https://img.shields.io/badge/Launch-media-orange)](https://github.com/egemeny13/euroleague-analytics-launch)
 
 A validated data warehouse and [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for EuroLeague and EuroCup basketball, exposing precision play-by-play possessions, lineup on/off splits, four factors, and court shot charts directly to AI language models.
@@ -111,7 +111,7 @@ Cursor, Windsurf, Gemini/Antigravity, Codex, and custom MCP clients can use eith
 transport when they support it. Client-specific configuration screens differ, but the
 server URL, tool names, and contracts do not.
 
-For troubleshooting, see the [Support & Connection Guide](https://egemenyucelen.me/support.html).
+For troubleshooting, see the [Support & Connection Guide](https://euroleague.egemenyucelen.me/support.html).
 
 ## 5. ChatGPT Setup
 
@@ -214,9 +214,9 @@ Both paths must agree with the published `<expected_answer>`.
 
 ## 9. Links & Documentation
 
-- **Landing Website**: [egemenyucelen.me](https://egemenyucelen.me)
-- **Privacy Policy**: [egemenyucelen.me/privacy.html](https://egemenyucelen.me/privacy.html)
-- **Support & FAQ**: [egemenyucelen.me/support.html](https://egemenyucelen.me/support.html)
+- **Landing Website**: [euroleague.egemenyucelen.me](https://euroleague.egemenyucelen.me)
+- **Privacy Policy**: [euroleague.egemenyucelen.me/privacy.html](https://euroleague.egemenyucelen.me/privacy.html)
+- **Support & FAQ**: [euroleague.egemenyucelen.me/support.html](https://euroleague.egemenyucelen.me/support.html)
 - **Sponsorship One-Pager**: [`docs/SPONSOR_ONE_PAGER.md`](docs/SPONSOR_ONE_PAGER.md)
 - **Decision Log**: [`DECISIONS.md`](DECISIONS.md)
 - **Phase Reports**: [`docs/`](docs/)

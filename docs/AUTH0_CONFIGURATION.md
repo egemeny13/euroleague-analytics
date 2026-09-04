@@ -35,7 +35,7 @@ pointing at that metadata. That is the expected, healthy behaviour.
 | Custom Domain | `auth.egemenyucelen.me` (Auth0-managed TLS/SSL active, CNAME to `dev-ew0k6i4pmarjvgkn-cd-fdgixg6xdbavegzd.edge.tenants.us.auth0.com`, DNS only) |
 | Environment tag | **PRODUCTION** (Switched from DEVELOPMENT on 2026-08-31) |
 | Region | US |
-| Support URL | `https://egemenyucelen.me` |
+| Support URL | `https://euroleague.egemenyucelen.me/support.html` |
 | Support Email | Configured (owner contact) |
 
 The tenant environment tag was switched from Development to Production on
@@ -351,7 +351,9 @@ door.
    Proxy status **DNS Only** (grey cloud). Added `https://auth.egemenyucelen.me/login/callback`
    to Google Cloud Console's authorized redirect URIs. Auth0 domain verification and
    SSL certificate provisioning completed with status Ready / Active.
-4. **Tenant support metadata set.** Support URL set to `https://egemenyucelen.me`
+4. **Tenant support metadata set.** It was initially set to `https://egemenyucelen.me`;
+   the 2026-09-05 product-domain decision requires changing it to
+   `https://euroleague.egemenyucelen.me/support.html` when the new site goes live.
    and Support Email set in Tenant Settings.
 5. **Introspection callback cleaned.** Removed obsolete `http://localhost` callback
    from `EuroLeague MCP Introspection`.

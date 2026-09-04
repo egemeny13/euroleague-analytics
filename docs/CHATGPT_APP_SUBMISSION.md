@@ -13,21 +13,34 @@ All 11 exposed MCP tools are strictly read-only, closed-world, and non-destructi
 
 ---
 
-## 2. Submission Manifest (`chatgpt-app-submission.json`)
+## 2. Submission Record and Manifest (`chatgpt-app-submission.json`)
 
-The official manifest in the repository root complies with OpenAI's `chatgpt-app-submission.v1.json` schema.
+The machine-readable manifest in the repository root complies with OpenAI's
+`chatgpt-app-submission.v1.json` schema. The public listing URLs below are
+portal fields and are recorded here because they are not represented in that
+manifest schema.
 
 ### 2.1 Metadata & Brand
 * **App Display Name:** `EuroLeague Analytics`
 * **Subtitle:** `EuroLeague basketball stats` (27 characters, within the 30-character limit)
 * **Category:** `ENTERTAINMENT`
 * **Description:** *"Access validated EuroLeague and EuroCup basketball data including exact possession counts, four factors, five-man lineup on/off net ratings, and court shot charts."*
-* **Website URL:** `https://egemenyucelen.me`
-* **Support / Terms URL:** `https://egemenyucelen.me/support.html`
-* **Privacy Policy URL:** `https://egemenyucelen.me/privacy.html`
-* **Demo Recording:** `https://egemenyucelen.me/preview.mp4`
+* **Website URL:** `https://euroleague.egemenyucelen.me`
+* **Support / Terms URL:** `https://euroleague.egemenyucelen.me/support.html`
+* **Privacy Policy URL:** `https://euroleague.egemenyucelen.me/privacy.html`
+* **Demo Recording:** `https://euroleague.egemenyucelen.me/preview.mp4`
 
-### 2.2 Brand Assets
+### 2.2 Portal update required after the domain move
+
+The submission entered review on 2026-09-02 with the apex-domain URLs. After
+the product site is live, update the four portal fields above. If the portal
+does not allow an in-review submission to be edited, withdraw or wait for the
+review outcome as appropriate, then submit the corrected listing as an update.
+For an already published plugin, submit and publish a new reviewed version;
+published MCP metadata is a reviewed snapshot rather than a live read from
+this repository.
+
+### 2.3 Brand Assets
 Vector and raster brand assets were generated to align with the EuroLeague Analytics design system (clean white background `#FFFFFF`, EuroLeague orange `#E2541A`, and clean seam geometry):
 * **`directory_icon.png`:** 512×512 px PNG (Directory icon)
 * **`composer_icon.png`:** 128×128 px PNG (ChatGPT composer icon)

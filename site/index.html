@@ -1,1124 +1,782 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EuroLeague Analytics — Possession-Level Intelligence for AI Assistants</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EuroLeague Analytics — European basketball for your AI assistant</title>
+<meta name="description" content="Connect EuroLeague play-by-play data to Claude, ChatGPT or Gemini and ask in your own words. Exact possessions, five-man lineups and shot locations, reconstructed from the play-by-play.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ======================================================================
-       FIXED SITE NAVIGATION
-       ====================================================================== -->
-  <header class="site-header">
-    <div class="nav-container">
-      <a href="#hero" class="nav-brand">
-        <span class="court-dot-icon"></span>
-        <span class="brand-text">EuroLeague Analytics</span>
-      </a>
-      <nav class="nav-links">
-        <a href="#possibilities" class="nav-link">Possibilities</a>
-        <a href="#video-showcase" class="nav-link">Video</a>
-        <a href="#use-with-ai" class="nav-link nav-cta">Use It</a>
-        <a href="#trust" class="nav-link">Trust</a>
-        <a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener" class="nav-link nav-github">GitHub &nearr;</a>
-      </nav>
-    </div>
-  </header>
+<a class="skip" href="#main">Skip to content</a>
 
-  <main class="page-container">
+<header class="topbar">
+  <a class="wordmark" href="index.html">
+    <span class="wordmark-mark" aria-hidden="true"></span>
+    EuroLeague Analytics
+  </a>
+  <nav class="topnav" aria-label="Main">
+    <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Source</a>
+    <a class="button-solid" href="#connect">Connect</a>
+  </nav>
+</header>
 
-    <!-- ======================================================================
-         ACT 1: HERO
-         ====================================================================== -->
-    <section class="act act-hero" id="hero">
-      <canvas id="hero-court-canvas" class="hero-canvas"></canvas>
+<div class="courtgrid" aria-hidden="true">
+  <span class="rail rail-left"></span>
+  <span class="rail rail-right"></span>
+</div>
 
-      <div class="act-inner hero-inner">
-        
-        <div class="hero-grid">
-          
-          <!-- Hero Left Column: Editorial & Actions -->
-          <div class="hero-text-col">
-            <h1 class="hero-headline" id="hero-headline">
-              <span id="hero-headline-text">Ask EuroLeague questions that normally take SQL.</span>
-              <span class="hero-text-cursor" id="hero-text-cursor"></span>
-            </h1>
-            <p class="hero-lead">
-              A validated data warehouse for EuroLeague basketball, connected directly to your AI assistant.
-            </p>
+<main id="main">
 
-            <div class="hero-actions-group">
-              <a href="#use-with-ai" class="hero-action-btn hero-action-primary">Use With Your AI &rarr;</a>
-              <a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener" class="hero-action-btn hero-action-secondary">GitHub &nearr;</a>
-            </div>
-
-            <div class="hero-conduit-guide">
-              <div class="conduit-line-track">
-                <div class="conduit-line-pip"></div>
-              </div>
-              <span class="scroll-label">Scroll to explore</span>
-            </div>
-          </div>
-
-          <!-- Hero Right Column: AI Assistant Composite Device Surface (Safari + Mobile) -->
-          <div class="hero-media-col reveal delay-1">
-            
-            <!-- 1. Primary Desktop Safari Window -->
-            <div class="assistant-media-window safari-frame" id="assistant-media-window">
-              
-              <!-- Safari Browser Header -->
-              <div class="safari-header">
-                <div class="safari-controls">
-                  <span class="safari-dot red"></span>
-                  <span class="safari-dot yellow"></span>
-                  <span class="safari-dot green"></span>
-                </div>
-                <div class="safari-nav-buttons">
-                  <svg class="safari-nav-btn" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                  <svg class="safari-nav-btn disabled" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                </div>
-                <div class="safari-address-bar">
-                  <svg class="safari-lock-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <span class="safari-url">claude.ai <span class="safari-url-sub">/euroleague-analytics</span></span>
-                </div>
-                <div class="safari-actions">
-                  <span class="safari-badge">
-                    <span class="pulse-dot"></span> MCP Active
-                  </span>
-                </div>
-              </div>
-
-              <!-- Safari Content Body -->
-              <div class="media-conversation-body">
-                
-                <!-- 1. User Prompt Bubble -->
-                <div class="media-msg user-media-msg" id="media-user-msg">
-                  <div class="user-bubble-inner">
-                    <span id="media-typed-prompt"></span>
-                    <span class="media-cursor" id="media-prompt-cursor"></span>
-                  </div>
-                </div>
-
-                <!-- 2. Assistant Status Indicator -->
-                <div class="media-tool-activity" id="media-tool-activity">
-                  <span class="tool-spinner"></span>
-                  <span class="tool-status-text" id="tool-status-text">Using EuroLeague Analytics&hellip;</span>
-                </div>
-
-                <!-- 3. Assistant Response Surface (Dynamic) -->
-                <div class="media-msg assistant-media-msg" id="media-assistant-msg">
-                  <p class="assistant-lead-text" id="assistant-lead-text">
-                    In E2024, Paris was significantly more dangerous with TJ Shorts on the floor:
-                  </p>
-                  <div class="media-mini-stat-grid" id="assistant-stat-grid">
-                    <div class="mini-stat-card on-card">
-                      <div class="mini-label">Shorts ON</div>
-                      <div class="mini-val text-orange highlighter-brush">+5.09 Net</div>
-                      <div class="mini-sub">116.14 ORtg &middot; 111.04 DRtg</div>
-                    </div>
-                    <div class="mini-stat-card off-card">
-                      <div class="mini-label">Shorts OFF</div>
-                      <div class="mini-val text-dark">−11.45 Net</div>
-                      <div class="mini-sub">117.05 ORtg &middot; 128.50 DRtg</div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-            <!-- 2. Floating iPhone Mobile Mockup ("Use on any device") -->
-            <div class="hero-mobile-mockup" id="hero-mobile-mockup">
-              <div class="mobile-mockup-inner">
-                
-                <!-- Dynamic Island -->
-                <div class="mobile-notch-area">
-                  <div class="dynamic-island">
-                    <span class="island-lens"></span>
-                  </div>
-                </div>
-
-                <!-- Status Bar -->
-                <div class="mobile-status-bar">
-                  <span class="mobile-clock">21:10</span>
-                  <div class="mobile-icons">
-                    <span class="mobile-net">5G</span>
-                    <span class="mobile-batt"><span class="batt-level"></span></span>
-                  </div>
-                </div>
-
-                <!-- Mobile App Header -->
-                <div class="mobile-app-header">
-                  <div class="mobile-agent-badge">
-                    <span class="mobile-agent-dot"></span>
-                    <span class="mobile-agent-title">Claude Mobile</span>
-                  </div>
-                  <span class="mobile-mcp-tag">Live MCP</span>
-                </div>
-
-                <!-- Mobile Conversation -->
-                <div class="mobile-dialog-body">
-                  <div class="mobile-bubble mobile-user">
-                    <span>Kendrick Nunn clutch FG%?</span>
-                  </div>
-                  <div class="mobile-bubble mobile-assistant">
-                    <div class="mobile-source-tag">el_get_shot_data</div>
-                    <p class="mobile-reply"><strong>47.2% FG</strong> (17/36) in final 2 mins within 5 pts.</p>
-                  </div>
-                </div>
-
-                <!-- Home Indicator Bar -->
-                <div class="mobile-home-indicator"></div>
-
-              </div>
-            </div>
-
-          </div>
-
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy on-court">
+        <h1>Add EuroLeague to the AI you already use.</h1>
+        <p class="lede">
+          Connect once, then ask in your own words — every lineup, every shot,
+          every second on court. <strong>No app, no spreadsheet.</strong>
+        </p>
+        <div class="actions">
+          <a class="button-solid button-lg" href="#connect">Connect</a>
+          <a class="quiet-link" href="#how">See how it works</a>
         </div>
+      </div>
+
+      <div class="hero-demo">
+        <figure class="window" aria-labelledby="demo-caption">
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" id="app-avatar" aria-hidden="true"></span>
+              <span id="app-name">Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot" aria-hidden="true"></i>EuroLeague Analytics connected</span>
+          </div>
+
+          <!-- Nothing in here is ever added or removed while the page is open.
+               The three exchanges share one grid cell and the questions and
+               answers hold their space from the first paint, so the window is a
+               fixed object and the page underneath it never moves.
+
+               Each assistant gets its own question. Seeing the same sentence
+               three times reads as a loop; three different ones read as a tool
+               that answers whatever you bring it. -->
+          <div class="window-body" id="thread">
+
+            <div class="exchange" data-question="Which five wins games for Fenerbahce?">
+              <div class="from-you">
+                <!-- The hidden copy reserves the bubble's final size, so the
+                     question types inside a bubble that never resizes. It also
+                     holds the sentence: the script reads the question from the
+                     markup rather than carrying copy of its own. -->
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Which five wins games for Fenerbahce?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">reading the play-by-play</span></div>
+              <div class="reply">
+                <p class="reply-line">Their most efficient five this season:</p>
+                <ul class="lineup">
+                  <li><span class="jersey" style="--club:#12305B">13</span>Biberovic</li>
+                  <li><span class="jersey" style="--club:#12305B">92</span>Birch</li>
+                  <li><span class="jersey" style="--club:#12305B">20</span>Hall</li>
+                  <li><span class="jersey" style="--club:#12305B">8</span>Horton-Tucker</li>
+                  <li><span class="jersey" style="--club:#12305B">4</span>Melli</li>
+                </ul>
+                <p class="verdict">
+                  <span class="figure">+24.5</span> net rating
+                  <span class="qualifier">over 214 possessions together</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="exchange" data-question="Which team plays fastest this season?">
+              <div class="from-you">
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Which team plays fastest this season?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">counting possessions</span></div>
+              <div class="reply">
+                <p class="reply-line">Paris Basketball, by some distance:</p>
+                <p class="verdict">
+                  <span class="figure">78.0</span> possessions per game
+                  <span class="qualifier">counted from the event stream, not estimated from a box score</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="exchange" data-question="How many clutch possessions were there this season?">
+              <div class="from-you">
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">How many clutch possessions were there this season?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">filtering by margin and clock</span></div>
+              <div class="reply">
+                <p class="reply-line">Last two minutes, within three points:</p>
+                <p class="verdict">
+                  <span class="figure">646</span> possessions
+                  <span class="qualifier">and you pick the thresholds — clutch is a filter here, not a fixed definition</span>
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="window-input" aria-hidden="true">
+            <span class="window-placeholder">Ask about any team, lineup or possession</span>
+            <span class="window-send"></span>
+          </div>
+        </figure>
+        <figcaption class="demo-caption on-court" id="demo-caption">
+          A recorded answer from the warehouse. Works the same in any assistant
+          that speaks MCP.
+        </figcaption>
+      </div>
+    </div>
+  </section>
+
+  <section class="claim" id="shots">
+    <div class="claim-inner">
+      <div class="claim-copy">
+        <h2>Ask where the shots came from.</h2>
+        <p>
+          Any game, any player, any stretch of the floor — the coordinate the
+          league recorded, not a zone and not a guess from a box score.
+        </p>
+
+        <div class="scoreline">
+          <span class="side"><i class="crest" style="--club:#C8102E"></i>Olympiacos<b>78</b></span>
+          <span class="side"><i class="crest" style="--club:#00529F"></i>Real Madrid<b>79</b></span>
+          <span class="scoreline-meta">Final Four championship game, 21 May 2023</span>
+        </div>
+
+        <p class="tally">
+          <span class="tally-figure" id="shot-count">0</span>
+          <span class="tally-label">shots placed</span>
+        </p>
+
+        <!-- The caption lives with the copy, not under the figure. Beneath the
+             court it sat in a column of its own with dead space either side;
+             here it closes the paragraph it belongs to. -->
+        <p class="figure-note" id="shots-caption">
+          Every field goal attempt, placed at the coordinate the league
+          recorded. Free throws have none, so they are absent.
+        </p>
 
       </div>
-    </section>
 
+      <div class="claim-figure">
+        <div class="courtwrap">
+        <!-- Drawn to FIBA dimensions in centimetres, the same units the source
+             coordinates arrive in, so a shot lands where the league recorded it
+             rather than where a hand-tuned transform puts it. -->
+        <svg class="halfcourt" id="halfcourt" viewBox="-820 20 1640 1180" aria-labelledby="shots-caption">
+          <!-- THE ORIGIN IS THE RING, NOT THE BASELINE.
 
-    <!-- ======================================================================
-         ACT 2: WHAT WOULD YOU ASK? (POSSIBILITIES JOURNEY)
-         ====================================================================== -->
-    <section class="act act-possibilities" id="possibilities">
-      <div class="act-inner possibilities-inner">
-        
-        <div class="section-lead-title reveal">
-          <h2 class="act-title">What would you ask?</h2>
+               This court was drawn 157.5 cm out of place until 2026-09-04. The
+               assumption was that the league's y counts from the baseline. It
+               counts from the ring, and the data says so without being asked:
+               every row carries the league's own two-or-three flag, which owes
+               nothing to any geometry we choose, so the two can be compared.
+
+               Measured over both loaded seasons, 93,269 shots with coordinates:
+
+                 y from the baseline   26,403 disagreements   28.3 %
+                 y from the ring          345 disagreements    0.37 %
+
+               And the reading that settles it: on the ring origin, ZERO shots
+               in either season fall behind the baseline. On the old one, 2,214
+               did - which is what put dots outside the court and made the
+               drawing look wrong. They were never outside it.
+
+               Everything below is therefore measured from the ring at (0, 0):
+               the baseline is 157.5 behind it, the arc is 675 around it, and a
+               shot is placed with no arithmetic of ours at all. -->
+          <g transform="translate(0, 1000) scale(1, -1)">
+          <g fill="none" stroke="var(--hairline)" stroke-width="7">
+            <path d="M-750 -157.5 H750"/>
+            <path d="M-750 -157.5 V942.5 M750 -157.5 V942.5"/>
+            <rect x="-245" y="-157.5" width="490" height="580"/>
+            <circle cx="0" cy="422.5" r="180"/>
+            <path d="M-90 -37.5 H90"/>
+            <circle cx="0" cy="0" r="22.5"/>
+            <path d="M-660 -157.5 V141.5 M660 -157.5 V141.5"/>
+            <path d="M-660 141.5 A675 675 0 0 0 660 141.5"/>
+          </g>
+          <g id="shot-marks"></g>
+          <g id="shot-spotlight"></g>
+          </g>
+        </svg>
+
+        <!-- Opens once, over the shot it describes, five seconds after the
+             chart finishes filling. Its position is computed from that shot's
+             own coordinates, so it cannot drift away from the dot it points
+             at. Every fact in it was read out of the play-by-play. -->
+        <div class="callout" id="winner-card" hidden>
+          <span class="callout-leader" aria-hidden="true"></span>
+          <div class="callout-body">
+            <span class="callout-flag">Game winner</span>
+            <span class="callout-who">Sergio Llull</span>
+            <!-- The figure is 4.9 m, and printing it is a decision with a
+                 measurement behind it. See Decisions 57 and 58.
+
+                 The page used to show a different game - the 2022 semi-final,
+                 and Micic's buzzer-beater - and carried no distance at all,
+                 because the owner did not believe the 9.4 m the coordinates gave
+                 for it. He was right, and the reason turned out to be the game
+                 rather than the coordinate system. E2021 game 328 is one of the
+                 badly recorded ones: its non-corner three-point attempts sit
+                 93 cm further from the ring than its own season's, seventh worst
+                 of 299 games, while its corner attempts - which the sideline
+                 pins in place - are exactly normal.
+
+                 THIS game is clean, and that is checked rather than assumed:
+                 scripts/build_site_shot_chart.py refuses to build a game whose
+                 non-corner threes sit more than 40 cm outside its season's
+                 median. E2022 game 330 comes in at -3 cm.
+
+                 So the frame is measured (Decision 57), the game is measured
+                 against its season (Decision 58), and the shot itself is
+                 (-238, 432) - 4.93 m, printed to the nearest tenth because the
+                 source records on a 6.4 cm lattice and a centimetre would be
+                 quoting the lattice rather than the shot. What remains
+                 unvalidated is whoever recorded this one attempt aiming true,
+                 which needs video and is out of scope. -->
+            <span class="callout-what">
+              A two from 4.9 m with the clock on three seconds, for the
+              lead Olympiacos never took back.
+            </span>
+            <span class="callout-score">
+              <i style="--club:#00529F"></i>Real Madrid <b>79</b>
+              <i style="--club:#C8102E"></i>Olympiacos <b>78</b>
+            </span>
+          </div>
+        </div>
         </div>
 
-        <div class="possibilities-stream">
-          
-          <svg class="stream-spine-svg" viewBox="0 0 1000 780" fill="none" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-            <path class="spine-line-base" d="M 60 40 L 60 180 Q 60 280, 500 320 Q 940 360, 940 460 L 940 540 Q 940 640, 160 700 L 160 760" stroke="#E5E6EA" stroke-width="1.5" />
-            <path class="spine-line-active" id="spine-active-path" d="M 60 40 L 60 180 Q 60 280, 500 320 Q 940 360, 940 460 L 940 540 Q 940 640, 160 700 L 160 760" stroke="#E2541A" stroke-width="2" stroke-dasharray="6 8" />
-            <path class="shot-trajectory-arc" d="M 60 160 Q 500 60, 940 220" stroke="#E2541A" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.35" />
+        <!-- The bar is the anticipation. Without it the chart fills in under
+             three seconds with no warning and the card that follows arrives
+             out of nowhere; with it the visitor can see that something is
+             being built and that it has an end. It reaches full at the moment
+             the card opens, not at the last shot. -->
+        <div class="chartbar" id="chart-bar">
+          <p class="chartbar-label" id="chart-label">Placing every attempt in the game</p>
+          <div class="chartbar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="chart-track">
+            <span class="chartbar-fill" id="chart-fill"></span>
+          </div>
+        </div>
+
+        <!-- Short, but neither claim may be dropped: free throws are absent for
+             a reason, and the four dots behind the baseline are real. A caption
+             that omits either is tidier and false. -->
+      </div>
+    </div>
+  </section>
+
+  <section class="claim claim-flip" id="lineups">
+    <div class="claim-inner">
+      <div class="claim-copy">
+        <h2>Ask which five actually work together.</h2>
+        <p>
+          Four Fenerbahce players stay. Swap Birch for Baldwin, and the team
+          turns over.
+        </p>
+        <p class="figure-note figure-note-tight">
+          Every answer shows the possessions behind it, so a small sample
+          cannot hide.
+        </p>
+        <p class="figure-note">
+          The club supplies each position; the spots on this floor are
+          illustrative.
+        </p>
+
+        <div class="unit-verdict">
+          <!-- The live figures use the space below the short explanation. They
+               used to add a second row below the court, leaving this column
+               empty while making the whole section taller. -->
+          <div class="unit-metric">
+            <span class="unit-figure" id="unit-net">—</span>
+            <span class="unit-label">net rating</span>
+          </div>
+          <div class="unit-metric">
+            <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
+            <span class="unit-label">possessions together</span>
+          </div>
+          <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="claim-figure">
+        <!-- Two real units, one substitution apart, on the floor.
+             Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md
+
+             THE TWO KINDS OF THING IN THIS PICTURE, and they must not be
+             confused. Each player's POSITION is the league's own record - the
+             club's E2025 registration, joined to the game player id through
+             person_game_link (Decision 53). Each player's SPOT on the floor is
+             a convention: the ordinary arrangement of two guards, two forwards
+             and a centre. The caption says which is which, because a diagram
+             that looks measured and is not is worse than no diagram.
+
+             The source publishes three positions and nothing finer, so this is
+             not a 1-through-5 reading and must never be drawn as one.
+
+             What the picture is for: Birch is the only centre in the strong
+             five, and Baldwin is a guard. The substitution therefore does not
+             swap like for like - it takes the centre off the floor and leaves
+             the paint empty. That is the shape behind the number. -->
+        <div class="floor" id="floor">
+          <svg class="floor-court" viewBox="-820 -60 1640 1160" fill="none" aria-hidden="true">
+            <!-- The same FIBA numbers as the shot chart above, mirrored the
+                 same way, so the two sections are one court and not two
+                 drawings that happen to look alike. -->
+            <g transform="translate(0, 1000) scale(1, -1)">
+              <g stroke="var(--hairline)" stroke-width="7">
+                <path d="M-750 0 H750"/>
+                <path d="M-750 0 V1060 M750 0 V1060"/>
+                <circle cx="0" cy="580" r="180"/>
+                <path d="M-90 120 H90"/>
+                <circle cx="0" cy="157" r="22"/>
+                <path d="M-660 0 V299 M660 0 V299"/>
+                <path d="M-660 299 A675 675 0 0 0 660 299"/>
+              </g>
+              <!-- The paint is its own element so it can be lit when it
+                   empties. Nothing else on this court changes. -->
+              <rect class="floor-paint" id="floor-paint"
+                    x="-245" y="0" width="490" height="580"
+                    stroke="var(--hairline)" stroke-width="7"/>
+            </g>
           </svg>
 
-          <!-- 1: 5-Man Lineups -->
-          <div class="stream-node node-right reveal" data-node="1">
-            <div class="node-bullet-marker">
-              <span class="node-ring"></span>
-              <span class="node-core"></span>
-            </div>
+          <div class="floor-players" id="floor-players"></div>
 
-            <div class="node-content-block">
-              <div class="node-category-bar">
-                <span class="node-cat-label">5-Man Lineup Chemistry</span>
-              </div>
-              <h3 class="kinetic-prompt-text" data-text="Which five-man lineup had the best net rating in E2024 above 150 possessions?">
-                “Which five-man lineup had the best net rating in E2024 above 150 possessions?”
-              </h3>
-              <div class="node-micro-result">
-                <span class="micro-res-tag">Paris Basketball:</span>
-                <span class="micro-res-val text-orange highlighter-brush">+25.45 Net Rating</span>
-                <span class="micro-res-subtext">(Hayes &middot; Herrera &middot; Jantunen &middot; Shorts &middot; Ward)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 2: Caller-Defined Clutch -->
-          <div class="stream-node node-wide reveal delay-1" data-node="2">
-            <div class="node-bullet-marker">
-              <span class="node-ring"></span>
-              <span class="node-core"></span>
-            </div>
-
-            <div class="node-content-block">
-              <div class="node-category-bar">
-                <span class="node-cat-label">Custom Clutch Logic</span>
-              </div>
-              <h3 class="kinetic-prompt-text" data-text="Define clutch as the last 120 seconds within 3 points. Which offense was most efficient?">
-                “Define clutch as the last 120 seconds within 3 points. Which offense was most efficient?”
-              </h3>
-              <div class="node-micro-result">
-                <span class="micro-res-tag">Fenerbahce Beko:</span>
-                <span class="micro-res-val text-orange highlighter-brush">154.84 Offensive Rating</span>
-                <span class="micro-res-subtext">(+35.63 points per 100 over baseline)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3: Spatial Shooting -->
-          <div class="stream-node node-left node-curiosity reveal delay-2" data-node="3">
-            <div class="node-bullet-marker">
-              <span class="node-ring"></span>
-              <span class="node-core"></span>
-            </div>
-
-            <div class="node-content-block">
-              <div class="node-category-bar">
-                <span class="node-cat-label">Spatial Shot Auditing</span>
-              </div>
-              <h3 class="kinetic-prompt-text" data-text="Show Olympiacos corner-three shooting efficiency in playoff games compared to the regular season.">
-                “Show Olympiacos corner-three shooting efficiency in playoff games compared to the regular season.”
-              </h3>
-              <div class="node-curiosity-hint">
-                <span class="hint-arrow">&rarr;</span>
-                <span class="hint-text">Ask your connected assistant directly</span>
-              </div>
-            </div>
-          </div>
-
+          <p class="floor-empty" id="floor-empty" hidden>No centre on the floor</p>
         </div>
 
       </div>
-    </section>
+    </div>
+  </section>
 
+  <section class="ask" id="ask">
+    <div class="ask-inner">
+      <h2>Now ask it yourself.</h2>
+      <p class="ask-lede">
+        The same window, and this time you drive it. Each answer was produced by
+        the same query your own assistant would run — no number here was typed
+        by hand.
+      </p>
 
-    <!-- ======================================================================
-         ACT 3: SEE IT IN ACTION (VIDEO SHOWCASE)
-         ====================================================================== -->
-    <section class="act act-video-showcase" id="video-showcase">
-      <div class="act-inner">
-        
-        <div class="section-lead-title reveal">
-          <h2 class="act-title">See it in action.</h2>
+      <!-- The same window component as the hero, so the visitor recognises
+           where they are: this is what it looks like once it is connected. The
+           chips sit where the text field is, as suggestions, because a chip is
+           the only input this can safely accept. -->
+      <figure class="window ask-window">
+        <div class="window-bar">
+          <span class="window-app">
+            <span class="app-avatar" style="--tint:#1A1512">You</span>
+            <span>Your assistant</span>
+          </span>
+          <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
         </div>
 
-        <div class="video-presentation-container reveal delay-1">
-          <div class="video-media-stage" id="video-media-stage">
-            
-            <video id="showcase-video-player" class="showcase-video-player" playsinline preload="metadata" controls>
-              <source src="preview.mp4" type="video/mp4">
-              Your browser does not support HTML5 video.
-            </video>
+        <!-- THE EMPTY STATE IS THE INVITATION, and it used to be an
+             instruction: "Pick one of the questions below." in faint grey, in
+             an otherwise empty box. The owner, reading the built page as a
+             visitor: this section is pale and motionless, so I do not feel like
+             clicking anything.
 
-            <div class="video-cover-overlay" id="video-cover-overlay">
-              <svg class="court-background-svg" viewBox="0 0 1000 500" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="500" cy="500" r="180" stroke="#E5E6EA" stroke-width="1.5" />
-                <circle cx="500" cy="500" r="60" stroke="#E5E6EA" stroke-width="1.5" />
-                <rect x="410" y="320" width="180" height="180" stroke="#E5E6EA" stroke-width="1.5" />
-                <path d="M 120 500 C 120 280, 880 280, 880 500" stroke="#E5E6EA" stroke-width="1.5" stroke-dasharray="4 4" />
-              </svg>
+             The scorer is the character, and he is the one thing on this page
+             that is waiting for you. He is at the scorer's table, which is what
+             this project is - somebody writing down every event as it happens.
+             The pen is the only orange in the drawing because the pen is the
+             part doing the recording.
 
-              <button class="play-action-circle" id="play-video-btn" type="button" aria-label="Play Product Video">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-              </button>
-              <div class="video-cover-caption">Watch 45s Product Overview</div>
-            </div>
-
+             Two other directions were drawn and are one line of markup away:
+             site/_mascots.html holds all three side by side. He is removed from
+             the panel by ask.js the moment a question is asked, which is the
+             point of him: he was waiting, and now he has gone to read. -->
+        <div class="window-body ask-body" id="ask-answer" aria-live="polite">
+          <div class="ask-empty">
+            <svg class="mascot" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+              <g class="mascot-body">
+                <circle cx="34" cy="24" r="12.5" stroke="var(--ink-soft)" stroke-width="2.2"/>
+                <g class="mascot-eyes">
+                  <circle cx="30" cy="23" r="2.6" fill="var(--ink)"/>
+                  <circle cx="39" cy="23" r="2.6" fill="var(--ink)"/>
+                </g>
+                <path d="M16 56 A18 18 0 0 1 52 56" stroke="var(--ink-soft)" stroke-width="2.2"/>
+                <path d="M6 56 H74" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M48 56 V44 H70 V56" stroke="var(--ink-faint)" stroke-width="1.8"/>
+                <path d="M53 51 H65 M53 47 H65" stroke="var(--ink-faint)" stroke-width="1.8"/>
+                <path d="M58 46 L67 33" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M67 33 L70 29" stroke="var(--ball)" stroke-width="3.2" stroke-linecap="round"/>
+              </g>
+            </svg>
+            <p class="ask-invite">
+              <b>Ask me something.</b>
+              <span>Pick one of the questions below and I will go and read it.</span>
+            </p>
           </div>
         </div>
 
+        <div class="chips" id="chips" role="group" aria-label="Questions you can ask"></div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ACCESS IS STILL INVITE-ONLY UNTIL R-9. A visitor who follows these steps
+       before the Auth0 Action is switched off is refused at the sign-in screen.
+       This section must not go live before that happens; see section 7 of
+       docs/superpowers/specs/2026-09-04-launch-website-design.md.
+
+       Every claim in here is taken from docs/CLIENT_COMPATIBILITY.md and
+       docs/CHATGPT_APP_SUBMISSION.md and says which of the two kinds of claim
+       it is. "Verified" means somebody connected that client and called a tool.
+       "Expected" means the client's own published specification says this
+       works and nobody here has run it. Those are not the same sentence and
+       the page must not print them as if they were. -->
+  <section class="connect" id="connect">
+    <div class="connect-inner">
+      <h2>Connect it once.</h2>
+      <p class="connect-lede">
+        There is one address, and it is the whole of the setup. Any assistant
+        that speaks MCP takes it — there is nothing to install, and nothing to
+        configure afterwards.
+      </p>
+
+      <div class="address">
+        <code id="server-url">https://euroleague-analytics-mcp.fly.dev/mcp</code>
+        <button class="copy" type="button" id="copy-url" data-copied="Copied" data-select="Press Ctrl+C">Copy</button>
       </div>
-    </section>
 
-
-    <!-- ======================================================================
-         ACT 4: USE IT WITH YOUR AI (ONBOARDING & CLIENT PICKER)
-         ====================================================================== -->
-    <section class="act act-onboarding" id="use-with-ai">
-      <div class="act-inner">
-        
-        <div class="section-lead-title reveal">
-          <h2 class="act-title">Choose your AI. Start asking.</h2>
-          <p class="act-subtitle">Connect the data warehouse directly in <span class="highlighter-brush">seconds</span>. Select your AI client below.</p>
+      <div class="clients">
+        <div class="client-tabs" role="tablist" aria-label="Choose your assistant">
+          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true">Claude</button>
+          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="false">ChatGPT</button>
+          <button class="client-tab" type="button" role="tab" id="tab-gemini" aria-controls="panel-gemini" aria-selected="false">Gemini</button>
+          <button class="client-tab" type="button" role="tab" id="tab-editor" aria-controls="panel-editor" aria-selected="false">Editors &amp; CLIs</button>
         </div>
 
-        <!-- 21st.dev Logos3 / Infinite AI Logo Marquee Strip -->
-        <div class="ai-logo-marquee-strip reveal delay-1">
-          <div class="marquee-caption">Works seamlessly with your favorite MCP-enabled AI clients:</div>
-          <div class="marquee-container">
-            <div class="marquee-track">
-              <!-- Item 1: Anthropic Claude -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                  <path d="M12 2a1 1 0 0 1 1 1v3.268a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm6.364 3.636a1 1 0 0 1 0 1.414l-2.31 2.311a1 1 0 0 1-1.415-1.415l2.31-2.31a1 1 0 0 1 1.415 0zM22 12a1 1 0 0 1-1 1h-3.268a1 1 0 0 1 0-2H21a1 1 0 0 1 1 1zm-3.636 6.364a1 1 0 0 1-1.414 0l-2.311-2.31a1 1 0 0 1 1.415-1.415l2.31 2.31a1 1 0 0 1 0 1.415zM12 22a1 1 0 0 1-1-1v-3.268a1 1 0 0 1 2 0V21a1 1 0 0 1-1 1zm-6.364-3.636a1 1 0 0 1 0-1.414l2.31-2.311a1 1 0 0 1 1.415 1.415l-2.31 2.31a1 1 0 0 1-1.415 0zM2 12a1 1 0 0 1 1-1h3.268a1 1 0 0 1 0 2H3a1 1 0 0 1-1-1zm3.636-6.364a1 1 0 0 1 1.414 0l2.311 2.31a1 1 0 0 1-1.415 1.415l-2.31-2.31a1 1 0 0 1 0-1.415z"/>
-                </svg>
-                <span class="marquee-logo-name">Claude</span>
-              </div>
-              <!-- Item 2: Cursor -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/>
-                </svg>
-                <span class="marquee-logo-name">Cursor</span>
-              </div>
-              <!-- Item 3: OpenAI / ChatGPT -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                  <path d="M20.5 10.5a4.48 4.48 0 0 0-.38-2.67 4.54 4.54 0 0 0-4.75-2.28A4.47 4.47 0 0 0 11.8 4a4.53 4.53 0 0 0-4.3 3.12 4.47 4.47 0 0 0-3.37 2.45 4.53 4.53 0 0 0 .54 5.25 4.48 4.48 0 0 0 .38 2.67 4.54 4.54 0 0 0 4.75 2.28 4.47 4.47 0 0 0 3.57 1.55 4.53 4.53 0 0 0 4.3-3.12 4.47 4.47 0 0 0 3.37-2.45 4.53 4.53 0 0 0-.54-5.25zM12 13.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-                </svg>
-                <span class="marquee-logo-name">ChatGPT</span>
-              </div>
-              <!-- Item 4: Windsurf -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2 12c3.5-6 8.5-6 12 0s8.5 6 12 0"/><path d="M2 17c3.5-6 8.5-6 12 0s8.5 6 12 0"/>
-                </svg>
-                <span class="marquee-logo-name">Windsurf</span>
-              </div>
-              <!-- Item 5: VS Code / Copilot -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-                </svg>
-                <span class="marquee-logo-name">Copilot</span>
-              </div>
-              <!-- Item 6: Claude Code -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
-                </svg>
-                <span class="marquee-logo-name">Claude Code</span>
-              </div>
-              <!-- Item 7: Zed -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                  <path d="M5 5h14v3l-8.5 8H19v3H5v-3l8.5-8H5V5z"/>
-                </svg>
-                <span class="marquee-logo-name">Zed</span>
-              </div>
-              <!-- Item 8: Cline -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect width="18" height="14" x="3" y="5" rx="3"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M12 2v3"/>
-                </svg>
-                <span class="marquee-logo-name">Cline</span>
-              </div>
-              <!-- Item 9: Google Antigravity -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="8" ry="3.5" transform="rotate(30 12 12)"/><ellipse cx="12" cy="12" rx="8" ry="3.5" transform="rotate(-30 12 12)"/>
-                </svg>
-                <span class="marquee-logo-name">Antigravity</span>
-              </div>
-              <!-- Item 10: LibreChat -->
-              <div class="marquee-logo-card">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-                <span class="marquee-logo-name">LibreChat</span>
-              </div>
-
-              <!-- Duplicate loop set for seamless continuous marquee -->
-              <div class="marquee-logo-card" aria-hidden="true">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2a1 1 0 0 1 1 1v3.268a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm6.364 3.636a1 1 0 0 1 0 1.414l-2.31 2.311a1 1 0 0 1-1.415-1.415l2.31-2.31a1 1 0 0 1 1.415 0zM22 12a1 1 0 0 1-1 1h-3.268a1 1 0 0 1 0-2H21a1 1 0 0 1 1 1zm-3.636 6.364a1 1 0 0 1-1.414 0l-2.311-2.31a1 1 0 0 1 1.415-1.415l2.31 2.31a1 1 0 0 1 0 1.415zM12 22a1 1 0 0 1-1-1v-3.268a1 1 0 0 1 2 0V21a1 1 0 0 1-1 1zm-6.364-3.636a1 1 0 0 1 0-1.414l2.31-2.311a1 1 0 0 1 1.415 1.415l-2.31 2.31a1 1 0 0 1-1.415 0zM2 12a1 1 0 0 1 1-1h3.268a1 1 0 0 1 0 2H3a1 1 0 0 1-1-1zm3.636-6.364a1 1 0 0 1 1.414 0l2.311 2.31a1 1 0 0 1-1.415 1.415l-2.31-2.31a1 1 0 0 1 0-1.415z"/></svg>
-                <span class="marquee-logo-name">Claude</span>
-              </div>
-              <div class="marquee-logo-card" aria-hidden="true">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></svg>
-                <span class="marquee-logo-name">Cursor</span>
-              </div>
-              <div class="marquee-logo-card" aria-hidden="true">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.5 10.5a4.48 4.48 0 0 0-.38-2.67 4.54 4.54 0 0 0-4.75-2.28A4.47 4.47 0 0 0 11.8 4a4.53 4.53 0 0 0-4.3 3.12 4.47 4.47 0 0 0-3.37 2.45 4.53 4.53 0 0 0 .54 5.25 4.48 4.48 0 0 0 .38 2.67 4.54 4.54 0 0 0 4.75 2.28 4.47 4.47 0 0 0 3.57 1.55 4.53 4.53 0 0 0 4.3-3.12 4.47 4.47 0 0 0 3.37-2.45 4.53 4.53 0 0 0-.54-5.25zM12 13.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
-                <span class="marquee-logo-name">ChatGPT</span>
-              </div>
-              <div class="marquee-logo-card" aria-hidden="true">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c3.5-6 8.5-6 12 0s8.5 6 12 0"/><path d="M2 17c3.5-6 8.5-6 12 0s8.5 6 12 0"/></svg>
-                <span class="marquee-logo-name">Windsurf</span>
-              </div>
-              <div class="marquee-logo-card" aria-hidden="true">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                <span class="marquee-logo-name">Copilot</span>
-              </div>
-              <div class="marquee-logo-card" aria-hidden="true">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                <span class="marquee-logo-name">Claude Code</span>
-              </div>
-              <div class="marquee-logo-card" aria-hidden="true">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M5 5h14v3l-8.5 8H19v3H5v-3l8.5-8H5V5z"/></svg>
-                <span class="marquee-logo-name">Zed</span>
-              </div>
-              <div class="marquee-logo-card" aria-hidden="true">
-                <svg class="marquee-svg-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="14" x="3" y="5" rx="3"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M12 2v3"/></svg>
-                <span class="marquee-logo-name">Cline</span>
-              </div>
-            </div>
-          </div>
+        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
+          <p class="client-status client-status-verified">Verified — connected and answering</p>
+          <ol class="howto">
+            <li>Open <b>Settings</b>, then <b>Connectors</b>.</li>
+            <li>Choose <b>Add custom connector</b> and paste the address above.</li>
+            <li>Sign in with Google when Claude opens the sign-in window.</li>
+            <li>Ask it something. Eleven tools appear under the connector's name.</li>
+          </ol>
+          <p class="howto-alt">In Claude Code instead:</p>
+<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
         </div>
 
-        <div class="client-onboarding-wrapper reveal delay-1">
-          
-          <!-- Client Selector Tabs -->
-          <div class="client-tabs-nav" role="tablist">
-            <button class="client-tab-btn is-active" data-client="claude" role="tab" aria-selected="true">Claude</button>
-            <button class="client-tab-btn" data-client="cursor" role="tab" aria-selected="false">Cursor</button>
-            <button class="client-tab-btn" data-client="claude-code" role="tab" aria-selected="false">Claude Code</button>
-            <button class="client-tab-btn" data-client="chatgpt" role="tab" aria-selected="false">Codex</button>
-            <button class="client-tab-btn" data-client="vscode" role="tab" aria-selected="false">VS Code / Copilot</button>
-            <button class="client-tab-btn" data-client="antigravity" role="tab" aria-selected="false">Antigravity</button>
-            <button class="client-tab-btn" data-client="zed" role="tab" aria-selected="false">Zed</button>
-            <button class="client-tab-btn" data-client="other" role="tab" aria-selected="false">Other MCP Client</button>
-          </div>
-
-          <!-- Dynamic Client Instruction Panels -->
-          <div class="client-instruction-container">
-            
-            <!-- 1. Claude -->
-            <div class="client-panel is-active" id="panel-claude" role="tabpanel">
-              <div class="panel-step-row">
-                <span class="step-num">1</span>
-                <div class="step-content">
-                  <span class="step-text">Open <strong>Claude</strong> &rarr; <strong>Customize</strong> &rarr; <strong>Connectors</strong></span>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">2</span>
-                <div class="step-content">
-                  <span class="step-text">Click <strong>Add custom connector</strong> and paste the hosted URL:</span>
-                  <div class="copy-box-group">
-                    <code class="copyable-value">https://euroleague-analytics-mcp.fly.dev/mcp</code>
-                    <button class="snippet-copy-btn" data-copy="https://euroleague-analytics-mcp.fly.dev/mcp">Copy URL</button>
-                  </div>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">3</span>
-                <div class="step-content">
-                  <span class="step-text">Ask any EuroLeague question directly in chat. Done!</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 2. Cursor -->
-            <div class="client-panel" id="panel-cursor" role="tabpanel">
-              <div class="panel-step-row">
-                <span class="step-num">1</span>
-                <div class="step-content">
-                  <span class="step-text">Open <strong>Cursor Settings</strong> &rarr; <strong>Features</strong> &rarr; <strong>MCP</strong> &rarr; click <strong>+ Add New MCP Server</strong></span>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">2</span>
-                <div class="step-content">
-                  <span class="step-text">Choose <strong>SSE / HTTP</strong> and paste URL:</span>
-                  <div class="copy-box-group">
-                    <code class="copyable-value">https://euroleague-analytics-mcp.fly.dev/mcp</code>
-                    <button class="snippet-copy-btn" data-copy="https://euroleague-analytics-mcp.fly.dev/mcp">Copy URL</button>
-                  </div>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">3</span>
-                <div class="step-content">
-                  <span class="step-text">Save and start querying directly in Cursor Composer or Chat.</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 3. Claude Code -->
-            <div class="client-panel" id="panel-claude-code" role="tabpanel">
-              <div class="panel-step-row">
-                <span class="step-num">1</span>
-                <div class="step-content">
-                  <span class="step-text">Run this terminal command:</span>
-                  <div class="copy-box-group">
-                    <code class="copyable-value">claude mcp add --transport http euroleague-analytics https://euroleague-analytics-mcp.fly.dev/mcp</code>
-                    <button class="snippet-copy-btn" data-copy="claude mcp add --transport http euroleague-analytics https://euroleague-analytics-mcp.fly.dev/mcp">Copy Command</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 4. Codex -->
-            <div class="client-panel" id="panel-chatgpt" role="tabpanel">
-              <div class="panel-step-row">
-                <span class="step-num">1</span>
-                <div class="step-content">
-                  <span class="step-text">In <strong>Codex</strong>, open <strong>Settings</strong> &rarr; <strong>MCP servers</strong> &rarr; <strong>Add server</strong></span>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">2</span>
-                <div class="step-content">
-                  <span class="step-text">Choose <strong>Streamable HTTP</strong> and enter:</span>
-                  <div class="copy-box-group">
-                    <code class="copyable-value">https://euroleague-analytics-mcp.fly.dev/mcp</code>
-                    <button class="snippet-copy-btn" data-copy="https://euroleague-analytics-mcp.fly.dev/mcp">Copy URL</button>
-                  </div>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">3</span>
-                <div class="step-content">
-                  <span class="step-text">Save and restart Codex if prompted.</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 5. VS Code / GitHub Copilot -->
-            <div class="client-panel" id="panel-vscode" role="tabpanel">
-              <div class="panel-step-row">
-                <span class="step-num">1</span>
-                <div class="step-content">
-                  <span class="step-text">Open Command Palette (<kbd>Ctrl+Shift+P</kbd> / <kbd>Cmd+Shift+P</kbd>) &rarr; select <strong>MCP: Add Server</strong></span>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">2</span>
-                <div class="step-content">
-                  <span class="step-text">Choose <strong>HTTP</strong> and paste URL:</span>
-                  <div class="copy-box-group">
-                    <code class="copyable-value">https://euroleague-analytics-mcp.fly.dev/mcp</code>
-                    <button class="snippet-copy-btn" data-copy="https://euroleague-analytics-mcp.fly.dev/mcp">Copy URL</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 6. Google Antigravity -->
-            <div class="client-panel" id="panel-antigravity" role="tabpanel">
-              <div class="panel-step-row">
-                <span class="step-num">1</span>
-                <div class="step-content">
-                  <span class="step-text">Open Antigravity menu &rarr; <strong>Manage MCP Servers</strong> &rarr; <strong>View raw config</strong></span>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">2</span>
-                <div class="step-content">
-                  <span class="step-text">Add to <code>mcpServers</code> in <code>~/.gemini/config/mcp_config.json</code>:</span>
-                  <div class="copy-box-group">
-                    <code class="copyable-value">"euroleague-analytics": { "url": "https://euroleague-analytics-mcp.fly.dev/mcp" }</code>
-                    <button class="snippet-copy-btn" data-copy='"euroleague-analytics": { "url": "https://euroleague-analytics-mcp.fly.dev/mcp" }'>Copy JSON</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 7. Zed -->
-            <div class="client-panel" id="panel-zed" role="tabpanel">
-              <div class="panel-step-row">
-                <span class="step-num">1</span>
-                <div class="step-content">
-                  <span class="step-text">Open <strong>Settings</strong> &rarr; <strong>AI</strong> &rarr; <strong>MCP Servers</strong> &rarr; <strong>Add Server</strong> &rarr; <strong>Add Remote Server</strong></span>
-                </div>
-              </div>
-              <div class="panel-step-row">
-                <span class="step-num">2</span>
-                <div class="step-content">
-                  <span class="step-text">Paste the remote server URL:</span>
-                  <div class="copy-box-group">
-                    <code class="copyable-value">https://euroleague-analytics-mcp.fly.dev/mcp</code>
-                    <button class="snippet-copy-btn" data-copy="https://euroleague-analytics-mcp.fly.dev/mcp">Copy URL</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 8. Other MCP Client -->
-            <div class="client-panel" id="panel-other" role="tabpanel">
-              <div class="panel-step-row">
-                <span class="step-num">1</span>
-                <div class="step-content">
-                  <span class="step-text">Remote MCP URL:</span>
-                  <div class="copy-box-group">
-                    <code class="copyable-value">https://euroleague-analytics-mcp.fly.dev/mcp</code>
-                    <button class="snippet-copy-btn" data-copy="https://euroleague-analytics-mcp.fly.dev/mcp">Copy URL</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
+        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
+          <p class="client-status client-status-review">In review — submitted to the ChatGPT app directory on 2 September 2026</p>
+          <p class="client-note">
+            Once it is approved you will add it by name, with no address to
+            paste. Until then it connects the developer way, and the server
+            already speaks everything the Apps SDK asks for.
+          </p>
+          <ol class="howto">
+            <li>Turn on <b>Developer mode</b> in <b>Settings → Connectors</b>.</li>
+            <li>Choose <b>Create</b>, paste the address, and pick <b>OAuth</b>.</li>
+            <li>Sign in with Google.</li>
+          </ol>
         </div>
 
+        <div class="client-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
+          <p class="client-status client-status-verified">Verified — connected and answering, in both the CLI and Antigravity</p>
+          <ol class="howto">
+            <li>In the Gemini CLI, one command:</li>
+          </ol>
+<pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+          <ol class="howto howto-continued">
+            <li>In Antigravity: add the same address under <b>MCP servers</b>.</li>
+            <li>Check it with <code>gemini mcp list</code> — it should report connected.</li>
+          </ol>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-editor" aria-labelledby="tab-editor" hidden>
+          <p class="client-status client-status-expected">Expected from each client's published MCP specification — not yet run here</p>
+          <p class="client-note">
+            Cursor, Codex, Windsurf, Zed, Continue.dev and Goose all take a
+            remote MCP server the same way. One block in that client's own
+            configuration file:
+          </p>
+<pre class="howto-code"><code>{
+  "mcpServers": {
+    "euroleague-analytics": {
+      "url": "https://euroleague-analytics-mcp.fly.dev/mcp"
+    }
+  }
+}</code></pre>
+          <p class="client-note">
+            The MCP Inspector is verified against the same address, and is the
+            fastest way to see the eleven tools before wiring up a client.
+          </p>
+        </div>
       </div>
-    </section>
 
+      <p class="connect-note">
+        Free to use. Read-only: eleven tools that answer questions and none that
+        change anything.
+        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics/blob/master/docs/CLIENT_COMPATIBILITY.md">The full compatibility matrix</a>
+      </p>
+    </div>
+  </section>
 
-    <!-- ======================================================================
-         ACT 5: TRUST
-         ====================================================================== -->
-    <section class="act act-trust" id="trust">
-      <div class="act-inner">
-        
-        <div class="section-lead-title reveal">
-          <h2 class="act-title">Verified against ground truth.</h2>
-        </div>
+  <!-- ================= FOR THE READER WHO WANTS THE HARD VERSION =========
 
-        <div class="trust-stats-grid reveal delay-1">
-          <div class="trust-stat-card">
-            <span class="trust-num highlighter-brush">107,311</span>
-            <span class="trust-desc">Reconstructed possessions audited from play-by-play events</span>
-          </div>
-          <div class="trust-stat-card">
-            <span class="trust-num highlighter-brush">732</span>
-            <span class="trust-desc">Loaded public games across E2024 (330) and E2025 (402)</span>
-          </div>
-          <div class="trust-stat-card">
-            <span class="trust-num highlighter-brush">41,524</span>
-            <span class="trust-desc">Field goal attempts with verified court coordinates in E2024</span>
-          </div>
-          <div class="trust-stat-card">
-            <span class="trust-num highlighter-brush">99.54%</span>
-            <span class="trust-desc">Exact second-level player minute match against official box scores</span>
-          </div>
-          <div class="trust-stat-card">
-            <span class="trust-num highlighter-brush">100%</span>
-            <span class="trust-desc">Final score reconciliation (0 point discrepancies across all 732 games)</span>
-          </div>
-          <div class="trust-stat-card">
-            <span class="trust-num highlighter-brush">Active</span>
-            <span class="trust-desc">Archive backfill running; every completed season is restore-verified byte for byte before the chain advances</span>
-          </div>
-        </div>
+       It sits BELOW Connect on purpose. Section 1 of the design record says
+       anything that does not move a visitor toward connecting is pushed past
+       the point where only a curious reader goes, and this is that reader.
 
-        <div class="trust-assurance-bar reveal delay-2">
-          <span class="assurance-dot"></span>
-          <p class="assurance-text">
-            Published evaluations re-run selected questions through ground-truth SQL and the live MCP tool path. Both must reproduce the expected answer.
+       WHAT IS IN THESE THREE WINDOWS IS REAL, and that is the whole point of
+       the section. Every question below was put to the running MCP server over
+       its own stdio transport - the same registry, the same validation, the
+       same response envelope a connected assistant gets - and every figure,
+       every tool name, every argument and every caveat is what came back.
+       Nothing here was composed to look good. If one of these numbers changes
+       when the season reloads, this section is wrong and has to be re-run;
+       scripts/mcp_server.py is how it was produced.
+
+       WHY THE ANSWERS ARE PROSE AND NOT JSON. The owner's point, and he is
+       right: raw tool output is a picture of homework, not of a product. What
+       a visitor is buying is the READING - an assistant that asks the next
+       question, distrusts a number built on 43 possessions, and says what it
+       left out. Each window therefore shows one quiet, human-readable thinking
+       step and the reading. Exact calls stay in source comments for replay;
+       they are evidence for maintainers, not interface for visitors.
+
+       They are HTML rather than screenshots. Same window component as the
+       hero, so it is sharp at any size, selectable, translatable with the rest
+       of the page, and it cannot drift out of date the way a PNG silently
+       does. -->
+  <section class="deep" id="deep">
+    <div class="deep-inner">
+      <div class="deep-head on-court">
+        <h2>Ask it something hard.</h2>
+        <p class="deep-lede">
+          The hard part is the reading: asking the next question, rejecting a
+          weak answer, and naming what was left out.
+        </p>
+        <p class="figure-note">
+          Three real sessions against the running server. Every figure and
+          caveat below came back from it.
+        </p>
+      </div>
+
+      <article class="deep-case">
+        <div class="deep-copy on-court">
+          <h3>It asks the next question for you.</h3>
+          <p>
+            One threshold is an opinion. A useful answer moves the threshold and
+            shows you what happens, then tells you where the number stops being
+            worth quoting.
           </p>
         </div>
 
-      </div>
-    </section>
+        <figure class="window deep-window">
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
+          </div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">Fenerbahce look good late in games. Check it — how do
+              they score in the last two minutes with the margin inside three? Does it hold
+              if I loosen the definition? And tell me whether the number is trustworthy.</p>
+            </div>
 
+            <!-- Repro source: el_get_possessions for E2025 Fenerbahce at the
+                 full-season, 300-second/5-point and 120-second/3-point cuts. -->
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> comparing three clutch thresholds
+            </p>
 
-    <!-- ======================================================================
-         ACT 6: FINAL CONNECT & RESOLUTION
-         ====================================================================== -->
-    <section class="act act-connect" id="connect">
-      <div class="act-inner connect-inner">
-        
-        <div class="connect-lead-block reveal">
-          <h2 class="connect-title">EuroLeague Analytics</h2>
-          <p class="connect-subtitle">
-            An open-source possession-level data warehouse and MCP server for EuroLeague basketball.
+            <div class="reply is-shown">
+              <p class="reply-line">Over the whole season Fenerbahce scored 112.8 per 100
+              possessions. Narrow to the last five minutes within five points and it rises
+              to 116.4, over 159 possessions. Narrow again — last two minutes, within
+              three — and it jumps to 144.2.</p>
+              <p class="reply-line">Be careful with that last one. It rests on 43
+              possessions, about half a game's worth, and five of them straddled a
+              substitution. The direction is real; the size of it is not established. These
+              are counted possessions, not a box-score estimate, so do not compare the
+              figure with a pace number from anywhere else.</p>
+              <p class="verdict">
+                <span class="figure">144.2</span> per 100 in the clutch
+                <span class="qualifier">on 43 possessions — which is why it says so</span>
+              </p>
+            </div>
+          </div>
+        </figure>
+      </article>
+
+      <article class="deep-case deep-case-flip">
+        <div class="deep-copy on-court">
+          <h3>It takes its own answer back.</h3>
+          <p>
+            Every lineup response carries the possessions behind it and a
+            warning that small samples are noise. An assistant that reads its
+            own tool output will act on that — and the second answer is the
+            real one.
           </p>
         </div>
 
-        <div class="footer-links-strip reveal delay-1">
-          <a href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener" class="footer-link">
-            GitHub Repository &rarr;
-          </a>
-          <a href="support.html" class="footer-link">
-            Support &amp; FAQ &rarr;
-          </a>
-          <a href="privacy.html" class="footer-link">
-            Privacy Policy &rarr;
-          </a>
-          <a href="https://github.com/egemeny13/euroleague-analytics/blob/master/evaluation.xml" target="_blank" rel="noopener" class="footer-link">
-            Evaluation Suite &rarr;
-          </a>
+        <figure class="window deep-window">
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
+          </div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">Which is Panathinaikos's best five this season?</p>
+            </div>
+
+            <!-- Repro source: el_get_lineup_stats for E2025 Panathinaikos at
+                 minimum-possession thresholds 25 and 100. -->
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> checking the sample behind each lineup
+            </p>
+
+            <div class="reply is-shown">
+              <p class="reply-line">My first answer was not an answer. At a 25-possession
+              threshold the best Panathinaikos unit is Hernangomez–Holmes–Nunn–Osman–Shorts
+              at +76.6 net, over 54 possessions. That is about a quarter of a game. A number
+              like that is noise wearing a suit.</p>
+              <p class="reply-line">Raise the bar to 100 possessions and exactly one unit
+              survives: Grant–Hayes-Davis–Lessort–Nunn–Osman, +7.55 over 133 possessions.
+              That is the only five-man number here I would repeat out loud.</p>
+              <p class="verdict">
+                <span class="figure">+7.6</span> net rating
+                <span class="qualifier">over 133 possessions — the one unit that qualifies</span>
+              </p>
+            </div>
+          </div>
+        </figure>
+      </article>
+
+      <article class="deep-case">
+        <div class="deep-copy on-court">
+          <h3>It tells you what it left out.</h3>
+          <p>
+            Games that fail a validation invariant are held back from every
+            answer, and the response says how many and why. Nothing is deleted
+            and you can ask for them — but you are told before you quote a
+            number, not after.
+          </p>
         </div>
 
-        <footer class="terminal-footer reveal delay-2">
-          <div class="footer-colophon">
-            EuroLeague Analytics &middot; Open Source under MIT &middot; Built by Egemen Y&uuml;celen
+        <figure class="window deep-window">
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
           </div>
-        </footer>
-
-      </div>
-    </section>
-
-  </main>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // 1. Living basketball court canvas
-      const canvas = document.getElementById('hero-court-canvas');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        let animationFrameId;
-        let isCanvasActive = true;
-
-        const rawShots = [
-          { x: 0, y: 60, make: true }, { x: -30, y: 80, make: true }, { x: 40, y: 70, make: false },
-          { x: -70, y: 130, make: true }, { x: 60, y: 140, make: true }, { x: -10, y: 110, make: true },
-          { x: 20, y: 160, make: false }, { x: -80, y: 90, make: false },
-          { x: -160, y: 220, make: true }, { x: 170, y: 210, make: false }, { x: -140, y: 280, make: true },
-          { x: 150, y: 270, make: true }, { x: 0, y: 290, make: true }, { x: -60, y: 310, make: false },
-          { x: -340, y: 60, make: true }, { x: -340, y: 120, make: false }, { x: -340, y: 180, make: true },
-          { x: 340, y: 70, make: true }, { x: 340, y: 130, make: true }, { x: 340, y: 190, make: false },
-          { x: -280, y: 320, make: true }, { x: -220, y: 380, make: false }, { x: -120, y: 440, make: true },
-          { x: 0, y: 460, make: true }, { x: 130, y: 430, make: true }, { x: 230, y: 370, make: false }
-        ];
-
-        let width = 0, height = 0, time = 0;
-
-        function resizeCanvas() {
-          const rect = canvas.getBoundingClientRect();
-          const dpr = window.devicePixelRatio || 1;
-          width = rect.width;
-          height = rect.height;
-          canvas.width = width * dpr;
-          canvas.height = height * dpr;
-          ctx.scale(dpr, dpr);
-        }
-
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        const ball = { angle: 0, radius: 10 };
-
-        function drawCourt(centerX, baselineY, scale) {
-          ctx.save();
-          ctx.strokeStyle = '#E5E6EA';
-          ctx.lineWidth = 1.2;
-
-          const keyWidth = 190 * scale;
-          const keyHeight = 220 * scale;
-          ctx.strokeRect(centerX - keyWidth / 2, baselineY - keyHeight, keyWidth, keyHeight);
-
-          ctx.beginPath();
-          ctx.arc(centerX, baselineY - keyHeight, 70 * scale, 0, Math.PI * 2);
-          ctx.stroke();
-
-          const cornerX = 330 * scale;
-          const cornerLength = 120 * scale;
-          const arcRadius = 310 * scale;
-
-          ctx.beginPath();
-          ctx.moveTo(centerX - cornerX, baselineY);
-          ctx.lineTo(centerX - cornerX, baselineY - cornerLength);
-          ctx.arc(centerX, baselineY - 40 * scale, arcRadius, Math.PI + 0.38, 0 - 0.38, false);
-          ctx.lineTo(centerX + cornerX, baselineY);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.arc(centerX, baselineY - 40 * scale, 45 * scale, Math.PI, 0, false);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.arc(centerX, baselineY - 40 * scale, 8 * scale, 0, Math.PI * 2);
-          ctx.fillStyle = '#E2541A';
-          ctx.fill();
-          ctx.restore();
-        }
-
-        function render() {
-          if (!isCanvasActive) return;
-          time += 0.015;
-          ctx.clearRect(0, 0, width, height);
-
-          const centerX = width * 0.85;
-          const baselineY = height * 0.85;
-          const courtScale = Math.min(width / 1200, 1) * 0.85;
-
-          drawCourt(centerX, baselineY, courtScale);
-
-          rawShots.forEach((shot, index) => {
-            const sx = centerX + shot.x * courtScale;
-            const sy = baselineY - shot.y * courtScale;
-            const offset = Math.sin(time + index * 0.4) * 1.5;
-            const alpha = shot.make ? 0.4 + Math.sin(time + index) * 0.15 : 0.2;
-
-            ctx.beginPath();
-            ctx.arc(sx, sy + offset, shot.make ? 3 : 2, 0, Math.PI * 2);
-            ctx.fillStyle = shot.make ? `rgba(226, 84, 26, ${alpha})` : `rgba(97, 101, 110, ${alpha})`;
-            ctx.fill();
-          });
-
-          ball.angle += 0.007;
-          const trajectoryRadiusX = 220 * courtScale;
-          const trajectoryRadiusY = 140 * courtScale;
-          const bx = centerX + Math.cos(ball.angle) * trajectoryRadiusX;
-          const by = (baselineY - 160 * courtScale) + Math.sin(ball.angle) * trajectoryRadiusY;
-
-          ctx.save();
-          ctx.beginPath();
-          ctx.ellipse(centerX, baselineY - 160 * courtScale, trajectoryRadiusX, trajectoryRadiusY, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(226, 84, 26, 0.1)';
-          ctx.setLineDash([4, 6]);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.arc(bx, by, 9, 0, Math.PI * 2);
-          ctx.fillStyle = '#E2541A';
-          ctx.fill();
-
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(bx, by, 9, -0.4, 0.4);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(bx - 9, by);
-          ctx.lineTo(bx + 9, by);
-          ctx.stroke();
-          ctx.restore();
-
-          animationFrameId = requestAnimationFrame(render);
-        }
-
-        render();
-
-        const heroSection = document.getElementById('hero');
-        if (heroSection && 'IntersectionObserver' in window) {
-          const heroObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-              isCanvasActive = entry.isIntersecting;
-              if (isCanvasActive) {
-                cancelAnimationFrame(animationFrameId);
-                render();
-              }
-            });
-          }, { threshold: 0.05 });
-          heroObserver.observe(heroSection);
-        }
-      }
-
-      // 2. Kinetic headline & cycling hero assistant demo
-      const headlineTarget = document.getElementById('hero-headline-text');
-      const headlineCursor = document.getElementById('hero-text-cursor');
-      const mediaPromptTarget = document.getElementById('media-typed-prompt');
-      const mediaPromptCursor = document.getElementById('media-prompt-cursor');
-      const mediaToolActivity = document.getElementById('media-tool-activity');
-      const toolStatusText = document.getElementById('tool-status-text');
-      const mediaAssistantMsg = document.getElementById('media-assistant-msg');
-      const assistantLeadText = document.getElementById('assistant-lead-text');
-      const assistantStatGrid = document.getElementById('assistant-stat-grid');
-
-      const headlinePrefix = 'Ask EuroLeague questions that normally take ';
-      const headlinePunchline = 'SQL.';
-
-      const assistantScenarios = [
-        {
-          prompt: 'How did Paris perform with TJ Shorts on vs. off the floor?',
-          tool: 'Using el_get_player_on_off (PRS · TJ Shorts · E2024)…',
-          lead: 'In E2024, Paris was significantly more dangerous with TJ Shorts on the floor:',
-          statsHtml: `
-            <div class="mini-stat-card on-card">
-              <div class="mini-label">Shorts ON</div>
-              <div class="mini-val text-orange highlighter-brush">+5.09 Net</div>
-              <div class="mini-sub">116.14 ORtg &middot; 111.04 DRtg</div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">How many games is all of this built on — and is there
+              anything you are not telling me?</p>
             </div>
-            <div class="mini-stat-card off-card">
-              <div class="mini-label">Shorts OFF</div>
-              <div class="mini-val text-dark">−11.45 Net</div>
-              <div class="mini-sub">117.05 ORtg &middot; 128.50 DRtg</div>
+
+            <!-- Repro source: el_describe_warehouse, then el_get_team_stats
+                 for E2024 and E2025 with the default exclusion policy. -->
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> checking coverage and exclusions
+            </p>
+
+            <div class="reply is-shown">
+              <p class="reply-line">732 games are loaded across two seasons and 53 of them
+              are held back: 22 in 2024-25 and 31 in 2025-26. Take this season — 371 of 402
+              are used. Seventeen of the 31 failed the possession gate, twelve had a
+              statistical event attributed to a player believed to be off court, three
+              disagreed with the official box score on minutes, and one had a substitution
+              state I could not resolve.</p>
+              <p class="reply-line">I did not have to go looking for that. Every answer
+              carries it, so I cannot quote you a number without being told what is missing
+              from it. The games are not deleted and you can ask me to include them — but
+              then I would say so.</p>
+              <p class="verdict">
+                <span class="figure">679</span> of 732 games used
+                <span class="qualifier">and the 53 left out are named, not hidden</span>
+              </p>
             </div>
-          `
-        },
-        {
-          prompt: 'Which 5-man lineup had the best net rating in E2024 (min. 150 poss)?',
-          tool: 'Auditing 5-man lineup combinations across 107,311 possessions…',
-          lead: 'Paris Basketball held the #1 lineup net efficiency rating in Europe:',
-          statsHtml: `
-            <div class="mini-stat-card on-card">
-              <div class="mini-label">Paris Top Lineup</div>
-              <div class="mini-val text-orange highlighter-brush">+25.45 Net</div>
-              <div class="mini-sub">Hayes &middot; Herrera &middot; Jantunen &middot; Shorts &middot; Ward</div>
-            </div>
-            <div class="mini-stat-card off-card">
-              <div class="mini-label">Sample Size</div>
-              <div class="mini-val text-dark">184 Possessions</div>
-              <div class="mini-sub">132.8 ORtg &middot; 107.3 DRtg</div>
-            </div>
-          `
-        },
-        {
-          prompt: 'Define clutch as last 120s within 3 pts. Which offense was most efficient?',
-          tool: 'Applying caller-defined clutch filter (seconds <= 120, margin <= 3)…',
-          lead: 'Fenerbahce Beko led all teams in caller-defined clutch efficiency:',
-          statsHtml: `
-            <div class="mini-stat-card on-card">
-              <div class="mini-label">Fenerbahce Clutch</div>
-              <div class="mini-val text-orange highlighter-brush">154.84 ORtg</div>
-              <div class="mini-sub">+35.63 points per 100 over baseline</div>
-            </div>
-            <div class="mini-stat-card off-card">
-              <div class="mini-label">Clutch Efficiency</div>
-              <div class="mini-val text-dark">31 Possessions</div>
-              <div class="mini-sub">1.55 Points Per Possession</div>
-            </div>
-          `
-        }
-      ];
+          </div>
+        </figure>
+      </article>
+    </div>
+  </section>
 
-      let currentScenarioIndex = 0;
-      let isTypingPrompt = false;
+  <section class="how" id="how">
+    <div class="how-inner on-court">
+      <h2>What is behind it.</h2>
 
-      if (headlineTarget) {
-        headlineTarget.textContent = '';
-        let charIndex = 0;
-        const headlineSpeed = 18;
-        const fullHeadline = headlinePrefix + headlinePunchline;
+      <dl class="facts">
+        <div>
+          <dt>732</dt>
+          <dd>games loaded, across 2024-25 and 2025-26, with 2026-27 filling
+              nightly</dd>
+        </div>
+        <div>
+          <dt>53</dt>
+          <dd>games held back because they failed a validation check, and left
+              out of every answer unless you ask for them</dd>
+        </div>
+        <div>
+          <dt>11</dt>
+          <dd>tools, all read-only, all documented in the repository</dd>
+        </div>
+      </dl>
 
-        function typeHeadline() {
-          if (charIndex < fullHeadline.length) {
-            headlineTarget.textContent = fullHeadline.substring(0, charIndex + 1);
-            charIndex++;
-            setTimeout(typeHeadline, headlineSpeed);
-          } else {
-            headlineTarget.innerHTML = headlinePrefix + '<span class="highlighter">SQL</span>.';
-            setTimeout(() => {
-              if (headlineCursor) headlineCursor.style.display = 'none';
-              runAssistantCycle();
-            }, 200);
-          }
-        }
+      <p class="how-note">
+        <!-- The one marked phrase on the page. It is the line the whole
+             project rests on: the counting statistics are the league's, and
+             everything derived is ours. A second marker anywhere would make
+             this one a background colour. -->
+        Counting statistics are the official box score. Possessions, lineups,
+        on/off and every per-100 rate are
+        <span class="marker">this project's own reconstruction from the
+        play-by-play</span>, and every answer says which it gave you.
+        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Read the source</a>
+      </p>
+    </div>
+  </section>
 
-        setTimeout(typeHeadline, 80);
+</main>
 
-        function runAssistantCycle() {
-          if (!mediaPromptTarget || isTypingPrompt) return;
-          isTypingPrompt = true;
+<footer class="footer">
+  <div class="footer-inner on-court">
+    <span>EuroLeague Analytics</span>
+    <nav aria-label="Footer">
+      <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Source</a>
+      <a class="quiet-link" href="privacy.html">Privacy</a>
+      <a class="quiet-link" href="support.html">Support</a>
+    </nav>
+    <span class="footer-note">
+      Not affiliated with Euroleague Basketball. Data from their public API.
+    </span>
+  </div>
+</footer>
 
-          const scenario = assistantScenarios[currentScenarioIndex];
-          mediaPromptTarget.textContent = '';
-          if (mediaPromptCursor) mediaPromptCursor.style.display = 'inline-block';
-          if (mediaToolActivity) mediaToolActivity.classList.remove('is-active');
-          if (mediaAssistantMsg) mediaAssistantMsg.classList.remove('is-visible');
-
-          let pIndex = 0;
-          const typeSpeed = 22;
-
-          function typeChar() {
-            if (pIndex < scenario.prompt.length) {
-              mediaPromptTarget.textContent = scenario.prompt.substring(0, pIndex + 1);
-              pIndex++;
-              setTimeout(typeChar, typeSpeed);
-            } else {
-              setTimeout(() => {
-                if (mediaPromptCursor) mediaPromptCursor.style.display = 'none';
-                if (toolStatusText) toolStatusText.textContent = scenario.tool;
-                if (mediaToolActivity) mediaToolActivity.classList.add('is-active');
-
-                setTimeout(() => {
-                  if (assistantLeadText) assistantLeadText.textContent = scenario.lead;
-                  if (assistantStatGrid) assistantStatGrid.innerHTML = scenario.statsHtml;
-                  if (mediaAssistantMsg) mediaAssistantMsg.classList.add('is-visible');
-
-                  setTimeout(() => {
-                    if (mediaAssistantMsg) mediaAssistantMsg.classList.remove('is-visible');
-                    if (mediaToolActivity) mediaToolActivity.classList.remove('is-active');
-
-                    setTimeout(() => {
-                      currentScenarioIndex = (currentScenarioIndex + 1) % assistantScenarios.length;
-                      isTypingPrompt = false;
-                      runAssistantCycle();
-                    }, 400);
-                  }, 4600);
-
-                }, 500);
-              }, 200);
-            }
-          }
-
-          setTimeout(typeChar, 150);
-        }
-      }
-
-      // 3. Intersection Observer for reveals
-      const revealElements = document.querySelectorAll('.reveal');
-      if ('IntersectionObserver' in window) {
-        const observerOptions = { threshold: 0.12, rootMargin: '0px 0px -40px 0px' };
-        const revealObserver = new IntersectionObserver((entries, observer) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              const el = entry.target;
-              el.classList.add('is-visible');
-              if (el.classList.contains('stream-node')) {
-                const promptHeading = el.querySelector('.kinetic-prompt-text');
-                if (promptHeading && !promptHeading.dataset.animated) {
-                  promptHeading.dataset.animated = 'true';
-                  const rawText = promptHeading.getAttribute('data-text') || promptHeading.textContent.trim();
-                  promptHeading.textContent = '“';
-                  let charIdx = 0;
-                  const typeSpeed = 14;
-
-                  function typeStreamPrompt() {
-                    if (charIdx < rawText.length) {
-                      promptHeading.textContent = '“' + rawText.substring(0, charIdx + 1) + (charIdx + 1 < rawText.length ? '' : '”');
-                      charIdx++;
-                      setTimeout(typeStreamPrompt, typeSpeed);
-                    }
-                  }
-                  setTimeout(typeStreamPrompt, 100);
-                }
-              }
-              observer.unobserve(el);
-            }
-          });
-        }, observerOptions);
-        revealElements.forEach(el => revealObserver.observe(el));
-      } else {
-        revealElements.forEach(el => el.classList.add('is-visible'));
-      }
-
-      // 4. Video Showcase Player
-      const playBtn = document.getElementById('play-video-btn');
-      const videoOverlay = document.getElementById('video-cover-overlay');
-      const showcaseVideo = document.getElementById('showcase-video-player');
-
-      if (playBtn && videoOverlay && showcaseVideo) {
-        function playProductVideo() {
-          videoOverlay.classList.add('is-hidden');
-          showcaseVideo.play().catch(() => {});
-        }
-        playBtn.addEventListener('click', playProductVideo);
-        videoOverlay.addEventListener('click', (e) => {
-          if (e.target !== playBtn) playProductVideo();
-        });
-        showcaseVideo.addEventListener('pause', () => {
-          if (showcaseVideo.currentTime === 0 || showcaseVideo.ended) {
-            videoOverlay.classList.remove('is-hidden');
-          }
-        });
-      }
-
-      // 5. Client Tabs
-      const tabButtons = document.querySelectorAll('.client-tab-btn');
-      const panels = document.querySelectorAll('.client-panel');
-
-      tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const clientKey = btn.getAttribute('data-client');
-          if (!clientKey) return;
-          tabButtons.forEach(b => {
-            b.classList.remove('is-active');
-            b.setAttribute('aria-selected', 'false');
-          });
-          btn.classList.add('is-active');
-          btn.setAttribute('aria-selected', 'true');
-          panels.forEach(p => p.classList.remove('is-active'));
-          const targetPanel = document.getElementById(`panel-${clientKey}`);
-          if (targetPanel) targetPanel.classList.add('is-active');
-        });
-      });
-
-      // 6. Copy Buttons
-      document.querySelectorAll('.snippet-copy-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const textToCopy = btn.getAttribute('data-copy');
-          if (!textToCopy) return;
-          const originalText = btn.textContent;
-          try {
-            await navigator.clipboard.writeText(textToCopy);
-            btn.classList.add('copied');
-            btn.textContent = 'Copied!';
-            setTimeout(() => {
-              btn.classList.remove('copied');
-              btn.textContent = originalText;
-            }, 2000);
-          } catch (err) {
-            btn.textContent = 'Copied!';
-            setTimeout(() => {
-              btn.textContent = originalText;
-            }, 2000);
-          }
-        });
-      });
-
-      // 7. Smooth Anchor Scroll
-      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-          const targetId = this.getAttribute('href');
-          if (targetId === '#') return;
-          const targetEl = document.querySelector(targetId);
-          if (targetEl) {
-            e.preventDefault();
-            const headerHeight = document.querySelector('.site-header')?.offsetHeight || 64;
-            const targetPos = targetEl.getBoundingClientRect().top + window.pageYOffset - headerHeight - 16;
-            window.scrollTo({ top: targetPos, behavior: 'smooth' });
-          }
-        });
-      });
-    });
-  </script>
+<script src="hero.js" defer></script>
+<script src="shots.js" defer></script>
+<script src="lineups.js" defer></script>
+<script src="ask.js" defer></script>
+<script src="motion.js" defer></script>
 </body>
 </html>
