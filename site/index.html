@@ -92,52 +92,49 @@
               <div class="reply">
                 <p class="reply-line">Their most efficient five this season:</p>
                 <ul class="lineup">
-                  <li><span class="jersey" style="--club:#12305B">7</span>Hall</li>
-                  <li><span class="jersey" style="--club:#12305B">10</span>Wilbekin</li>
-                  <li><span class="jersey" style="--club:#12305B">33</span>Motley</li>
-                  <li><span class="jersey" style="--club:#12305B">1</span>Biberović</li>
-                  <li><span class="jersey" style="--club:#12305B">21</span>Sanli</li>
+                  <li><span class="jersey" style="--club:#12305B">13</span>Biberovic</li>
+                  <li><span class="jersey" style="--club:#12305B">92</span>Birch</li>
+                  <li><span class="jersey" style="--club:#12305B">20</span>Hall</li>
+                  <li><span class="jersey" style="--club:#12305B">8</span>Horton-Tucker</li>
+                  <li><span class="jersey" style="--club:#12305B">4</span>Melli</li>
                 </ul>
                 <p class="verdict">
-                  <span class="figure">+21.6</span> net rating
-                  <span class="qualifier">over 184 possessions together</span>
+                  <span class="figure">+24.5</span> net rating
+                  <span class="qualifier">over 214 possessions together</span>
                 </p>
               </div>
             </div>
 
-            <div class="exchange" data-question="Who takes over in the clutch for Real Madrid?">
+            <div class="exchange" data-question="Which team plays fastest this season?">
               <div class="from-you">
                 <p class="bubble-user">
-                  <span class="ask-ghost" aria-hidden="true">Who takes over in the clutch for Real Madrid?</span>
-                  <span class="ask-typed"></span>
-                </p>
-              </div>
-              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">counting clutch possessions</span></div>
-              <div class="reply">
-                <p class="reply-line">In the last five minutes, within five points:</p>
-                <ul class="lineup">
-                  <li><span class="jersey" style="--club:#5B2C6F">14</span>Campazzo</li>
-                </ul>
-                <p class="verdict">
-                  <span class="figure">31%</span> of their clutch possessions ended with him
-                  <span class="qualifier">across 96 such possessions this season</span>
-                </p>
-              </div>
-            </div>
-
-            <div class="exchange" data-question="Wie schnell spielt Bayern in dieser Saison?">
-              <div class="from-you">
-                <p class="bubble-user">
-                  <span class="ask-ghost" aria-hidden="true">Wie schnell spielt Bayern in dieser Saison?</span>
+                  <span class="ask-ghost" aria-hidden="true">Which team plays fastest this season?</span>
                   <span class="ask-typed"></span>
                 </p>
               </div>
               <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">counting possessions</span></div>
               <div class="reply">
-                <p class="reply-line">Bayern's pace this season:</p>
+                <p class="reply-line">Paris Basketball, by some distance:</p>
                 <p class="verdict">
-                  <span class="figure">72.4</span> possessions per 40 minutes
+                  <span class="figure">78.0</span> possessions per game
                   <span class="qualifier">counted from the event stream, not estimated from a box score</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="exchange" data-question="Wie viele Clutch-Possessions gab es diese Saison?">
+              <div class="from-you">
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Wie viele Clutch-Possessions gab es diese Saison?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">filtering by margin and clock</span></div>
+              <div class="reply">
+                <p class="reply-line">Last two minutes, within three points:</p>
+                <p class="verdict">
+                  <span class="figure">646</span> possessions
+                  <span class="qualifier">and you pick the thresholds — clutch is a filter here, not a fixed definition</span>
                 </p>
               </div>
             </div>
@@ -271,10 +268,31 @@
     </div>
   </section>
 
+  <section class="ask" id="ask">
+    <div class="ask-inner">
+      <h2>Now ask it yourself.</h2>
+      <p class="ask-lede">
+        Pick a question. Each answer was produced by the same query your own
+        assistant would run — no number here was typed by hand.
+      </p>
+
+      <!-- Chips, never a text field. A visitor handed an empty box asks a bad
+           question and leaves with a bad impression, and an endpoint that
+           accepts free text is the only version of this that is dangerous.
+           Filled from data/asks.json. -->
+      <div class="chips" id="chips" role="group" aria-label="Questions you can ask"></div>
+
+      <div class="ask-answer" id="ask-answer" aria-live="polite">
+        <p class="ask-empty">Choose one above.</p>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <script src="hero.js" defer></script>
 <script src="shots.js" defer></script>
 <script src="lineups.js" defer></script>
+<script src="ask.js" defer></script>
 </body>
 </html>

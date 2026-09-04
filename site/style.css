@@ -884,3 +884,104 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   .unit-names li { animation: none; }
 }
+
+/* ---------- the one place the visitor acts ---------- */
+
+.ask {
+  padding: clamp(4rem, 10vw, 8.5rem) var(--gutter);
+  border-top: 1px solid var(--hairline);
+  background: var(--paper-deep);
+}
+
+.ask-inner { max-width: 780px; margin: 0 auto; }
+
+.ask h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(2rem, 3.6vw, 3rem);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+
+.ask-lede {
+  margin: 1rem 0 0;
+  max-width: 46ch;
+  color: var(--ink-soft);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 2rem;
+}
+
+.chip {
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.6rem 1.05rem;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+}
+.chip:hover { border-color: var(--ink-faint); }
+.chip.is-chosen {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.ask-answer {
+  margin-top: 1.6rem;
+  min-height: 9.5rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 1.4rem 1.5rem;
+}
+
+.ask-empty { margin: 0; color: var(--ink-faint); font-size: 0.92rem; }
+
+.ask-working {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+.ask-line { margin: 0 0 0.7rem; font-size: 1rem; }
+
+.ask-verdict {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.9rem 0 0;
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
+.ask-figure {
+  font-family: var(--figures);
+  font-weight: 500;
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ball);
+}
+
+.ask-qualifier {
+  margin: 0.55rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+.ask .lineup { margin-top: 0; }
+.ask .lineup li { background: var(--paper); }
