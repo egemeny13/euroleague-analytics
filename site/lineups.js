@@ -151,9 +151,42 @@
     return markers;
   }
 
-  function setFigures(unit) {
-    net.textContent = signed(unit.net_rating);
-    poss.textContent = String(unit.possessions);
+  /* The number is the payoff of the whole section, and it used to arrive by
+     silently replacing itself - a reader looking at the floor missed it
+     entirely. The old value leaves upward, the new one drops in, and the
+     metric pulses once.
+
+     Deliberately NOT a rolling counter. Counting from +24.5 down to -34.1
+     would put -12.7 on the screen, and -12.7 is not a lineup this warehouse
+     ever measured. Every number on this page is a measurement; an animation is
+     not a licence to invent the ones in between. */
+  var SWAP_OUT_MS = 190;   // must match the 30% mark of the CSS keyframe
+
+  function swapFigure(element, text) {
+    if (element.textContent === text) return;
+    if (reduced.matches) {
+      element.textContent = text;
+      return;
+    }
+    var metric = element.parentNode;
+    element.classList.remove("is-changing");
+    if (metric) metric.classList.remove("is-changing");
+    /* Reading a layout property restarts an animation that is already
+       running; without it a second change within one cycle does nothing. */
+    void element.offsetWidth;
+    element.classList.add("is-changing");
+    if (metric) metric.classList.add("is-changing");
+    window.setTimeout(function () { element.textContent = text; }, SWAP_OUT_MS);
+  }
+
+  function setFigures(unit, animate) {
+    if (!animate) {
+      net.textContent = signed(unit.net_rating);
+      poss.textContent = String(unit.possessions);
+      return;
+    }
+    swapFigure(net, signed(unit.net_rating));
+    swapFigure(poss, String(unit.possessions));
   }
 
   function run(data) {
@@ -169,17 +202,25 @@
       markers[name].classList.add("is-off");
     }
 
-    function showStrong(animate) {
+    /* The resting state. Painting it is not part of the sequence and must never
+       be gated on anything: a page opened in a background tab used to sit at
+       the placeholder dash with an empty floor until somebody looked at it,
+       which is a broken page rather than a paused animation. */
+    function paintStrong(animate) {
       Object.keys(spots.strong).forEach(function (name) {
         var spot = spots.strong[name];
         markers[name].classList.remove("is-off", "is-leaving", "is-arriving");
         moveTo(markers[name], spot[0], spot[1]);
       });
       seat(arriving, "left");
-      setFigures(strong);
+      setFigures(strong, animate);
       swapNote.textContent = "";
       if (paint) paint.classList.remove("is-empty");
       if (emptyNote) emptyNote.hidden = true;
+    }
+
+    function showStrong() {
+      paintStrong(true);
       after(HOLD_STRONG_MS, stepOut);
     }
 
@@ -214,22 +255,18 @@
       moveTo(markers[arriving], spot[0], spot[1]);
       swapNote.textContent = leaving + " off, " + arriving + " on.";
       after(ARRIVE_MS, function () {
-        setFigures(weak);
-        after(HOLD_WEAK_MS, function () { showStrong(true); });
+        setFigures(weak, true);
+        after(HOLD_WEAK_MS, showStrong);
       });
     }
 
-    /* Somebody who asked for less motion gets the finished first unit, not a
-       sequence played quickly. */
-    if (reduced.matches || !("IntersectionObserver" in window)) {
-      Object.keys(spots.strong).forEach(function (name) {
-        markers[name].classList.remove("is-off");
-        moveTo(markers[name], spots.strong[name][0], spots.strong[name][1]);
-      });
-      seat(arriving, "left");
-      setFigures(strong);
-      return;
-    }
+    /* The floor is correct from the first paint, whoever is looking and
+       whether or not anything is going to move. */
+    paintStrong(false);
+
+    /* Somebody who asked for less motion keeps that first unit and nothing
+       else happens. */
+    if (reduced.matches || !("IntersectionObserver" in window)) return;
 
     /* On screen AND in the visible tab. A background tab still reports its
        sections as intersecting, and the sequence would play out to nobody. */
@@ -241,7 +278,7 @@
         resume();
         if (!started) {
           started = true;
-          showStrong(false);
+          after(HOLD_STRONG_MS, stepOut);
         }
       } else {
         pause();

@@ -166,7 +166,7 @@ body {
 
 .hero {
   position: relative;
-  padding: clamp(2.5rem, 7vw, 6rem) var(--gutter) clamp(4rem, 9vw, 8rem);
+  padding: clamp(2.25rem, 5vw, 4.5rem) var(--gutter) clamp(3rem, 5.5vw, 5.5rem);
   overflow: hidden;
 }
 
@@ -484,7 +484,7 @@ h1 {
    a section argues two points; the last attempt did and could not be read. */
 
 .claim {
-  padding: clamp(4rem, 10vw, 8.5rem) var(--gutter);
+  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
   border-top: 1px solid var(--hairline);
 }
 
@@ -956,6 +956,32 @@ h1 {
   border-top: 1px solid var(--hairline);
 }
 
+/* The number leaves upward and the new one drops in, and the metric behind it
+   pulses once. The text is swapped at the 30% mark, where the figure is
+   invisible, so the reader never sees the change itself - only the arrival.
+   SWAP_OUT_MS in lineups.js is that mark and the two have to agree. */
+@keyframes figure-swap {
+  0%   { transform: translateY(0);       opacity: 1; }
+  29%  { transform: translateY(-0.32em); opacity: 0; }
+  30%  { transform: translateY(0.38em);  opacity: 0; }
+  60%  { transform: translateY(0);       opacity: 1; }
+  74%  { transform: translateY(0) scale(1.06); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes figure-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.22); }
+  70%  { box-shadow: 0 0 0 14px rgba(234, 88, 12, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
+}
+
+.unit-metric { border-radius: 8px; }
+.unit-metric.is-changing { animation: figure-pulse 760ms ease-out; }
+.unit-figure.is-changing {
+  animation: figure-swap 640ms cubic-bezier(.4, 0, .2, 1);
+  transform-origin: left center;
+}
+
 .unit-figure {
   display: block;
   font-family: var(--figures);
@@ -996,15 +1022,28 @@ h1 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* The markers still get placed, they just stop travelling to get there. */
+  /* The markers still get placed, they just stop travelling to get there, and
+     the figures still change, they just stop announcing it. */
   .player { transition: none; }
   .floor-paint { transition: none; }
+  .unit-figure.is-changing,
+  .unit-metric.is-changing { animation: none; }
 }
+
+/* THE SECTION RHYTHM, measured rather than felt, 2026-09-04.
+   Every section carried 128px of padding above and below on a 1280px screen,
+   so 256px of nothing sat between any two of them. On the owner's 1536 by 730
+   screen that was 272px - more than a third of the viewport spent on emptiness
+   between one claim and the next. The scale is now 5.5vw capped at 5.5rem,
+   which is a gap of about 170px: still air, no longer a wait.
+
+   These four paddings are one decision and move together. Changing one of them
+   alone reintroduces the uneven rhythm they exist to keep. */
 
 /* ---------- the one place the visitor acts ---------- */
 
 .ask {
-  padding: clamp(4rem, 10vw, 8.5rem) var(--gutter);
+  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
   border-top: 1px solid var(--hairline);
   background: var(--paper-deep);
 }
@@ -1307,7 +1346,7 @@ main, .topbar { position: relative; z-index: 1; }
 
 .connect {
   position: relative;
-  padding: clamp(4rem, 10vw, 8.5rem) var(--gutter);
+  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
   border-top: 1px solid var(--hairline);
 }
 .connect-inner { max-width: 780px; margin: 0 auto; }
@@ -1520,7 +1559,7 @@ main, .topbar { position: relative; z-index: 1; }
 /* ---------- what is behind it ---------- */
 
 .how {
-  padding: clamp(3.5rem, 8vw, 7rem) var(--gutter);
+  padding: clamp(2.75rem, 5vw, 5rem) var(--gutter);
   border-top: 1px solid var(--hairline);
 }
 .how-inner { max-width: 780px; margin: 0 auto; }
