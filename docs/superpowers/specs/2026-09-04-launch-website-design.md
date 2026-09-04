@@ -8,8 +8,10 @@ implementation has one place to disagree with.
 design document, not a decision log: the decisions it creates are listed at the
 end and belong in `DECISIONS.md` in the pull request that implements them.
 
-**Status.** Design approved in session; not yet implemented. No site code has
-been written against it.
+**Status, 2026-09-04 end of day.** v1 is built and complete end to end on the
+branch `feat/launch-site`. Nothing is merged and nothing is deployed. Section 15
+records what the session changed after this document was first written, and
+section 16 is the remaining work.
 
 ---
 
@@ -53,16 +55,20 @@ to download" says nothing useful in Turkish; the sentence that works there is
 closer to "you are not installing an app, you connect the AI you already use,
 once". Two authored texts, one switch between them.
 
-**This collides with an existing rule and the collision is unresolved.**
-`tests/test_english_only.py` fails on any tracked file containing Turkish
+**This collided with an existing rule, and the collision is settled.**
+`tests/test_english_only.py` failed on any tracked file containing Turkish
 characters, which is `CLAUDE.md`'s "no exceptions" rule expressed as a test.
-Turkish product copy under `site/` cannot exist while that test scans it. The
-options are to exempt visitor-facing copy under `site/` from the character scan
-while keeping the rule everywhere else, or to abandon the Turkish text. Awaiting
-the owner; until then the site ships English only and the hero's demo question
-is asked in English rather than Turkish.
+Decision 53 exempts `.html` files under `site/` and nothing else: scripts and
+stylesheets stay English, comments included, which is why `site/hero.js` reads
+the demo question from a `data-question` attribute rather than holding a
+sentence of its own.
 
-English is the default. The switch remembers the visitor's choice.
+**English is the default, and the Turkish page is reached by redirect rather
+than by a button.** The owner's decision: detect the browser's language, send a
+Turkish reader to `/tr/`, and keep a small link back so nobody is trapped in a
+language they did not choose. A prominent switch was rejected; removing the
+escape hatch entirely was rejected too. Neither the page nor the redirect is
+built.
 
 `CLAUDE.md` requires English for code, comments, documentation and tool
 descriptions. Site copy is product text and is not covered by that rule; this
@@ -321,3 +327,82 @@ with its condition:
    excluded on licence and on affiliation grounds.
 5. **Proof appears inside answers rather than as a statistics row**, and every
    rate on the page carries the population it was measured over.
+
+---
+
+## 15. What the build changed, and why
+
+Written as the sections were built and reviewed by the owner one at a time.
+Where this contradicts an earlier section, this wins: it is later, and it was
+decided while looking at the thing rather than at a description of it.
+
+**Language is resolved.** Decision 53 exempts `.html` files under `site/` from
+the Turkish scan and nothing else, which is why `site/hero.js` reads the demo
+question from a `data-question` attribute instead of holding a sentence. The
+owner chose a browser-language redirect to `/tr/` with a small link back rather
+than a language button. Neither the Turkish page nor the redirect exists yet.
+
+**The hero cycles three assistants, each with its own question.** One assistant
+read as "works with that one"; the same question three times read as a loop.
+Claude, ChatGPT and Gemini, each named in text with its own brand colour, no
+logo and no imitation of anyone's interface. The owner asked about using real
+logos: reproducing a logo to state compatibility is generally permitted by these
+companies' brand guidelines, and the earlier blanket refusal in section 9 was too
+strong. What stays off limits is dressing the page up as their product.
+
+**Four beats, not two.** You ask; EuroLeague Analytics goes and reads; the
+assistant thinks; the answer arrives. The third beat is the thing the visitor is
+being asked to connect, and watching it work is what makes "connect once" mean
+something.
+
+**Never show internal identifiers.** An earlier version printed
+`Called el_get_lineup_stats` in the window. The owner's instruction: technical
+detail never appears in the interface a visitor is looking at.
+
+**Section headings are capabilities, not boasts.** They drifted into describing
+our data — "We know where every shot was taken" — and the owner stopped it. They
+are now questions a person could type: "Ask where the shots came from", "Ask
+which five actually work together".
+
+**The shot chart is E2021 game 328**, the 2022 Final Four semi-final, Olympiacos
+74-77 Anadolu Efes, pulled read-only from the immutable archive. When all 111
+attempts have landed, one card opens over Micic's buzzer three — a minimal
+callout with an orange "Game winner" flag — holds five seconds, closes, and does
+not come back. Its position is computed from that shot's coordinates.
+
+**The lineup section is two real units one substitution apart.** Fenerbahce,
+E2025: the same four players plus Birch are +24.5 over 214 possessions; plus
+Baldwin instead, -34.1 over 64. The changing player keeps a fixed row so the
+substitution moves one name rather than resorting the list.
+
+**Every number on the page is measured.** They come from the same query
+functions the MCP server calls, so the site and a connected assistant cannot
+disagree. No placeholder figures remain.
+
+**The ask section is the same window, driven by the visitor.** Chips sit where
+the text field would be. Answers are read from `site/data/asks.json` today; the
+approved live endpoint is still to be built, and every chip already carries the
+`id` it will send.
+
+**One court runs the length of the page.** Two rails are its sidelines, the
+circle at mid-page is the centre circle, keys and arcs sit at both ends, and
+each section boundary nicks the sideline. This replaced the court that sat in
+the hero's corner, and it is what stopped the sections reading as separate pages
+stacked on each other.
+
+**Palette and type.** Warm neutrals on a near-white paper; one saturated orange
+(`#EA580C`) used for exactly two things, a measured value and the one action
+worth taking. Gabarito, Figtree and IBM Plex Mono, self-hosted, sixteen faces,
+latin and latin-ext. The page makes zero third-party requests.
+
+## 16. What is left
+
+1. **The live endpoint.** Section 6's locked route: an allowlist of question
+   identifiers, cached, rate limited. The page is built to switch to it in one
+   function.
+2. **The Turkish page and the `/tr/` redirect.** The copy must be authored, not
+   translated.
+3. **R-9.** Section 7 is blocked on it. The site must not go live first.
+4. **Fine detail.** The owner has a list and is holding it until v1 is agreed.
+5. **A pull request.** `feat/launch-site` has never been reviewed, and merging
+   it publishes the site: `pages.yml` republishes on any change to `site/**`.
