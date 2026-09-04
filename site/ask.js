@@ -23,8 +23,19 @@
   var panel = document.getElementById("ask-answer");
   if (!chips || !panel) return;
 
+  /* The chosen question is echoed as your own message before the answer
+     arrives, because that is what the window looks like when a person uses it.
+     Without it the panel reads as a search result, not as a conversation. */
   function render(ask) {
     panel.textContent = "";
+
+    var mine = document.createElement("div");
+    mine.className = "from-you";
+    var bubble = document.createElement("p");
+    bubble.className = "bubble-user";
+    bubble.textContent = ask.question;
+    mine.appendChild(bubble);
+    panel.appendChild(mine);
 
     var working = document.createElement("p");
     working.className = "ask-working";
@@ -38,9 +49,17 @@
     panel.appendChild(working);
 
     window.setTimeout(function () {
-      panel.textContent = "";
+      working.remove();
+
+      var reply = document.createElement("div");
+      reply.className = "reply is-shown";
 
       if (ask.players) {
+        var lead = document.createElement("p");
+        lead.className = "reply-line";
+        lead.textContent = "Their most efficient five this season:";
+        reply.appendChild(lead);
+
         var list = document.createElement("ul");
         list.className = "lineup";
         ask.players.forEach(function (name) {
@@ -48,28 +67,30 @@
           item.textContent = name;
           list.appendChild(item);
         });
-        panel.appendChild(list);
+        reply.appendChild(list);
       } else if (ask.answer) {
         var line = document.createElement("p");
-        line.className = "ask-line";
+        line.className = "reply-line";
         line.textContent = ask.answer;
-        panel.appendChild(line);
+        reply.appendChild(line);
       }
 
       var verdict = document.createElement("p");
-      verdict.className = "ask-verdict";
+      verdict.className = "verdict";
       var figure = document.createElement("span");
-      figure.className = "ask-figure";
+      figure.className = "figure";
       figure.textContent = ask.figure;
       verdict.appendChild(figure);
       verdict.appendChild(document.createTextNode(" " + ask.unit));
-      panel.appendChild(verdict);
 
       /* The number never appears without the population behind it. */
-      var qualifier = document.createElement("p");
-      qualifier.className = "ask-qualifier";
+      var qualifier = document.createElement("span");
+      qualifier.className = "qualifier";
       qualifier.textContent = ask.qualifier;
-      panel.appendChild(qualifier);
+      verdict.appendChild(qualifier);
+
+      reply.appendChild(verdict);
+      panel.appendChild(reply);
     }, THINK_MS);
   }
 

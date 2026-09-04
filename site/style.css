@@ -985,3 +985,150 @@ h1 {
 
 .ask .lineup { margin-top: 0; }
 .ask .lineup li { background: var(--paper); }
+
+/* ---------- one court, the length of the page ----------
+   The two rails are its sidelines. They run from the top of the page to the
+   bottom, which frames the content the way a court frames play and gives the
+   sections a shared object to sit inside - the thing that was missing when
+   they read as separate pages stacked on each other.
+
+   The marks (key, arc, centre circle) are drawn by the sections themselves, so
+   they stay where they were meant to be as the content grows. Nothing here
+   moves, and nothing here is decoration: it is the subject of the site. */
+
+body { position: relative; }
+
+.courtgrid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--hairline);
+}
+.rail-left  { left: max(var(--gutter), calc(50% - 640px)); }
+.rail-right { right: max(var(--gutter), calc(50% - 640px)); }
+
+/* Where a section ends, the sideline is nicked - the same device a court uses
+   to mark a hash. It is what turns two long lines into a measured thing. */
+.claim, .ask { position: relative; }
+.claim::before, .claim::after,
+.ask::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+}
+.claim::before, .ask::before { left: max(var(--gutter), calc(50% - 640px)); transform: translateX(-2.5px); }
+.claim::after { right: max(var(--gutter), calc(50% - 640px)); transform: translateX(2.5px); }
+
+main, .topbar { position: relative; z-index: 1; }
+
+/* The centre circle and halfway line, at the middle of the page. */
+.halfway {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.halfway::before {
+  content: "";
+  position: absolute;
+  left: max(var(--gutter), calc(50% - 640px));
+  right: max(var(--gutter), calc(50% - 640px));
+  height: 1px;
+  background: var(--hairline);
+}
+.halfway span {
+  width: clamp(120px, 16vw, 210px);
+  aspect-ratio: 1;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+/* ---------- the ask window ---------- */
+
+.ask-window { margin-top: 2rem; }
+
+.ask-body {
+  min-height: 12rem;
+  display: block;
+}
+
+.ask-empty {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 0.92rem;
+}
+
+.ask-working {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+/* The chips live where the text field would be: suggestions, and the only
+   input this window can safely accept. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.9rem 1rem 1rem;
+  border-top: 1px solid var(--hairline);
+  background: var(--paper);
+}
+
+.chip {
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+}
+.chip:hover { border-color: var(--ink-faint); color: var(--ink); }
+.chip.is-chosen {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.court-end {
+  position: absolute;
+  left: max(var(--gutter), calc(50% - 640px));
+  right: max(var(--gutter), calc(50% - 640px));
+  width: auto;
+  color: var(--hairline);
+  opacity: 0.85;
+}
+.court-end-top { top: 0; }
+.court-end-bottom { bottom: 0; }
+
+@media (max-width: 860px) {
+  /* On a phone the court would be all there is. The sidelines alone still
+     frame the page; the ends are dropped. */
+  .court-end, .halfway { display: none; }
+}

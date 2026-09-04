@@ -24,26 +24,40 @@
   </nav>
 </header>
 
+<div class="courtgrid" aria-hidden="true">
+  <span class="rail rail-left"></span>
+  <span class="rail rail-right"></span>
+  <span class="halfway"><span></span></span>
+
+  <!-- The two ends of the court. Between them the rails are its sidelines and
+       the circle at mid-page is the centre circle, so the whole page is one
+       court seen end to end rather than a stack of separate pages. -->
+  <svg class="court-end court-end-top" viewBox="0 0 1500 760" fill="none">
+    <g stroke="currentColor" stroke-width="2">
+      <rect x="505" y="0" width="490" height="440"/>
+      <circle cx="750" cy="440" r="150"/>
+      <path d="M660 60 H840"/>
+      <circle cx="750" cy="120" r="34"/>
+      <path d="M170 0 V210 M1330 0 V210"/>
+      <path d="M170 210 A660 660 0 0 0 1330 210"/>
+    </g>
+  </svg>
+
+  <svg class="court-end court-end-bottom" viewBox="0 0 1500 760" fill="none">
+    <g stroke="currentColor" stroke-width="2">
+      <rect x="505" y="320" width="490" height="440"/>
+      <circle cx="750" cy="320" r="150"/>
+      <path d="M660 700 H840"/>
+      <circle cx="750" cy="640" r="34"/>
+      <path d="M170 760 V550 M1330 760 V550"/>
+      <path d="M170 550 A660 660 0 0 1 1330 550"/>
+    </g>
+  </svg>
+</div>
+
 <main id="main">
 
   <section class="hero">
-    <!-- The attacking end of one half court, drawn to FIBA proportions at
-         40 units per metre and anchored off the bottom-left corner. Only the
-         marks a viewer recognises are kept — key, free-throw circle, hoop,
-         backboard, three-point line. The sidelines and the halfway line are
-         omitted on purpose: as straight full-length rules they read as page
-         furniture rather than as a court. Nothing here moves. -->
-    <svg class="courtlines" viewBox="0 0 560 620" fill="none" aria-hidden="true" focusable="false">
-      <g stroke="currentColor" stroke-width="2.5">
-        <path d="M0 46 H119.6 M0 574 H119.6"/>
-        <path d="M119.6 46 A270 270 0 0 1 119.6 574"/>
-        <rect x="0" y="212" width="232" height="196"/>
-        <circle cx="232" cy="310" r="72"/>
-        <path d="M25 274 V346"/>
-        <circle cx="63" cy="310" r="18"/>
-      </g>
-    </svg>
-
     <div class="hero-inner">
       <div class="hero-copy">
         <h1>Add EuroLeague to the AI you already use.</h1>
@@ -272,19 +286,30 @@
     <div class="ask-inner">
       <h2>Now ask it yourself.</h2>
       <p class="ask-lede">
-        Pick a question. Each answer was produced by the same query your own
-        assistant would run — no number here was typed by hand.
+        The same window, and this time you drive it. Each answer was produced by
+        the same query your own assistant would run — no number here was typed
+        by hand.
       </p>
 
-      <!-- Chips, never a text field. A visitor handed an empty box asks a bad
-           question and leaves with a bad impression, and an endpoint that
-           accepts free text is the only version of this that is dangerous.
-           Filled from data/asks.json. -->
-      <div class="chips" id="chips" role="group" aria-label="Questions you can ask"></div>
+      <!-- The same window component as the hero, so the visitor recognises
+           where they are: this is what it looks like once it is connected. The
+           chips sit where the text field is, as suggestions, because a chip is
+           the only input this can safely accept. -->
+      <figure class="window ask-window">
+        <div class="window-bar">
+          <span class="window-app">
+            <span class="app-avatar" style="--tint:#1A1512">You</span>
+            <span>Your assistant</span>
+          </span>
+          <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
+        </div>
 
-      <div class="ask-answer" id="ask-answer" aria-live="polite">
-        <p class="ask-empty">Choose one above.</p>
-      </div>
+        <div class="window-body ask-body" id="ask-answer" aria-live="polite">
+          <p class="ask-empty">Pick one of the questions below.</p>
+        </div>
+
+        <div class="chips" id="chips" role="group" aria-label="Questions you can ask"></div>
+      </figure>
     </div>
   </section>
 
