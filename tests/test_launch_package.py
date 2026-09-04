@@ -1,9 +1,9 @@
-"""Automated verification of the R-11 public launch package for egemenyucelen.me.
+"""Automated verification of the R-11 public launch package for euroleague.egemenyucelen.me.
 
 Validates:
 1. Static site files structure, valid HTML5, and clean internal links.
 2. Zero-tracking policy: no analytics scripts, pixels, external CDNs, or cookie trackers.
-3. CNAME file correctness for custom domain egemenyucelen.me.
+3. CNAME file correctness for custom domain euroleague.egemenyucelen.me.
 4. Consistency of verified project numbers across README, site, and sponsor brief.
 5. Accurate disclosures in privacy policy regarding durable row budget and third-party providers.
 """
@@ -21,6 +21,7 @@ SITE_DIR = Path("site")
 HTML_FILES = ("index.html", "privacy.html", "support.html")
 DOC_FILES = ("SPONSOR_ONE_PAGER.md", "LAUNCH_COPY.md", "OWNER_LAUNCH_STEPS.md")
 LAUNCH_THREAD = Path("docs/LAUNCH_THREAD_FINAL.md")
+CHATGPT_SUBMISSION_RECORD = Path("docs/CHATGPT_APP_SUBMISSION.md")
 PUBLIC_LAUNCH_SURFACES = (
     Path("README.md"),
     SITE_DIR / "index.html",
@@ -121,9 +122,20 @@ def test_site_directory_and_required_files_exist() -> None:
 
 
 def test_cname_file_contains_expected_domain() -> None:
-    """CNAME file must specify egemenyucelen.me exactly."""
+    """CNAME file must specify euroleague.egemenyucelen.me exactly."""
     cname_text = (SITE_DIR / "CNAME").read_text(encoding="utf-8").strip()
-    assert cname_text == "egemenyucelen.me", f"Expected 'egemenyucelen.me', got '{cname_text}'"
+    expected = "euroleague.egemenyucelen.me"
+    assert cname_text == expected, f"Expected '{expected}', got '{cname_text}'"
+
+
+def test_chatgpt_submission_record_uses_product_subdomain() -> None:
+    """Portal-facing public URLs must all use the EuroLeague product subdomain."""
+    content = CHATGPT_SUBMISSION_RECORD.read_text(encoding="utf-8")
+    base_url = "https://euroleague.egemenyucelen.me"
+    assert f"**Website URL:** `{base_url}`" in content
+    assert f"**Support / Terms URL:** `{base_url}/support.html`" in content
+    assert f"**Privacy Policy URL:** `{base_url}/privacy.html`" in content
+    assert f"**Demo Recording:** `{base_url}/preview.mp4`" in content
 
 
 def test_html_files_have_valid_html5_structure() -> None:

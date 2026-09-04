@@ -57,7 +57,7 @@ Pre-drafted social announcement threads and launch posts in English for the publ
 ### Tweet 7 (Open Source & Portfolio)
 > Fully open source (MIT).
 >
-> 🌐 Landing & Docs: https://egemenyucelen.me
+> 🌐 Landing & Docs: https://euroleague.egemenyucelen.me
 > 💻 GitHub: https://github.com/egemeny13/euroleague-analytics
 >
 > Built for basketball analysts, data engineers, and AI developers. Check it out and let us know what you think! 🏀🤖
@@ -77,7 +77,7 @@ Pre-drafted social announcement threads and launch posts in English for the publ
 >
 > The entire codebase, database migration history, and dual-path test suite are open source under the MIT License.
 >
-> 🔗 Website & Setup Guide: https://egemenyucelen.me
+> 🔗 Website & Setup Guide: https://euroleague.egemenyucelen.me
 > 🔗 GitHub Repository: https://github.com/egemeny13/euroleague-analytics
 >
 > #BasketballAnalytics #EuroLeague #DataEngineering #MCP #OpenSource #DataScience #Python #PostgreSQL

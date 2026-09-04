@@ -2979,8 +2979,10 @@ application anywhere in this repository; the site is static files under `site/`.
 output directory.
 
 **The decision, and its boundary.** Vercel publishes **branch previews only**.
-The site's home is GitHub Pages at `egemenyucelen.me`, published by `pages.yml`
-on any change to `site/**` on master, and that does not change. Two publishers
+The site's home is GitHub Pages at `euroleague.egemenyucelen.me`, published by
+`pages.yml` on any change to `site/**` on master. On 2026-09-05, the owner chose
+the product subdomain so the apex `egemenyucelen.me` remains available for a
+separate personal site. Two publishers
 of one site is a question - "which one is live?" - that must have a written
 answer before it is asked, and the answer is: Pages is the site, Vercel is a
 window onto a branch.

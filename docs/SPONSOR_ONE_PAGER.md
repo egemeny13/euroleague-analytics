@@ -65,7 +65,7 @@ The automated archive backfill is working toward all **21 historical seasons (E2
 ## 5. What Sponsors Receive
 
 1. **Full Historical Query Access**: Dedicated, authenticated access to query 20 seasons of European basketball data through MCP and SQL — E2007 to E2026, which is every season the public API serves. Measured 2026-09-03: E2006 and older return an empty body at every game endpoint, so they do not exist to be sold. See `DECISIONS.md` item 52.
-2. **Prominent Recognition**: Sponsor acknowledgment on the project landing site (`egemenyucelen.me`), repository README, and research reports.
+2. **Prominent Recognition**: Sponsor acknowledgment on the project landing site (`euroleague.egemenyucelen.me`), repository README, and research reports.
 3. **Collaborative Analytics**: Direct communication on custom tool development, statistical studies, and deep-dive analytics for European basketball.
 
 ---
@@ -76,5 +76,5 @@ To discuss collaboration or request a private test demonstration:
 
 - **Egemen Yücelen**
 - Email: [egemenyucelen@gmail.com](mailto:egemenyucelen@gmail.com)
-- Website: [egemenyucelen.me](https://egemenyucelen.me)
+- Website: [euroleague.egemenyucelen.me](https://euroleague.egemenyucelen.me)
 - GitHub: [github.com/egemeny13/euroleague-analytics](https://github.com/egemeny13/euroleague-analytics)
