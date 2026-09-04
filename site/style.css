@@ -794,22 +794,49 @@ h1 {
 }
 
 .unit-names li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
   padding: 0.62rem 0;
   border-bottom: 1px solid var(--hairline);
   font-family: var(--display);
   font-weight: 500;
   font-size: clamp(1.05rem, 1.7vw, 1.35rem);
   letter-spacing: -0.02em;
-  animation: name-in 420ms cubic-bezier(.2,.7,.3,1) both;
 }
 .unit-names li:last-child { border-bottom: 0; }
 
-/* The one that changed is the only thing the eye should find. */
-.unit-names li.is-changed { color: var(--ball); }
-.unit-names li.is-leaving { animation: name-out 460ms cubic-bezier(.4,0,.2,1) both; }
+/* Club colour and shirt number, both from our own data. No crest. */
+.unit-jersey {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--club);
+  color: #fff;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.72rem;
+  display: grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
 
-@keyframes name-in  { from { opacity: 0; transform: translateY(7px); } }
-@keyframes name-out { to   { opacity: 0; transform: translateX(-16px); } }
+/* The changing player keeps one row to himself, so the substitution moves one
+   name instead of resorting the list under the reader. */
+.unit-slot { position: relative; }
+.unit-names li.is-changed .unit-jersey { background: var(--ball); }
+.unit-names li.is-entering { animation: slot-in 480ms cubic-bezier(.2,.7,.3,1) both; }
+.unit-names li.is-leaving {
+  position: absolute;
+  left: 0;
+  right: 0;
+  animation: slot-out 480ms cubic-bezier(.4,0,.2,1) both;
+  pointer-events: none;
+}
+
+@keyframes slot-in  { from { opacity: 0; transform: translateY(-12px); } }
+@keyframes slot-out { to   { opacity: 0; transform: translateY(12px); } }
 
 .unit-verdict {
   display: flex;
