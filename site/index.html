@@ -401,7 +401,7 @@
 
       <div class="address">
         <code id="server-url">https://euroleague-analytics-mcp.fly.dev/mcp</code>
-        <button class="copy" type="button" id="copy-url" data-copied="Copied">Copy</button>
+        <button class="copy" type="button" id="copy-url" data-copied="Copied" data-select="Press Ctrl+C">Copy</button>
       </div>
 
       <div class="clients">
@@ -420,10 +420,8 @@
             <li>Sign in with Google when Claude opens the sign-in window.</li>
             <li>Ask it something. Eleven tools appear under the connector's name.</li>
           </ol>
-          <p class="howto-alt">
-            In Claude Code instead:
-            <code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code>
-          </p>
+          <p class="howto-alt">In Claude Code instead:</p>
+<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
@@ -443,7 +441,10 @@
         <div class="client-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
           <p class="client-status client-status-verified">Verified — connected and answering, in both the CLI and Antigravity</p>
           <ol class="howto">
-            <li>In the Gemini CLI: <code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></li>
+            <li>In the Gemini CLI, one command:</li>
+          </ol>
+<pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+          <ol class="howto howto-continued">
             <li>In Antigravity: add the same address under <b>MCP servers</b>.</li>
             <li>Check it with <code>gemini mcp list</code> — it should report connected.</li>
           </ol>

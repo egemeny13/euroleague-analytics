@@ -1438,23 +1438,39 @@ main, .topbar { position: relative; z-index: 1; }
   gap: 0.55rem;
   max-width: 56ch;
 }
+/* The number hangs in the margin and the step reads as one sentence.
+   This was a grid with a 1.6rem marker column, copied from the block-level
+   list it replaced. Grid makes every child its own item, and these steps are
+   inline content - "Open ", <b>Settings</b>, ", then ", <b>Connectors</b> - so
+   each fragment was laid into the next cell and the sentence came apart, one
+   bold word per line, overlapping the line above. Inline content needs inline
+   flow; the marker gets out of the way instead. */
 .howto li {
   counter-increment: howto;
-  display: grid;
-  grid-template-columns: 1.6rem 1fr;
-  gap: 0.7rem;
+  position: relative;
+  padding-left: 2.3rem;
   font-size: 0.94rem;
+  line-height: 1.55;
   color: var(--ink-soft);
 }
 .howto li::before {
   content: counter(howto);
+  position: absolute;
+  left: 0;
+  top: 0.08em;
+  width: 1.6rem;
   font-family: var(--figures);
   font-size: 0.8rem;
   color: var(--ink-faint);
-  padding-top: 0.15rem;
 }
 .howto b { color: var(--ink); font-weight: 600; }
 
+/* Inline code is for short things only - a command name, a flag. A long
+   command in here breaks mid-word and its box splits across two lines with a
+   border down the middle of a URL, so long commands are block-level instead
+   (.howto-code below). `break-word` rather than `break-all`: it breaks a word
+   only when the word alone will not fit, which is what stops a short token
+   being chopped for no reason. */
 .howto code,
 .howto-alt code {
   font-family: var(--figures);
@@ -1463,16 +1479,24 @@ main, .topbar { position: relative; z-index: 1; }
   border: 1px solid var(--hairline);
   border-radius: 5px;
   padding: 0.1em 0.4em;
-  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
+/* The Gemini steps are numbered across a code block, so the second list has to
+   carry on counting rather than start again at one. */
+.howto-continued { counter-reset: howto 1; }
+
 .howto-alt {
-  margin: 1.1rem 0 0;
+  margin: 1.4rem 0 0;
   font-size: 0.88rem;
   color: var(--ink-faint);
   max-width: 56ch;
 }
 
+/* One command per line, never broken with a backslash continuation: that is a
+   shell-ism that fails in PowerShell and survives a copy badly. A command too
+   wide for the card scrolls inside the card instead, which is the one place
+   horizontal scrolling is the right answer. */
 .howto-code {
   margin: 1.1rem 0 0;
   padding: 1rem 1.15rem;
