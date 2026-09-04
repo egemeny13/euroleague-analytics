@@ -1018,14 +1018,20 @@ h1 {
   color: var(--ink-faint);
 }
 
-/* Its own line ABOVE the two figures, and it holds that line whether or not
-   there is anything to say. A caption that appears and disappears would move
-   everything below it every few seconds. */
+/* The third column of the row, not a line of its own. `flex-basis: 100%` used
+   to force it onto its own line, which spent a whole row on one short sentence;
+   it now shares the row with the two figures and wraps under them only when the
+   row genuinely runs out of width.
+
+   It still reserves its height whether or not there is anything to say. A
+   caption that appears and disappears would move everything below it every few
+   seconds. */
 .unit-swap {
-  flex-basis: 100%;
-  margin: 0 0 0.2rem;
+  flex: 1 1 11rem;
+  margin: 0;
   min-height: 1.3em;
   font-size: 0.85rem;
+  line-height: 1.45;
   color: var(--ink-soft);
 }
 

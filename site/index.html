@@ -387,11 +387,11 @@
         </div>
 
         <div class="unit-verdict">
-          <!-- The swap line leads the numbers rather than trailing them. It
-               names what changed on the floor, so it is the sentence the two
-               figures are an answer to; underneath them it was read last, after
-               the reader had already stopped looking. -->
-          <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
+          <!-- Three things on ONE row, left to right: the net rating, the
+               possessions behind it, and what changed on the floor. The swap
+               line had its own full-width line under the numbers, then its own
+               line above them; both spent a whole row on one short sentence.
+               It is the third column now and the row costs what one row costs. -->
           <div class="unit-metric">
             <span class="unit-figure" id="unit-net">—</span>
             <span class="unit-label">net rating</span>
@@ -400,6 +400,7 @@
             <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
             <span class="unit-label">possessions together</span>
           </div>
+          <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
         </div>
 
       </div>
