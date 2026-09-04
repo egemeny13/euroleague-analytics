@@ -237,9 +237,50 @@
     </div>
   </section>
 
+  <section class="claim claim-flip" id="lineups">
+    <div class="claim-inner">
+      <div class="claim-copy">
+        <h2>Change one player, and it is a different team.</h2>
+        <p>
+          Four of these five stay on the floor. Only the fifth changes — and
+          Fenerbahce goes from outscoring everyone to being outscored by
+          nearly as much.
+        </p>
+        <p class="figure-note figure-note-tight">
+          Fenerbahce, 2025-26. Both units are the same four players plus one.
+          Net rating is points scored minus points allowed per 100 possessions,
+          counted from the event stream.
+        </p>
+      </div>
+
+      <div class="claim-figure">
+        <!-- Two real units, one substitution apart. The names, the possession
+             counts and the ratings are filled in from data/lineups.json, which
+             was produced by the same query the MCP server answers with. -->
+        <div class="unit" id="unit">
+          <ol class="unit-names" id="unit-names"></ol>
+
+          <div class="unit-verdict">
+            <div class="unit-metric">
+              <span class="unit-figure" id="unit-net">—</span>
+              <span class="unit-label">net rating</span>
+            </div>
+            <div class="unit-metric">
+              <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
+              <span class="unit-label">possessions together</span>
+            </div>
+          </div>
+
+          <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <script src="hero.js" defer></script>
 <script src="shots.js" defer></script>
+<script src="lineups.js" defer></script>
 </body>
 </html>
