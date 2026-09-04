@@ -429,8 +429,44 @@
           <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
         </div>
 
+        <!-- THE EMPTY STATE IS THE INVITATION, and it used to be an
+             instruction: "Pick one of the questions below." in faint grey, in
+             an otherwise empty box. The owner, reading the built page as a
+             visitor: this section is pale and motionless, so I do not feel like
+             clicking anything.
+
+             The scorer is the character, and he is the one thing on this page
+             that is waiting for you. He is at the scorer's table, which is what
+             this project is - somebody writing down every event as it happens.
+             The pen is the only orange in the drawing because the pen is the
+             part doing the recording.
+
+             Two other directions were drawn and are one line of markup away:
+             site/_mascots.html holds all three side by side. He is removed from
+             the panel by ask.js the moment a question is asked, which is the
+             point of him: he was waiting, and now he has gone to read. -->
         <div class="window-body ask-body" id="ask-answer" aria-live="polite">
-          <p class="ask-empty">Pick one of the questions below.</p>
+          <div class="ask-empty">
+            <svg class="mascot" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+              <g class="mascot-body">
+                <circle cx="34" cy="24" r="12.5" stroke="var(--ink-soft)" stroke-width="2.2"/>
+                <g class="mascot-eyes">
+                  <circle cx="30" cy="23" r="2.6" fill="var(--ink)"/>
+                  <circle cx="39" cy="23" r="2.6" fill="var(--ink)"/>
+                </g>
+                <path d="M16 56 A18 18 0 0 1 52 56" stroke="var(--ink-soft)" stroke-width="2.2"/>
+                <path d="M6 56 H74" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M48 56 V44 H70 V56" stroke="var(--ink-faint)" stroke-width="1.8"/>
+                <path d="M53 51 H65 M53 47 H65" stroke="var(--ink-faint)" stroke-width="1.8"/>
+                <path d="M58 46 L67 33" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M67 33 L70 29" stroke="var(--ball)" stroke-width="3.2" stroke-linecap="round"/>
+              </g>
+            </svg>
+            <p class="ask-invite">
+              <b>Ask me something.</b>
+              <span>Pick one of the questions below and I will go and read it.</span>
+            </p>
+          </div>
         </div>
 
         <div class="chips" id="chips" role="group" aria-label="Questions you can ask"></div>

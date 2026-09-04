@@ -1324,13 +1324,57 @@ main, .topbar { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) {
   .toolcall-spinner { animation: none; }
   .ask-body { scroll-behavior: auto; }
+  /* He is still there, he is just still. */
+  .mascot-eyes, .mascot-body { animation: none; }
 }
 
+/* The invitation, and the one thing on the page that is waiting for you. */
 .ask-empty {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
   margin: 0;
-  color: var(--ink-faint);
-  font-size: 0.92rem;
 }
+
+.mascot {
+  flex: none;
+  width: 78px;
+  height: 78px;
+  overflow: visible;
+}
+
+.ask-invite { margin: 0; }
+.ask-invite b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--ink);
+}
+.ask-invite span {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--ink-faint);
+}
+
+/* Waiting, not performing. Two slow movements, both small enough that they
+   register at the edge of vision rather than asking to be watched: a breath,
+   and a glance that keeps coming back to you. The page's other motion happens
+   ONCE and stops, and this is the deliberate exception - a character that
+   stops moving is a character that has left, and the whole job here is to look
+   like somebody is still there. */
+@keyframes mascot-glance {
+  0%, 42%   { transform: translateX(0); }
+  52%, 74%  { transform: translateX(2.2px); }
+  84%, 100% { transform: translateX(-1.6px); }
+}
+@keyframes mascot-breathe {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2.5px); }
+}
+.mascot-eyes { animation: mascot-glance 4.6s ease-in-out infinite; }
+.mascot-body { animation: mascot-breathe 3.8s ease-in-out infinite; }
 
 .ask-working {
   display: flex;
