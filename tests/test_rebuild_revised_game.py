@@ -56,7 +56,6 @@ from euroleague.live import GameNotRebuildableError, RebuildSummary, rebuild_rev
 from euroleague.parse import (
     RAW_BOXSCORE_PLAYER_COLUMNS,
     RAW_BOXSCORE_TEAM_COLUMNS,
-    RAW_EVENT_COLUMNS,
     RAW_GAME_COLUMNS,
     RAW_SHOT_COLUMNS,
 )
@@ -71,11 +70,12 @@ REBUILT_GAME = 2
 # is COPYied in. Asserting the whole set - not a sample - is what makes
 # "the rebuild cannot reach a second game" a claim about all of its writes: a
 # table added later that nobody scoped shows up here as an unexpected key.
+# Since migration 0023 the event stream is staged once, as `stage_game_event`;
+# there is no `stage_raw_event`.
 STAGED_COLUMNS: dict[str, tuple[str, ...]] = {
     "stage_raw_game": RAW_GAME_COLUMNS,
     "stage_raw_boxscore_player": RAW_BOXSCORE_PLAYER_COLUMNS,
     "stage_raw_boxscore_team": RAW_BOXSCORE_TEAM_COLUMNS,
-    "stage_raw_event": RAW_EVENT_COLUMNS,
     "stage_raw_shot": RAW_SHOT_COLUMNS,
     "stage_player": ("player_id", "display_name"),
     "stage_team": ("team_code",),
@@ -95,7 +95,6 @@ DELETED_TABLES = {
     "player_game_minutes",
     "game_quality",
     "lineup_stint",
-    "raw_event",
     "raw_boxscore_player",
     "raw_boxscore_team",
     "raw_game",
@@ -334,7 +333,7 @@ def test_a_failure_part_way_through_rolls_back_once_and_commits_nothing(
     with pytest.raises(RuntimeError):
         rebuild_revised_game(connection, cache, SEASON, REBUILT_GAME)
 
-    assert connection.copied["stage_raw_event"], "the failure must land part-way, not first"
+    assert connection.copied["stage_raw_boxscore_team"], "the failure must land part-way, not first"
     assert connection.transactions_started == 1
     assert connection.transactions_committed == 0
     assert connection.transactions_rolled_back == 1
@@ -392,9 +391,15 @@ def test_the_game_event_delete_precedes_every_delete_it_points_at(
     assert order.index("game_event") < order.index("lineup_stint")
     # possession references lineup_stint, so it goes first among the parents.
     assert order.index("possession") < order.index("lineup_stint")
-    # raw_event cascades into game_event; the derived layer is already gone.
-    assert order.index("game_event") < order.index("raw_event")
-    assert order.index("raw_event") < order.index("raw_game")
+    # Since migration 0023 no raw table cascades into game_event, so nothing
+    # forces the derived delete ahead of the raw ones. The order is kept
+    # explicit anyway: the derived layer is gone before any raw row it was
+    # built from, and the two boxscore tables go before the raw_game row they
+    # reference.
+    for raw_table in ("raw_boxscore_player", "raw_boxscore_team", "raw_game"):
+        assert order.index("game_event") < order.index(raw_table)
+    assert order.index("raw_boxscore_player") < order.index("raw_game")
+    assert order.index("raw_boxscore_team") < order.index("raw_game")
 
 
 def test_a_rebuild_prunes_only_old_dimensions_that_became_unreferenced(
@@ -442,11 +447,15 @@ def test_the_build_reads_the_whole_season_while_the_write_names_one_game(
     assert {row[1] for row in connection.copied["stage_game_event"]} == {REBUILT_GAME}
     # Every staged table is accounted for in the reported counts, dimension
     # tables included - a count silently dropped on the floor is a rebuild
-    # whose log line understates what it wrote.
-    assert set(summary.counts) == {table.removeprefix("stage_") for table in STAGED_COLUMNS}
+    # whose log line understates what it wrote. `events_parsed` is the one
+    # count that is not a table: it is how many play-by-play rows the parser
+    # produced, and it must equal the rows staged for `game_event`.
+    staged_tables = {table.removeprefix("stage_") for table in STAGED_COLUMNS}
+    assert set(summary.counts) == staged_tables | {"events_parsed"}
     assert "raw_shot" in summary.counts
     for table in STAGED_COLUMNS:
         assert summary.counts[table.removeprefix("stage_")] == len(connection.copied[table])
+    assert summary.counts["events_parsed"] == len(connection.copied["stage_game_event"])
 
 
 def test_a_cache_missing_another_played_game_refuses_to_rebuild(
@@ -641,7 +650,7 @@ def test_the_summary_names_the_game_and_carries_no_credential() -> None:
         season_code="E2026",
         gamecode=17,
         season_games_built=42,
-        counts={"raw_event": 458, "game_event": 458},
+        counts={"events_parsed": 458, "game_event": 458},
     )
 
     line = summary.as_log_line()
@@ -664,10 +673,11 @@ def test_the_rebuilt_rows_come_from_the_revised_bytes(
     A rebuild that read a stale build, or that rebuilt some other game, would
     pass every scope assertion above and still be useless. So the source bytes
     are revised - one event removed from the first quarter - and the staged
-    rows are required to move with them, in the raw layer and the derived layer
-    alike. The event is removed from the END of the quarter so that no
-    surviving event's position in the array changes: `ingest_index` is assigned
-    in array order and must never be disturbed.
+    rows are required to move with them: the parser's event count and the
+    `game_event` rows staged from it, which since migration 0023 is the only
+    place the event stream is written. The event is removed from the END of
+    the quarter so that no surviving event's position in the array changes:
+    `ingest_index` is assigned in array order and must never be disturbed.
     """
     before = loader_connection()
     cache = _season_cache(live_cache, fixture_games_root)
@@ -681,9 +691,9 @@ def test_the_rebuilt_rows_come_from_the_revised_bytes(
     after = loader_connection()
     revised = rebuild_revised_game(after, cache, SEASON, REBUILT_GAME)
 
-    assert revised.counts["raw_event"] == original.counts["raw_event"] - 1
+    assert revised.counts["events_parsed"] == original.counts["events_parsed"] - 1
     assert revised.counts["game_event"] == original.counts["game_event"] - 1
-    assert len(after.copied["stage_raw_event"]) == len(before.copied["stage_raw_event"]) - 1
+    assert len(after.copied["stage_game_event"]) == len(before.copied["stage_game_event"]) - 1
     # The build population is unchanged: one game's bytes were revised, and the
     # correction flag is still decided from the whole season.
     assert revised.season_games_built == original.season_games_built

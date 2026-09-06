@@ -1292,3 +1292,29 @@ choose it. That claim stays unmade, as the previous section says.
 **What fills the queue.** Only what Phase 9 returns. The public API still has
 season totals and standings, measured in `exploration/SEASON_ENDPOINT_PROBE.md`;
 they are not a backlog, they are the second list in `docs/SCOPE.md`.
+
+## Hot window space work: Tiers A, B and D. 2026-09-07.
+
+The owner asked whether the hot database could shrink without losing an MCP
+feature or a gate proof, then approved three of the four tiers in
+`docs/superpowers/plans/2026-09-06-hot-window-space-plan.md`. Each is its own
+migration, rehearsed on a disposable PostgreSQL 17.11 loaded from the local
+cache, and recorded in `docs/evidence/`.
+
+- **Tier A, migration 0021, Decision 66.** Four raw-layer indexes no query
+  could use. 19.6 MB on production.
+- **Tier B, migration 0022, Decision 67.** Lineup-reference questions moved
+  from `game_event` to `lineup_stint`; five derived-layer indexes dropped.
+  27.8 MB on production. A full-season derived rebuild went from 209 s to
+  80 s on the rehearsal copy.
+- **Tier D, migration 0023, Decision 68.** `raw_event` dropped; the event
+  stream is stored once and proved against the parsed cache. 70.9 MB on
+  production. Four proofs replaced or given up, each named in the decision.
+- **Tier C** stays parked: it needs a table rewrite and was judged not worth
+  its 28 MB now.
+
+**What none of this establishes.** The production figures. Every number above
+is either the 2026-09-06 production measurement of what the migration removes
+or a rehearsal on one fresh season; the whole-database size before and after
+each production apply is what gets recorded next. Decision 21's bytes per game
+is re-measured once E2026 has games.

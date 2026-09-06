@@ -225,7 +225,9 @@ def test_confirmation_raw_load_includes_points_before_derived_fingerprinting(
 
     def load_raw(connection, cache, season_code: str, *, progress):
         calls.append("raw")
-        return {"raw_event": 10}
+        # The loader reports parsed events under `events_parsed` since
+        # migration 0023 removed the `raw_event` table it used to count.
+        return {"events_parsed": 10}
 
     def load_shots(connection, cache, season_code: str, *, progress):
         calls.append("shots")
@@ -237,7 +239,7 @@ def test_confirmation_raw_load_includes_points_before_derived_fingerprinting(
     counts = load_confirmation_raw_rows(object(), object(), "E2024")
 
     assert calls == ["raw", "shots"]
-    assert counts == {"raw_event": 10, "raw_shot": 4}
+    assert counts == {"events_parsed": 10, "raw_shot": 4}
 
 
 def test_confirmation_checks_production_baseline_before_starting_batched_build(

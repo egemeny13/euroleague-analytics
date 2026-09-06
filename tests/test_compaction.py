@@ -58,8 +58,8 @@ def test_a_changed_checksum_is_a_mismatch() -> None:
 
 
 def test_a_changed_row_count_is_a_mismatch_even_when_the_checksum_is_unread() -> None:
-    baseline = {"raw_event": (176_483, "8903cbc6336b21f2a94a3d2212219f87")}
-    observed = {"raw_event": (176_482, "8903cbc6336b21f2a94a3d2212219f87")}
+    baseline = {"game_event_source": (176_483, "ed8de487b6be091b24ad73ad3848c19d")}
+    observed = {"game_event_source": (176_482, "ed8de487b6be091b24ad73ad3848c19d")}
     (mismatch,) = compare_fingerprints(baseline, observed)
     assert mismatch.reason == "row count"
 

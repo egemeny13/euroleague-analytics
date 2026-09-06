@@ -37,7 +37,7 @@ def _no_rows() -> dict[str, int]:
         "raw_game": 0,
         "raw_boxscore_player": 0,
         "raw_boxscore_team": 0,
-        "raw_event": 0,
+        "events_parsed": 0,
     }
 
 

@@ -328,7 +328,7 @@ def test_a_new_live_game_consumes_points_before_its_source_marker_can_advance(
     monkeypatch.setattr(
         live_module,
         "load_game",
-        lambda *args: {"raw_event": 4, "raw_boxscore_player": 10},
+        lambda *args: {"events_parsed": 4, "raw_boxscore_player": 10},
     )
     monkeypatch.setattr(
         live_module,

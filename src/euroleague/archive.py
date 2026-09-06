@@ -1121,7 +1121,7 @@ def reconcile_warehouse_archive_gap(
     """Reconcile warehouse parsed data tables against raw_api_response archive index entries.
 
     For each season and endpoint (Points -> raw_shot, Boxscore -> raw_game,
-    PlaybyPlay -> raw_event), evaluates whether parsed rows exist in warehouse
+    PlaybyPlay -> game_event), evaluates whether parsed rows exist in warehouse
     tables while corresponding archive index records in raw_api_response are missing or short.
 
     Blind spot / Failure modes not detected:
@@ -1147,7 +1147,7 @@ def reconcile_warehouse_archive_gap(
     }
     event_counts = {
         row[0]: (row[1], row[2])
-        for row in _query("season_code, COUNT(DISTINCT gamecode), COUNT(*)", "raw_event")
+        for row in _query("season_code, COUNT(DISTINCT gamecode), COUNT(*)", "game_event")
     }
     shot_counts = {
         row[0]: (row[1], row[2])

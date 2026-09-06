@@ -192,7 +192,7 @@ def test_run_live_pipeline_orchestration_for_competitions(
         live_module,
         "load_new_raw_games",
         lambda conn, c, season, games, **kwargs: (
-            raw_games_loaded.append(season) or {"raw_event": 10}
+            raw_games_loaded.append(season) or {"events_parsed": 10}
         ),
     )
     monkeypatch.setattr(

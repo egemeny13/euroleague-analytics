@@ -12,7 +12,6 @@ from euroleague.config import DatabaseSettings
 from euroleague.parse import (
     RAW_BOXSCORE_PLAYER_COLUMNS,
     RAW_BOXSCORE_TEAM_COLUMNS,
-    RAW_EVENT_COLUMNS,
     RAW_GAME_COLUMNS,
     RAW_SHOT_COLUMNS,
     ParsedGameRows,
@@ -40,8 +39,13 @@ _TABLES = (
         RAW_BOXSCORE_TEAM_COLUMNS,
         lambda game: game.teams,
     ),
-    ("raw_event", "stage_raw_event", RAW_EVENT_COLUMNS, lambda game: game.events),
 )
+# The event stream is not in this tuple on purpose. Until migration 0023 it was
+# written twice, here as `raw_event` and again as `game_event` by the derived
+# loader. Now only `game_event` holds it, and the gate proves that table
+# against the parsed cache instead of against a second copy. See DECISIONS.md
+# item 68. `RAW_EVENT_COLUMNS` stays in `parse.py` because it is the parser's
+# row type, not a table.
 
 
 def played_games(schedule_data: Iterable[dict]) -> list[dict]:
@@ -148,10 +152,10 @@ def delete_raw_game_rows(cursor: Any, season_code: str, gamecode: int) -> None:
 
     Every parameter is the season and the gamecode being replaced, so no
     statement here can reach a second game. `raw_game` goes last because the
-    other three reference it.
+    other two reference it.
     """
     params = (season_code, gamecode)
-    for target in ("raw_event", "raw_boxscore_player", "raw_boxscore_team"):
+    for target in ("raw_boxscore_player", "raw_boxscore_team"):
         cursor.execute(
             f"DELETE FROM {target} WHERE season_code = %s AND gamecode = %s",
             params,
@@ -167,11 +171,18 @@ def insert_staged_raw_game_rows(cursor: Any) -> None:
 
 
 def load_game(connection: Any, parsed: ParsedGameRows) -> dict[str, int]:
-    """Replace one complete game's four parsed raw row sets in one transaction."""
+    """Replace one complete game's three parsed raw row sets in one transaction.
+
+    `events_parsed` in the returned counts is how many play-by-play rows the
+    parser produced for the game. It is reported so the operator still sees
+    the event volume per game, but no raw table receives those rows: the
+    derived loader writes them to `game_event`.
+    """
     with connection.transaction(), connection.cursor() as cursor:
         counts = stage_raw_game_rows(cursor, parsed)
         delete_raw_game_rows(cursor, parsed.game.season_code, parsed.game.gamecode)
         insert_staged_raw_game_rows(cursor)
+    counts["events_parsed"] = len(parsed.events)
     return counts
 
 
@@ -315,6 +326,7 @@ def load_cached_season(
         )
 
     totals = {target: 0 for target, *_ in _TABLES}
+    totals["events_parsed"] = 0
     for index, schedule_game in enumerate(games, start=1):
         gamecode = int(schedule_game["gameCode"])
         counts = load_game(connection, parse_cached_game(cache, season_code, schedule_game))
@@ -322,7 +334,7 @@ def load_cached_season(
             totals[table] += count
         progress(
             f"[{index:>3}/{len(games)}] game {gamecode:>3}: "
-            f"{counts['raw_event']:,} events, {counts['raw_boxscore_player']:,} players"
+            f"{counts['events_parsed']:,} events, {counts['raw_boxscore_player']:,} players"
         )
 
     # Re-loading a season replaces every game and leaves old row versions for
@@ -330,9 +342,7 @@ def load_cached_season(
     # ANALYZE refreshes planner statistics. VACUUM FULL is deliberately not
     # routine loader work: it rewrites and exclusively locks each table.
     with connection.cursor() as cursor:
-        cursor.execute(
-            "VACUUM (ANALYZE) raw_game, raw_boxscore_player, raw_boxscore_team, raw_event"
-        )
+        cursor.execute("VACUUM (ANALYZE) raw_game, raw_boxscore_player, raw_boxscore_team")
     return totals
 
 

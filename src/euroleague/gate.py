@@ -121,10 +121,22 @@ _SNAPSHOT_QUERIES = {
             md5(to_jsonb(t)::text), '' order by gamecode, team_code, row_kind
         ), '')) from raw_boxscore_team t where season_code = %s
     """,
-    "raw_event": """
+    # The event stream's source columns, hashed from `game_event` since
+    # migration 0023 removed `raw_event`. Only the eleven columns the parser
+    # supplies are hashed, by name, so a derived column added to the table or
+    # a derived rule that changes cannot move this checksum: it answers "did
+    # the source rows change", the question `raw_event`'s fingerprint used to
+    # answer. See DECISIONS.md item 68.
+    "game_event_source": """
         select count(*), md5(coalesce(string_agg(
-            md5(to_jsonb(t)::text), '' order by gamecode, ingest_index
-        ), '')) from raw_event t where season_code = %s
+            md5(jsonb_build_object(
+                'season_code', season_code, 'gamecode', gamecode,
+                'ingest_index', ingest_index, 'competition_code', competition_code,
+                'source_list', source_list, 'numberofplay', numberofplay,
+                'playtype', playtype, 'player_id', player_id, 'codeteam', codeteam,
+                'markertime', markertime, 'minute', minute
+            )::text), '' order by gamecode, ingest_index
+        ), '')) from game_event where season_code = %s
     """,
     "raw_shot": """
         select count(*), md5(coalesce(string_agg(
@@ -198,11 +210,17 @@ def assert_warehouse_reconciles(
     games while keeping the gate fast enough to run repeatedly.
     """
     schedule = cache.read_schedule_json(season_code).get("data") or []
+    # `game_event` stands where `raw_event` stood until migration 0023: it is
+    # the only table holding the event stream, so its per-game count is what
+    # must equal the parser's. One state this cannot see: a season whose raw
+    # rows are loaded and whose derived rows are not yet built reads zero
+    # events and fails here. That is correct, and the live pipeline runs this
+    # gate after the derive step for exactly that reason.
     expected_by_game: dict[str, dict[int, int]] = {
         "raw_game": {},
         "raw_boxscore_player": {},
         "raw_boxscore_team": {},
-        "raw_event": {},
+        "game_event": {},
     }
     for schedule_game in schedule:
         parsed = parse_cached_game(cache, season_code, schedule_game)
@@ -210,7 +228,7 @@ def assert_warehouse_reconciles(
         expected_by_game["raw_game"][gamecode] = 1
         expected_by_game["raw_boxscore_player"][gamecode] = len(parsed.players)
         expected_by_game["raw_boxscore_team"][gamecode] = len(parsed.teams)
-        expected_by_game["raw_event"][gamecode] = len(parsed.events)
+        expected_by_game["game_event"][gamecode] = len(parsed.events)
 
     for table, expected in expected_by_game.items():
         actual = _counts_by_game(connection, table, season_code)
@@ -443,8 +461,62 @@ def projected_window_bytes(
     return int(current_bytes + unloaded_games * bytes_per_game)
 
 
-def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str, int]:
-    """Prove one season's dimensions and event rows still match the raw layer."""
+SOURCE_EVENT_COLUMNS = (
+    "season_code",
+    "gamecode",
+    "ingest_index",
+    "competition_code",
+    "source_list",
+    "numberofplay",
+    "playtype",
+    "player_id",
+    "codeteam",
+    "markertime",
+    "minute",
+)
+
+
+def _source_event_differences(
+    connection: Any, cache: ResponseCache, season_code: str
+) -> list[tuple[int, int]]:
+    """Compare `game_event`'s source columns against the parsed cache, row for row.
+
+    Until migration 0023 this comparison ran inside the database between
+    `raw_event` and `game_event`. Now the source side is the cache file the
+    loader read, parsed by the same production parser, so the proof is against
+    the bytes rather than against a second table. Rows are matched by key,
+    never sorted: the dictionaries are keyed by `(gamecode, ingest_index)` and
+    compared as sets, which is a comparison of the event stream, not an
+    ordering of it.
+
+    Returns the keys that differ: present on one side only, or present on both
+    with a different value in any of the eleven source columns.
+    """
+    column_sql = ", ".join(SOURCE_EVENT_COLUMNS)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"SELECT {column_sql} FROM game_event WHERE season_code = %s",
+            (season_code,),
+        )
+        stored = {(int(row[1]), int(row[2])): tuple(row) for row in cursor.fetchall()}
+
+    expected: dict[tuple[int, int], tuple] = {}
+    schedule = cache.read_schedule_json(season_code).get("data") or []
+    for schedule_game in schedule:
+        parsed = parse_cached_game(cache, season_code, schedule_game)
+        for event in parsed.events:
+            row = tuple(getattr(event, column) for column in SOURCE_EVENT_COLUMNS)
+            expected[(int(row[1]), int(row[2]))] = row
+
+    differences = [key for key in expected.keys() ^ stored.keys()]
+    differences += [key for key in expected.keys() & stored.keys() if expected[key] != stored[key]]
+    return differences
+
+
+def assert_phase5_base_reconciles(
+    connection: Any, cache: ResponseCache, season_code: str
+) -> dict[str, int]:
+    """Prove one season's dimensions and event rows still match the raw layer and the cache."""
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -464,46 +536,6 @@ def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str
 
         cursor.execute(
             """
-            SELECT count(*) FROM (
-                (SELECT season_code, gamecode, ingest_index
-                 FROM raw_event WHERE season_code = %s
-                 EXCEPT
-                 SELECT season_code, gamecode, ingest_index
-                 FROM game_event WHERE season_code = %s)
-                UNION ALL
-                (SELECT season_code, gamecode, ingest_index
-                 FROM game_event WHERE season_code = %s
-                 EXCEPT
-                 SELECT season_code, gamecode, ingest_index
-                 FROM raw_event WHERE season_code = %s)
-            ) differences
-            """,
-            (season_code,) * 4,
-        )
-        key_differences = int(cursor.fetchone()[0])
-
-        cursor.execute(
-            """
-            SELECT count(*)
-            FROM raw_event raw
-            JOIN game_event derived
-              USING (season_code, gamecode, ingest_index)
-            WHERE raw.season_code = %s
-              AND (raw.competition_code IS DISTINCT FROM derived.competition_code
-                   OR raw.source_list IS DISTINCT FROM derived.source_list
-                   OR raw.numberofplay IS DISTINCT FROM derived.numberofplay
-                   OR raw.playtype IS DISTINCT FROM derived.playtype
-                   OR raw.player_id IS DISTINCT FROM derived.player_id
-                   OR raw.codeteam IS DISTINCT FROM derived.codeteam
-                   OR raw.markertime IS DISTINCT FROM derived.markertime
-                   OR raw.minute IS DISTINCT FROM derived.minute)
-            """,
-            (season_code,),
-        )
-        payload_differences = int(cursor.fetchone()[0])
-
-        cursor.execute(
-            """
             SELECT count(*) FROM game_event
             WHERE season_code = %s
               AND free_throw_trip_id IS NOT NULL
@@ -517,10 +549,11 @@ def assert_phase5_base_reconciles(connection: Any, season_code: str) -> dict[str
         )
         coach_players = int(cursor.fetchone()[0])
 
-    if key_differences or payload_differences:
+    source_differences = _source_event_differences(connection, cache, season_code)
+    if source_differences:
         raise AssertionError(
-            f"game_event differs from raw_event: keys={key_differences}, "
-            f"payload_rows={payload_differences}."
+            f"game_event differs from the parsed cache for {season_code}: "
+            f"{len(source_differences)} rows, first {sorted(source_differences)[:10]}."
         )
     if phase6_rows:
         raise AssertionError(f"Found {phase6_rows} game_event rows with a free-throw trip.")

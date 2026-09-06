@@ -1,0 +1,140 @@
+{
+  "season": "E2024",
+  "schema": "space_e2024",
+  "sizes_before": {
+    "tables": {
+      "raw_api_fetch": 16384,
+      "raw_api_response": 32768,
+      "raw_event": 23306240,
+      "raw_boxscore_player": 1826816,
+      "team_season": 49152,
+      "team": 32768,
+      "player": 73728,
+      "lineup_stint": 3719168,
+      "lineup": 1712128,
+      "player_game_minutes": 1105920,
+      "game_event": 52944896,
+      "game_quality": 122880,
+      "game_source_state": 16384,
+      "possession": 13770752,
+      "season_progress": 16384,
+      "roster_registration": 40960,
+      "raw_boxscore_team": 319488,
+      "raw_game": 188416,
+      "mcp_row_budget_policy": 16384,
+      "mcp_row_daily_budget": 16384,
+      "person_game_link": 32768,
+      "mcp_row_usage": 24576,
+      "raw_shot": 8323072
+    },
+    "total": 107708416
+  },
+  "snapshot_before": {
+    "raw_api_response": [
+      0,
+      "d41d8cd98f00b204e9800998ecf8427e"
+    ],
+    "raw_api_fetch": [
+      0,
+      "d41d8cd98f00b204e9800998ecf8427e"
+    ],
+    "raw_game": [
+      330,
+      "706239e43e0f039eea2e09c0447fba4b"
+    ],
+    "raw_boxscore_player": [
+      7863,
+      "986a2671f24298557a86d6111cc63fe8"
+    ],
+    "raw_boxscore_team": [
+      1320,
+      "30ddfdfa405dee9650247635711b5908"
+    ],
+    "game_event_source": [
+      176483,
+      "ed8de487b6be091b24ad73ad3848c19d"
+    ],
+    "raw_shot": [
+      51193,
+      "7eb905723f2626f32d9f7c364d95d085"
+    ]
+  },
+  "raw_event_rows_before": 176483,
+  "migration_seconds": 0.01819280005292967,
+  "sizes_after": {
+    "tables": {
+      "raw_api_fetch": 16384,
+      "raw_api_response": 32768,
+      "raw_boxscore_player": 1826816,
+      "team_season": 49152,
+      "team": 32768,
+      "player": 73728,
+      "lineup_stint": 3719168,
+      "lineup": 1712128,
+      "player_game_minutes": 1105920,
+      "game_event": 52944896,
+      "game_quality": 122880,
+      "game_source_state": 16384,
+      "possession": 13770752,
+      "season_progress": 16384,
+      "roster_registration": 40960,
+      "raw_boxscore_team": 319488,
+      "raw_game": 188416,
+      "mcp_row_budget_policy": 16384,
+      "mcp_row_daily_budget": 16384,
+      "person_game_link": 32768,
+      "mcp_row_usage": 24576,
+      "raw_shot": 8323072
+    },
+    "total": 84402176
+  },
+  "snapshot_after": {
+    "raw_api_response": [
+      0,
+      "d41d8cd98f00b204e9800998ecf8427e"
+    ],
+    "raw_api_fetch": [
+      0,
+      "d41d8cd98f00b204e9800998ecf8427e"
+    ],
+    "raw_game": [
+      330,
+      "706239e43e0f039eea2e09c0447fba4b"
+    ],
+    "raw_boxscore_player": [
+      7863,
+      "986a2671f24298557a86d6111cc63fe8"
+    ],
+    "raw_boxscore_team": [
+      1320,
+      "30ddfdfa405dee9650247635711b5908"
+    ],
+    "game_event_source": [
+      176483,
+      "ed8de487b6be091b24ad73ad3848c19d"
+    ],
+    "raw_shot": [
+      51193,
+      "7eb905723f2626f32d9f7c364d95d085"
+    ]
+  },
+  "game_event_source_unchanged_by_migration": true,
+  "per_game_event_counts_match_parser": true,
+  "source_event_differences": 0,
+  "source_comparison_seconds": 4.485901599982753,
+  "phase5_base": {
+    "player": 306,
+    "team": 18,
+    "team_season": 18,
+    "game_event": 176483,
+    "possession": 47829
+  },
+  "phase5_base_seconds": 4.543839499994647,
+  "tamper_detected": [
+    [
+      1,
+      3
+    ]
+  ],
+  "bytes_freed": 23306240
+}

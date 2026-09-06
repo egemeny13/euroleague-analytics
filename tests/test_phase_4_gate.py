@@ -221,22 +221,24 @@ def test_live_phase_4_gate() -> None:
         "raw_game": 330,
         "raw_boxscore_player": 7863,
         "raw_boxscore_team": 1320,
-        "raw_event": 176483,
+        "game_event": 176483,
         "raw_shot": 51193,
     }
+    # The snapshot fingerprints the event stream's source columns out of
+    # `game_event` under the key `game_event_source`, and the reconciliation
+    # counts the same table per game under `game_event` (DECISIONS.md item 68).
+    # The two must agree on the row count.
     assert {table: value.count for table, value in snapshot.items()} == {
-        table: reconciliation[table]
-        for table in (
-            "raw_api_response",
-            "raw_api_fetch",
-            "raw_game",
-            "raw_boxscore_player",
-            "raw_boxscore_team",
-            "raw_event",
-            "raw_shot",
-        )
+        "raw_api_response": reconciliation["raw_api_response"],
+        "raw_api_fetch": reconciliation["raw_api_fetch"],
+        "raw_game": reconciliation["raw_game"],
+        "raw_boxscore_player": reconciliation["raw_boxscore_player"],
+        "raw_boxscore_team": reconciliation["raw_boxscore_team"],
+        "game_event_source": reconciliation["game_event"],
+        "raw_shot": reconciliation["raw_shot"],
     }
-    assert len(sizes) == 16
+    # Fifteen public tables since migration 0023 dropped `raw_event`.
+    assert len(sizes) == 15
 
     # The physical-size gate, re-scoped on 2026-08-19 under Decision 20
     # Condition B. It asserted that all 23 archived seasons fit in the free

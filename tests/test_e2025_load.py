@@ -5,6 +5,7 @@ from __future__ import annotations
 import psycopg
 import pytest
 
+from euroleague.cache import ResponseCache
 from euroleague.config import DatabaseSettings
 from euroleague.gate import (
     TableFingerprint,
@@ -22,9 +23,10 @@ SEASON = "E2025"
 def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
     """Break caught: any E2025 layer is partial, duplicated, or built from another season."""
     settings = DatabaseSettings.from_env()
+    cache = ResponseCache("exploration/cache")
     with psycopg.connect(settings.url()) as connection:
         raw = warehouse_snapshot(connection, SEASON)
-        base = assert_phase5_base_reconciles(connection, SEASON)
+        base = assert_phase5_base_reconciles(connection, cache, SEASON)
         derived = assert_phase5_reconciles(connection, SEASON)
         fingerprints = derived_snapshot(connection, SEASON)
 
@@ -34,7 +36,7 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
         "raw_game": 402,
         "raw_boxscore_player": 9_540,
         "raw_boxscore_team": 1_608,
-        "raw_event": 222_976,
+        "game_event_source": 222_976,
         "raw_shot": 64_137,
     }
     assert base == {
@@ -157,7 +159,11 @@ def test_live_e2024_fingerprints_match_order_5_and_order_9() -> None:
         "raw_game": TableFingerprint(330, "706239e43e0f039eea2e09c0447fba4b"),
         "raw_boxscore_player": TableFingerprint(7_863, "986a2671f24298557a86d6111cc63fe8"),
         "raw_boxscore_team": TableFingerprint(1_320, "30ddfdfa405dee9650247635711b5908"),
-        "raw_event": TableFingerprint(176_483, "8903cbc6336b21f2a94a3d2212219f87"),
+        # `game_event_source` replaced the `raw_event` fingerprint
+        # (8903cbc6...) when migration 0023 dropped the table. The checksum
+        # was captured on the rehearsal schema on 2026-09-07 and must equal
+        # the production capture after the apply (DECISIONS.md item 68).
+        "game_event_source": TableFingerprint(176_483, "ed8de487b6be091b24ad73ad3848c19d"),
         "raw_shot": TableFingerprint(51_193, "7eb905723f2626f32d9f7c364d95d085"),
     }
     assert derived == {
