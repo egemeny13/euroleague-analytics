@@ -3464,6 +3464,65 @@ against a replay record, and a recording of them would be a picture of homework.
 itself lands as `site/hero-demo.mp4`, `site/hero-demo.webm` and
 `site/hero-demo.jpg`. Until it does, the slot is empty and the window shows.
 
+**Landed 2026-09-06, second take.** The first take was rejected by the owner
+for four things and each is now a rule for any re-recording: no cursor in
+frame (the Claude-in-Chrome extension draws one at page centre on every tool
+call, so nothing may call the extension while the tab is being captured); no
+personal name (the greeting keeps the logo and reads "Good evening"); typing at
+a human pace, character by character; and the whole answer visible (the
+transcript scrolls to its end before the clip stops). Two further takes came
+back in Turkish under the account's cross-conversation memory; the recording
+is made in an incognito chat on Low effort, which gives a short English answer.
+
+## 61. Every animated figure on the site plays as a recording of itself; the scripts become fallbacks
+
+**Decided 2026-09-06 by the owner**, extending Decision 60 from the hero to the
+rest of the page. His words: the site should play video recordings rather than
+run scripts, for the shot chart, the substitution floor, the "Now ask it
+yourself" window and the "Ask it something hard" windows alike.
+
+**Two kinds of recording, and they are not the same claim.**
+
+- *The shot chart and the floor* are this site's own figures. There is no
+  assistant to film, so they are recorded from this page itself - Playwright,
+  CDP screencast at 2x, cropped to the card - and the recording is, pixel for
+  pixel, the drawn animation. Nothing is imitated and nothing is new; what
+  changes is that every visitor now sees the same frames at the same tempo,
+  and a slow device no longer stutters the pour.
+- *The "Now ask it yourself" chips* were a drawn window replaying canned
+  answers. Each chip now plays a real recording of Claude answering that
+  question over this server, made the way the hero was (Decision 60). The
+  chips were never live (Decision 6's endpoint is unbuilt), so nothing is lost;
+  what is gained is that the window stops being a drawing of an assistant.
+  Decision 9's rule against imitating anyone's interface is what made the
+  owner reject the drawn window, and it is why the answer is a recording and
+  not a closer imitation.
+
+**The condition, shared with Decision 60.** A recording is an upgrade, never a
+dependency. Every drawn figure stays in the markup and is what shows until the
+browser fires `canplay`; a missing or unplayable file leaves the page as it was.
+Under `prefers-reduced-motion` the drawn figure shows in its finished state and
+no recording starts. `site/demo-video.js` is the single place this rule lives.
+
+**Numbers beside a recording follow its clock.** The shot counter and the floor's
+net rating and possessions used to be driven by the same script that drew the
+animation. They now read the video's `currentTime` against beats measured in
+the clip (`POUR_START` in shots.js; `LEAVE_AT`, `ARRIVE_AT`, `BACK_AT` in
+lineups.js). **Re-recording a clip means re-measuring those numbers**; the
+comments say how they were read.
+
+**What this reverses.** Decision 59 kept "Ask it something hard" as HTML
+transcript rather than screenshots for three reasons: staleness, translation,
+and sharpness on unknown displays. The owner has weighed those and chosen
+screenshots of real conversations for that section; the same three costs from
+the Decision 60 table apply and are accepted. The replay record in the source
+comments stays, so the figures in the screenshots remain checkable.
+
+**Status at the time of writing.** Shot chart and floor: landed. Ask-it-yourself
+recordings: the Fenerbahce clip exists (it is the hero's); the other three are
+being recorded. Hard-section screenshots: not started. Each lands in its own
+commit and this entry is amended when the section is complete.
+
 ## Rules to add to the project instruction file
 
 ```
