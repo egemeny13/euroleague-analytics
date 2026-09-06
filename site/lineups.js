@@ -62,6 +62,17 @@
 
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+  /* The recording of this floor (Decision 61) and where its beats fall. The
+     clip was cut from a capture of this page so that it loops: it opens on the
+     strong five, Birch leaves at LEAVE_AT, Baldwin has arrived by ARRIVE_AT
+     (LEAVE_AT + LEAVE_MS + SPREAD_MS + ARRIVE_MS), and the strong five is
+     restored from BACK_AT. Measured 2026-09-06 by sampling Birch's spot frame
+     by frame; if the clip is re-recorded these three numbers must be re-read. */
+  var video = document.getElementById("lineups-video");
+  var LEAVE_AT = 1.4;
+  var ARRIVE_AT = 3.5;
+  var BACK_AT = 7.7;
+
   /* ---- a clock that only runs while the section is being looked at ---- */
   var pending = null;
   var armedAt = 0;
@@ -272,8 +283,45 @@
        sections as intersecting, and the sequence would play out to nobody. */
     var started = false;
     var visible = false;
+    var filmed = false;
+
+    /* With the recording playing, the floor is the video and this script only
+       keeps the figures and the note in step with it. The states are the same
+       four beats as the drawn sequence; only the clock is different. */
+    function followVideo() {
+      filmed = true;
+      pause();
+      pending = null;
+      var state = "";
+      (function tick() {
+        var t = video.currentTime;
+        var next = t < LEAVE_AT ? "strong"
+                 : t < ARRIVE_AT ? "changing"
+                 : t < BACK_AT ? "weak"
+                 : "strong";
+        if (next !== state) {
+          state = next;
+          if (state === "strong") {
+            setFigures(strong, true);
+            swapNote.textContent = "";
+          } else if (state === "changing") {
+            swapNote.textContent = leaving + " off.";
+          } else {
+            swapNote.textContent = leaving + " off, " + arriving + " on.";
+            setFigures(weak, true);
+          }
+        }
+        window.requestAnimationFrame(tick);
+      })();
+    }
+
+    if (video) {
+      if (video.closest(".has-video")) followVideo();
+      else video.addEventListener("demo-video-ready", followVideo);
+    }
 
     function settle() {
+      if (filmed) return;
       if (visible && document.visibilityState === "visible") {
         resume();
         if (!started) {

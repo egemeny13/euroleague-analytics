@@ -788,6 +788,32 @@ h1 {
   pointer-events: none;
 }
 
+/* ---------- recorded demos (Decision 61) ----------
+   The recording was taken of the whole card - border, padding and corners
+   included - so once it plays, the card's own frame is switched off and the
+   video is the card. Until canplay (demo-video.js) nothing here applies and
+   the drawn figure is what shows. */
+.demo-video {
+  display: none;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-lg);
+}
+.has-video > .demo-video { display: block; }
+.courtwrap.has-video,
+.floor.has-video {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.has-video > .halfcourt,
+.has-video > .court-overlay,
+.has-video > .floor-court,
+.has-video > .floor-players,
+.has-video > .floor-empty { display: none; }
+/* The bar was the anticipation for the drawn pour; the recording carries its own. */
+.claim-figure.has-video .chartbar { display: none; }
+
 .callout {
   position: absolute;
   width: min(17rem, 74%);

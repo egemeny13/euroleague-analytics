@@ -187,7 +187,15 @@
       </div>
 
       <div class="claim-figure">
-        <div class="courtwrap">
+        <div class="courtwrap" data-demo-host>
+        <!-- The chart below, recorded from this page itself at 2x (Decision 61).
+             Plays once and rests on the finished chart. The drawn chart stays
+             as the fallback and the reduced-motion version. -->
+        <video class="demo-video" id="shots-video" muted playsinline preload="auto"
+               poster="shots-demo.jpg" aria-hidden="true">
+          <source src="shots-demo.webm" type="video/webm">
+          <source src="shots-demo.mp4" type="video/mp4">
+        </video>
         <!-- Drawn to FIBA dimensions in centimetres, the same units the source
              coordinates arrive in, so a shot lands where the league recorded it
              rather than where a hand-tuned transform puts it. -->
@@ -351,7 +359,15 @@
              five, and Baldwin is a guard. The substitution therefore does not
              swap like for like - it takes the centre off the floor and leaves
              the paint empty. That is the shape behind the number. -->
-        <div class="floor" id="floor">
+        <div class="floor" id="floor" data-demo-host>
+          <!-- One full substitution cycle recorded from this page at 2x, cut
+               to loop seamlessly (Decision 61). The figures beside it follow
+               the recording's clock in lineups.js. -->
+          <video class="demo-video" id="lineups-video" muted loop playsinline preload="auto"
+                 poster="lineups-demo.jpg" aria-hidden="true">
+            <source src="lineups-demo.webm" type="video/webm">
+            <source src="lineups-demo.mp4" type="video/mp4">
+          </video>
           <svg class="floor-court" viewBox="-820 -60 1640 1160" fill="none" aria-hidden="true">
             <!-- The same FIBA numbers as the shot chart above, mirrored the
                  same way, so the two sections are one court and not two
@@ -793,6 +809,7 @@
 </footer>
 
 <script src="hero.js" defer></script>
+<script src="demo-video.js" defer></script>
 <script src="shots.js" defer></script>
 <script src="lineups.js" defer></script>
 <script src="ask.js" defer></script>
