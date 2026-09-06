@@ -3554,6 +3554,17 @@ The three hard-section clips open on the question already sent: the owner
 judged that watching it typed a fourth time, after the hero, showed the
 visitor nothing new.
 
+**Second review, same night, clip by clip.** The stills-with-dissolve cut was
+itself rejected: the dissolve read as an effect, and two of the four clips had
+answers that fit the frame and needed no scroll or still at all. The rule that
+came out of it: **if the answer fits, end on it and hold; if it does not, either
+cut hard between as many scenes as the answer has parts (the clutch answer has
+three - text, chart, verdict), or re-record with a slow scroll written into the
+capture so the whole answer passes at reading speed.** Case 3 was re-recorded
+that way (the live answer changed in wording, not in figures). No dissolves
+anywhere. The page was also pulled in toward its centre line at the owner's
+request (columns 1180 to 1100 px, rails 1280 to 1200, a wider gutter).
+
 **Playback rules, set by the owner the same evening and kept in
 `site/demo-video.js` alone:** nothing loads until its host is within half a
 screen (`preload="none"`, so a visitor who leaves from the hero pays for no
