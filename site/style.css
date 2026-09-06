@@ -557,6 +557,52 @@ h1 {
 /* The film's own ground is the page's paper, so a borderless shape would have
    no edge; one hairline, inside the radius, gives it one. */
 .film-stage { box-shadow: inset 0 0 0 1px var(--hairline); }
+
+/* It grows in as it arrives (demo-video.js sets the scale from the scroll
+   position, 0.5 below the fold to 1 two thirds of the way up), from its bottom
+   centre, as antigravity's does. Under reduced motion the script never runs
+   and the shape simply sits at its size. */
+.film-stage {
+  position: relative;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .film-stage { transform: none !important; }
+}
+
+/* Over the film the pointer is the control: the system cursor goes, and a
+   white pill that reads Play or Pause follows the hand. Only where there is a
+   fine pointer to follow. */
+@media (hover: hover) and (pointer: fine) {
+  .film-stage[data-cursor] { cursor: none; }
+}
+.demo-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.4rem 0.85rem 1.1rem;
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  font-family: var(--text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0);
+  transition: opacity var(--dur-hover) var(--ease-hover);
+  will-change: transform;
+  z-index: 2;
+}
+.demo-cursor.is-shown { opacity: 1; }
+.demo-cursor-glyph { font-size: 0.8em; }
 /* Progress line and hint sit under the shape, not inside it, in the film's
    own column. */
 .film-inner > .demo-progress,
