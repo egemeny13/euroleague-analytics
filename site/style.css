@@ -56,7 +56,16 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  /* The Connect and "see how it works" links point down the page. Without
+     this the page jumps; with it the page travels, at the browser's own
+     tempo, and the visitor keeps their bearings. */
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
 
 body {
   margin: 0;
@@ -745,7 +754,24 @@ h1 {
    coordinates rather than from a hand-picked offset, so it cannot drift away
    from the thing it points at when the chart is resized. */
 
-.courtwrap { position: relative; }
+/* The same card as .floor two sections down. Until 2026-09-06 this court sat
+   bare on the paper while the substitution court sat in a white frame, and the
+   owner read the two as two designs. One court, one frame. */
+.courtwrap {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  padding: 0.75rem;
+}
+
+/* Inset by the card's padding, like .floor-players, so the callout's
+   percentages measure the court and not the frame. */
+.court-overlay {
+  position: absolute;
+  inset: 0.75rem;
+  pointer-events: none;
+}
 
 .callout {
   position: absolute;
