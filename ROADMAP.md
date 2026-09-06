@@ -1313,6 +1313,19 @@ cache, and recorded in `docs/evidence/`.
 - **Tier C** stays parked: it needs a table rewrite and was judged not worth
   its 28 MB now.
 
+**Applied to production on 2026-09-06 UTC**, from the owner's terminal, one
+migration at a time with sizes recorded in `docs/evidence/`:
+
+| Migration | Database before | Database after | Freed |
+|---|---:|---:|---:|
+| 0021 | 364,326,035 | 344,755,347 | 19,570,688 |
+| 0022 | 344,755,347 | 316,984,467 | 27,770,880 |
+| 0023 | 316,984,467 | 264,334,483 | 52,649,984 |
+
+100.0 MB in total, 27.4 % of the database, with two seasons loaded. Decision
+68's condition held: production's `game_event_source` checksums for E2024
+and E2025 equalled the rehearsal baselines on the day of the apply.
+
 **What none of this establishes.** The production figures. Every number above
 is either the 2026-09-06 production measurement of what the migration removes
 or a rehearsal on one fresh season; the whole-database size before and after
