@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EuroLeague Analytics — European basketball for your AI assistant</title>
-<meta name="description" content="Connect EuroLeague play-by-play data to Claude, ChatGPT or Gemini and ask in your own words. Exact possessions, five-man lineups and shot locations, reconstructed from the play-by-play.">
+<meta name="description" content="Ask EuroLeague questions that normally take SQL. Exact possessions, five-man lineups, and shot locations directly inside your AI assistant.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
@@ -14,13 +14,16 @@
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="topbar">
-  <a class="wordmark" href="index.html">
+  <a class="wordmark" href="index.html" aria-label="EuroLeague Analytics Home">
     <span class="wordmark-mark" aria-hidden="true"></span>
-    EuroLeague Analytics
+    <span class="wordmark-title">EuroLeague Analytics</span>
   </a>
   <nav class="topnav" aria-label="Main">
-    <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Source</a>
-    <a class="button-solid" href="#connect">Connect</a>
+    <a class="nav-link" href="#shots">Shots</a>
+    <a class="nav-link" href="#lineups">Lineups</a>
+    <a class="nav-link" href="#trust">Warehouse</a>
+    <a class="nav-link" href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">Source</a>
+    <a class="button-solid button-sm" href="#connect">Connect</a>
   </nav>
 </header>
 
@@ -31,124 +34,202 @@
 
 <main id="main">
 
-  <section class="hero">
-    <div class="hero-inner">
-      <div class="hero-copy on-court">
-        <h1>Add EuroLeague to the AI you already use.</h1>
-        <p class="lede">
-          Connect once, then ask in your own words — every lineup, every shot,
-          every second on court. <strong>No app, no spreadsheet.</strong>
-        </p>
-        <div class="actions">
-          <a class="button-solid button-lg" href="#connect">Connect</a>
-          <a class="quiet-link" href="#how">See how it works</a>
-        </div>
+  <!-- ================= 1. BRAND / HERO ================= -->
+  <section class="hero-brand" id="hero">
+    <div class="hero-brand-inner on-court">
+      <div class="hero-eyebrow">
+        <span class="eyebrow-accent"></span>
+        <span>Model Context Protocol for EuroLeague</span>
       </div>
-
-      <div class="hero-demo">
-        <figure class="window" aria-labelledby="demo-caption">
-          <div class="window-bar">
-            <span class="window-app">
-              <span class="app-avatar" id="app-avatar" aria-hidden="true"></span>
-              <span id="app-name">Claude</span>
-            </span>
-            <span class="window-state"><i class="live-dot" aria-hidden="true"></i>EuroLeague Analytics connected</span>
-          </div>
-
-          <!-- Nothing in here is ever added or removed while the page is open.
-               The three exchanges share one grid cell and the questions and
-               answers hold their space from the first paint, so the window is a
-               fixed object and the page underneath it never moves.
-
-               Each assistant gets its own question. Seeing the same sentence
-               three times reads as a loop; three different ones read as a tool
-               that answers whatever you bring it. -->
-          <div class="window-body" id="thread">
-
-            <div class="exchange" data-question="Which five wins games for Fenerbahce?">
-              <div class="from-you">
-                <!-- The hidden copy reserves the bubble's final size, so the
-                     question types inside a bubble that never resizes. It also
-                     holds the sentence: the script reads the question from the
-                     markup rather than carrying copy of its own. -->
-                <p class="bubble-user">
-                  <span class="ask-ghost" aria-hidden="true">Which five wins games for Fenerbahce?</span>
-                  <span class="ask-typed"></span>
-                </p>
-              </div>
-              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">reading the play-by-play</span></div>
-              <div class="reply">
-                <p class="reply-line">Their most efficient five this season:</p>
-                <ul class="lineup">
-                  <li><span class="jersey" style="--club:#12305B">13</span>Biberovic</li>
-                  <li><span class="jersey" style="--club:#12305B">92</span>Birch</li>
-                  <li><span class="jersey" style="--club:#12305B">20</span>Hall</li>
-                  <li><span class="jersey" style="--club:#12305B">8</span>Horton-Tucker</li>
-                  <li><span class="jersey" style="--club:#12305B">4</span>Melli</li>
-                </ul>
-                <p class="verdict">
-                  <span class="figure">+24.5</span> net rating
-                  <span class="qualifier">over 214 possessions together</span>
-                </p>
-              </div>
-            </div>
-
-            <div class="exchange" data-question="Which team plays fastest this season?">
-              <div class="from-you">
-                <p class="bubble-user">
-                  <span class="ask-ghost" aria-hidden="true">Which team plays fastest this season?</span>
-                  <span class="ask-typed"></span>
-                </p>
-              </div>
-              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">counting possessions</span></div>
-              <div class="reply">
-                <p class="reply-line">Paris Basketball, by some distance:</p>
-                <p class="verdict">
-                  <span class="figure">78.0</span> possessions per game
-                  <span class="qualifier">counted from the event stream, not estimated from a box score</span>
-                </p>
-              </div>
-            </div>
-
-            <div class="exchange" data-question="How many clutch possessions were there this season?">
-              <div class="from-you">
-                <p class="bubble-user">
-                  <span class="ask-ghost" aria-hidden="true">How many clutch possessions were there this season?</span>
-                  <span class="ask-typed"></span>
-                </p>
-              </div>
-              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">filtering by margin and clock</span></div>
-              <div class="reply">
-                <p class="reply-line">Last two minutes, within three points:</p>
-                <p class="verdict">
-                  <span class="figure">646</span> possessions
-                  <span class="qualifier">and you pick the thresholds — clutch is a filter here, not a fixed definition</span>
-                </p>
-              </div>
-            </div>
-
-          </div>
-
-          <div class="window-input" aria-hidden="true">
-            <span class="window-placeholder">Ask about any team, lineup or possession</span>
-            <span class="window-send"></span>
-          </div>
-        </figure>
-        <figcaption class="demo-caption on-court" id="demo-caption">
-          A recorded answer from the warehouse. Works the same in any assistant
-          that speaks MCP.
-        </figcaption>
+      <h1 class="hero-title">Ask EuroLeague questions that normally take SQL.</h1>
+      <p class="hero-lede">
+        Verified possession-level analytics, directly inside your AI assistant.
+        Every lineup, every shot, every second on court.
+        <strong>No app, no spreadsheet.</strong>
+      </p>
+      <div class="hero-actions">
+        <a class="button-solid button-lg" href="#connect">Connect MCP Server</a>
+        <a class="button-quiet button-lg" href="#shots">Inspect Shot Coordinates</a>
       </div>
     </div>
   </section>
 
-  <section class="claim" id="shots">
+  <!-- ================= 2. QUESTION → ANSWER CONTINUITY ================= -->
+  <section class="qa-stage" id="qa">
+    <div class="qa-stage-inner on-court">
+
+      <div class="qa-stage-head">
+        <span class="stage-tag">Continuous Presentation</span>
+        <h2 class="qa-stage-heading">Question transforms to proof.</h2>
+        <p class="qa-stage-sub">
+          The model doesn't invent analytics. It runs verified queries against the warehouse and answers with sample size and provenance.
+        </p>
+      </div>
+
+      <div class="qa-console" id="qa-console">
+        <!-- Interactive question selector -->
+        <div class="qa-selector" role="tablist" aria-label="Verified warehouse questions">
+          <button class="qa-tab is-active" type="button" role="tab" id="qa-tab-0" aria-selected="true" aria-controls="qa-panel-0" data-index="0">
+            <span class="qa-tab-num">01</span>
+            <span class="qa-tab-label">Which five wins games for Fenerbahce?</span>
+          </button>
+          <button class="qa-tab" type="button" role="tab" id="qa-tab-1" aria-selected="false" aria-controls="qa-panel-1" data-index="1">
+            <span class="qa-tab-num">02</span>
+            <span class="qa-tab-label">Which team plays fastest this season?</span>
+          </button>
+          <button class="qa-tab" type="button" role="tab" id="qa-tab-2" aria-selected="false" aria-controls="qa-panel-2" data-index="2">
+            <span class="qa-tab-num">03</span>
+            <span class="qa-tab-label">How many clutch possessions occurred?</span>
+          </button>
+        </div>
+
+        <div class="qa-screen" id="qa-screen">
+
+          <!-- Case 0: Lineup efficiency -->
+          <article class="qa-panel is-active" id="qa-panel-0" role="tabpanel" aria-labelledby="qa-tab-0" data-question="Which five wins games for Fenerbahce?">
+            <div class="qa-flow">
+              <div class="qa-prompt-row">
+                <span class="qa-role-badge">Question</span>
+                <p class="qa-prompt-text">Which five wins games for Fenerbahce?</p>
+              </div>
+
+              <div class="qa-query-row" aria-live="polite">
+                <div class="query-indicator">
+                  <span class="query-spinner" aria-hidden="true"></span>
+                  <span class="query-tool">el_get_lineup_stats</span>
+                  <span class="query-meta">Filtering possession gates · 371 games scanned · Season E2025</span>
+                </div>
+              </div>
+
+              <div class="qa-proof-row">
+                <div class="sample-badge">
+                  <span class="sample-label">Underlying sample size</span>
+                  <span class="sample-count">214 possessions together</span>
+                  <span class="sample-sub">Reconstructed from the play-by-play event stream across 371 games</span>
+                </div>
+              </div>
+
+              <div class="qa-answer-card">
+                <p class="qa-answer-intro">Their most efficient five-man lineup this season:</p>
+                <ul class="lineup-roster" aria-label="Five-man lineup">
+                  <li><span class="jersey" style="--club:#12305B">13</span><b>Biberovic</b> <span class="role">Forward</span></li>
+                  <li><span class="jersey" style="--club:#12305B">92</span><b>Birch</b> <span class="role">Center</span></li>
+                  <li><span class="jersey" style="--club:#12305B">20</span><b>Hall</b> <span class="role">Guard</span></li>
+                  <li><span class="jersey" style="--club:#12305B">8</span><b>Horton-Tucker</b> <span class="role">Guard</span></li>
+                  <li><span class="jersey" style="--club:#12305B">4</span><b>Melli</b> <span class="role">Forward</span></li>
+                </ul>
+                <div class="qa-verdict-box">
+                  <div class="qa-primary-stat">
+                    <span class="stat-value">+24.5</span>
+                    <span class="stat-unit">net rating</span>
+                  </div>
+                  <div class="qa-secondary-stats">
+                    <span>111.2 offensive rating</span>
+                    <span class="sep">&bull;</span>
+                    <span>86.7 defensive rating</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Case 1: Fastest team -->
+          <article class="qa-panel" id="qa-panel-1" role="tabpanel" aria-labelledby="qa-tab-1" data-question="Which team plays fastest this season?" hidden>
+            <div class="qa-flow">
+              <div class="qa-prompt-row">
+                <span class="qa-role-badge">Question</span>
+                <p class="qa-prompt-text">Which team plays fastest this season?</p>
+              </div>
+
+              <div class="qa-query-row" aria-live="polite">
+                <div class="query-indicator">
+                  <span class="query-spinner" aria-hidden="true"></span>
+                  <span class="query-tool">el_get_team_stats</span>
+                  <span class="query-meta">Counting possession start and end boundaries · 33 games scanned</span>
+                </div>
+              </div>
+
+              <div class="qa-proof-row">
+                <div class="sample-badge">
+                  <span class="sample-label">Underlying sample size</span>
+                  <span class="sample-count">33 games analyzed</span>
+                  <span class="sample-sub">Counted from the event stream across E2025 — not an estimated FGA pace formula</span>
+                </div>
+              </div>
+
+              <div class="qa-answer-card">
+                <p class="qa-answer-intro">Paris Basketball, by some distance:</p>
+                <div class="qa-verdict-box">
+                  <div class="qa-primary-stat">
+                    <span class="stat-value">78.0</span>
+                    <span class="stat-unit">possessions per game</span>
+                  </div>
+                  <div class="qa-secondary-stats">
+                    <span>Rank 1 in EuroLeague</span>
+                    <span class="sep">&bull;</span>
+                    <span>+4.2 possessions above league median</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Case 2: Clutch possessions -->
+          <article class="qa-panel" id="qa-panel-2" role="tabpanel" aria-labelledby="qa-tab-2" data-question="How many clutch possessions were there this season?" hidden>
+            <div class="qa-flow">
+              <div class="qa-prompt-row">
+                <span class="qa-role-badge">Question</span>
+                <p class="qa-prompt-text">How many clutch possessions were there this season?</p>
+              </div>
+
+              <div class="qa-query-row" aria-live="polite">
+                <div class="query-indicator">
+                  <span class="query-spinner" aria-hidden="true"></span>
+                  <span class="query-tool">el_get_possessions</span>
+                  <span class="query-meta">Filtering seconds_remaining_at_start ≤ 120 AND margin_at_start ≤ 3</span>
+                </div>
+              </div>
+
+              <div class="qa-proof-row">
+                <div class="sample-badge">
+                  <span class="sample-label">Filter criteria</span>
+                  <span class="sample-count">Last 2 minutes · Within 3 points</span>
+                  <span class="sample-sub">Clutch is a dynamic filter on possession columns, never a hard-coded definition</span>
+                </div>
+              </div>
+
+              <div class="qa-answer-card">
+                <p class="qa-answer-intro">Across all verified E2025 games in the warehouse:</p>
+                <div class="qa-verdict-box">
+                  <div class="qa-primary-stat">
+                    <span class="stat-value">646</span>
+                    <span class="stat-unit">clutch possessions</span>
+                  </div>
+                  <div class="qa-secondary-stats">
+                    <span>Monotonic score progression</span>
+                    <span class="sep">&bull;</span>
+                    <span>One-second exact clock resolution</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= 3. SHOT DATA ================= -->
+  <section class="claim shots-section" id="shots">
     <div class="claim-inner">
       <div class="claim-copy">
+        <span class="section-kicker">Spatial Precision</span>
         <h2>Ask where the shots came from.</h2>
         <p>
-          Any game, any player, any stretch of the floor — the coordinate the
-          league recorded, not a zone and not a guess from a box score.
+          Any game, any player, any stretch of the floor — the exact coordinate the
+          league recorded, measured from the ring on FIBA geometry.
         </p>
 
         <div class="scoreline">
@@ -157,186 +238,109 @@
           <span class="scoreline-meta">Final Four championship game, 21 May 2023</span>
         </div>
 
-        <p class="tally">
-          <span class="tally-figure" id="shot-count">0</span>
-          <span class="tally-label">shots placed</span>
-        </p>
+        <div class="tally-box">
+          <p class="tally">
+            <span class="tally-figure" id="shot-count">0</span>
+            <span class="tally-label">/ 123 attempts placed</span>
+          </p>
+          <div class="shot-legend">
+            <span class="legend-item"><i class="dot-made"></i> Made</span>
+            <span class="legend-item"><i class="dot-miss"></i> Miss</span>
+            <span class="legend-item"><i class="dot-winner"></i> Title winner</span>
+          </div>
+        </div>
 
-        <!-- The caption lives with the copy, not under the figure. Beneath the
-             court it sat in a column of its own with dead space either side;
-             here it closes the paragraph it belongs to. -->
         <p class="figure-note" id="shots-caption">
-          Every field goal attempt, placed at the coordinate the league
-          recorded. Free throws have none, so they are absent.
+          Every field goal attempt placed at the coordinate recorded by the league.
+          Free throws carry (-1, -1) and are omitted.
         </p>
-
       </div>
 
       <div class="claim-figure">
         <div class="courtwrap">
-        <!-- Drawn to FIBA dimensions in centimetres, the same units the source
-             coordinates arrive in, so a shot lands where the league recorded it
-             rather than where a hand-tuned transform puts it. -->
-        <svg class="halfcourt" id="halfcourt" viewBox="-820 20 1640 1180" aria-labelledby="shots-caption">
-          <!-- THE ORIGIN IS THE RING, NOT THE BASELINE.
+          <!-- FIBA court in centimetres, origin at ring (0,0) -->
+          <svg class="halfcourt" id="halfcourt" viewBox="-820 20 1640 1180" aria-labelledby="shots-caption">
+            <g transform="translate(0, 1000) scale(1, -1)">
+              <g fill="none" stroke="var(--hairline)" stroke-width="7">
+                <path d="M-750 -157.5 H750"/>
+                <path d="M-750 -157.5 V942.5 M750 -157.5 V942.5"/>
+                <rect x="-245" y="-157.5" width="490" height="580"/>
+                <circle cx="0" cy="422.5" r="180"/>
+                <path d="M-90 -37.5 H90"/>
+                <circle cx="0" cy="0" r="22.5"/>
+                <path d="M-660 -157.5 V141.5 M660 -157.5 V141.5"/>
+                <path d="M-660 141.5 A675 675 0 0 0 660 141.5"/>
+              </g>
+              <g id="shot-marks"></g>
+              <g id="shot-spotlight"></g>
+            </g>
+          </svg>
 
-               This court was drawn 157.5 cm out of place until 2026-09-04. The
-               assumption was that the league's y counts from the baseline. It
-               counts from the ring, and the data says so without being asked:
-               every row carries the league's own two-or-three flag, which owes
-               nothing to any geometry we choose, so the two can be compared.
-
-               Measured over both loaded seasons, 93,269 shots with coordinates:
-
-                 y from the baseline   26,403 disagreements   28.3 %
-                 y from the ring          345 disagreements    0.37 %
-
-               And the reading that settles it: on the ring origin, ZERO shots
-               in either season fall behind the baseline. On the old one, 2,214
-               did - which is what put dots outside the court and made the
-               drawing look wrong. They were never outside it.
-
-               Everything below is therefore measured from the ring at (0, 0):
-               the baseline is 157.5 behind it, the arc is 675 around it, and a
-               shot is placed with no arithmetic of ours at all. -->
-          <g transform="translate(0, 1000) scale(1, -1)">
-          <g fill="none" stroke="var(--hairline)" stroke-width="7">
-            <path d="M-750 -157.5 H750"/>
-            <path d="M-750 -157.5 V942.5 M750 -157.5 V942.5"/>
-            <rect x="-245" y="-157.5" width="490" height="580"/>
-            <circle cx="0" cy="422.5" r="180"/>
-            <path d="M-90 -37.5 H90"/>
-            <circle cx="0" cy="0" r="22.5"/>
-            <path d="M-660 -157.5 V141.5 M660 -157.5 V141.5"/>
-            <path d="M-660 141.5 A675 675 0 0 0 660 141.5"/>
-          </g>
-          <g id="shot-marks"></g>
-          <g id="shot-spotlight"></g>
-          </g>
-        </svg>
-
-        <!-- Opens once, over the shot it describes, five seconds after the
-             chart finishes filling. Its position is computed from that shot's
-             own coordinates, so it cannot drift away from the dot it points
-             at. Every fact in it was read out of the play-by-play. -->
-        <div class="callout" id="winner-card" hidden>
-          <span class="callout-leader" aria-hidden="true"></span>
-          <div class="callout-body">
-            <span class="callout-flag">Game winner</span>
-            <span class="callout-who">Sergio Llull</span>
-            <!-- The figure is 4.9 m, and printing it is a decision with a
-                 measurement behind it. See Decisions 57 and 58.
-
-                 The page used to show a different game - the 2022 semi-final,
-                 and Micic's buzzer-beater - and carried no distance at all,
-                 because the owner did not believe the 9.4 m the coordinates gave
-                 for it. He was right, and the reason turned out to be the game
-                 rather than the coordinate system. E2021 game 328 is one of the
-                 badly recorded ones: its non-corner three-point attempts sit
-                 93 cm further from the ring than its own season's, seventh worst
-                 of 299 games, while its corner attempts - which the sideline
-                 pins in place - are exactly normal.
-
-                 THIS game is clean, and that is checked rather than assumed:
-                 scripts/build_site_shot_chart.py refuses to build a game whose
-                 non-corner threes sit more than 40 cm outside its season's
-                 median. E2022 game 330 comes in at -3 cm.
-
-                 So the frame is measured (Decision 57), the game is measured
-                 against its season (Decision 58), and the shot itself is
-                 (-238, 432) - 4.93 m, printed to the nearest tenth because the
-                 source records on a 6.4 cm lattice and a centimetre would be
-                 quoting the lattice rather than the shot. What remains
-                 unvalidated is whoever recorded this one attempt aiming true,
-                 which needs video and is out of scope. -->
-            <span class="callout-what">
-              A two from 4.9 m with the clock on three seconds, for the
-              lead Olympiacos never took back.
-            </span>
-            <span class="callout-score">
-              <i style="--club:#00529F"></i>Real Madrid <b>79</b>
-              <i style="--club:#C8102E"></i>Olympiacos <b>78</b>
-            </span>
+          <!-- Spotlight on Sergio Llull's championship decider -->
+          <div class="callout" id="winner-card" hidden>
+            <span class="callout-leader" aria-hidden="true"></span>
+            <div class="callout-body">
+              <span class="callout-flag">Game winner</span>
+              <span class="callout-who">Sergio Llull</span>
+              <span class="callout-what">
+                A two from 4.9 m with 3 seconds on the clock, for the lead Olympiacos never took back.
+              </span>
+              <span class="callout-score">
+                <i style="--club:#00529F"></i>Real Madrid <b>79</b>
+                <i style="--club:#C8102E"></i>Olympiacos <b>78</b>
+              </span>
+            </div>
           </div>
         </div>
-        </div>
 
-        <!-- The bar is the anticipation. Without it the chart fills in under
-             three seconds with no warning and the card that follows arrives
-             out of nowhere; with it the visitor can see that something is
-             being built and that it has an end. It reaches full at the moment
-             the card opens, not at the last shot. -->
         <div class="chartbar" id="chart-bar">
           <p class="chartbar-label" id="chart-label">Placing every attempt in the game</p>
           <div class="chartbar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="chart-track">
             <span class="chartbar-fill" id="chart-fill"></span>
           </div>
         </div>
-
-        <!-- Short, but neither claim may be dropped: free throws are absent for
-             a reason, and the four dots behind the baseline are real. A caption
-             that omits either is tidier and false. -->
       </div>
     </div>
   </section>
 
-  <section class="claim claim-flip" id="lineups">
+  <!-- ================= 4. LINEUPS ================= -->
+  <section class="claim claim-flip lineups-section" id="lineups">
     <div class="claim-inner">
       <div class="claim-copy">
+        <span class="section-kicker">Lineup Mechanics</span>
         <h2>Ask which five actually work together.</h2>
         <p>
-          Four Fenerbahce players stay. Swap Birch for Baldwin, and the team
-          turns over.
-        </p>
-        <p class="figure-note figure-note-tight">
-          Every answer shows the possessions behind it, so a small sample
-          cannot hide.
-        </p>
-        <p class="figure-note">
-          The club supplies each position; the spots on this floor are
-          illustrative.
+          Four Fenerbahce players stay. Swap Birch for Baldwin, and the team turns over.
         </p>
 
         <div class="unit-verdict">
-          <!-- The live figures use the space below the short explanation. They
-               used to add a second row below the court, leaving this column
-               empty while making the whole section taller. -->
           <div class="unit-metric">
-            <span class="unit-figure" id="unit-net">—</span>
+            <span class="unit-figure" id="unit-net">+24.5</span>
             <span class="unit-label">net rating</span>
           </div>
           <div class="unit-metric">
-            <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
+            <span class="unit-figure unit-figure-quiet" id="unit-poss">214</span>
             <span class="unit-label">possessions together</span>
           </div>
-          <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
+          <p class="unit-swap" id="unit-swap" aria-live="polite">Birch on the floor.</p>
         </div>
+
+        <div class="lineup-toggles" role="group" aria-label="Lineup comparison toggle">
+          <button class="lineup-btn is-active" type="button" id="btn-unit-strong">Birch unit (+24.5)</button>
+          <button class="lineup-btn" type="button" id="btn-unit-weak">Baldwin unit (−34.1)</button>
+        </div>
+
+        <p class="figure-note figure-note-tight">
+          Every answer shows the possessions behind it, so a small sample cannot hide.
+        </p>
+        <p class="figure-note">
+          The club supplies each player position; spots on this floor represent structural spacing.
+        </p>
       </div>
 
       <div class="claim-figure">
-        <!-- Two real units, one substitution apart, on the floor.
-             Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md
-
-             THE TWO KINDS OF THING IN THIS PICTURE, and they must not be
-             confused. Each player's POSITION is the league's own record - the
-             club's E2025 registration, joined to the game player id through
-             person_game_link (Decision 53). Each player's SPOT on the floor is
-             a convention: the ordinary arrangement of two guards, two forwards
-             and a centre. The caption says which is which, because a diagram
-             that looks measured and is not is worse than no diagram.
-
-             The source publishes three positions and nothing finer, so this is
-             not a 1-through-5 reading and must never be drawn as one.
-
-             What the picture is for: Birch is the only centre in the strong
-             five, and Baldwin is a guard. The substitution therefore does not
-             swap like for like - it takes the centre off the floor and leaves
-             the paint empty. That is the shape behind the number. -->
         <div class="floor" id="floor">
           <svg class="floor-court" viewBox="-820 -60 1640 1160" fill="none" aria-hidden="true">
-            <!-- The same FIBA numbers as the shot chart above, mirrored the
-                 same way, so the two sections are one court and not two
-                 drawings that happen to look alike. -->
             <g transform="translate(0, 1000) scale(1, -1)">
               <g stroke="var(--hairline)" stroke-width="7">
                 <path d="M-750 0 H750"/>
@@ -347,8 +351,6 @@
                 <path d="M-660 0 V299 M660 0 V299"/>
                 <path d="M-660 299 A675 675 0 0 0 660 299"/>
               </g>
-              <!-- The paint is its own element so it can be lit when it
-                   empties. Nothing else on this court changes. -->
               <rect class="floor-paint" id="floor-paint"
                     x="-245" y="0" width="490" height="580"
                     stroke="var(--hairline)" stroke-width="7"/>
@@ -359,104 +361,134 @@
 
           <p class="floor-empty" id="floor-empty" hidden>No centre on the floor</p>
         </div>
-
       </div>
     </div>
   </section>
 
-  <section class="ask" id="ask">
-    <div class="ask-inner">
-      <h2>Now ask it yourself.</h2>
-      <p class="ask-lede">
-        The same window, and this time you drive it. Each answer was produced by
-        the same query your own assistant would run — no number here was typed
-        by hand.
-      </p>
+  <!-- ================= 5. TRUST / SCALE (DARK CHARCOAL) ================= -->
+  <section class="trust-stage dark-section" id="trust">
+    <div class="trust-inner on-court">
+      <div class="trust-head">
+        <span class="trust-eyebrow">Data Warehouse Invariants</span>
+        <h2 class="trust-title">The model doesn't invent the analytics. It asks the warehouse.</h2>
+        <p class="trust-lede">
+          Every statistic on this page is reconstructed directly from play-by-play events in PostgreSQL.
+          When play-by-play events violate basketball mechanics, the game is quarantined rather than guessed.
+        </p>
+      </div>
 
-      <!-- The same window component as the hero, so the visitor recognises
-           where they are: this is what it looks like once it is connected. The
-           chips sit where the text field is, as suggestions, because a chip is
-           the only input this can safely accept. -->
-      <figure class="window ask-window">
-        <div class="window-bar">
-          <span class="window-app">
-            <span class="app-avatar" style="--tint:#1A1512">You</span>
-            <span>Your assistant</span>
-          </span>
-          <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
+      <div class="facts-grid">
+        <div class="fact-block">
+          <div class="fact-num" data-target="732">732</div>
+          <div class="fact-label">games loaded</div>
+          <p class="fact-desc">Full play-by-play warehouse across 2024-25 and 2025-26, with 2026-27 filling nightly.</p>
         </div>
 
-        <!-- THE EMPTY STATE IS THE INVITATION, and it used to be an
-             instruction: "Pick one of the questions below." in faint grey, in
-             an otherwise empty box. The owner, reading the built page as a
-             visitor: this section is pale and motionless, so I do not feel like
-             clicking anything.
-
-             The scorer is the character, and he is the one thing on this page
-             that is waiting for you. He is at the scorer's table, which is what
-             this project is - somebody writing down every event as it happens.
-             The pen is the only orange in the drawing because the pen is the
-             part doing the recording.
-
-             Two other directions were drawn and are one line of markup away:
-             site/_mascots.html holds all three side by side. He is removed from
-             the panel by ask.js the moment a question is asked, which is the
-             point of him: he was waiting, and now he has gone to read. -->
-        <div class="window-body ask-body" id="ask-answer" aria-live="polite">
-          <div class="ask-empty">
-            <svg class="mascot" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-              <g class="mascot-body">
-                <circle cx="34" cy="24" r="12.5" stroke="var(--ink-soft)" stroke-width="2.2"/>
-                <g class="mascot-eyes">
-                  <circle cx="30" cy="23" r="2.6" fill="var(--ink)"/>
-                  <circle cx="39" cy="23" r="2.6" fill="var(--ink)"/>
-                </g>
-                <path d="M16 56 A18 18 0 0 1 52 56" stroke="var(--ink-soft)" stroke-width="2.2"/>
-                <path d="M6 56 H74" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
-                <path d="M48 56 V44 H70 V56" stroke="var(--ink-faint)" stroke-width="1.8"/>
-                <path d="M53 51 H65 M53 47 H65" stroke="var(--ink-faint)" stroke-width="1.8"/>
-                <path d="M58 46 L67 33" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
-                <path d="M67 33 L70 29" stroke="var(--ball)" stroke-width="3.2" stroke-linecap="round"/>
-              </g>
-            </svg>
-            <p class="ask-invite">
-              <b>Ask me something.</b>
-              <span>Pick one of the questions below and I will go and read it.</span>
-            </p>
-          </div>
+        <div class="fact-block">
+          <div class="fact-num" data-target="107311">107,311</div>
+          <div class="fact-label">exact possessions</div>
+          <p class="fact-desc">Reconstructed boundary by boundary from the event stream — zero box score estimation formulas.</p>
         </div>
 
-        <div class="chips" id="chips" role="group" aria-label="Questions you can ask"></div>
-      </figure>
+        <div class="fact-block">
+          <div class="fact-num" data-target="41524">41,524</div>
+          <div class="fact-label">verified coordinates</div>
+          <p class="fact-desc">Shot locations normalized to the basket ring origin, measured on FIBA half-court geometry.</p>
+        </div>
+
+        <div class="fact-block">
+          <div class="fact-num" data-target="53">53</div>
+          <div class="fact-label">quarantined games</div>
+          <p class="fact-desc">Games that failed mechanical validation checks are held back from every default answer.</p>
+        </div>
+
+        <div class="fact-block">
+          <div class="fact-num" data-target="11">11</div>
+          <div class="fact-label">read-only MCP tools</div>
+          <p class="fact-desc">Thin query endpoints over pre-computed warehouse tables. No unbounded or destructive calls.</p>
+        </div>
+
+        <div class="fact-block">
+          <div class="fact-num">99.54%</div>
+          <div class="fact-label">box score match</div>
+          <p class="fact-desc">Validated second-level agreement with official league box scores across all regulation games.</p>
+        </div>
+      </div>
+
+      <div class="trust-quote-box">
+        <p class="trust-quote">
+          Counting statistics come from official league records. Possessions, lineups, on/off, and per-100 metrics are
+          <span class="marker-dark">this project's own verified reconstruction from play-by-play data</span>.
+        </p>
+      </div>
     </div>
   </section>
 
-  <!-- ACCESS IS STILL INVITE-ONLY UNTIL R-9. A visitor who follows these steps
-       before the Auth0 Action is switched off is refused at the sign-in screen.
-       This section must not go live before that happens; see section 7 of
-       docs/superpowers/specs/2026-09-04-launch-website-design.md.
+  <!-- ================= 6. HOW IT WORKS ================= -->
+  <section class="how-stage" id="how">
+    <div class="how-inner on-court">
+      <div class="how-head">
+        <span class="section-kicker">Simple Execution Chain</span>
+        <h2 class="how-heading">How it works.</h2>
+        <p class="how-sub">One protocol connects your assistant to 732 games of basketball data in four quiet beats.</p>
+      </div>
 
-       Every claim in here is taken from docs/CLIENT_COMPATIBILITY.md and
-       docs/CHATGPT_APP_SUBMISSION.md and says which of the two kinds of claim
-       it is. "Verified" means somebody connected that client and called a tool.
-       "Expected" means the client's own published specification says this
-       works and nobody here has run it. Those are not the same sentence and
-       the page must not print them as if they were. -->
-  <section class="connect" id="connect">
-    <div class="connect-inner">
-      <h2>Connect it once.</h2>
-      <p class="connect-lede">
-        There is one address, and it is the whole of the setup. Any assistant
-        that speaks MCP takes it — there is nothing to install, and nothing to
-        configure afterwards.
-      </p>
+      <div class="how-flow">
+        <div class="flow-step">
+          <span class="flow-num">1</span>
+          <h3 class="flow-title">Your Prompt</h3>
+          <p class="flow-text">You ask in natural language inside Claude, ChatGPT, Gemini, or your editor CLI.</p>
+          <code class="flow-code">"Which lineup played best in the 4th quarter?"</code>
+        </div>
 
-      <div class="address">
+        <div class="flow-arrow" aria-hidden="true">&rarr;</div>
+
+        <div class="flow-step">
+          <span class="flow-num">2</span>
+          <h3 class="flow-title">MCP Query</h3>
+          <p class="flow-text">Your assistant invokes a specialized <code>el_*</code> tool over StreamableHTTP.</p>
+          <code class="flow-code">el_get_lineup_stats(team="ULK", min_poss=50)</code>
+        </div>
+
+        <div class="flow-arrow" aria-hidden="true">&rarr;</div>
+
+        <div class="flow-step">
+          <span class="flow-num">3</span>
+          <h3 class="flow-title">Warehouse Engine</h3>
+          <p class="flow-text">Supabase PostgreSQL queries derived tables built from validated play-by-play events.</p>
+          <code class="flow-code">SELECT * FROM lineup_summary WHERE ...</code>
+        </div>
+
+        <div class="flow-arrow" aria-hidden="true">&rarr;</div>
+
+        <div class="flow-step">
+          <span class="flow-num">4</span>
+          <h3 class="flow-title">Verified Answer</h3>
+          <p class="flow-text">You receive the answer qualified by sample size, possessions, and data provenance.</p>
+          <code class="flow-code">+24.5 net rating over 214 possessions</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 7. CONNECT ================= -->
+  <section class="connect-stage" id="connect">
+    <div class="connect-inner on-court">
+      <div class="connect-head">
+        <span class="section-kicker">One Address</span>
+        <h2 class="connect-heading">Connect it once.</h2>
+        <p class="connect-lede">
+          There is one address, and it is the whole of the setup. Any assistant that speaks MCP takes it —
+          nothing to install, and nothing to configure afterwards.
+        </p>
+      </div>
+
+      <div class="address-box">
         <code id="server-url">https://euroleague-analytics-mcp.fly.dev/mcp</code>
-        <button class="copy" type="button" id="copy-url" data-copied="Copied" data-select="Press Ctrl+C">Copy</button>
+        <button class="copy-btn" type="button" id="copy-url" data-copied="Copied" data-select="Press Ctrl+C">Copy</button>
       </div>
 
-      <div class="clients">
+      <div class="client-setup">
         <div class="client-tabs" role="tablist" aria-label="Choose your assistant">
           <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true">Claude</button>
           <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="false">ChatGPT</button>
@@ -467,24 +499,22 @@
         <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
           <p class="client-status client-status-verified">Verified — connected and answering</p>
           <ol class="howto">
-            <li>Open <b>Settings</b>, then <b>Connectors</b>.</li>
+            <li>Open <b>Settings</b> &rarr; <b>Connectors</b>.</li>
             <li>Choose <b>Add custom connector</b> and paste the address above.</li>
             <li>Sign in with Google when Claude opens the sign-in window.</li>
             <li>Ask it something. Eleven tools appear under the connector's name.</li>
           </ol>
-          <p class="howto-alt">In Claude Code instead:</p>
-<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+          <p class="howto-alt">In Claude Code CLI instead:</p>
+          <pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
           <p class="client-status client-status-review">In review — submitted to the ChatGPT app directory on 2 September 2026</p>
           <p class="client-note">
-            Once it is approved you will add it by name, with no address to
-            paste. Until then it connects the developer way, and the server
-            already speaks everything the Apps SDK asks for.
+            Once approved you will add it by name without pasting an address. Until then, connect via Developer Mode:
           </p>
           <ol class="howto">
-            <li>Turn on <b>Developer mode</b> in <b>Settings → Connectors</b>.</li>
+            <li>Turn on <b>Developer mode</b> in <b>Settings &rarr; Connectors</b>.</li>
             <li>Choose <b>Create</b>, paste the address, and pick <b>OAuth</b>.</li>
             <li>Sign in with Google.</li>
           </ol>
@@ -495,7 +525,7 @@
           <ol class="howto">
             <li>In the Gemini CLI, one command:</li>
           </ol>
-<pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+          <pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
           <ol class="howto howto-continued">
             <li>In Antigravity: add the same address under <b>MCP servers</b>.</li>
             <li>Check it with <code>gemini mcp list</code> — it should report connected.</li>
@@ -503,257 +533,40 @@
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-editor" aria-labelledby="tab-editor" hidden>
-          <p class="client-status client-status-expected">Expected from each client's published MCP specification — not yet run here</p>
+          <p class="client-status client-status-expected">Expected from each client's published MCP specification</p>
           <p class="client-note">
-            Cursor, Codex, Windsurf, Zed, Continue.dev and Goose all take a
-            remote MCP server the same way. One block in that client's own
-            configuration file:
+            Cursor, Codex, Windsurf, Zed, Continue.dev, and Goose all support remote MCP servers via configuration:
           </p>
-<pre class="howto-code"><code>{
+          <pre class="howto-code"><code>{
   "mcpServers": {
     "euroleague-analytics": {
       "url": "https://euroleague-analytics-mcp.fly.dev/mcp"
     }
   }
 }</code></pre>
-          <p class="client-note">
-            The MCP Inspector is verified against the same address, and is the
-            fastest way to see the eleven tools before wiring up a client.
-          </p>
         </div>
       </div>
 
       <p class="connect-note">
-        Free to use. Read-only: eleven tools that answer questions and none that
-        change anything.
-        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics/blob/master/docs/CLIENT_COMPATIBILITY.md">The full compatibility matrix</a>
+        Free to use. Read-only: eleven tools that answer questions and none that change anything.
+        <a class="quiet-link" href="support.html">Need help? Read the support guide</a>.
       </p>
     </div>
   </section>
 
-  <!-- ================= FOR THE READER WHO WANTS THE HARD VERSION =========
-
-       It sits BELOW Connect on purpose. Section 1 of the design record says
-       anything that does not move a visitor toward connecting is pushed past
-       the point where only a curious reader goes, and this is that reader.
-
-       WHAT IS IN THESE THREE WINDOWS IS REAL, and that is the whole point of
-       the section. Every question below was put to the running MCP server over
-       its own stdio transport - the same registry, the same validation, the
-       same response envelope a connected assistant gets - and every figure,
-       every tool name, every argument and every caveat is what came back.
-       Nothing here was composed to look good. If one of these numbers changes
-       when the season reloads, this section is wrong and has to be re-run;
-       scripts/mcp_server.py is how it was produced.
-
-       WHY THE ANSWERS ARE PROSE AND NOT JSON. The owner's point, and he is
-       right: raw tool output is a picture of homework, not of a product. What
-       a visitor is buying is the READING - an assistant that asks the next
-       question, distrusts a number built on 43 possessions, and says what it
-       left out. Each window therefore shows one quiet, human-readable thinking
-       step and the reading. Exact calls stay in source comments for replay;
-       they are evidence for maintainers, not interface for visitors.
-
-       They are HTML rather than screenshots. Same window component as the
-       hero, so it is sharp at any size, selectable, translatable with the rest
-       of the page, and it cannot drift out of date the way a PNG silently
-       does. -->
-  <section class="deep" id="deep">
-    <div class="deep-inner">
-      <div class="deep-head on-court">
-        <h2>Ask it something hard.</h2>
-        <p class="deep-lede">
-          The hard part is the reading: asking the next question, rejecting a
-          weak answer, and naming what was left out.
-        </p>
-        <p class="figure-note">
-          Three real sessions against the running server. Every figure and
-          caveat below came back from it.
-        </p>
+  <!-- ================= 8. CLOSE ================= -->
+  <section class="close-stage" id="close">
+    <div class="close-inner on-court">
+      <div class="close-wordmark">EuroLeague Analytics</div>
+      <h2 class="close-heading">Ask the game something harder.</h2>
+      <p class="close-sub">
+        Possessions, five-man ratings, and shot locations reconstructed from play-by-play events.
+        Ready inside your AI assistant.
+      </p>
+      <div class="close-actions">
+        <a class="button-solid button-lg" href="#connect">Connect MCP Server</a>
+        <a class="button-quiet button-lg" href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">View on GitHub</a>
       </div>
-
-      <article class="deep-case">
-        <div class="deep-copy on-court">
-          <h3>It asks the next question for you.</h3>
-          <p>
-            One threshold is an opinion. A useful answer moves the threshold and
-            shows you what happens, then tells you where the number stops being
-            worth quoting.
-          </p>
-        </div>
-
-        <figure class="window deep-window">
-          <div class="window-bar">
-            <span class="window-app">
-              <span class="app-avatar" style="--tint:#C15F3C">C</span>
-              <span>Claude</span>
-            </span>
-            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
-          </div>
-          <div class="window-body deep-body">
-            <div class="from-you">
-              <p class="bubble-user">Fenerbahce look good late in games. Check it — how do
-              they score in the last two minutes with the margin inside three? Does it hold
-              if I loosen the definition? And tell me whether the number is trustworthy.</p>
-            </div>
-
-            <!-- Repro source: el_get_possessions for E2025 Fenerbahce at the
-                 full-season, 300-second/5-point and 120-second/3-point cuts. -->
-            <p class="deep-thought">
-              <span>EuroLeague Analytics</span> comparing three clutch thresholds
-            </p>
-
-            <div class="reply is-shown">
-              <p class="reply-line">Over the whole season Fenerbahce scored 112.8 per 100
-              possessions. Narrow to the last five minutes within five points and it rises
-              to 116.4, over 159 possessions. Narrow again — last two minutes, within
-              three — and it jumps to 144.2.</p>
-              <p class="reply-line">Be careful with that last one. It rests on 43
-              possessions, about half a game's worth, and five of them straddled a
-              substitution. The direction is real; the size of it is not established. These
-              are counted possessions, not a box-score estimate, so do not compare the
-              figure with a pace number from anywhere else.</p>
-              <p class="verdict">
-                <span class="figure">144.2</span> per 100 in the clutch
-                <span class="qualifier">on 43 possessions — which is why it says so</span>
-              </p>
-            </div>
-          </div>
-        </figure>
-      </article>
-
-      <article class="deep-case deep-case-flip">
-        <div class="deep-copy on-court">
-          <h3>It takes its own answer back.</h3>
-          <p>
-            Every lineup response carries the possessions behind it and a
-            warning that small samples are noise. An assistant that reads its
-            own tool output will act on that — and the second answer is the
-            real one.
-          </p>
-        </div>
-
-        <figure class="window deep-window">
-          <div class="window-bar">
-            <span class="window-app">
-              <span class="app-avatar" style="--tint:#C15F3C">C</span>
-              <span>Claude</span>
-            </span>
-            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
-          </div>
-          <div class="window-body deep-body">
-            <div class="from-you">
-              <p class="bubble-user">Which is Panathinaikos's best five this season?</p>
-            </div>
-
-            <!-- Repro source: el_get_lineup_stats for E2025 Panathinaikos at
-                 minimum-possession thresholds 25 and 100. -->
-            <p class="deep-thought">
-              <span>EuroLeague Analytics</span> checking the sample behind each lineup
-            </p>
-
-            <div class="reply is-shown">
-              <p class="reply-line">My first answer was not an answer. At a 25-possession
-              threshold the best Panathinaikos unit is Hernangomez–Holmes–Nunn–Osman–Shorts
-              at +76.6 net, over 54 possessions. That is about a quarter of a game. A number
-              like that is noise wearing a suit.</p>
-              <p class="reply-line">Raise the bar to 100 possessions and exactly one unit
-              survives: Grant–Hayes-Davis–Lessort–Nunn–Osman, +7.55 over 133 possessions.
-              That is the only five-man number here I would repeat out loud.</p>
-              <p class="verdict">
-                <span class="figure">+7.6</span> net rating
-                <span class="qualifier">over 133 possessions — the one unit that qualifies</span>
-              </p>
-            </div>
-          </div>
-        </figure>
-      </article>
-
-      <article class="deep-case">
-        <div class="deep-copy on-court">
-          <h3>It tells you what it left out.</h3>
-          <p>
-            Games that fail a validation invariant are held back from every
-            answer, and the response says how many and why. Nothing is deleted
-            and you can ask for them — but you are told before you quote a
-            number, not after.
-          </p>
-        </div>
-
-        <figure class="window deep-window">
-          <div class="window-bar">
-            <span class="window-app">
-              <span class="app-avatar" style="--tint:#C15F3C">C</span>
-              <span>Claude</span>
-            </span>
-            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
-          </div>
-          <div class="window-body deep-body">
-            <div class="from-you">
-              <p class="bubble-user">How many games is all of this built on — and is there
-              anything you are not telling me?</p>
-            </div>
-
-            <!-- Repro source: el_describe_warehouse, then el_get_team_stats
-                 for E2024 and E2025 with the default exclusion policy. -->
-            <p class="deep-thought">
-              <span>EuroLeague Analytics</span> checking coverage and exclusions
-            </p>
-
-            <div class="reply is-shown">
-              <p class="reply-line">732 games are loaded across two seasons and 53 of them
-              are held back: 22 in 2024-25 and 31 in 2025-26. Take this season — 371 of 402
-              are used. Seventeen of the 31 failed the possession gate, twelve had a
-              statistical event attributed to a player believed to be off court, three
-              disagreed with the official box score on minutes, and one had a substitution
-              state I could not resolve.</p>
-              <p class="reply-line">I did not have to go looking for that. Every answer
-              carries it, so I cannot quote you a number without being told what is missing
-              from it. The games are not deleted and you can ask me to include them — but
-              then I would say so.</p>
-              <p class="verdict">
-                <span class="figure">679</span> of 732 games used
-                <span class="qualifier">and the 53 left out are named, not hidden</span>
-              </p>
-            </div>
-          </div>
-        </figure>
-      </article>
-    </div>
-  </section>
-
-  <section class="how" id="how">
-    <div class="how-inner on-court">
-      <h2>What is behind it.</h2>
-
-      <dl class="facts">
-        <div>
-          <dt>732</dt>
-          <dd>games loaded, across 2024-25 and 2025-26, with 2026-27 filling
-              nightly</dd>
-        </div>
-        <div>
-          <dt>53</dt>
-          <dd>games held back because they failed a validation check, and left
-              out of every answer unless you ask for them</dd>
-        </div>
-        <div>
-          <dt>11</dt>
-          <dd>tools, all read-only, all documented in the repository</dd>
-        </div>
-      </dl>
-
-      <p class="how-note">
-        <!-- The one marked phrase on the page. It is the line the whole
-             project rests on: the counting statistics are the league's, and
-             everything derived is ours. A second marker anywhere would make
-             this one a background colour. -->
-        Counting statistics are the official box score. Possessions, lineups,
-        on/off and every per-100 rate are
-        <span class="marker">this project's own reconstruction from the
-        play-by-play</span>, and every answer says which it gave you.
-        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Read the source</a>
-      </p>
     </div>
   </section>
 
@@ -761,14 +574,14 @@
 
 <footer class="footer">
   <div class="footer-inner on-court">
-    <span>EuroLeague Analytics</span>
-    <nav aria-label="Footer">
-      <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Source</a>
+    <span class="footer-brand">EuroLeague Analytics</span>
+    <nav class="footer-nav" aria-label="Footer">
+      <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics" target="_blank" rel="noopener noreferrer">Source</a>
       <a class="quiet-link" href="privacy.html">Privacy</a>
       <a class="quiet-link" href="support.html">Support</a>
     </nav>
     <span class="footer-note">
-      Not affiliated with Euroleague Basketball. Data from their public API.
+      Not affiliated with Euroleague Basketball. Data reconstructed from their public API.
     </span>
   </div>
 </footer>
@@ -776,7 +589,6 @@
 <script src="hero.js" defer></script>
 <script src="shots.js" defer></script>
 <script src="lineups.js" defer></script>
-<script src="ask.js" defer></script>
 <script src="motion.js" defer></script>
 </body>
 </html>

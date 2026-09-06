@@ -1,122 +1,165 @@
-/* Two small pieces of motion, and the rule they both obey.
-
-   The owner asked for text and number animation and sent three references. The
-   question this file answers is not "should something move" but "what does the
-   movement say", because the page already has three moving things - the hero
-   typing itself, the shot chart filling one attempt at a time, the lineup
-   figure changing - and a fourth kind of motion with nothing to say turns a
-   page that demonstrates into a page that fidgets.
-
-   So there are two, and each one means something.
-
-   THE NUMBERS COUNT. 732 games, 53 held back, 11 tools. These are not round
-   numbers chosen for a headline; they are the result of counting, and the
-   count is the claim. A number that arrives by counting says what it is.
-
-   ONE PHRASE IS MARKED. The sentence under the numbers draws the line the
-   whole project rests on: the counting statistics are the league's, and the
-   possessions, lineups and rates are ours. The marker is on our half of it,
-   once, and nowhere else on the page. A highlighter used twice is a background
-   colour.
-
-   THE RULE, the same one the rest of the page follows:
-     - once, when the thing is actually being looked at, then never again
-     - on screen AND in the visible tab, because a background tab reports its
-       sections as intersecting and would spend the animation on nobody
-     - finished immediately for a visitor who asked for less motion */
+/* EuroLeague Analytics — Global Motion, Counting Figures & Client Tabs
+   Handles viewport-gated number counting, copy-to-clipboard, and client tab navigation. */
 
 (function () {
   "use strict";
 
-  var COUNT_MS = 1100;   // the whole count, however large the number
-  var MARK_MS = 620;     // the marker's sweep
-
+  var COUNT_MS = 1400;
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  /* Run `fn` once, the first time `el` is both on screen and in a tab someone
-     is looking at. Without the second condition the page plays itself out in a
-     background tab and the visitor arrives after the end. */
+  function easeOutExpo(t) {
+    return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+  }
+
+  function formatNumber(num, isOriginalFormatted) {
+    if (isOriginalFormatted && num >= 1000) {
+      return num.toLocaleString("en-US");
+    }
+    return String(num);
+  }
+
+  function countUp(el, target, hasComma) {
+    var start = null;
+
+    function step(timestamp) {
+      if (!start) start = timestamp;
+      var progress = Math.min(1, (timestamp - start) / COUNT_MS);
+      var current = Math.round(easeOutExpo(progress) * target);
+      el.textContent = formatNumber(current, hasComma);
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        el.textContent = formatNumber(target, hasComma);
+      }
+    }
+
+    window.requestAnimationFrame(step);
+  }
+
   function whenSeen(el, fn) {
     if (!("IntersectionObserver" in window)) {
       fn();
       return;
     }
-    var done = false;
-
-    function settle() {
-      if (done) return;
-      if (!seen) return;
-      if (document.visibilityState !== "visible") return;
-      done = true;
-      io.disconnect();
-      document.removeEventListener("visibilitychange", settle);
-      fn();
-    }
-
     var seen = false;
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
-        if (entry.isIntersecting) seen = true;
+        if (entry.isIntersecting && !seen) {
+          seen = true;
+          io.disconnect();
+          fn();
+        }
       });
-      settle();
-    }, { threshold: 0.4 });
-
+    }, { threshold: 0.3 });
     io.observe(el);
-    document.addEventListener("visibilitychange", settle);
   }
 
-  /* Fast at the start and easing to a stop, so the last few numbers are
-     readable rather than a blur that snaps. */
-  function easeOut(t) {
-    return 1 - Math.pow(1 - t, 3);
-  }
+  // Animate trust section numbers
+  var factNumbers = Array.prototype.slice.call(document.querySelectorAll(".fact-num[data-target]"));
+  factNumbers.forEach(function (el) {
+    var target = parseInt(el.getAttribute("data-target"), 10);
+    var hasComma = el.textContent.indexOf(",") !== -1;
 
-  function countTo(el, target) {
-    var started = null;
-
-    function frame(now) {
-      if (started === null) started = now;
-      var t = Math.min(1, (now - started) / COUNT_MS);
-      el.textContent = String(Math.round(easeOut(t) * target));
-      if (t < 1) window.requestAnimationFrame(frame);
-    }
-
-    window.requestAnimationFrame(frame);
-  }
-
-  /* ---- the counted numbers ---- */
-
-  var figures = Array.prototype.slice.call(document.querySelectorAll(".facts dt"));
-  figures.forEach(function (el) {
-    var text = el.textContent.trim();
-    if (!/^\d+$/.test(text)) return;   // anything that is not a plain count is left alone
-    var target = parseInt(text, 10);
-    if (reduced.matches) return;       // it already reads the right number
-
-    /* Nothing moves while the digits change. Each `dt` is a block filling its
-       own grid column, so its box is the column's width whether it holds one
-       digit or three, and the description under it never shifts. Pinning a
-       width here would be guarding against a reflow the layout already
-       prevents. */
-    el.textContent = "0";
-
-    whenSeen(el, function () {
-      countTo(el, target);
-    });
-  });
-
-  /* ---- the one marked phrase ---- */
-
-  var marks = Array.prototype.slice.call(document.querySelectorAll(".marker"));
-  marks.forEach(function (el) {
     if (reduced.matches) {
-      el.classList.add("is-marked");
+      el.textContent = formatNumber(target, hasComma);
       return;
     }
+
+    el.textContent = "0";
     whenSeen(el, function () {
-      window.setTimeout(function () {
-        el.classList.add("is-marked");
-      }, MARK_MS / 2);
+      countUp(el, target, hasComma);
     });
   });
+
+  // Client tabs in Connect section
+  var tablist = document.querySelector(".client-tabs");
+  if (tablist) {
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll(".client-tab"));
+    var panels = Array.prototype.slice.call(document.querySelectorAll(".client-panel"));
+
+    function selectTab(tab, focus) {
+      var targetId = tab.getAttribute("aria-controls");
+      tabs.forEach(function (t) {
+        var active = t === tab;
+        t.setAttribute("aria-selected", active ? "true" : "false");
+        t.tabIndex = active ? 0 : -1;
+      });
+
+      panels.forEach(function (p) {
+        p.hidden = p.id !== targetId;
+      });
+
+      if (focus) tab.focus();
+    }
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        selectTab(tab, false);
+      });
+    });
+
+    tablist.addEventListener("keydown", function (e) {
+      var activeTab = document.activeElement;
+      var index = tabs.indexOf(activeTab);
+      if (index === -1) return;
+
+      var target = null;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        target = tabs[(index + 1) % tabs.length];
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        target = tabs[(index - 1 + tabs.length) % tabs.length];
+      } else if (e.key === "Home") {
+        target = tabs[0];
+      } else if (e.key === "End") {
+        target = tabs[tabs.length - 1];
+      }
+
+      if (target) {
+        e.preventDefault();
+        selectTab(target, true);
+      }
+    });
+  }
+
+  // Copy server URL button
+  var copyBtn = document.getElementById("copy-url");
+  var urlEl = document.getElementById("server-url");
+
+  if (copyBtn && urlEl) {
+    var idleText = copyBtn.textContent;
+    var copiedText = copyBtn.getAttribute("data-copied") || "Copied";
+    var resetTimer = null;
+
+    copyBtn.addEventListener("click", function () {
+      var text = urlEl.textContent.trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          showCopied();
+        }).catch(function () {
+          fallbackSelect();
+        });
+      } else {
+        fallbackSelect();
+      }
+    });
+
+    function showCopied() {
+      copyBtn.textContent = copiedText;
+      copyBtn.classList.add("is-done");
+      window.clearTimeout(resetTimer);
+      resetTimer = window.setTimeout(function () {
+        copyBtn.textContent = idleText;
+        copyBtn.classList.remove("is-done");
+      }, 1800);
+    }
+
+    function fallbackSelect() {
+      var range = document.createRange();
+      range.selectNodeContents(urlEl);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      showCopied();
+    }
+  }
 })();
