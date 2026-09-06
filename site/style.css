@@ -18,6 +18,10 @@
   --ink-faint:  #A09284;
   --hairline:   #EBE2D7;
   --surface:    #FFFFFF;
+  /* The ground of the recorded Claude windows, sampled from the hero clip on
+     2026-09-06. The two courts sit on it too, so a recording and a drawing
+     read as the same kind of card. */
+  --stage:      #FBFBF8;
 
   /* The one saturated colour on the page. Reserved for measured values and
      for the single action we want taken. Nothing decorative is ever this. */
@@ -771,10 +775,14 @@ h1 {
 
 /* The same card as .floor two sections down. Until 2026-09-06 this court sat
    bare on the paper while the substitution court sat in a white frame, and the
-   owner read the two as two designs. One court, one frame. */
+   owner read the two as two designs. One court, one frame.
+
+   The frame's ground is --stage, not --surface: the owner asked for the two
+   courts to sit on the same ground as the recorded Claude windows, and that
+   ground was sampled from the recording itself (rgb 251 251 248). */
 .courtwrap {
   position: relative;
-  background: var(--surface);
+  background: var(--stage);
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
   padding: 0.75rem;
@@ -789,10 +797,13 @@ h1 {
 }
 
 /* ---------- recorded demos (Decision 61) ----------
-   The recording was taken of the whole card - border, padding and corners
-   included - so once it plays, the card's own frame is switched off and the
-   video is the card. Until canplay (demo-video.js) nothing here applies and
-   the drawn figure is what shows. */
+   Used by the "Ask it something hard" windows. The recording was taken of the
+   whole chat column, frame included, so once it plays the drawn window's own
+   chrome is switched off and the video is the window. Until canplay
+   (demo-video.js) nothing here applies and the drawn transcript is what shows.
+   The shot chart and the floor were recorded this way too, for one day: the
+   captures ran at a lower frame rate than the scripts they filmed and the owner
+   saw it. They are scripts again. */
 .demo-video {
   display: none;
   width: 100%;
@@ -800,19 +811,27 @@ h1 {
   border-radius: var(--r-lg);
 }
 .has-video > .demo-video { display: block; }
-.courtwrap.has-video,
-.floor.has-video {
-  padding: 0;
-  border: 0;
-  background: transparent;
+
+/* Under every recording, a hairline that fills as the clip plays (demo-video.js
+   adds it on canplay). Ink, not orange: progress is not a measured value. The
+   fill is scaled rather than resized, so it costs no layout per frame. */
+.demo-progress {
+  display: none;
+  height: 2px;
+  margin-top: 0.55rem;
+  background: var(--hairline);
+  overflow: hidden;
 }
-.has-video > .halfcourt,
-.has-video > .court-overlay,
-.has-video > .floor-court,
-.has-video > .floor-players,
-.has-video > .floor-empty { display: none; }
-/* The bar was the anticipation for the drawn pour; the recording carries its own. */
-.claim-figure.has-video .chartbar { display: none; }
+.has-video > .demo-progress { display: block; }
+/* The hero keeps its caption; the bar sits between recording and caption. */
+.hero-demo > .demo-progress { margin-bottom: 0.35rem; }
+.demo-progress > i {
+  display: block;
+  height: 100%;
+  background: var(--ink-faint);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
 
 .callout {
   position: absolute;
@@ -927,7 +946,7 @@ h1 {
 
 .floor {
   position: relative;
-  background: var(--surface);
+  background: var(--stage);
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
   padding: 0.75rem;
@@ -1140,106 +1159,6 @@ h1 {
    These four paddings are one decision and move together. Changing one of them
    alone reintroduces the uneven rhythm they exist to keep. */
 
-/* ---------- the one place the visitor acts ---------- */
-
-.ask {
-  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
-  background: var(--paper-deep);
-}
-
-.ask-inner { max-width: 780px; margin: 0 auto; }
-
-.ask h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(2rem, 3.6vw, 3rem);
-  line-height: 1.06;
-  letter-spacing: -0.035em;
-}
-
-.ask-lede {
-  margin: 1rem 0 0;
-  max-width: 46ch;
-  color: var(--ink-soft);
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 2rem;
-}
-
-.chip {
-  font: inherit;
-  font-size: 0.92rem;
-  font-weight: 500;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-pill);
-  padding: 0.6rem 1.05rem;
-  cursor: pointer;
-  transition: border-color var(--dur-hover) var(--ease-hover), background var(--dur-hover) var(--ease-hover), color var(--dur-hover) var(--ease-hover);
-}
-.chip:hover { border-color: var(--ink-faint); }
-.chip.is-chosen {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
-}
-
-.ask-answer {
-  margin-top: 1.6rem;
-  min-height: 9.5rem;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  padding: 1.4rem 1.5rem;
-}
-
-.ask-empty { margin: 0; color: var(--ink-faint); font-size: 0.92rem; }
-
-.ask-working {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--ink-faint);
-}
-
-.ask-line { margin: 0 0 0.7rem; font-size: 1rem; }
-
-.ask-verdict {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin: 0.9rem 0 0;
-  font-size: 1rem;
-  color: var(--ink-soft);
-}
-
-.ask-figure {
-  font-family: var(--figures);
-  font-weight: 500;
-  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
-  line-height: 1;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-  color: var(--ball);
-}
-
-.ask-qualifier {
-  margin: 0.55rem 0 0;
-  font-size: 0.85rem;
-  color: var(--ink-faint);
-}
-
-.ask .lineup { margin-top: 0; }
-.ask .lineup li { background: var(--paper); }
-
 /* ---------- sidelines, the length of the page ----------
    The two rails frame the content and the short outward ticks mark section
    boundaries. Interior court furniture was removed after the owner found the
@@ -1282,9 +1201,8 @@ body { position: relative; }
    The length is chosen to be legible, not scaled. A real mark reaches 0.15 m
    onto a 15 m floor - a hundredth of the width, about 11px here - which at this
    size would read as dirt on the screen rather than as a mark. */
-.claim, .ask, .connect, .how, .footer { position: relative; }
+.claim, .connect, .how, .footer { position: relative; }
 .claim::before, .claim::after,
-.ask::before, .ask::after,
 .connect::before, .connect::after,
 .how::before, .how::after,
 .footer::before, .footer::after {
@@ -1300,191 +1218,14 @@ body { position: relative; }
 }
 /* Outside the sideline, not inside it: the mark sits off the floor so nothing
    ever reaches into the column the content occupies. */
-.claim::before, .ask::before, .connect::before, .how::before, .footer::before {
+.claim::before, .connect::before, .how::before, .footer::before {
   right: calc(100% - max(var(--gutter), calc(50% - 640px)));
 }
-.claim::after, .ask::after, .connect::after, .how::after, .footer::after {
+.claim::after, .connect::after, .how::after, .footer::after {
   left: calc(100% - max(var(--gutter), calc(50% - 640px)));
 }
 
 main, .topbar { position: relative; z-index: 1; }
-
-/* ---------- the ask stage: recordings, chosen by chip (Decision 61) ---------- */
-
-.ask-stage {
-  margin-top: 2rem;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-.ask-video {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* The recordings are 1360x980; reserving the ratio keeps the chips from
-     jumping when the first clip's metadata arrives. */
-  aspect-ratio: 1360 / 980;
-  background: var(--surface);
-}
-.chip.is-playing {
-  color: var(--ink);
-  border-color: var(--ball);
-}
-
-/* ---------- the ask window (the drawn version, retired 2026-09-06) ---------- */
-
-.ask-window { margin-top: 2rem; }
-
-/* A transcript, so it scrolls its own box rather than growing the page under
-   the visitor's cursor. The floor keeps the window from collapsing before the
-   first question; the ceiling keeps a long conversation from pushing the chips
-   off the screen, which is where the next question comes from. */
-.ask-body {
-  display: block;
-  min-height: 12rem;
-  max-height: 26rem;
-  overflow-y: auto;
-  scroll-behavior: smooth;
-}
-.ask-body > * + * { margin-top: 1.1rem; }
-.ask-body .reply { margin-top: 0.75rem; }
-
-/* The tool call. A connected assistant really does pick one of the eleven
-   el_* tools and run it, so this row is a report, not an ornament. */
-.toolcall {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 0.8rem;
-  font-family: var(--figures);
-  color: var(--ink-faint);
-  background: var(--paper-deep);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  padding: 0.5rem 0.75rem;
-}
-.toolcall-name { color: var(--ink-soft); }
-.toolcall-source {
-  margin-left: auto;
-  font-family: var(--text);
-  font-size: 0.76rem;
-}
-
-.toolcall-spinner {
-  width: 9px;
-  height: 9px;
-  flex: none;
-  border-radius: 50%;
-  border: 1.5px solid var(--ink-faint);
-  border-top-color: transparent;
-  animation: toolspin 700ms linear infinite;
-}
-.toolcall.is-done .toolcall-spinner {
-  border: 0;
-  background: #16A34A;
-  animation: none;
-}
-
-@keyframes toolspin { to { transform: rotate(360deg); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .toolcall-spinner { animation: none; }
-  .ask-body { scroll-behavior: auto; }
-  /* He is still there, he is just still. */
-  .mascot-eyes, .mascot-body { animation: none; }
-}
-
-/* The invitation, and the one thing on the page that is waiting for you. */
-.ask-empty {
-  display: flex;
-  align-items: center;
-  gap: 1.1rem;
-  margin: 0;
-}
-
-.mascot {
-  flex: none;
-  width: 78px;
-  height: 78px;
-  overflow: visible;
-}
-
-.ask-invite { margin: 0; }
-.ask-invite b {
-  display: block;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--ink);
-}
-.ask-invite span {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.9rem;
-  color: var(--ink-faint);
-}
-
-/* Waiting, not performing. Two slow movements, both small enough that they
-   register at the edge of vision rather than asking to be watched: a breath,
-   and a glance that keeps coming back to you. The page's other motion happens
-   ONCE and stops, and this is the deliberate exception - a character that
-   stops moving is a character that has left, and the whole job here is to look
-   like somebody is still there. */
-@keyframes mascot-glance {
-  0%, 42%   { transform: translateX(0); }
-  52%, 74%  { transform: translateX(2.2px); }
-  84%, 100% { transform: translateX(-1.6px); }
-}
-@keyframes mascot-breathe {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-2.5px); }
-}
-.mascot-eyes { animation: mascot-glance 4.6s ease-in-out infinite; }
-.mascot-body { animation: mascot-breathe 3.8s ease-in-out infinite; }
-
-.ask-working {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 1rem 0 0;
-  font-size: 0.85rem;
-  color: var(--ink-faint);
-}
-
-/* The chips live where the text field would be: suggestions, and the only
-   input this window can safely accept. */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  margin: 0;
-  padding: 0.9rem 1rem 1rem;
-  border-top: 1px solid var(--hairline);
-  background: var(--paper);
-}
-
-.chip {
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 500;
-  color: var(--ink-soft);
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-pill);
-  padding: 0.5rem 0.9rem;
-  cursor: pointer;
-  transition: border-color var(--dur-hover) var(--ease-hover), background var(--dur-hover) var(--ease-hover), color var(--dur-hover) var(--ease-hover);
-}
-.chip:hover { border-color: var(--ink-faint); color: var(--ink); }
-/* Spent, not disabled. It stays clickable, and the mark is only a record of
-   what has already been asked. */
-.chip.is-asked {
-  color: var(--ink-faint);
-  background: var(--paper-deep);
-  border-style: dashed;
-}
-
 
 /* ---------- connect ---------- */
 
@@ -1738,6 +1479,27 @@ main, .topbar { position: relative; z-index: 1; }
   align-items: start;
   gap: clamp(1.75rem, 4vw, 3.5rem);
   margin-top: clamp(2rem, 3.5vw, 3.25rem);
+}
+
+/* Three cases, counted and separated (owner, 2026-09-06). The number is set in
+   the figures face like every other measured mark on the page, and the rule
+   between cases is the same hairline as the court. The counter lives on the
+   list, so reordering the markup renumbers it. */
+.deep-inner { counter-reset: deepcase; }
+.deep-case + .deep-case {
+  border-top: 1px solid var(--hairline);
+  padding-top: clamp(2rem, 3.5vw, 3.25rem);
+}
+.deep-copy h3::before {
+  counter-increment: deepcase;
+  content: counter(deepcase, decimal-leading-zero);
+  display: block;
+  margin-bottom: 0.7rem;
+  font-family: var(--figures);
+  font-weight: 500;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
 }
 /* The copy and the window swap sides on the middle case. The COLUMNS swap with
    them - ordering alone would have left the window in the narrow column and

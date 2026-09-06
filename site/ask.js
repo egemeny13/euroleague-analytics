@@ -1,70 +1,9 @@
-/* The one place on the page where the visitor does something.
-   Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md,
-   Decisions 60 and 61.
-
-   Chips, never a text field. That is a security decision and an experience
-   decision at the same time: an endpoint that accepts free text is the only
-   version of this worth attacking, and a visitor handed an empty box asks a
-   bad question and leaves with a bad impression of a warehouse that would have
-   answered a good one.
-
-   Each chip plays a recording. Until 2026-09-06 a chip appended a canned
-   transcript to a drawn assistant window, and the owner read that window as a
-   fake one. Now every chip has a real capture of Claude answering that exact
-   question with this server connected, made the way the hero's was. The first
-   chip plays the hero's own file. Nothing here is generated, typed, or
-   imitated; the figures on screen are whatever the assistant said that day,
-   which is also why the recordings are dated in DECISIONS.md and re-made when
-   the loaded seasons change.
-
-   Reduced motion is respected by doing nothing until asked: the stage shows a
-   still until a chip is clicked, and a click is the visitor's own choice. */
-
-(function () {
-  "use strict";
-
-  var stage = document.getElementById("ask-stage");
-  var video = document.getElementById("ask-video");
-  var chips = document.getElementById("chips");
-  if (!stage || !video || !chips) return;
-
-  var buttons = Array.prototype.slice.call(chips.querySelectorAll(".chip"));
-
-  function source(name, type) {
-    var node = document.createElement("source");
-    node.src = name + "." + type;
-    node.type = "video/" + type;
-    return node;
-  }
-
-  function play(name) {
-    video.pause();
-    while (video.firstChild) video.removeChild(video.firstChild);
-    video.appendChild(source(name, "webm"));
-    video.appendChild(source(name, "mp4"));
-    video.load();
-    video.play().catch(function () {
-      /* A browser that refuses is left showing the poster. Nothing to say. */
-    });
-  }
-
-  buttons.forEach(function (chip) {
-    chip.addEventListener("click", function () {
-      var name = chip.getAttribute("data-clip");
-      if (!name) return;
-      buttons.forEach(function (other) { other.classList.remove("is-playing"); });
-      /* Asked chips stay on the board and stay clickable. Marking them spent
-         tells the visitor how much of this they have seen without taking
-         anything away from them. */
-      chip.classList.add("is-asked", "is-playing");
-      play(name);
-    });
-  });
-
-  video.addEventListener("ended", function () {
-    buttons.forEach(function (other) { other.classList.remove("is-playing"); });
-  });
-})();
+/* This file used to open with the "Now ask it yourself" window - chips that
+   replayed canned answers, then chips that played recordings. The owner removed
+   the section on 2026-09-06 (Decision 61, amended): the hero already shows the
+   assistant answering, and a second window that only replayed clips was a
+   repeat. What remains here is the connect section's behaviour.
+   Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md */
 
 /* The client tabs. Four genuinely different setups, one visible at a time.
    The panels are all in the markup and only hidden, so the page still says

@@ -49,14 +49,6 @@
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   var SVG_NS = "http://www.w3.org/2000/svg";
 
-  /* The recording of this very chart (Decision 61). When demo-video.js says it
-     can play, the drawn pour is cancelled and the counter follows the video's
-     clock instead. In the recording the first dot lands POUR_START seconds in
-     and the last one STEP_MS later per shot - the same tempo as the drawn
-     version, because it IS the drawn version, filmed. */
-  var video = document.getElementById("shots-video");
-  var POUR_START = 0.35;   // seconds into the recording, measured 2026-09-06 (clip starts 0.1 s into the capture)
-
   /* ---- a clock that only runs while the section is being looked at ----
      One pending step at a time, which is all this sequence ever has. Pausing
      banks the time already served, so resuming does not restart the wait. */
@@ -220,32 +212,8 @@
        hat. It has to be on screen AND the tab has to be the visible one. */
     var started = false;
     var visible = false;
-    var filmed = false;
-
-    function followVideo() {
-      filmed = true;
-      /* Whatever the drawn pour had done so far is dropped: the recording is
-         now the chart, and the counter reads from its clock. */
-      pause();
-      pending = null;
-      marks.textContent = "";
-      var total = shots.length;
-      var pourSeconds = (total * STEP_MS) / 1000;
-      (function tick() {
-        var p = (video.currentTime - POUR_START) / pourSeconds;
-        p = Math.max(0, Math.min(1, p));
-        counter.textContent = String(Math.round(p * total));
-        window.requestAnimationFrame(tick);
-      })();
-    }
-
-    if (video) {
-      if (video.closest(".has-video")) followVideo();
-      else video.addEventListener("demo-video-ready", followVideo);
-    }
 
     function settle() {
-      if (filmed) return;
       if (visible && document.visibilityState === "visible") {
         resume();
         if (!started) {

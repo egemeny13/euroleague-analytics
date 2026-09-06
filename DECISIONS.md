@@ -3518,20 +3518,53 @@ screenshots of real conversations for that section; the same three costs from
 the Decision 60 table apply and are accepted. The replay record in the source
 comments stays, so the figures in the screenshots remain checkable.
 
-**Status, end of 2026-09-06.** All landed on `site/polish`. Shot chart and floor:
-recordings of themselves. Ask-it-yourself: three chips, three recordings
-(Fenerbahce five = the hero's file; fastest team, 78.03 possessions per game;
-clutch at two minutes / three points, 646 possessions). A fourth, Horton-Tucker
-on/off, was recorded and dropped: `el_get_player_on_off` returned nothing three
-times and the assistant concluded the player had not joined the club - a tool
-question, open. Hard section: the "screenshots" became short recordings after
-the first take showed an answer three screens long; each clip ends resting on
-the finished answer so it can be read. Case 2's heading was re-read against its
-recording ("It refuses the flashy answer."). What every recording taught about
-questions: name the season, the thresholds and the warehouse in the question
-itself, or a fresh incognito chat asks for clarification instead of calling a
-tool. The recipe and the scripts live with the launch material outside this
-repository (`hero-recording-brief.md`, `recorder/`).
+**Status, end of 2026-09-06, after the owner's review of the built page.**
+Three of the four moves above were reversed the same evening, each with a reason
+worth keeping:
+
+- **The shot chart and the floor are scripts again.** Their recordings were
+  taken through the CDP screencast, which emits frames only as the compositor
+  produces them; the result ran visibly below the scripts' own frame rate and
+  the owner saw it at once (his note: the frame rate had dropped). A recording of an animation this
+  page can run itself gains nothing and loses smoothness. The two court cards
+  keep one change from that day: their ground is now `--stage`, the colour
+  sampled from the recorded Claude window, so a drawing and a recording read
+  as the same kind of card.
+- **"Now ask it yourself" is gone.** With the hero already showing the assistant
+  answer a question, a second window that only replayed clips was a repeat;
+  the owner removed it rather than keep three more recordings on the page.
+  The clips (fastest team, clutch), `asks.json`, `ask.js`'s first block and the
+  section's styles were deleted. The finding about Horton-Tucker on/off
+  (`el_get_player_on_off` returning nothing) stands as an open tool question.
+- **No recording scrolls any more.** The scripted scroll at the end of each
+  take ran a three-screen answer past the reader in two seconds; the middle
+  was never readable. The cuts now hold the finished answer as stills - top,
+  middle, bottom for the two long answers, top and bottom for the others -
+  four seconds each with a short dissolve. No re-recording was needed: the
+  stills are frames from the existing takes. A rule for cutting these: tab
+  capture emits no frames while the screen is static, so every segment is
+  padded to a fixed duration before the dissolve offsets are computed, or the
+  dissolves land early.
+
+What stands: the hero recording (Decision 60), the three "Ask it something
+hard" recordings, now numbered 01-03 and separated by hairlines at the owner's
+request, and Case 2's re-read heading ("It refuses the flashy answer.").
+
+**Playback rules, set by the owner the same evening and kept in
+`site/demo-video.js` alone:** nothing loads until its host is within half a
+screen (`preload="none"`, so a visitor who leaves from the hero pays for no
+clip); nothing plays until it is on screen, and it pauses when it leaves or the
+tab hides; only one recording plays at a time, the highest on the page; and a
+2 px progress bar sits under each recording, drawn in ink on the court's
+hairline because progress is not a measured value. The hero recording now
+follows the same file instead of its own copy of the logic. The WebM copies
+were dropped - for these mostly-still clips VP9 came out larger than H.264, and
+H.264 plays everywhere - as was the unused `preview.mp4` (6.6 MB). What
+every recording taught about questions: name the season, the thresholds and the
+warehouse in the question itself, or a fresh incognito chat asks for
+clarification instead of calling a tool. The recipe and the scripts live with
+the launch material outside this repository (`hero-recording-brief.md`,
+`recorder/`).
 
 ## Rules to add to the project instruction file
 

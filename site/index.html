@@ -45,18 +45,18 @@
         </div>
       </div>
 
-      <div class="hero-demo" id="hero-demo">
+      <div class="hero-demo" id="hero-demo" data-demo-host>
         <!-- A recording of the real thing: Claude, this server connected, one
-             question asked and answered. Decision 60. It is muted, it loops, and
-             it plays only while on screen. If the file is missing or cannot
-             play, the script never marks the demo as having a video and the
-             drawn window below carries on exactly as before - the recording is
-             an upgrade, never a dependency. Under prefers-reduced-motion it
-             shows its poster and does not run. -->
-        <video class="hero-video" id="hero-video" muted loop playsinline
-               preload="metadata" poster="hero-demo.jpg"
+             question asked and answered. Decision 60. Loading, playing, the
+             one-at-a-time rule and the progress bar are demo-video.js's, the
+             same as every other recording on the page. If the file is missing
+             or cannot play, the host never gets .has-video and the drawn window
+             below carries on exactly as before - the recording is an upgrade,
+             never a dependency. Under prefers-reduced-motion the drawn window
+             shows its finished state and nothing loads. -->
+        <video class="hero-video demo-video" id="hero-video" muted loop playsinline
+               preload="none" poster="hero-demo.jpg"
                aria-label="Claude, with EuroLeague Analytics connected, answering which five wins games for Fenerbahce">
-          <source src="hero-demo.webm" type="video/webm">
           <source src="hero-demo.mp4" type="video/mp4">
         </video>
 
@@ -187,15 +187,7 @@
       </div>
 
       <div class="claim-figure">
-        <div class="courtwrap" data-demo-host>
-        <!-- The chart below, recorded from this page itself at 2x (Decision 61).
-             Plays once and rests on the finished chart. The drawn chart stays
-             as the fallback and the reduced-motion version. -->
-        <video class="demo-video" id="shots-video" muted playsinline preload="auto"
-               poster="shots-demo.jpg" aria-hidden="true">
-          <source src="shots-demo.webm" type="video/webm">
-          <source src="shots-demo.mp4" type="video/mp4">
-        </video>
+        <div class="courtwrap">
         <!-- Drawn to FIBA dimensions in centimetres, the same units the source
              coordinates arrive in, so a shot lands where the league recorded it
              rather than where a hand-tuned transform puts it. -->
@@ -359,15 +351,7 @@
              five, and Baldwin is a guard. The substitution therefore does not
              swap like for like - it takes the centre off the floor and leaves
              the paint empty. That is the shape behind the number. -->
-        <div class="floor" id="floor" data-demo-host>
-          <!-- One full substitution cycle recorded from this page at 2x, cut
-               to loop seamlessly (Decision 61). The figures beside it follow
-               the recording's clock in lineups.js. -->
-          <video class="demo-video" id="lineups-video" muted loop playsinline preload="auto"
-                 poster="lineups-demo.jpg" aria-hidden="true">
-            <source src="lineups-demo.webm" type="video/webm">
-            <source src="lineups-demo.mp4" type="video/mp4">
-          </video>
+        <div class="floor" id="floor">
           <svg class="floor-court" viewBox="-820 -60 1640 1160" fill="none" aria-hidden="true">
             <!-- The same FIBA numbers as the shot chart above, mirrored the
                  same way, so the two sections are one court and not two
@@ -396,95 +380,6 @@
         </div>
 
       </div>
-    </div>
-  </section>
-
-  <section class="ask" id="ask">
-    <div class="ask-inner">
-      <h2>Now ask it yourself.</h2>
-      <p class="ask-lede">
-        Three questions, three recordings of Claude answering them over this
-        server. Pick one and watch it go and read — no number here was typed
-        by hand.
-      </p>
-
-      <!-- RECORDINGS, NOT A DRAWN WINDOW (Decision 61). Each chip plays a real
-           capture of Claude answering that question with this server connected,
-           made the way the hero's was (Decision 60): incognito chat, Low
-           effort, no cursor, no name. The chips are the only input, as before -
-           a chip is the only thing this can safely accept - and each one now
-           selects a clip rather than a canned transcript. The first chip plays
-           the hero's own recording; the same file, so the two cannot disagree.
-
-           Before any click the stage shows a still of the empty chat. A visitor
-           who asked for less motion sees exactly that until they choose a
-           question: a click is their choice, not the page's. -->
-      <div class="ask-stage" id="ask-stage">
-        <video class="ask-video" id="ask-video" muted playsinline preload="none"
-               poster="ask-idle.jpg"
-               aria-label="Claude, with EuroLeague Analytics connected, answering the question you picked"></video>
-        <div class="chips" id="chips" role="group" aria-label="Questions you can ask">
-          <button type="button" class="chip" data-clip="hero-demo">Which five wins games for Fenerbahce?</button>
-          <button type="button" class="chip" data-clip="ask-fastest">Which team plays fastest this season?</button>
-          <button type="button" class="chip" data-clip="ask-clutch">How many clutch possessions were there this season, last two minutes within three points?</button>
-          <!-- A fourth chip, "What happens to Fenerbahce when Horton-Tucker
-               sits?", was recorded on 2026-09-06 and dropped: the assistant
-               called el_get_player_on_off three times, got nothing back, and
-               answered that the player had not joined the club yet. That is a
-               question for the tool, not for the page. -->
-        </div>
-      </div>
-
-      <figure class="window ask-window" hidden>
-        <div class="window-bar">
-          <span class="window-app">
-            <span class="app-avatar" style="--tint:#1A1512">You</span>
-            <span>Your assistant</span>
-          </span>
-          <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
-        </div>
-
-        <!-- THE EMPTY STATE IS THE INVITATION, and it used to be an
-             instruction: "Pick one of the questions below." in faint grey, in
-             an otherwise empty box. The owner, reading the built page as a
-             visitor: this section is pale and motionless, so I do not feel like
-             clicking anything.
-
-             The scorer is the character, and he is the one thing on this page
-             that is waiting for you. He is at the scorer's table, which is what
-             this project is - somebody writing down every event as it happens.
-             The pen is the only orange in the drawing because the pen is the
-             part doing the recording.
-
-             Two other directions were drawn and are one line of markup away:
-             site/_mascots.html holds all three side by side. He is removed from
-             the panel by ask.js the moment a question is asked, which is the
-             point of him: he was waiting, and now he has gone to read. -->
-        <div class="window-body ask-body" id="ask-answer" aria-live="polite">
-          <div class="ask-empty">
-            <svg class="mascot" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-              <g class="mascot-body">
-                <circle cx="34" cy="24" r="12.5" stroke="var(--ink-soft)" stroke-width="2.2"/>
-                <g class="mascot-eyes">
-                  <circle cx="30" cy="23" r="2.6" fill="var(--ink)"/>
-                  <circle cx="39" cy="23" r="2.6" fill="var(--ink)"/>
-                </g>
-                <path d="M16 56 A18 18 0 0 1 52 56" stroke="var(--ink-soft)" stroke-width="2.2"/>
-                <path d="M6 56 H74" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
-                <path d="M48 56 V44 H70 V56" stroke="var(--ink-faint)" stroke-width="1.8"/>
-                <path d="M53 51 H65 M53 47 H65" stroke="var(--ink-faint)" stroke-width="1.8"/>
-                <path d="M58 46 L67 33" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
-                <path d="M67 33 L70 29" stroke="var(--ball)" stroke-width="3.2" stroke-linecap="round"/>
-              </g>
-            </svg>
-            <p class="ask-invite">
-              <b>Ask me something.</b>
-              <span>Pick one of the questions below and I will go and read it.</span>
-            </p>
-          </div>
-        </div>
-
-      </figure>
     </div>
   </section>
 
@@ -644,8 +539,7 @@
              fallback and the reduced-motion version; its replay record stays in
              the comments. -->
         <figure class="window deep-window" data-demo-host>
-          <video class="demo-video" muted playsinline preload="metadata" poster="hard-1.jpg" aria-hidden="true">
-            <source src="hard-1.webm" type="video/webm">
+          <video class="demo-video" muted playsinline preload="none" poster="hard-1.jpg" aria-hidden="true">
             <source src="hard-1.mp4" type="video/mp4">
           </video>
           <div class="window-bar">
@@ -700,8 +594,7 @@
         </div>
 
         <figure class="window deep-window" data-demo-host>
-          <video class="demo-video" muted playsinline preload="metadata" poster="hard-2.jpg" aria-hidden="true">
-            <source src="hard-2.webm" type="video/webm">
+          <video class="demo-video" muted playsinline preload="none" poster="hard-2.jpg" aria-hidden="true">
             <source src="hard-2.mp4" type="video/mp4">
           </video>
           <div class="window-bar">
@@ -751,8 +644,7 @@
         </div>
 
         <figure class="window deep-window" data-demo-host>
-          <video class="demo-video" muted playsinline preload="metadata" poster="hard-3.jpg" aria-hidden="true">
-            <source src="hard-3.webm" type="video/webm">
+          <video class="demo-video" muted playsinline preload="none" poster="hard-3.jpg" aria-hidden="true">
             <source src="hard-3.mp4" type="video/mp4">
           </video>
           <div class="window-bar">
