@@ -1254,3 +1254,41 @@ claim that the free offering persuades anybody is untested - no one outside the
 invite list has used this server. Free-tier egress under public traffic is
 unmeasured, and R-7's forty-request result was measured against a server with a
 handful of users, not against a launch.
+
+## Phase 9: external judgement. Opened 2026-09-06.
+
+Phases 1 to 8 are closed, the goal queue is empty, and `docs/SCOPE.md` freezes
+version 1 at eleven tools (Decision 65). Every remaining gate in this file has
+been a test of the code. This one is a test of the product, and it is the only
+phase left.
+
+**The question.** `CONTEXT.md` puts one goal first: would a club's analytics
+staff respect this. Nothing so far measures that. The invite list is friends,
+the evaluations are the owner's own questions, and the launch thread has not
+gone out.
+
+**The work.**
+
+1. Three readers who know the game and read box scores for a living, or close
+   to it. Not friends of the project. Each gets the hosted server, the
+   `README.md` connection steps, and one sentence: "ask it what you would ask a
+   club analyst, and tell me where it is wrong, incomplete, or missing."
+2. Every answer they get is checked against the warehouse and against
+   euroleague.net, and each remark is sorted with `docs/SCOPE.md`: **wrong**
+   becomes a bug goal, **missing** becomes a goal only if it is in the first
+   list's spirit, **left out on purpose** gets the reason sent back, and the
+   reader's reaction to that reason is recorded too.
+3. The 2026-09-18 live rehearsal (R-14) is the first live measurement inside
+   this phase, not a separate item.
+
+**Gate.** Three written reports in `docs/evidence/`, each remark sorted, each
+"wrong" fixed or recorded as a known limit in `docs/SCOPE.md`. A remark that
+cannot be sorted is a defect in `docs/SCOPE.md`, not in the reader.
+
+**What this gate would fail to detect.** Three readers are not a market; they
+can say the numbers are right and the tool is usable, not that anyone will
+choose it. That claim stays unmade, as the previous section says.
+
+**What fills the queue.** Only what Phase 9 returns. The public API still has
+season totals and standings, measured in `exploration/SEASON_ENDPOINT_PROBE.md`;
+they are not a backlog, they are the second list in `docs/SCOPE.md`.
