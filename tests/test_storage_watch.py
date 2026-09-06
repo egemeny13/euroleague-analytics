@@ -20,6 +20,7 @@ from euroleague.storage_watch import (
     format_storage_summary,
     games_until_stop,
     read_budgets,
+    read_per_game_cost,
 )
 
 
@@ -139,3 +140,81 @@ def test_an_empty_archive_reads_as_zero_rather_than_failing() -> None:
     """Break caught: a fresh archive returns NULL and the whole nightly summary dies."""
     _, archive = read_budgets(_Connection(1_000, None))
     assert archive.used_bytes == 0
+
+
+class _RoutingCursor:
+    """A cursor that answers by query text, so one fake can serve every read."""
+
+    def __init__(self, connection) -> None:
+        self.connection = connection
+
+    def __enter__(self) -> _RoutingCursor:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        pass
+
+    def execute(self, query: str, params: object = None) -> None:
+        self.connection.queries.append(query)
+        lowered = query.lower()
+        if "pg_total_relation_size" in lowered:
+            self._result = (self.connection.public_bytes,)
+        elif "from raw_game" in lowered:
+            self._result = (self.connection.games_loaded,)
+        else:
+            raise AssertionError(f"unexpected query: {query}")
+
+    def fetchone(self):
+        return self._result
+
+
+class _RoutingConnection:
+    def __init__(self, public_bytes: int, games_loaded: int) -> None:
+        self.public_bytes = public_bytes
+        self.games_loaded = games_loaded
+        self.queries: list[str] = []
+
+    def cursor(self) -> _RoutingCursor:
+        return _RoutingCursor(self)
+
+
+def test_the_per_game_cost_is_public_bytes_over_games_loaded() -> None:
+    """Break caught: the nightly figure is Decision 28's assumption restated, not a measurement."""
+    cost = read_per_game_cost(_RoutingConnection(264_334_483, 732))
+    assert cost is not None
+    assert cost.public_bytes == 264_334_483
+    assert cost.games_loaded == 732
+    assert cost.bytes_per_game == 264_334_483 / 732
+    assert cost.ratio_to_assumed == (264_334_483 / 732) / BYTES_PER_GAME
+
+
+def test_the_per_game_cost_is_absent_rather_than_infinite_with_no_games() -> None:
+    """Break caught: an empty warehouse divides by zero and kills the nightly summary."""
+    assert read_per_game_cost(_RoutingConnection(10_000_000, 0)) is None
+
+
+def test_reading_the_per_game_cost_writes_nothing() -> None:
+    connection = _RoutingConnection(264_334_483, 732)
+    read_per_game_cost(connection)
+    joined = " ".join(connection.queries).lower()
+    for forbidden in ("insert", "update", "delete", "drop", "alter", "create", "vacuum"):
+        assert forbidden not in joined
+
+
+def test_the_summary_prefers_the_measured_cost_and_names_the_assumed_one() -> None:
+    """Break caught: the games-left figure quietly keeps using the E2025 assumption."""
+    cost = read_per_game_cost(_RoutingConnection(264_334_483, 732))
+    database = assess_database(264_334_483)
+    text = format_storage_summary(database, assess_archive(15_409_234), cost)
+    measured = 264_334_483 / 732
+    assert f"{int((480_000_000 - 264_334_483) // measured)}" in text
+    assert "361,113" in text  # 264,334,483 / 732 = 361,112.68, rounded
+    assert "359,504.6" in text  # Decision 28's assumption, shown beside it
+    assert "732 games" in text
+    assert "Decision 21" in text
+
+
+def test_the_summary_falls_back_to_the_assumed_cost_without_a_measurement() -> None:
+    text = format_storage_summary(assess_database(335_105_171), assess_archive(15_409_234), None)
+    assert "403" in text
+    assert "not measured tonight" in text

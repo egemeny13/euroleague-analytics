@@ -118,6 +118,57 @@ def games_until_stop(reading: BudgetReading, bytes_per_game: float = BYTES_PER_G
     return int(reading.headroom_to_stop // bytes_per_game)
 
 
+@dataclass(frozen=True)
+class PerGameCost:
+    """What one loaded game costs tonight, measured rather than assumed.
+
+    Decision 21 measured 347,667.6 bytes per game on 2026-08-19 and Decision 28
+    re-measured 359,504.6 after compaction. Both were one-off readings, and
+    both went stale the day migrations 0021 to 0023 removed 100 MB. This
+    class is the nightly reading that replaces the ritual: every public
+    relation's bytes, divided by the games the warehouse holds.
+    """
+
+    public_bytes: int
+    games_loaded: int
+
+    @property
+    def bytes_per_game(self) -> float:
+        return self.public_bytes / self.games_loaded
+
+    @property
+    def ratio_to_assumed(self) -> float:
+        """Measured over Decision 28's figure. 1.0 means the assumption still holds."""
+        return self.bytes_per_game / BYTES_PER_GAME
+
+
+def read_per_game_cost(connection: Any) -> PerGameCost | None:
+    """Measure tonight's per-game cost. Reads only, and must stay that way.
+
+    In plain language: add up the size of every table in the public schema,
+    indexes included, and divide by the number of games in `raw_game`. With no
+    games loaded there is nothing to divide by, and the function says so with
+    `None` rather than a crash: a fresh warehouse is not an error.
+
+    What it does not measure: the catalogue and the system schemas that make
+    up the gap between the public tables and `pg_database_size`. Those are
+    not per-game costs, which is why the whole-database figure stays the one
+    the budgets are read from.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "select coalesce(sum(pg_total_relation_size("
+            "format('%I.%I', schemaname, tablename)::regclass)), 0) "
+            "from pg_tables where schemaname = 'public'"
+        )
+        public_bytes = int(cursor.fetchone()[0])
+        cursor.execute("select count(*) from raw_game")
+        games_loaded = int(cursor.fetchone()[0])
+    if games_loaded == 0:
+        return None
+    return PerGameCost(public_bytes=public_bytes, games_loaded=games_loaded)
+
+
 def _line(reading: BudgetReading) -> str:
     mark = {LEVEL_OK: "OK", LEVEL_WARNING: "WARNING", LEVEL_STOP: "STOP RULE PASSED"}[reading.level]
     return (
@@ -126,14 +177,39 @@ def _line(reading: BudgetReading) -> str:
     )
 
 
-def format_storage_summary(database: BudgetReading, archive: BudgetReading) -> str:
-    """Format both budgets for the nightly step summary."""
+def format_storage_summary(
+    database: BudgetReading,
+    archive: BudgetReading,
+    per_game_cost: PerGameCost | None = None,
+) -> str:
+    """Format both budgets for the nightly step summary.
+
+    The games-left figure uses tonight's measured per-game cost when there is
+    one, and says which it used. Decision 28's assumed figure is printed
+    beside the measurement so a drift is visible without opening a decision.
+    """
+    if per_game_cost is not None:
+        games_left = games_until_stop(database, per_game_cost.bytes_per_game)
+        cost_line = (
+            f"- **Measured per-game cost (Decision 21, re-measured nightly):** "
+            f"{per_game_cost.bytes_per_game:,.0f} bytes over {per_game_cost.games_loaded:,} games, "
+            f"{per_game_cost.ratio_to_assumed:.1%} of Decision 28's assumed {BYTES_PER_GAME:,}."
+        )
+        basis = "tonight's measured per-game cost"
+    else:
+        games_left = games_until_stop(database)
+        cost_line = (
+            f"- **Per-game cost:** not measured tonight; Decision 28's assumed "
+            f"{BYTES_PER_GAME:,} used."
+        )
+        basis = "the assumed per-game cost"
     lines = [
         "### 💾 Storage budgets\n",
         _line(database),
         _line(archive),
+        cost_line,
         f"- **Headroom to Decision 28's stop rule:** {database.headroom_to_stop:,} bytes, "
-        f"about **{games_until_stop(database)}** more games at the measured per-game cost.",
+        f"about **{games_left}** more games at {basis}.",
     ]
     if database.level != LEVEL_OK:
         lines.append(

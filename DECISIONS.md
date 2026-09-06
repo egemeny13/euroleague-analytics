@@ -3889,6 +3889,32 @@ investigate, never a baseline to overwrite. `events_parsed` must equal the
 game is re-measured on production once E2026 has games, and Decision 20's
 window arithmetic is redone from that figure.
 
+## 69. The per-game storage cost is measured every night, not carried from one season
+
+**Decided 2026-09-07 by the owner**, choosing "connect it to Actions" over a
+manual re-measure. Decision 21 measured bytes per game once, Decision 28
+re-measured it once after compaction, and Decision 68 made both readings
+stale by removing 100 MB. A figure that has to be re-measured by hand after
+every change is a figure that will be quoted stale.
+
+**What runs.** The nightly live workflow already reads the storage budgets
+after each load (`storage_watch.read_budgets`). It now also reads
+`read_per_game_cost`: the total of every public relation, indexes included,
+divided by the games in `raw_game`. The step summary prints that figure,
+Decision 28's assumed 359,504.6 beside it as a ratio, and uses the measured
+value for the "games left before the stop rule" line, saying which basis it
+used. With no games loaded the measurement is absent, not zero or infinite.
+
+**What it is not.** Not a gate and not a correction: it reports and never
+refuses, like the rest of the storage watch. It does not close Decision 20's
+window arithmetic on its own; when E2026 has enough games to give a stable
+reading, that arithmetic is redone from the summary's figure and recorded.
+
+**Condition.** If the measured ratio to the assumed figure leaves the range
+0.8 to 1.2 for a week of loads, `BYTES_PER_GAME` in `storage_watch.py` is
+updated to the measured value with the date, and the tests that pin it move
+with it.
+
 ## Rules to add to the project instruction file
 
 ```

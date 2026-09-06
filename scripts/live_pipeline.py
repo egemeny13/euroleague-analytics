@@ -32,7 +32,11 @@ from euroleague.config import DatabaseSettings, live_runtime_settings
 from euroleague.fetch import DEFAULT_CACHE_ROOT, validate_season_code
 from euroleague.live import run_live_pipeline
 from euroleague.step_summary import append_step_summary, format_live_pipeline_summary
-from euroleague.storage_watch import format_storage_summary, read_budgets
+from euroleague.storage_watch import (
+    format_storage_summary,
+    read_budgets,
+    read_per_game_cost,
+)
 
 SUPPORTED_LIVE_SEASONS = ("E2026", "SC2026")
 
@@ -86,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
 
     cache = ResponseCache(args.cache_root)
     budgets = None
+    per_game_cost = None
     budget_error = "not reached"
 
     try:
@@ -128,8 +133,12 @@ def main(argv: list[str] | None = None) -> int:
             # games, so it is caught and noted rather than raised.
             try:
                 budgets = read_budgets(connection)
+                # Decision 21's per-game cost, re-measured every night rather
+                # than assumed from E2025 (Decision 69). Reporting only.
+                per_game_cost = read_per_game_cost(connection)
             except Exception as budget_failure:
                 budgets = None
+                per_game_cost = None
                 budget_error = f"{type(budget_failure).__name__}: {budget_failure}"
     except Exception as failure:
         # The message, never the settings object: a traceback carrying a
@@ -140,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
 
     append_step_summary(format_live_pipeline_summary(season_code, summary))
     if budgets is not None:
-        append_step_summary(format_storage_summary(*budgets))
+        append_step_summary(format_storage_summary(*budgets, per_game_cost))
         print(
             f"storage: database={budgets[0].used_bytes:,} bytes "
             f"({budgets[0].level}), archive={budgets[1].used_bytes:,} bytes"
