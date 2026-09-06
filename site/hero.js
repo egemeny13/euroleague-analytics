@@ -62,6 +62,43 @@
   var index = 0;
   var timer = null;
 
+  /* The screen recording, when there is one (Decision 60). The browser decides:
+     on canplay the demo is marked as having a video, the drawn window hides
+     and this script stops cycling it. A missing or unplayable file fires no
+     canplay, so the page behaves as it did before the recording existed. The
+     recording, like everything else here, runs only on screen and not for a
+     visitor who asked for less motion - they get its poster frame. */
+  var demo = document.getElementById("hero-demo");
+  var video = document.getElementById("hero-video");
+  var hasVideo = false;
+
+  function stopCycle() {
+    hasVideo = true;
+    window.clearTimeout(timer);
+    if (demo) demo.classList.add("has-video");
+  }
+
+  if (video && demo) {
+    video.addEventListener("canplay", function onCanPlay() {
+      video.removeEventListener("canplay", onCanPlay);
+      stopCycle();
+      if (reduced.matches) return;
+      if ("IntersectionObserver" in window) {
+        new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              video.play().catch(function () {});
+            } else {
+              video.pause();
+            }
+          });
+        }, { threshold: 0.2 }).observe(video);
+      } else {
+        video.play().catch(function () {});
+      }
+    });
+  }
+
   function parts(exchange) {
     return {
       question: exchange.getAttribute("data-question") || "",
@@ -115,6 +152,7 @@
   }
 
   function play() {
+    if (hasVideo) return;
     show(index);
     reset(exchanges[index]);
     var p = parts(exchanges[index]);

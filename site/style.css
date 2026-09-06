@@ -250,6 +250,21 @@ h1 {
 
 .hero-demo { min-width: 0; }
 
+/* The recording takes the window's place only once the browser says it can
+   play it (.has-video is set by hero.js on canplay). Until then, and whenever
+   the file is absent, the drawn window below is what the visitor sees. Same
+   frame as every other panel on the page: hairline, --r-lg, no shadow. */
+.hero-video {
+  display: none;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.hero-demo.has-video .hero-video { display: block; }
+.hero-demo.has-video .window { display: none; }
+
 .window {
   margin: 0;
   background: var(--surface);

@@ -45,7 +45,21 @@
         </div>
       </div>
 
-      <div class="hero-demo">
+      <div class="hero-demo" id="hero-demo">
+        <!-- A recording of the real thing: Claude, this server connected, one
+             question asked and answered. Decision 60. It is muted, it loops, and
+             it plays only while on screen. If the file is missing or cannot
+             play, the script never marks the demo as having a video and the
+             drawn window below carries on exactly as before - the recording is
+             an upgrade, never a dependency. Under prefers-reduced-motion it
+             shows its poster and does not run. -->
+        <video class="hero-video" id="hero-video" muted loop playsinline
+               preload="metadata" poster="hero-demo.jpg"
+               aria-label="Claude, with EuroLeague Analytics connected, answering which five wins games for Fenerbahce">
+          <source src="hero-demo.webm" type="video/webm">
+          <source src="hero-demo.mp4" type="video/mp4">
+        </video>
+
         <figure class="window" aria-labelledby="demo-caption">
           <div class="window-bar">
             <span class="window-app">

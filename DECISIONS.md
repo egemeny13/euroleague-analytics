@@ -3424,6 +3424,46 @@ not establish that the live `#ask` chips further up the page will ever answer
 questions of this shape: those run a locked allowlist of recorded answers, and
 Decision 6's live endpoint is still unbuilt.
 
+## 60. The hero shows a screen recording of the real thing, and the drawn window is its fallback
+
+**Decided 2026-09-06 by the owner**, reversing one rule in the launch site's
+design record (section 10: "No autoplaying video anywhere. The hero conversation
+is text and CSS"). His words, reviewing the live page: the drawn assistant window
+reads as a fake window, and he wanted "a screen recording, like a demo".
+
+**Why the drawn window was there, and why the reason no longer wins.** Section 9
+of the design record forbids imitating anyone's interface, and the window was
+built neutral for that reason: a name, a brand colour, no logo, no copied
+chrome. That neutrality is exactly what reads as fake. A recording of Claude
+with this server connected is not an imitation; it is the product doing the
+thing the page asks the visitor to go and do. The imitation rule stands. The
+no-video rule is the one that gives way, and the costs it was protecting
+against are accepted knowingly:
+
+| Cost the old rule avoided | What happens now |
+|---|---|
+| Weight | One recording, 12-18 s, cropped to the app window, target 2-3 MB as H.264 plus WebM, `preload="metadata"`, poster frame first |
+| Goes stale when the client's interface changes | Accepted. Re-record; the brief for doing so lives with the launch material outside this repository |
+| Cannot be translated | Accepted. The Turkish page, when authored, needs its own recording or keeps the drawn window |
+| Blurs on displays the author did not own | Recorded at 1280 px wide with the client's text one step larger, shown at 560 px, so it is downscaled everywhere |
+
+**The condition.** The recording is an upgrade, never a dependency. `hero.js`
+hides the drawn window and stops cycling it only when the browser fires
+`canplay`; a missing or unplayable file leaves the page exactly as it was on
+2026-09-05. The video is muted, loops, plays only while on screen, and under
+`prefers-reduced-motion` shows its poster and does not run. Autoplay of a muted
+inline video is what browsers permit without a gesture; if a browser refuses,
+the poster stands and nothing errors.
+
+**What is not decided.** Whether other sections get recordings. The "Ask it
+something hard" windows stay HTML (Decision 59): they are transcripts read
+against a replay record, and a recording of them would be a picture of homework.
+
+**Recorded outside this repository:** the shot list the owner records from,
+`E:\dev\euroleague-analytics-launch\hero-recording-brief.md`. The recording
+itself lands as `site/hero-demo.mp4`, `site/hero-demo.webm` and
+`site/hero-demo.jpg`. Until it does, the slot is empty and the window shows.
+
 ## Rules to add to the project instruction file
 
 ```

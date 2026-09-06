@@ -268,9 +268,14 @@ Rules the implementation must follow:
 - `prefers-reduced-motion` is honoured: the animation renders its finished state
   immediately instead of playing.
 - Animations pause when their section is off screen.
-- No autoplaying video anywhere. The hero conversation is text and CSS, not the
+- ~~No autoplaying video anywhere. The hero conversation is text and CSS, not the
   existing `preview.mp4` — it stays crisp at any size, weighs almost nothing, and
-  can be translated with the rest of the page.
+  can be translated with the rest of the page.~~ **Reversed 2026-09-06 for the
+  hero only** — Decision 60. The owner found the drawn window read as a fake
+  window and asked for a screen recording of the real client. The recording is
+  muted, loops, plays only on screen, honours `prefers-reduced-motion`, and the
+  drawn window remains as the fallback whenever the file is absent or the
+  browser cannot play it. Everywhere else on the page the rule stands.
 
 ## 11. Technical shape
 
