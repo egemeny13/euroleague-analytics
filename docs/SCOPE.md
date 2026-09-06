@@ -15,7 +15,7 @@ league already publishes is not derived.
 
 ## What version 1 does
 
-Eleven read-only tools, served identically over stdio and HTTP. Every response
+Twelve read-only tools, served identically over stdio and HTTP. Every response
 states its data coverage, the games it excludes, and whether a minute figure is
 raw or corrected.
 
@@ -32,6 +32,7 @@ raw or corrected.
 | `el_get_lineup_stats` | Five-player lineups: possessions, offensive, defensive and net rating. |
 | `el_get_player_on_off` | The team's net rating with a player on court against off court. |
 | `el_get_possessions` | Possession rows with start margin and clock, so any clutch definition is a filter. |
+| `el_get_fouls` | Fouls committed and drawn by type, per player, team or game; reconciles to the box score. |
 
 Under the tools, the warehouse: three v1 game endpoints (`Boxscore`,
 `PlaybyPlay`, `Points`) and one v2 endpoint (the per-season people list, for

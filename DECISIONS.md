@@ -3915,6 +3915,39 @@ reading, that arithmetic is redone from the summary's figure and recorded.
 updated to the measured value with the date, and the tests that pin it move
 with it.
 
+## 70. Fouls are served by type, and the committed total is defined as what the box score counts
+
+**Decided 2026-09-07.** `el_get_fouls` is the twelfth MCP tool. Foul type is
+already in the data (CLAUDE.md's rule on `PLAYTYPE`) and had no tool serving
+it; this closes that gap without inferring anything new.
+
+**The measurement.** `v_foul_event` classifies every event whose `playtype`
+is one of `CM`, `OF`, `CMU`, `CMT`, `CMD`, `CMTI`, `C`, `B` or `RV` into
+`foul_kind`: `committed` for the first six, `bench` for `C`/`B`, `drawn` for
+`RV`. Measured 2026-09-07 on E2025 (402 games, 9,540 player-games):
+`fouls_commited` (the box score's misspelled `Boxscore.FoulsCommited`) equals
+the count of `committed` events for 9,540 of 9,540 player-games, and
+`fouls_received` equals the count of `RV` events for 9,540 of 9,540.
+Rehearsed the same reconciliation on the disposable database against both
+loaded seasons: E2024 (7,863 player-games) and E2025 (9,540 player-games)
+each show zero mismatches on both columns.
+`docs/evidence/fouls_reconciliation_rehearsal.json`.
+
+**The bench/coach pseudo-id rule.** `C` (coach) and `B` (bench) rows carry
+the positional pseudo-ids `CO_A`, `CO_B`, `AC_A`, `AC_B`, which
+`game_event.is_coach_event` already flags. They never appear in a box score
+and are reported at team and game level only - `el_get_fouls` excludes
+`is_coach_event` rows when `group_by` is `player`, so a pseudo-id is never
+mistaken for a person.
+
+**Condition.** The reconciliation test in `tests/test_foul_reconciliation.py`
+must stay at zero mismatches for every loaded season; a single mismatch fails
+it, per CLAUDE.md's box-score rule. The view's `case` statement names exactly
+the eight codes plus `RV`, enforced by
+`test_the_view_classifies_every_foul_code_and_nothing_else`. If a new foul
+code appears in `PLAYTYPE` in a future season, that test fails and it is a
+decision to make - not silently folded into `committed`, `bench` or `drawn`.
+
 ## Rules to add to the project instruction file
 
 ```

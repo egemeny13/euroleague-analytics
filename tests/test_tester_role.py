@@ -36,7 +36,7 @@ pytestmark = pytest.mark.warehouse
 TESTER_URL_ENV_VAR = "TESTER_DATABASE_URL"
 TESTER_ROLE = "el_tester"
 
-# The same seven security_invoker views `el_reader` serves. Migration 0011 made
+# The same eight security_invoker views `el_reader` serves. Migration 0011 made
 # them security_invoker, so reaching them also requires the base-table grants.
 VIEWS = (
     "v_game",
@@ -46,6 +46,7 @@ VIEWS = (
     "v_possession",
     "v_play_by_play",
     "v_shot_data",
+    "v_foul_event",
 )
 
 # Read directly by queries.py rather than through any view.

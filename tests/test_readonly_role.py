@@ -27,7 +27,7 @@ pytestmark = pytest.mark.warehouse
 
 READER_URL_ENV_VAR = "READER_DATABASE_URL"
 
-# The seven views the MCP server serves. Migration 0011 made every one of them
+# The eight views the MCP server serves. Migration 0011 made every one of them
 # security_invoker, so reaching them also requires the base-table grants below.
 VIEWS = (
     "v_game",
@@ -37,6 +37,7 @@ VIEWS = (
     "v_possession",
     "v_play_by_play",
     "v_shot_data",
+    "v_foul_event",
 )
 
 # Read directly by queries.py rather than through any view.

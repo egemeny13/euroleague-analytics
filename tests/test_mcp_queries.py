@@ -15,6 +15,7 @@ from euroleague.mcp.queries import (
     describe_warehouse,
     find_games,
     get_boxscore,
+    get_fouls,
     get_game,
     get_lineup_stats,
     get_play_by_play,
@@ -885,6 +886,7 @@ def test_possessions_aggregate_rejects_strings_and_null():
         (get_player_on_off, {"player": "P012774"}),
         (get_possessions, {}),
         (get_play_by_play, {"gamecode": 1}),
+        (get_fouls, {}),
     ],
 )
 def test_direct_query_path_rejects_string_include_quarantined(query_fn, extra_args):
@@ -907,6 +909,7 @@ def test_direct_query_path_rejects_string_include_quarantined(query_fn, extra_ar
         (get_player_on_off, {"player": "P012774"}),
         (get_possessions, {}),
         (get_play_by_play, {"gamecode": 1}),
+        (get_fouls, {}),
     ],
 )
 def test_direct_query_path_rejects_null_include_quarantined(query_fn, extra_args):
@@ -1482,3 +1485,51 @@ def test_get_boxscore_quarantined_game_excluded_by_default():
     )
     with pytest.raises(ValueError, match=r"quarantined \(possession_gate\) and excluded"):
         get_boxscore(cursor, {"season": "E2024", "gamecode": 14})
+
+
+def test_fouls_group_by_player_binds_the_season_and_the_foul_type() -> None:
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2025",)]),
+            (["total"], [(3,)]),
+            (
+                [
+                    "player_id",
+                    "team_code",
+                    "committed",
+                    "offensive",
+                    "unsportsmanlike",
+                    "technical",
+                    "disqualifying",
+                    "drawn",
+                ],
+                [("P012774", "BER", 3, 1, 0, 0, 0, 4)],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(402, 402, None, None, 402, None)],
+            ),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+
+    response = get_fouls(cursor, {"season": "E2025", "foul_type": "OF"})
+
+    assert response["rows"][0]["player_id"] == "P012774"
+    assert "playtype = %s" in cursor.statements[1]
+    assert cursor.parameters[1] == ("E2025", "OF")
+    assert "group by" in cursor.statements[2]
+
+
+def test_fouls_reject_an_unknown_group_by() -> None:
+    cursor = RecordingCursor([(["season_code"], [("E2025",)])])
+    with pytest.raises(ValueError, match="group_by must be one of"):
+        get_fouls(cursor, {"season": "E2025", "group_by": "referee"})

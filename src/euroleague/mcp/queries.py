@@ -1202,3 +1202,88 @@ def get_play_by_play(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
             FREE_THROW_CAVEAT,
         ],
     )
+
+
+FOUL_TYPES = ("CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "RV")
+FOUL_GROUPINGS = {
+    "player": "player_id, team_code",
+    "team": "team_code",
+    "game": "gamecode, team_code",
+}
+
+
+def get_fouls(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Fouls by type, grouped by player, team or game.
+
+    Every column is a count of events whose playtype names the foul type, so
+    nothing here is inferred. `committed` is the six codes the official box
+    score counts as personal fouls and reconciles to it exactly (Decision 70);
+    `drawn` is the RV code and reconciles to fouls received. Coach and bench
+    fouls carry pseudo-ids and only show up in team and game groupings.
+    """
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
+    season_code = resolve_season(cursor, arguments["season"])
+    group_by = arguments.get("group_by") or "player"
+    if group_by not in FOUL_GROUPINGS:
+        raise ValueError(f"group_by must be one of {', '.join(FOUL_GROUPINGS)}, not {group_by!r}.")
+    limit = clamp_limit(arguments.get("limit"))
+    offset = validate_offset(arguments.get("offset"))
+
+    conditions = ["season_code = %s"]
+    params: list[Any] = [season_code]
+    if not include_quarantined:
+        conditions.append("not excluded_by_default")
+    if arguments.get("foul_type"):
+        foul_type = str(arguments["foul_type"]).upper()
+        if foul_type not in FOUL_TYPES:
+            raise ValueError(f"foul_type must be one of {', '.join(FOUL_TYPES)}.")
+        conditions.append("playtype = %s")
+        params.append(foul_type)
+    if arguments.get("gamecode") is not None:
+        conditions.append("gamecode = %s")
+        params.append(int(arguments["gamecode"]))
+    if arguments.get("team"):
+        conditions.append("team_code = %s")
+        params.append(resolve_team(cursor, season_code, arguments["team"]))
+    if arguments.get("player"):
+        conditions.append("player_id = %s")
+        params.append(resolve_player(cursor, season_code, arguments["player"]))
+    if group_by == "player":
+        conditions.append("not is_coach_event")
+    where = " and ".join(conditions)
+    grouping = FOUL_GROUPINGS[group_by]
+
+    cursor.execute(
+        f"select count(*) as total from (select 1 from v_foul_event where {where} "
+        f"group by {grouping}) grouped",
+        tuple(params),
+    )
+    total = _rows(cursor)[0]["total"]
+    cursor.execute(
+        f"select {grouping}, "
+        f"count(*) filter (where foul_kind = 'committed') as committed, "
+        f"count(*) filter (where playtype = 'OF') as offensive, "
+        f"count(*) filter (where playtype = 'CMU') as unsportsmanlike, "
+        f"count(*) filter (where playtype = 'CMT') as technical, "
+        f"count(*) filter (where playtype = 'CMD') as disqualifying, "
+        f"count(*) filter (where foul_kind = 'bench') as bench, "
+        f"count(*) filter (where foul_kind = 'drawn') as drawn "
+        f"from v_foul_event where {where} group by {grouping} "
+        f"order by committed desc, drawn desc, {grouping} limit %s offset %s",
+        (*params, limit, offset),
+    )
+    rows = _rows(cursor)
+    return build_response(
+        rows=rows,
+        coverage=coverage_for(cursor, season_code, include_quarantined),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        limit=limit,
+        offset=offset,
+        total_available=total,
+        caveats=[
+            "committed counts CM, OF, CMU, CMT, CMD and CMTI, which is exactly what the "
+            "official box score counts; it reconciles per player-game with zero mismatches "
+            "on E2024 and E2025.",
+            "Shooting versus non-shooting fouls are not in the data and are not inferred here.",
+        ],
+    )
