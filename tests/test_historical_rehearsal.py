@@ -188,7 +188,8 @@ def test_rehearsal_roles_are_run_scoped_and_bounded() -> None:
     second = rehearsal_role_names("rehearse_e2023_20260831202755")
 
     assert first != second
-    assert set(first).isdisjoint({"el_reader", "el_usage_writer"})
+    assert len(first) == 3, "reader, usage writer and tester: one per persistent role"
+    assert set(first).isdisjoint({"el_reader", "el_usage_writer", "el_tester"})
     assert all(len(role_name) <= 63 for role_name in first)
 
 
@@ -197,6 +198,9 @@ def test_rehearsal_migration_rewrites_every_public_schema_reference() -> None:
     source = """
     create role el_usage_writer with login;
     grant usage on schema public to el_reader;
+    create role el_tester with login;
+    alter role el_tester bypassrls;
+    grant select on all tables in schema public to el_tester;
     create table public.example (id integer);
     set search_path = public, pg_temp;
     """
@@ -206,6 +210,7 @@ def test_rehearsal_migration_rewrites_every_public_schema_reference() -> None:
         quoted_schema='"rehearse_e2023_test"',
         reader_role="rehearsal_reader_test",
         usage_writer_role="rehearsal_usage_writer_test",
+        tester_role="rehearsal_tester_test",
     )
 
     assert "schema public" not in rewritten
@@ -213,6 +218,11 @@ def test_rehearsal_migration_rewrites_every_public_schema_reference() -> None:
     assert "search_path = public" not in rewritten
     assert "el_reader" not in rewritten
     assert "el_usage_writer" not in rewritten
+    # Migration 0020's role. On 2026-09-06 it was the one persistent role the
+    # rewrite missed: a rehearsal schema granted to the real el_tester, and the
+    # migration gate's `down 0020` then could not drop the role.
+    assert "el_tester" not in rewritten
+    assert "rehearsal_tester_test bypassrls" in rewritten
     assert 'schema "rehearse_e2023_test"' in rewritten
 
 
