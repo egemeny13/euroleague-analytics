@@ -527,6 +527,42 @@ h1 {
   .caret { animation: none; opacity: 0; }
 }
 
+/* ---------- the launch film ----------
+   Between the hero and the first claim (owner, 2026-09-06). One wide card on
+   the same ground as the recordings; the section keeps the page's rhythm
+   rather than announcing itself with a heading. */
+.film {
+  position: relative;
+  padding: 0 var(--gutter) clamp(3rem, 5.5vw, 5.5rem);
+}
+.film-inner { max-width: 1100px; margin: 0 auto; }
+.film-stage {
+  background: var(--stage);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+/* The film is 16:9 and has no drawn fallback, so its poster shows from the
+   first paint, video or no video. */
+.film-stage > .demo-video { display: block; aspect-ratio: 16 / 9; }
+.film-stage > .demo-progress,
+.film-stage > .demo-hint { margin-left: 1rem; margin-right: 1rem; }
+.film-stage > .demo-hint { margin-bottom: 0.9rem; }
+
+.demo-sound {
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-left: 0.4rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.demo-sound:hover { color: var(--ink); }
+
 /* ---------- a claim and its evidence ----------
    Left column states one thing. Right column shows only that thing. Nothing in
    a section argues two points; the last attempt did and could not be read. */
@@ -630,8 +666,10 @@ h1 {
   background: var(--ink-faint);
 }
 
-/* The two drawn figures pause on a click, like the recordings. */
+/* The two drawn figures pause on a click, like the recordings. The sidelines'
+   throw-in marks also mark the film. */
 .halfcourt, .floor { cursor: pointer; }
+.film { position: relative; }
 
 /* The one-line hint under every figure that can be paused. Set like a figure
    note: small, faint, and gone from the eye once it has been read. */
@@ -1280,6 +1318,14 @@ main, .topbar { position: relative; z-index: 1; }
   margin: 1rem 0 0;
   max-width: 48ch;
   color: var(--ink-soft);
+}
+
+/* The sentence that saves the visitor an attempt: no assistant connects itself. */
+.connect-honest {
+  margin: 1.6rem 0 0;
+  max-width: 56ch;
+  font-size: 0.95rem;
+  color: var(--ink);
 }
 
 .address {

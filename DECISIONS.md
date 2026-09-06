@@ -3581,6 +3581,56 @@ clarification instead of calling a tool. The recipe and the scripts live with
 the launch material outside this repository (`hero-recording-brief.md`,
 `recorder/`).
 
+## 62. The connect section tells the truth about each assistant, ChatGPT first, and says no assistant connects itself
+
+**Decided 2026-09-06 by the owner.** His framing: the people who will visit
+mostly use ChatGPT or Gemini; a Claude user is already half a developer and will
+manage; a 45-year-old who has never heard of Claude will not. So the section
+leads with ChatGPT, then Gemini, then Claude, and every step was re-checked
+against the vendors' own documentation that day rather than carried over.
+
+**The question he asked, answered on the page.** "If a visitor gives the
+address to their assistant and says *set this up*, can it?" No. None of the
+three lets a chat message add a connector; each one takes a visit to settings.
+The section says so in one sentence before the tabs, because the attempt is the
+first thing a visitor will make and the page should save them it.
+
+**What each panel now claims, and its source.**
+
+- *ChatGPT:* paid plans only (Plus, Pro, Business), web, Developer mode on.
+  Path: `Settings → Security and login → Developer mode`, then `Settings →
+  Plugins → +` (the section was called Connectors until mid-2026), name and
+  address under Connection, OAuth, sign in with Google. Source: OpenAI's Apps
+  SDK documentation, "Connect a custom MCP server to ChatGPT", read 2026-09-06.
+  OpenAI's help-centre article could not be fetched (HTTP 403), so the help
+  centre's own wording is unverified; the developer documentation is what the
+  panel follows. The directory listing (submitted 2026-09-02) is still in
+  review; when approved the panel changes to "add it by name".
+- *Gemini:* the free Gemini app has no place to add a custom server. Two
+  routes: Gemini Spark (Google AI Pro/Ultra, personal account, 18+, US) via
+  `Settings & help → Connected apps → Custom apps for Spark → Add a custom
+  app`, or the Gemini CLI with one command. The panel then points free Gemini
+  users to Claude's free plan, which is the shortest path on the page. Source:
+  third-party guides dated late August 2026 and Google's Business-edition help;
+  no first-party consumer page states the limitation, which is itself the
+  evidence for it.
+- *Claude:* `Customize → Connectors → + → Add custom connector`, paste, Add,
+  sign in with Google, then switch it on in a chat under `+ → Connectors`. Free
+  plan allowed, limited to one custom connector. Works on web, desktop and
+  phone. Source: Claude Help Center, "Get started with custom connectors using
+  remote MCP", read 2026-09-06.
+
+**The condition.** These paths change without notice - one of them was renamed
+between this project's first draft and this rewrite. Each panel names the date
+it was checked, and re-checking them is part of any future site pass. The
+compatibility matrix carries the same dates and a new row for the consumer
+Gemini app.
+
+**Also decided the same evening:** the launch film (49 s, the v5 cut from the
+launch material) sits between the hero and the first claim, under the same
+playback rule as every recording, starting muted with a button that turns the
+sound on.
+
 ## Rules to add to the project instruction file
 
 ```

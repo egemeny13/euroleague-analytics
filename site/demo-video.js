@@ -92,6 +92,24 @@
     hint.textContent = "Click to pause, drag the line to move.";
     bar.insertAdjacentElement("afterend", hint);
 
+    /* A recording with a soundtrack (data-sound) starts muted, because that is
+       the only way a browser lets it start on its own. One quiet button turns
+       the sound on; the same button turns it off again. */
+    if (video.hasAttribute("data-sound")) {
+      var sound = document.createElement("button");
+      sound.type = "button";
+      sound.className = "demo-sound";
+      var label = function () { sound.textContent = video.muted ? "Turn the sound on" : "Turn the sound off"; };
+      label();
+      sound.addEventListener("click", function () {
+        video.muted = !video.muted;
+        if (!video.muted && video.paused) { held = video; video.play().catch(function () {}); }
+        label();
+      });
+      hint.appendChild(document.createTextNode(" "));
+      hint.appendChild(sound);
+    }
+
     function seekTo(clientX) {
       var rect = bar.getBoundingClientRect();
       var p = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
