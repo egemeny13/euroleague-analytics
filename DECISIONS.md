@@ -3744,6 +3744,51 @@ in `docs/SCOPE.md`. A pull request that adds a tool without those three is
 incomplete, whatever else it does. If Phase 9 returns a request for one of the
 left-out surfaces from a reader who knows the game, that is the evidence this
 decision asks for, and it reopens.
+## 66. Four raw-layer indexes no query can use are dropped; the hot database sheds cost before it sheds tables
+
+**Decided 2026-09-06.** The owner asked whether the hot database could be
+made smaller without losing an MCP feature, a tool, or a gate proof. The
+answer was worked out in `docs/superpowers/plans/2026-09-06-hot-window-space-plan.md`
+as four tiers, and this decision covers the first, which loses nothing.
+
+**What was measured.** On 2026-09-06, read-only against production:
+`raw_event_player_idx` and `raw_shot_player_idx` had zero scans since the
+statistics reset on 2026-07-24; `raw_event_playtype_idx` had 91 and
+`raw_event_numberofplay_idx` 1,442. The four together held 19,579,520 bytes.
+A scan count is not proof, so four read-only traces over the repository were
+run instead: the MCP server reaches `raw_shot` only through its primary key
+and cannot read `raw_event` at all under the `el_reader` grant; the
+shot-coordinate join runs from `game_event.numberofplay`; no script,
+workflow, view, or test names any of the four.
+
+**What the rehearsal showed.** On a disposable PostgreSQL 17.11 with E2025
+loaded from the local cache, twenty query shapes were explained before and
+after the drops (`docs/evidence/space_tier_a_rehearsal_before.json` and
+`_after.json`). The per-game `delete from raw_event` moved from the
+numberofplay index's prefix to the identical primary-key prefix at the same
+cost, which is what the 1,442 scans were. The obsolete-player anti-joins had
+been using the partial player indexes as index-only scans and got faster
+without them: 59 ms to 26 ms on `raw_event`, 18 ms to 7 ms on `raw_shot`.
+Every MCP query plan was unchanged. 11.3 MB freed on that copy.
+
+**What was corrected on the way.** An earlier reading of the scan counts had
+`game_event_player_idx` as unused. It is the exact shape of
+`el_get_shot_data`'s player filter; sixteen scans meant few callers, not no
+feature. It stays, and so does every other index on `game_event` and
+`possession` until the later tiers are rehearsed on their own.
+
+**Why this before anything larger.** Dropping an index reclaims its bytes
+immediately, needs no table rewrite, and is reversed by the down migration
+in seconds. The plan's later tiers, moving lineup lookups off `game_event`,
+narrowing rows, and dropping `raw_event`, each change query text or lose a
+proof and each get their own decision.
+
+**Condition.** The production apply follows the owner's approval immediately
+before it, through the migration ledger, with `pg_total_relation_size` per
+table recorded before and after in `docs/evidence/`. If any of the eleven
+tools' plans changes on production in a way the rehearsal did not show, the
+down migration is applied and this decision is reopened. Re-measure after
+E2026 loads; the rehearsal was one season.
 
 ## Rules to add to the project instruction file
 
