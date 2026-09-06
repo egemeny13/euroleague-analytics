@@ -34,7 +34,10 @@
   --text:    "Figtree", ui-sans-serif, system-ui, sans-serif;
   --figures: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --gutter: clamp(1.25rem, 5vw, 5.5rem);
+  /* Pulled in a touch on 2026-09-06 at the owner's request: content columns
+     went from 1180 to 1100 px, the rails from 1280 to 1200, and the gutter
+     grew, so everything sits a little nearer the centre line. */
+  --gutter: clamp(1.5rem, 6vw, 6.5rem);
   --measure: 62ch;
 
   /* Motion, measured 2026-09-06: eight different curves and eleven durations
@@ -220,7 +223,7 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
   align-items: center;
   gap: clamp(2rem, 5vw, 4.5rem);
-  max-width: 1180px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -541,7 +544,7 @@ h1 {
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   align-items: start;
   gap: clamp(2.5rem, 6vw, 5.5rem);
-  max-width: 1180px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -1180,8 +1183,8 @@ body { position: relative; }
   width: 1px;
   background: var(--hairline);
 }
-.rail-left  { left: max(var(--gutter), calc(50% - 640px)); }
-.rail-right { right: max(var(--gutter), calc(50% - 640px)); }
+.rail-left  { left: max(var(--gutter), calc(50% - 600px)); }
+.rail-right { right: max(var(--gutter), calc(50% - 600px)); }
 
 /* WHERE ONE SECTION ENDS: the throw-in line, not a rule across the page.
 
@@ -1219,10 +1222,10 @@ body { position: relative; }
 /* Outside the sideline, not inside it: the mark sits off the floor so nothing
    ever reaches into the column the content occupies. */
 .claim::before, .connect::before, .how::before, .footer::before {
-  right: calc(100% - max(var(--gutter), calc(50% - 640px)));
+  right: calc(100% - max(var(--gutter), calc(50% - 600px)));
 }
 .claim::after, .connect::after, .how::after, .footer::after {
-  left: calc(100% - max(var(--gutter), calc(50% - 640px)));
+  left: calc(100% - max(var(--gutter), calc(50% - 600px)));
 }
 
 main, .topbar { position: relative; z-index: 1; }
@@ -1455,7 +1458,7 @@ main, .topbar { position: relative; z-index: 1; }
 .deep {
   padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
 }
-.deep-inner { max-width: 1180px; margin: 0 auto; }
+.deep-inner { max-width: 1100px; margin: 0 auto; }
 
 .deep-head { max-width: 640px; }
 .deep-head h2 {
@@ -1667,7 +1670,7 @@ main, .topbar { position: relative; z-index: 1; }
   padding: 2.5rem var(--gutter) 3rem;
 }
 .footer-inner {
-  max-width: 1180px;
+  max-width: 1100px;
   margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
