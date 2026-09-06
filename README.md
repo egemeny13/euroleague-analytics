@@ -42,9 +42,9 @@ Every number published by this warehouse is mechanically verified against offici
 
 ---
 
-## 3. The 11 MCP Tools
+## 3. The 12 MCP Tools
 
-The server exposes 11 read-only tools designed specifically for LLMs. Every response declares its data coverage, quarantined game exclusions, and whether minutes are raw or corrected.
+The server exposes 12 read-only tools designed specifically for LLMs. Every response declares its data coverage, quarantined game exclusions, and whether minutes are raw or corrected.
 
 | Tool | Purpose |
 |---|---|
@@ -59,13 +59,14 @@ The server exposes 11 read-only tools designed specifically for LLMs. Every resp
 | `el_get_lineup_stats` | 5-man lineup performance with possession counts, offensive, defensive, and net ratings. |
 | `el_get_player_on_off` | Team net rating differential with a specific player on court versus off court. |
 | `el_get_possessions` | Individual possession records with start score, duration, ending reason, and clutch filters. |
+| `el_get_fouls` | Fouls committed and drawn by type, grouped by player, team, or game; reconciles to the box score. |
 
 ---
 
 ## 4. Generic MCP Client Setup
 
 The server remains a standard MCP server. The hosted and local transports publish the
-same 11 tools, input schemas, output schemas, and safety annotations. No ChatGPT-specific
+same 12 tools, input schemas, output schemas, and safety annotations. No ChatGPT-specific
 metadata is present in the tool registry.
 
 ### Hosted Streamable HTTP (recommended)
@@ -123,7 +124,7 @@ of the tool registry.
 3. Add a new MCP connection and enter
    `https://euroleague-analytics-mcp.fly.dev/mcp` as the public Streamable HTTP URL.
 4. Complete the OAuth sign-in.
-5. Review the discovered 11 tools and start a new conversation with the connection enabled.
+5. Review the discovered 12 tools and start a new conversation with the connection enabled.
 
 Developer mode availability can depend on the ChatGPT account and workspace policy. The
 current official flow is documented in OpenAI's
@@ -218,7 +219,7 @@ Both paths must agree with the published `<expected_answer>`.
 - **Privacy Policy**: [euroleague.egemenyucelen.me/privacy.html](https://euroleague.egemenyucelen.me/privacy.html)
 - **Support & FAQ**: [euroleague.egemenyucelen.me/support.html](https://euroleague.egemenyucelen.me/support.html)
 - **Sponsorship One-Pager**: [`docs/SPONSOR_ONE_PAGER.md`](docs/SPONSOR_ONE_PAGER.md)
-- **Scope of version 1**: [`docs/SCOPE.md`](docs/SCOPE.md) — what the eleven tools do, what is left out on purpose, and why
+- **Scope of version 1**: [`docs/SCOPE.md`](docs/SCOPE.md) — what the twelve tools do, what is left out on purpose, and why
 - **Decision Log**: [`DECISIONS.md`](DECISIONS.md)
 - **Phase Reports**: [`docs/`](docs/)
 

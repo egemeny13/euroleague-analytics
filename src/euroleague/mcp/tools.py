@@ -1,4 +1,4 @@
-"""The eleven tool definitions.
+"""The twelve tool definitions.
 
 Descriptions are read by the model at call time, so they are written as prompts
 rather than as code comments: what the tool answers, what the numbers mean, and
@@ -27,6 +27,7 @@ TOOL_NAMES: tuple[str, ...] = (
     "el_get_possessions",
     "el_get_play_by_play",
     "el_get_shot_data",
+    "el_get_fouls",
 )
 
 _INCLUDE_QUARANTINED = {
@@ -594,6 +595,49 @@ def build_registry(
                 required=["season"],
             ),
             query=queries.get_shot_data,
+        ),
+        tool(
+            name="el_get_fouls",
+            title="Fouls by type",
+            description=(
+                "Fouls committed and drawn, split by type and grouped by player, team "
+                "or game. Types come straight from the event stream's foul codes: CM "
+                "personal, OF offensive, CMU unsportsmanlike, CMT technical, CMD "
+                "disqualifying, CMTI throw-in, C coach, B bench, and RV for a foul "
+                "drawn. The committed total reconciles exactly to the official box "
+                "score. Use foul_type to isolate one code, for example offensive fouls "
+                "by player, or technicals by team. Shooting-versus-non-shooting is not "
+                "in the data and is never guessed."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "team": {"type": "string", "description": "Restrict to one team's fouls."},
+                    "player": {
+                        "type": "string",
+                        "description": "Restrict to one player, by id or by name.",
+                    },
+                    "gamecode": {"type": "integer", "description": "Restrict to one game."},
+                    "foul_type": {
+                        "type": "string",
+                        "enum": ["CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "RV"],
+                        "description": "One foul code, or RV for fouls drawn.",
+                    },
+                    "group_by": {
+                        "type": "string",
+                        "enum": ["player", "team", "game"],
+                        "default": "player",
+                        "description": (
+                            "One row per player, per team, or per team per game. Coach "
+                            "and bench fouls appear only in team and game groupings."
+                        ),
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season"],
+            ),
+            query=queries.get_fouls,
         ),
     ]
     return {tool.name: tool for tool in tools}

@@ -264,9 +264,10 @@ later migration should scope the action to `possession_index`.
 
 ### Phase 7 — the MCP server. Complete.
 
-Eleven read-only `el_` tools now expose warehouse coverage, games, team and player
-statistics, lineups, on/off splits, possessions, source-ordered play by play, and shot data
-with coordinates (`el_get_shot_data`). They aggregate through seven versioned views; no table
+Twelve read-only `el_` tools now expose warehouse coverage, games, team and player
+statistics, lineups, on/off splits, possessions, source-ordered play by play, shot data
+with coordinates (`el_get_shot_data`), and fouls by type reconciled to the box score
+(`el_get_fouls`). They aggregate through eight versioned views; no table
 or external dependency was added. Counting statistics come from the official box score, while
 possessions, pace, lineups, on/off, clutch filters, per-100 rates, and shot coordinates remain
 the validated derived layer. The stdio entry point answers real MCP requests and keeps diagnostics off

@@ -1,0 +1,14 @@
+{
+  "E2024": {
+    "schema": "space_e2024",
+    "player_games": 7863,
+    "committed_mismatches": 0,
+    "drawn_mismatches": 0
+  },
+  "E2025": {
+    "schema": "space_e2025",
+    "player_games": 9540,
+    "committed_mismatches": 0,
+    "drawn_mismatches": 0
+  }
+}
