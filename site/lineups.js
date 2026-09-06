@@ -272,8 +272,10 @@
        sections as intersecting, and the sequence would play out to nobody. */
     var started = false;
     var visible = false;
+    var held = false;   // the visitor clicked the floor: stay paused until they click again
 
     function settle() {
+      if (held) { pause(); return; }
       if (visible && document.visibilityState === "visible") {
         resume();
         if (!started) {
@@ -286,6 +288,14 @@
     }
 
     document.addEventListener("visibilitychange", settle);
+
+    /* A click on the floor holds the substitution where it is; a second click
+       lets it go on. Same gesture as the recordings, same hint. */
+    floor.addEventListener("click", function () {
+      held = !held;
+      floor.classList.toggle("is-held", held);
+      settle();
+    });
 
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {

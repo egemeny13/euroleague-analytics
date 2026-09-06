@@ -621,12 +621,27 @@ h1 {
   overflow: hidden;
 }
 
+/* Ink, like the bar under every recording: one kind of progress line on the
+   page (owner, 2026-09-06). Progress is not a measured value. */
 .chartbar-fill {
   position: absolute;
   inset: 0 auto 0 0;
   width: 0;
-  background: var(--ball);
+  background: var(--ink-faint);
 }
+
+/* The two drawn figures pause on a click, like the recordings. */
+.halfcourt, .floor { cursor: pointer; }
+
+/* The one-line hint under every figure that can be paused. Set like a figure
+   note: small, faint, and gone from the eye once it has been read. */
+.demo-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--ink-faint);
+}
+.hero-demo > .demo-hint { margin-bottom: 0.35rem; }
 
 /* While shots are landing the width is set per shot and should follow with no
    easing of its own. The final run to full is the one deliberate glide, and it
@@ -840,8 +855,8 @@ h1 {
 .demo-progress:focus-visible { outline-offset: 6px; }
 .has-video > .demo-progress { display: block; }
 .has-video > .demo-video { cursor: pointer; }
-/* The hero keeps its caption; the bar sits between recording and caption. */
-.hero-demo > .demo-progress { margin-bottom: 0.35rem; }
+/* The hero keeps its caption; the bar and hint sit between recording and caption. */
+.hero-demo > .demo-progress { margin-bottom: 0; }
 .demo-progress > i {
   display: block;
   height: 100%;

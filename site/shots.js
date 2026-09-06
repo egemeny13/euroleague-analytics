@@ -212,8 +212,10 @@
        hat. It has to be on screen AND the tab has to be the visible one. */
     var started = false;
     var visible = false;
+    var held = false;   // the visitor clicked the court: stay paused until they click again
 
     function settle() {
+      if (held) { pause(); return; }
       if (visible && document.visibilityState === "visible") {
         resume();
         if (!started) {
@@ -226,6 +228,15 @@
     }
 
     document.addEventListener("visibilitychange", settle);
+
+    /* A click on the court pauses the pour where it is; a second click resumes
+       it. The recordings on the page pause the same way, so the hint under
+       each figure can say one thing for all of them. */
+    court.addEventListener("click", function () {
+      held = !held;
+      court.classList.toggle("is-held", held);
+      settle();
+    });
 
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {

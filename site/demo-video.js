@@ -85,6 +85,13 @@
     /* Directly under the recording, before any caption the host carries. */
     video.insertAdjacentElement("afterend", bar);
 
+    /* One quiet line so a visitor knows the recording is theirs to drive. The
+       same words appear under the two drawn figures, which pause the same way. */
+    var hint = document.createElement("p");
+    hint.className = "demo-hint";
+    hint.textContent = "Click to pause, drag the line to move.";
+    bar.insertAdjacentElement("afterend", hint);
+
     function seekTo(clientX) {
       var rect = bar.getBoundingClientRect();
       var p = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
