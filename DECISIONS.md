@@ -3631,6 +3631,30 @@ launch material) sits between the hero and the first claim, under the same
 playback rule as every recording, starting muted with a button that turns the
 sound on.
 
+## 63. Player name lookup treats a hyphen and a space as the same character
+
+**Decided 2026-09-06.** In a live session `el_get_player_on_off` answered
+"no player matches" for `Horton-Tucker`. Measured that day against the
+warehouse: the source stores the player as `HORTON TUCKER, TALEN`, without the
+hyphen, while 11 other surnames keep theirs (`WEILER-BABB, NICK`,
+`LOPEZ-AROSTEGUI, XABI`). The API is inconsistent, and a caller cannot know
+which spelling it chose for a given player.
+
+**What changed.** `resolve_player` folds `-` into a space on both the stored
+display name and the search term before the `ilike` comparison. `Horton-Tucker`
+and `Weiler Babb` now both resolve; id lookups are untouched; ambiguity
+handling is untouched.
+
+**What it does not fix.** Forename-first input (`Talen Horton-Tucker`) still
+fails, by design: names are stored `SURNAME, FORENAME` and the error message
+already tells the caller to try the surname alone or pass an id. Widening the
+match to word order is a separate decision with its own ambiguity cost.
+
+**Condition.** The fold is limited to the hyphen. If a future season shows a
+third spelling of the same surname (an apostrophe, a diacritic), measure it
+across the season first and extend the fold with that measurement, not by
+guessing.
+
 ## Rules to add to the project instruction file
 
 ```
