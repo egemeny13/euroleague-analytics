@@ -163,11 +163,16 @@
        muted because a browser allows nothing else without a gesture; the
        button under it turns the sound on. -->
   <section class="film" id="film">
-    <div class="film-inner">
-      <div class="film-stage" data-demo-host>
-        <video class="demo-video" id="launch-film" muted playsinline preload="none"
+    <div class="film-inner" data-demo-host>
+      <!-- The wrapper is the 36 px shape; the host is the column, so the
+           progress line and the hint land under the shape rather than inside
+           it. The film is the launch cut without its closing joke (the site
+           version ends on the address card at 38.5 s; the full 49 s cut stays
+           with the launch material). -->
+      <div class="film-stage">
+        <video class="demo-video" id="launch-film" muted loop playsinline preload="none"
                poster="launch-film.jpg" data-sound
-               aria-label="EuroLeague Analytics launch film, 49 seconds">
+               aria-label="EuroLeague Analytics launch film, 38 seconds">
           <source src="launch-film.mp4" type="video/mp4">
         </video>
       </div>

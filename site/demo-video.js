@@ -82,8 +82,11 @@
     bar.tabIndex = 0;
     var fill = document.createElement("i");
     bar.appendChild(fill);
-    /* Directly under the recording, before any caption the host carries. */
-    video.insertAdjacentElement("afterend", bar);
+    /* Directly under the recording, before any caption the host carries. When
+       the recording sits inside its own shape (the film's rounded wrapper),
+       the bar goes under the shape instead. */
+    var anchor = (video.parentElement !== hostOf(video)) ? video.parentElement : video;
+    anchor.insertAdjacentElement("afterend", bar);
 
     /* One quiet line so a visitor knows the recording is theirs to drive. The
        same words appear under the two drawn figures, which pause the same way. */
