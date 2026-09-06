@@ -33,6 +33,8 @@ def _resolve_inside_site(page: str, reference: str) -> Path:
         f"In {page}: '{reference}' resolves outside the site directory to {target}"
     )
     return target
+
+
 DOC_FILES = ("SPONSOR_ONE_PAGER.md", "LAUNCH_COPY.md", "OWNER_LAUNCH_STEPS.md")
 LAUNCH_THREAD = Path("docs/LAUNCH_THREAD_FINAL.md")
 CHATGPT_SUBMISSION_RECORD = Path("docs/CHATGPT_APP_SUBMISSION.md")
