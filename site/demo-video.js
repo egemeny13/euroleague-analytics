@@ -38,6 +38,7 @@
 
   var onScreen = [];     // videos currently intersecting, in DOM order
   var ready = [];        // videos whose file the browser can play
+  var held = null;       // a video the visitor paused or resumed by hand
 
   function hostOf(video) {
     return video.closest("[data-demo-host]") || video.parentNode;
@@ -53,8 +54,12 @@
         if (onScreen.indexOf(v) !== -1 && ready.indexOf(v) !== -1) { chosen = v; break; }
       }
     }
+    /* A recording the visitor paused by hand stays paused while it is on
+       screen; the hold is released when it scrolls away. */
+    if (held && onScreen.indexOf(held) === -1) held = null;
     videos.forEach(function (v) {
       if (v === chosen) {
+        if (v === held) return;
         if (v.paused && !v.ended) v.play().catch(function () { /* the poster stands */ });
       } else if (!v.paused) {
         v.pause();
@@ -62,20 +67,78 @@
     });
   }
 
+  /* The bar is also the scrubber (owner, 2026-09-06: the visitor should be able
+     to move through a recording rather than wait for it). Pointer down or drag
+     anywhere on it seeks; arrow keys step two seconds; the recording keeps its
+     play/pause state across a seek. Clicking the recording itself toggles
+     play and pause, the way every video player a visitor has met does. */
   function addProgress(video) {
     var bar = document.createElement("div");
     bar.className = "demo-progress";
-    bar.setAttribute("aria-hidden", "true");
+    bar.setAttribute("role", "slider");
+    bar.setAttribute("aria-label", "Position in the recording");
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", "100");
+    bar.tabIndex = 0;
     var fill = document.createElement("i");
     bar.appendChild(fill);
     /* Directly under the recording, before any caption the host carries. */
     video.insertAdjacentElement("afterend", bar);
 
+    function seekTo(clientX) {
+      var rect = bar.getBoundingClientRect();
+      var p = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      if (video.duration > 0) video.currentTime = p * video.duration;
+    }
+
+    var scrubbing = false;
+    bar.addEventListener("pointerdown", function (event) {
+      scrubbing = true;
+      bar.classList.add("is-scrubbing");
+      seekTo(event.clientX);
+      /* Capture keeps the drag alive when the pointer leaves the 2 px line.
+         It can refuse (a pointer the browser does not know); the seek above
+         has already happened, so a refusal costs only the drag. */
+      try { bar.setPointerCapture(event.pointerId); } catch (e) { /* no drag */ }
+      event.preventDefault();
+    });
+    bar.addEventListener("pointermove", function (event) {
+      if (scrubbing) seekTo(event.clientX);
+    });
+    function release() {
+      scrubbing = false;
+      bar.classList.remove("is-scrubbing");
+    }
+    bar.addEventListener("pointerup", release);
+    bar.addEventListener("pointercancel", release);
+
+    bar.addEventListener("keydown", function (event) {
+      if (!(video.duration > 0)) return;
+      var step = 2;
+      if (event.key === "ArrowRight" || event.key === "ArrowUp") video.currentTime = Math.min(video.duration, video.currentTime + step);
+      else if (event.key === "ArrowLeft" || event.key === "ArrowDown") video.currentTime = Math.max(0, video.currentTime - step);
+      else if (event.key === "Home") video.currentTime = 0;
+      else if (event.key === "End") video.currentTime = video.duration;
+      else if (event.key === " " || event.key === "Enter") { if (video.paused) video.play().catch(function () {}); else video.pause(); }
+      else return;
+      event.preventDefault();
+    });
+
+    /* A tap on the picture pauses or resumes. It also marks the recording as
+       the visitor's, so the one-player rule leaves it alone until they scroll
+       away from it. */
+    video.addEventListener("click", function () {
+      if (video.paused) { held = video; video.play().catch(function () {}); }
+      else { held = video; video.pause(); }
+    });
+
     /* Driven by the clock, not by timeupdate: timeupdate fires about four
        times a second and the bar would step rather than travel. */
     (function tick() {
       if (video.duration > 0) {
-        fill.style.transform = "scaleX(" + Math.min(1, video.currentTime / video.duration) + ")";
+        var p = Math.min(1, video.currentTime / video.duration);
+        fill.style.transform = "scaleX(" + p + ")";
+        bar.setAttribute("aria-valuenow", String(Math.round(p * 100)));
       }
       window.requestAnimationFrame(tick);
     })();
@@ -107,6 +170,10 @@
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return;
         near.disconnect();
+        /* preload="none" in the markup keeps the browser from fetching on page
+           load; once the host is near, the hint flips to auto so that load()
+           actually downloads and canplay can fire. */
+        video.preload = "auto";
         video.load();
       });
     }, { rootMargin: "50% 0px" });

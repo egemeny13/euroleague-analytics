@@ -820,12 +820,26 @@ h1 {
    fill is scaled rather than resized, so it costs no layout per frame. */
 .demo-progress {
   display: none;
+  position: relative;
   height: 2px;
   margin-top: 0.55rem;
   background: var(--hairline);
-  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  transition: height var(--dur-hover) var(--ease-hover), margin-top var(--dur-hover) var(--ease-hover);
 }
+/* A 2 px line is a hard target; the hit area is taller than the line. */
+.demo-progress::before {
+  content: "";
+  position: absolute;
+  inset: -10px 0;
+}
+.demo-progress:hover,
+.demo-progress.is-scrubbing,
+.demo-progress:focus-visible { height: 4px; margin-top: calc(0.55rem - 1px); }
+.demo-progress:focus-visible { outline-offset: 6px; }
 .has-video > .demo-progress { display: block; }
+.has-video > .demo-video { cursor: pointer; }
 /* The hero keeps its caption; the bar sits between recording and caption. */
 .hero-demo > .demo-progress { margin-bottom: 0.35rem; }
 .demo-progress > i {
