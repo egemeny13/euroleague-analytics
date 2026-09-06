@@ -3752,6 +3752,52 @@ tools' plans changes on production in a way the rehearsal did not show, the
 down migration is applied and this decision is reopened. Re-measure after
 E2026 loads; the rehearsal was one season.
 
+## 67. Lineup-reference questions are asked of `lineup_stint`, and five derived-layer indexes go
+
+**Decided 2026-09-07.** Tier B of the hot window space plan. On 2026-09-07
+the owner approved Tiers A, B and D together and asked not to be consulted
+step by step; this entry and Decision 68 are the record that rule
+"a production write needs the owner's approval immediately before it" was
+satisfied by that one message for the applies that follow it.
+
+**What moves.** Three queries asked `game_event` whether a lineup was still
+referenced: the obsolete-lineup cleanup in `derived_load.py`, the gate's
+lineup count in `assert_phase5_reconciles`, and the lineup fingerprints in
+`gate.py` and `incremental_confirmation.py`. They now ask `lineup_stint`.
+The two answers are the same by construction: the gate asserts every event
+is attached to a stint and carries that stint's two lineup ids
+(`unattached_events = 0`, `event_stint_mismatches = 0`). Measured on both
+seasons in `docs/evidence/space_tier_b_lineup_reference_equivalence.json`:
+E2024 5,985 lineups by either route, E2025 7,281, and no stint without an
+event in either. `tests/test_lineup_references_read_stints.py` fails if any
+of the three drifts back.
+
+**What is dropped.** Migration 0022 removes `game_event_home_lineup_idx`,
+`game_event_away_lineup_idx`, `game_event_stint_idx`,
+`game_event_possession_idx` and `possession_stint_idx`. The first two had
+no reader left. The other three served only the on-delete foreign-key
+triggers and, on some MCP plans, stood in for the identical primary-key
+prefix. On production on 2026-09-06 the five held 27.8 MB with bloat.
+
+**What the rehearsal showed** (`docs/evidence/space_tier_b_rehearsal_before.json`
+and `_after.json`, E2025 on a disposable PostgreSQL 17.11 with Tier A
+already applied). A full-season derived rebuild, delete and reload of all
+402 games, took 209 s before and 80 s after: five fewer indexes to maintain
+outweighs the triggers walking the primary-key prefix. Every MCP shape that
+had used `game_event_stint_idx` moved to `game_event_pkey` with no new
+sequential scan over an event-sized table. The old lineup-reference query
+on `game_event` would now be a 56 ms sequential scan, which is why it is no
+longer issued; its replacement on `lineup_stint` runs in 0.07 ms.
+
+**What this does not establish.** The rebuild timings are one run each on
+one machine, taken minutes apart; they show direction, not a ratio to
+quote. The production `pg_total_relation_size` figures before and after the
+apply are the numbers to record.
+
+**Condition.** If a future tool needs to filter `game_event` by lineup,
+stint or possession, it gets its index back through a decision with a
+measured query, not by restoring these five. Re-measure after E2026 loads.
+
 ## Rules to add to the project instruction file
 
 ```

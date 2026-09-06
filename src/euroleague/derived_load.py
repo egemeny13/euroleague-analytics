@@ -543,13 +543,17 @@ def prune_obsolete_dimensions(cursor: Any) -> None:
               WHERE offense_lineup_id = obsolete.lineup_id
                  OR defense_lineup_id = obsolete.lineup_id
           )
-          AND NOT EXISTS (
-              SELECT 1 FROM game_event
-              WHERE home_lineup_id = obsolete.lineup_id
-                 OR away_lineup_id = obsolete.lineup_id
-          )
         """
     )
+    # `game_event` is not consulted for lineup references on purpose. Every
+    # event carries the lineup ids of its stint (the gate asserts
+    # `event_stint_mismatches = 0` and `unattached_events = 0`), so a lineup an
+    # event still references is a lineup its stint still references, and the
+    # `lineup_stint` check above already refuses it. Measured on E2024 and
+    # E2025 rehearsals: the set of lineups referenced by events equals the set
+    # referenced by stints. Reading `lineup_stint` instead of `game_event` is
+    # what lets migration 0022 drop the two lineup indexes on `game_event`. See
+    # DECISIONS.md item 67.
     cursor.execute(
         """
         DELETE FROM player AS obsolete

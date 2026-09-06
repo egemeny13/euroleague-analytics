@@ -693,9 +693,9 @@ def assert_phase5_reconciles(
                 SELECT
                     (SELECT count(*) FROM lineup stored
                      WHERE EXISTS (
-                         SELECT 1 FROM game_event event
-                         WHERE event.season_code = %s {event_filter}
-                           AND stored.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+                         SELECT 1 FROM lineup_stint stint
+                         WHERE stint.season_code = %s {game_filter}
+                           AND stored.lineup_id IN (stint.home_lineup_id, stint.away_lineup_id)
                      )),
                     (SELECT count(*) FROM lineup_stint WHERE season_code = %s {game_filter}),
                     (SELECT count(*) FROM game_event WHERE season_code = %s {game_filter}),
@@ -711,9 +711,9 @@ def assert_phase5_reconciles(
                 SELECT
                     (SELECT count(*) FROM lineup stored
                      WHERE EXISTS (
-                         SELECT 1 FROM game_event event
-                         WHERE event.season_code = %s
-                           AND stored.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+                         SELECT 1 FROM lineup_stint stint
+                         WHERE stint.season_code = %s
+                           AND stored.lineup_id IN (stint.home_lineup_id, stint.away_lineup_id)
                      )),
                     (SELECT count(*) FROM lineup_stint WHERE season_code = %s),
                     (SELECT count(*) FROM game_event WHERE season_code = %s),
@@ -920,9 +920,9 @@ def derived_snapshot(connection: Any, season_code: str) -> dict[str, TableFinger
                 md5(to_jsonb(t)::text), '' ORDER BY lineup_id
             ), '')) FROM lineup t
             WHERE EXISTS (
-                SELECT 1 FROM game_event event
-                WHERE event.season_code = %s
-                  AND t.lineup_id IN (event.home_lineup_id, event.away_lineup_id)
+                SELECT 1 FROM lineup_stint stint
+                WHERE stint.season_code = %s
+                  AND t.lineup_id IN (stint.home_lineup_id, stint.away_lineup_id)
             )
             """,
             (season_code,),
