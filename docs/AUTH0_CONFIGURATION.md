@@ -67,6 +67,8 @@ Two independent things decide whether somebody reaches the warehouse:
 2. **Which person may log in.** A post-login Auth0 Action holds an email
    allowlist. It was installed because "Disable Sign Ups" does not exist for
    social connections and the promoted connection is social.
+   **Removed from the flow on 2026-09-06 for launch** — see the change-log
+   entry of that date. The paragraphs below describe the pre-launch state.
 
 **The Action was inspected on 2026-08-29 and is correctly wired.** Read directly
 from the dashboard:
@@ -435,6 +437,30 @@ untouched.
 6. **Submission completed.** The app was submitted to the OpenAI Directory review queue.
 7. **Application count unchanged.** No new client application was created in Auth0
    (the 10-app limit remains untouched).
+
+### 2026-09-06 — the invite-only Action was taken out of the login flow
+
+**Why.** The launch (planned 2026-09-16) invites the public to connect. With the
+allowlist in the Post Login trigger, every visitor who followed the site's
+connect steps would sign in with Google and then be refused. The owner removed
+the Action from the flow himself.
+
+**Verified 2026-09-06, read from the dashboard in the owner's session.** The
+Post Login trigger shows `Start (User Logged In)` -> `Complete (Token Issued)`
+with nothing between them, and reports "All changes are live". `Invite-only
+access` still exists in the Actions library under Custom, so it is not
+deployed but can be dragged back in. The Action itself was not deleted and
+its `ALLOWED` value was not changed.
+
+**What now decides access.** Only item 1 of section 4: which client may ask.
+Registration stays closed and the token check from 2026-08-30 stays in place.
+Any Google account can now log in and reach the read-only tools, which is the
+intended launch state. The per-user row budget in the server is the remaining
+control on cost.
+
+**What this does not establish.** A reading again, not an observation: nobody
+outside the old allowlist has yet been seen connecting. The first outside
+tester before 2026-09-16 is the check.
 
 ## 6. What this file does not establish
 

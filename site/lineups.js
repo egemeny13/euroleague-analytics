@@ -118,6 +118,23 @@
     return (value > 0 ? "+" : value < 0 ? "−" : "") + Math.abs(value).toFixed(1);
   }
 
+  /* Every sentence this script shows a visitor comes from the page when the
+     page carries it (data-text-* on <body>), so the Turkish page can say it in
+     Turkish without a Turkish string ever living in a script (Decision 53).
+     The English here is the fallback for a page that carries nothing. A
+     sentence with a name in it is a template: "{leaving}" and "{arriving}"
+     are filled in, and the page decides where the names go. */
+  function text(key, fallback) {
+    var value = document.body && document.body.getAttribute("data-text-" + key);
+    return value || fallback;
+  }
+
+  function fill(template, names) {
+    return template.replace(/\{(\w+)\}/g, function (match, key) {
+      return Object.prototype.hasOwnProperty.call(names, key) ? names[key] : match;
+    });
+  }
+
   function build(data) {
     var colour = data.team.colour;
     var markers = {};
@@ -141,7 +158,9 @@
 
       var role = document.createElement("span");
       role.className = "player-role";
-      role.textContent = who.position;
+      /* The data names the position in English (Guard, Forward, Center); the
+         page may carry its own word for each. */
+      role.textContent = text("position-" + String(who.position).toLowerCase(), who.position);
       marker.appendChild(role);
 
       stage.appendChild(marker);
@@ -227,7 +246,7 @@
     /* Beat one. The centre leaves, and nothing else moves yet, so the thing
        that is happening is unmistakable. */
     function stepOut() {
-      swapNote.textContent = leaving + " off.";
+      swapNote.textContent = fill(text("swap-off", "{leaving} off."), { leaving: leaving });
       markers[leaving].classList.add("is-leaving");
       seat(leaving, "right");
       after(LEAVE_MS, stepSpread);
@@ -253,7 +272,10 @@
       markers[arriving].classList.remove("is-off");
       markers[arriving].classList.add("is-arriving");
       moveTo(markers[arriving], spot[0], spot[1]);
-      swapNote.textContent = leaving + " off, " + arriving + " on.";
+      swapNote.textContent = fill(
+        text("swap", "{leaving} off, {arriving} on."),
+        { leaving: leaving, arriving: arriving }
+      );
       after(ARRIVE_MS, function () {
         setFigures(weak, true);
         after(HOLD_WEAK_MS, showStrong);
@@ -306,7 +328,9 @@
     io.observe(floor);
   }
 
-  fetch("data/lineups.json")
+  /* Resolved against this script's own address, not the page's, so the
+     Turkish page in /tr/ finds the same file. See shots.js. */
+  fetch(new URL("data/lineups.json", document.currentScript.src))
     .then(function (response) {
       if (!response.ok) throw new Error("lineups.json " + response.status);
       return response.json();

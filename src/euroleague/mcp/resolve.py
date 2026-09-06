@@ -168,12 +168,17 @@ def resolve_player(cursor: Cursor, season_code: str, value: str) -> str:
     if rows:
         return rows[0][0]
 
+    # The source is inconsistent about hyphens in surnames: measured on
+    # 2026-09-06, the warehouse holds 'HORTON TUCKER, TALEN' next to
+    # 'WEILER-BABB, NICK'. A caller cannot know which spelling the API chose,
+    # so both the stored name and the search term fold '-' into ' ' before the
+    # comparison. Without this, 'Horton-Tucker' found nobody.
     cursor.execute(
         "select distinct b.player_id, p.display_name from raw_boxscore_player b "
         "join player p on p.player_id = b.player_id "
-        "where b.season_code = %s and p.display_name ilike %s "
+        "where b.season_code = %s and replace(p.display_name, '-', ' ') ilike %s "
         "order by p.display_name, b.player_id",
-        (season_code, f"%{candidate}%"),
+        (season_code, f"%{candidate.replace('-', ' ')}%"),
     )
     rows = cursor.fetchall()
     if len(rows) == 1:

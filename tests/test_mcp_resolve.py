@@ -281,3 +281,19 @@ def test_sql_orders_player_by_display_name_then_id_and_team_by_code():
     assert "order by team_code" in team_exact_sql
     team_name_sql = cursor_team.calls[1][0].lower()
     assert "order by team_code" in team_name_sql
+
+
+def test_player_name_matching_treats_a_hyphen_and_a_space_as_the_same_character():
+    # Measured on 2026-09-06 against the live warehouse: the API stores
+    # 'HORTON TUCKER, TALEN' without the hyphen while 11 other surnames keep
+    # theirs ('WEILER-BABB, NICK'). A caller cannot know which spelling the
+    # source chose, so both sides of the comparison must fold '-' into ' '.
+    cursor = FakeCursor([[], [("P014124", "HORTON TUCKER, TALEN")]])
+    assert resolve_player(cursor, "E2025", "Horton-Tucker") == "P014124"
+
+    sql, params = cursor.calls[1]
+    assert "replace(p.display_name, '-', ' ') ilike %s" in sql
+    assert params == ("E2025", "%Horton Tucker%")
+
+    cursor_reverse = FakeCursor([[], [("P009", "WEILER-BABB, NICK")]])
+    assert resolve_player(cursor_reverse, "E2025", "Weiler Babb") == "P009"

@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EuroLeague Analytics — Yapay zekâ asistanın için Avrupa basketbolu</title>
+<meta name="description" content="EuroLeague oyun akışı verisini Claude, ChatGPT ya da Gemini'ye bağla ve kendi cümlelerinle sor. Oyun akışından yeniden kurulmuş kesin hücum sayıları, beşliler ve şut koordinatları.">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="en" href="https://euroleague.egemenyucelen.me/">
+<link rel="alternate" hreflang="tr" href="https://euroleague.egemenyucelen.me/tr/">
+<link rel="alternate" hreflang="x-default" href="https://euroleague.egemenyucelen.me/">
+<link rel="stylesheet" href="../fonts.css">
+<link rel="stylesheet" href="../style.css">
+<!-- The Turkish page. Written, not translated (design record, section 3):
+     the sentence that works in Turkish is often not the English one rendered
+     word for word. Every recording, script, stylesheet and data file is the
+     English page's own, loaded from the parent directory; nothing here is a
+     copy. The English page redirects a Turkish browser here and this page
+     never redirects anywhere, so nobody can be bounced between the two. The
+     "English" link in the footer carries ?lang=en, which records the choice
+     and disarms the redirect. Decision 53. -->
+</head>
+<!-- The data-text-* attributes are the sentences the scripts show: the hint
+     under a recording, the sound button, the play pill, the shot chart's
+     closing label, the lineup swap note and the position words. The scripts
+     read them from here and hold only English fallbacks, so this page is the
+     one place its Turkish lives. tests/test_launch_package.py checks that no
+     key a script reads is missing here. -->
+<body
+  data-text-hint="Durdurmak için tıkla, ilerlemek için çizgiyi sürükle."
+  data-text-scrub-label="Kayıttaki konum"
+  data-text-sound-on="Sesi aç"
+  data-text-sound-off="Sesi kapat"
+  data-text-play="Oynat"
+  data-text-pause="Durdur"
+  data-text-winning-shot="Şampiyonluğu getiren şut"
+  data-text-swap-off="{leaving} çıkıyor."
+  data-text-swap="{leaving} çıkıyor, {arriving} giriyor."
+  data-text-position-guard="Gard"
+  data-text-position-forward="Forvet"
+  data-text-position-center="Pivot">
+
+<a class="skip" href="#main">İçeriğe geç</a>
+
+<header class="topbar">
+  <a class="wordmark" href="./">
+    <span class="wordmark-mark" aria-hidden="true"></span>
+    EuroLeague Analytics
+  </a>
+  <nav class="topnav" aria-label="Ana menü">
+    <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Kaynak</a>
+    <a class="button-solid" href="#connect">Bağla</a>
+  </nav>
+</header>
+
+<div class="courtgrid" aria-hidden="true">
+  <span class="rail rail-left"></span>
+  <span class="rail rail-right"></span>
+</div>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy on-court">
+        <h1>EuroLeague'i zaten kullandığın yapay zekâya ekle.</h1>
+        <p class="lede">
+          Bir kez bağla, sonra kendi cümlelerinle sor: her beşli, her şut,
+          sahadaki her saniye. <strong>Uygulama yok, tablo yok.</strong>
+        </p>
+        <div class="actions">
+          <a class="button-solid button-lg" href="#connect">Bağla</a>
+          <a class="quiet-link" href="#how">Nasıl çalıştığını gör</a>
+        </div>
+      </div>
+
+      <div class="hero-demo" id="hero-demo" data-demo-host>
+        <!-- The same recording as the English page: Claude, this server
+             connected, one question asked in English and answered. The drawn
+             window beneath it is the fallback and asks in Turkish, which is
+             what a Turkish visitor will actually do. -->
+        <video class="hero-video demo-video" id="hero-video" muted loop playsinline
+               preload="none" poster="../hero-demo.jpg"
+               aria-label="Claude, EuroLeague Analytics bağlıyken, Fenerbahçe'de hangi beşlinin maç kazandırdığını cevaplıyor">
+          <source src="../hero-demo.mp4" type="video/mp4">
+        </video>
+
+        <figure class="window" aria-labelledby="demo-caption">
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" id="app-avatar" aria-hidden="true"></span>
+              <span id="app-name">Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot" aria-hidden="true"></i>EuroLeague Analytics bağlı</span>
+          </div>
+
+          <div class="window-body" id="thread">
+
+            <div class="exchange" data-question="Fenerbahçe'de hangi beşli maç kazandırıyor?">
+              <div class="from-you">
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Fenerbahçe'de hangi beşli maç kazandırıyor?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">oyun akışını okuyor</span></div>
+              <div class="reply">
+                <p class="reply-line">Bu sezonki en verimli beşlileri:</p>
+                <ul class="lineup">
+                  <li><span class="jersey" style="--club:#12305B">13</span>Biberovic</li>
+                  <li><span class="jersey" style="--club:#12305B">92</span>Birch</li>
+                  <li><span class="jersey" style="--club:#12305B">20</span>Hall</li>
+                  <li><span class="jersey" style="--club:#12305B">8</span>Horton-Tucker</li>
+                  <li><span class="jersey" style="--club:#12305B">4</span>Melli</li>
+                </ul>
+                <p class="verdict">
+                  <span class="figure">+24.5</span> net rating
+                  <span class="qualifier">birlikte oynadıkları 214 hücumda</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="exchange" data-question="Bu sezon en hızlı oynayan takım hangisi?">
+              <div class="from-you">
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Bu sezon en hızlı oynayan takım hangisi?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">hücumları sayıyor</span></div>
+              <div class="reply">
+                <p class="reply-line">Açık ara Paris Basketball:</p>
+                <p class="verdict">
+                  <span class="figure">78.0</span> maç başına hücum
+                  <span class="qualifier">olay akışından tek tek sayıldı, box score'dan tahmin edilmedi</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="exchange" data-question="Bu sezon kaç kritik hücum oldu?">
+              <div class="from-you">
+                <p class="bubble-user">
+                  <span class="ask-ghost" aria-hidden="true">Bu sezon kaç kritik hücum oldu?</span>
+                  <span class="ask-typed"></span>
+                </p>
+              </div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">farka ve süreye göre süzüyor</span></div>
+              <div class="reply">
+                <p class="reply-line">Son iki dakika, fark üç sayı ve altı:</p>
+                <p class="verdict">
+                  <span class="figure">646</span> hücum
+                  <span class="qualifier">eşikleri sen seçersin; burada "kritik" sabit bir tanım değil, bir filtre</span>
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="window-input" aria-hidden="true">
+            <span class="window-placeholder">Herhangi bir takım, beşli ya da hücum hakkında sor</span>
+            <span class="window-send"></span>
+          </div>
+        </figure>
+        <figcaption class="demo-caption on-court" id="demo-caption">
+          Ambardan gelen kaydedilmiş bir cevap. MCP konuşan her asistanda aynı
+          şekilde çalışır.
+        </figcaption>
+      </div>
+    </div>
+  </section>
+
+  <section class="film" id="film">
+    <div class="film-inner" data-demo-host>
+      <div class="film-stage" data-grow-in data-cursor>
+        <video class="demo-video" id="launch-film" muted loop playsinline preload="none"
+               poster="../launch-film.jpg" data-sound
+               aria-label="EuroLeague Analytics tanıtım filmi, 38 saniye">
+          <source src="../launch-film.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+  </section>
+
+  <section class="claim" id="shots">
+    <div class="claim-inner">
+      <div class="claim-copy">
+        <h2>Şutların nereden atıldığını sor.</h2>
+        <p>
+          Herhangi bir maç, herhangi bir oyuncu, sahanın herhangi bir bölgesi:
+          ligin kaydettiği koordinat. Bir bölge değil, box score'dan yürütülen
+          bir tahmin de değil.
+        </p>
+
+        <div class="scoreline">
+          <span class="side"><i class="crest" style="--club:#C8102E"></i>Olympiacos<b>78</b></span>
+          <span class="side"><i class="crest" style="--club:#00529F"></i>Real Madrid<b>79</b></span>
+          <span class="scoreline-meta">Final Four final maçı, 21 Mayıs 2023</span>
+        </div>
+
+        <p class="tally">
+          <span class="tally-figure" id="shot-count">0</span>
+          <span class="tally-label">şut yerleştirildi</span>
+        </p>
+
+        <p class="figure-note" id="shots-caption">
+          Saha içinden atılan her şut, ligin kaydettiği koordinata yerleştirildi.
+          Serbest atışların koordinatı yok, o yüzden burada değiller.
+        </p>
+
+      </div>
+
+      <div class="claim-figure">
+        <div class="courtwrap">
+        <!-- The same court as the English page, to FIBA dimensions in
+             centimetres with the ring at the origin. See the English page for
+             the measurement behind that choice. -->
+        <svg class="halfcourt" id="halfcourt" viewBox="-820 20 1640 1180" aria-labelledby="shots-caption">
+          <g transform="translate(0, 1000) scale(1, -1)">
+          <g fill="none" stroke="var(--hairline)" stroke-width="7">
+            <path d="M-750 -157.5 H750"/>
+            <path d="M-750 -157.5 V942.5 M750 -157.5 V942.5"/>
+            <rect x="-245" y="-157.5" width="490" height="580"/>
+            <circle cx="0" cy="422.5" r="180"/>
+            <path d="M-90 -37.5 H90"/>
+            <circle cx="0" cy="0" r="22.5"/>
+            <path d="M-660 -157.5 V141.5 M660 -157.5 V141.5"/>
+            <path d="M-660 141.5 A675 675 0 0 0 660 141.5"/>
+          </g>
+          <g id="shot-marks"></g>
+          <g id="shot-spotlight"></g>
+          </g>
+        </svg>
+
+        <div class="court-overlay">
+        <div class="callout" id="winner-card" hidden>
+          <span class="callout-leader" aria-hidden="true"></span>
+          <div class="callout-body">
+            <span class="callout-flag">Maçı kazandıran</span>
+            <span class="callout-who">Sergio Llull</span>
+            <!-- 4.9 m is measured, not typed: Decisions 57 and 58. -->
+            <span class="callout-what">
+              Süre üç saniyeyken 4.9 metreden iki sayılık; Olympiacos o
+              üstünlüğü bir daha geri alamadı.
+            </span>
+            <span class="callout-score">
+              <i style="--club:#00529F"></i>Real Madrid <b>79</b>
+              <i style="--club:#C8102E"></i>Olympiacos <b>78</b>
+            </span>
+          </div>
+        </div>
+        </div>
+        </div>
+
+        <div class="chartbar" id="chart-bar">
+          <p class="chartbar-label" id="chart-label">Maçtaki her deneme yerleştiriliyor</p>
+          <div class="chartbar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="chart-track">
+            <span class="chartbar-fill" id="chart-fill"></span>
+          </div>
+        </div>
+        <p class="demo-hint">Durdurmak için sahaya tıkla.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="claim claim-flip" id="lineups">
+    <div class="claim-inner">
+      <div class="claim-copy">
+        <h2>Hangi beşlinin gerçekten birlikte işlediğini sor.</h2>
+        <p>
+          Dört Fenerbahçe oyuncusu sabit. Birch'ü Baldwin'le değiştir, takım
+          tersine dönüyor.
+        </p>
+        <p class="figure-note figure-note-tight">
+          Her cevap arkasındaki hücum sayısını gösterir; küçük bir örneklem
+          saklanamaz.
+        </p>
+        <p class="figure-note">
+          Pozisyonları kulüp bildiriyor; bu sahadaki yerler temsili.
+        </p>
+
+        <div class="unit-verdict">
+          <div class="unit-metric">
+            <span class="unit-figure" id="unit-net">—</span>
+            <span class="unit-label">net rating</span>
+          </div>
+          <div class="unit-metric">
+            <span class="unit-figure unit-figure-quiet" id="unit-poss">—</span>
+            <span class="unit-label">birlikte oynanan hücum</span>
+          </div>
+          <p class="unit-swap" id="unit-swap" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="claim-figure">
+        <!-- Two real units one substitution apart. Positions are the club's
+             registration; spots on the floor are a convention. The English
+             page carries the full record. -->
+        <div class="floor" id="floor">
+          <svg class="floor-court" viewBox="-820 -60 1640 1160" fill="none" aria-hidden="true">
+            <g transform="translate(0, 1000) scale(1, -1)">
+              <g stroke="var(--hairline)" stroke-width="7">
+                <path d="M-750 0 H750"/>
+                <path d="M-750 0 V1060 M750 0 V1060"/>
+                <circle cx="0" cy="580" r="180"/>
+                <path d="M-90 120 H90"/>
+                <circle cx="0" cy="157" r="22"/>
+                <path d="M-660 0 V299 M660 0 V299"/>
+                <path d="M-660 299 A675 675 0 0 0 660 299"/>
+              </g>
+              <rect class="floor-paint" id="floor-paint"
+                    x="-245" y="0" width="490" height="580"
+                    stroke="var(--hairline)" stroke-width="7"/>
+            </g>
+          </svg>
+
+          <div class="floor-players" id="floor-players"></div>
+
+          <p class="floor-empty" id="floor-empty" hidden>Sahada pivot yok</p>
+        </div>
+        <p class="demo-hint">Durdurmak için sahaya tıkla.</p>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Every claim below follows docs/CLIENT_COMPATIBILITY.md and Decision 62,
+       the same as the English page. Menu names are left as the English
+       interface shows them, because that is what was checked; the Turkish
+       interface of each assistant has not been. -->
+  <section class="connect" id="connect">
+    <div class="connect-inner">
+      <h2>Bir kez bağla.</h2>
+      <p class="connect-lede">
+        Tek bir adres var ve kurulumun tamamı bu. Asistanının ayarlarına bir
+        kez yapıştırıyorsun, Google ile giriş yapıyorsun. Bir şey yüklenmiyor,
+        sonrasında ayarlanacak bir şey de yok.
+      </p>
+
+      <div class="address">
+        <code id="server-url">https://euroleague-analytics-mcp.fly.dev/mcp</code>
+        <button class="copy" type="button" id="copy-url" data-copied="Kopyalandı" data-select="Ctrl+C'ye bas">Kopyala</button>
+      </div>
+
+      <p class="connect-honest">
+        Asistandan kendini bağlamasını isteyemezsin; bu sayfayı ya da adresi
+        sohbete yapıştırmak hiçbir şey yapmaz. Bir kez ayarlara girmen
+        gerekiyor. Seninkini seç:
+      </p>
+
+      <div class="clients">
+        <div class="client-tabs" role="tablist" aria-label="Asistanını seç">
+          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="true">ChatGPT</button>
+          <button class="client-tab" type="button" role="tab" id="tab-gemini" aria-controls="panel-gemini" aria-selected="false">Gemini</button>
+          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="false">Claude</button>
+          <button class="client-tab" type="button" role="tab" id="tab-editor" aria-controls="panel-editor" aria-selected="false">Editörler ve CLI'lar</button>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt">
+          <p class="client-status client-status-review">Sadece ücretli planlarda; 2 Eylül 2026'dan beri ChatGPT uygulama dizininde incelemede</p>
+          <p class="client-note">
+            ChatGPT özel bağlayıcıları Plus, Pro ve Business planlarında,
+            web'de ve Developer mode açıkken ekliyor. Dizin listesi
+            onaylanınca adıyla ekleyeceksin; o zamana kadar yol bu. Menü
+            adları İngilizce arayüzden.
+          </p>
+          <ol class="howto">
+            <li><b>Settings → Security and login</b>'i aç ve <b>Developer mode</b>'u açık konuma getir.</li>
+            <li><b>Settings → Plugins</b>'e git (bu bölümün adı 2026 ortasına kadar Connectors'dı), sonra <b>+</b>.</li>
+            <li>Adını <b>EuroLeague Analytics</b> koy, yukarıdaki adresi <b>Connection</b> altına yapıştır, <b>OAuth</b>'u seç.</li>
+            <li>ChatGPT giriş penceresini açınca Google ile giriş yap, sonra bir sohbette bağlayıcıyı aç.</li>
+          </ol>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
+          <p class="client-status client-status-expected">Ücretsiz Gemini uygulamasında henüz yok; sadece Gemini Spark ve Gemini CLI</p>
+          <p class="client-note">
+            Ücretsiz kullandığın Gemini uygulamasında özel bağlayıcı eklenecek
+            bir yer yok. Bugün iki yol çalışıyor, ikisi de kontrol edildi:
+          </p>
+          <ol class="howto">
+            <li><b>Gemini Spark</b> ile (Google AI Pro ya da Ultra, kişisel hesap, 18+): <b>Settings &amp; help → Connected apps → Custom apps for Spark → Add a custom app</b>, adresi yapıştır, Google ile giriş yap.</li>
+            <li>Bilgisayarda <b>Gemini CLI</b> ile, tek komut:</li>
+          </ol>
+<pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+          <p class="howto-alt">
+            İkisi de sende yoksa en kısa yol Claude sekmesi: ücretsiz plan bir
+            özel bağlayıcı alıyor ve dört tıklama sürüyor.
+          </p>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude" hidden>
+          <p class="client-status client-status-verified">Doğrulandı: bağlı ve cevap veriyor, ücretsiz planda da</p>
+          <ol class="howto">
+            <li><b>Customize</b>'ı, sonra <b>Connectors</b>'ı aç.</li>
+            <li><b>+</b>'ya tıkla, <b>Add custom connector</b>'ı seç, yukarıdaki adresi yapıştır, <b>Add</b>'e tıkla.</li>
+            <li>Claude giriş penceresini açınca Google ile giriş yap.</li>
+            <li>Bir sohbette <b>+</b> → <b>Connectors</b>'ı aç ve etkinleştir. Adının altında on bir araç belirir.</li>
+          </ol>
+          <p class="howto-alt">Claude'un web, masaüstü ve telefon sürümlerinde çalışır. Claude Code'da ise:</p>
+<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-editor" aria-labelledby="tab-editor" hidden>
+          <p class="client-status client-status-expected">Her istemcinin yayımladığı MCP belgesine göre bekleniyor; burada henüz çalıştırılmadı</p>
+          <p class="client-note">
+            Cursor, Codex, Windsurf, Zed, Continue.dev ve Goose uzak bir MCP
+            sunucusunu aynı şekilde alır. O istemcinin kendi yapılandırma
+            dosyasına tek blok:
+          </p>
+<pre class="howto-code"><code>{
+  "mcpServers": {
+    "euroleague-analytics": {
+      "url": "https://euroleague-analytics-mcp.fly.dev/mcp"
+    }
+  }
+}</code></pre>
+          <p class="client-note">
+            MCP Inspector aynı adrese karşı doğrulandı; bir istemci bağlamadan
+            önce on bir aracı görmenin en hızlı yolu.
+          </p>
+        </div>
+      </div>
+
+      <p class="connect-note">
+        Kullanımı ücretsiz. Salt okunur: soru cevaplayan on bir araç var, bir
+        şeyi değiştiren yok.
+        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics/blob/master/docs/CLIENT_COMPATIBILITY.md">Tam uyumluluk tablosu</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- The three sessions are the English page's recordings; Claude answered
+       in English. The drawn transcripts beneath them are those answers
+       rendered in Turkish, with every figure and every caveat exactly as it
+       came back. The replay record for each stays in the English page. -->
+  <section class="deep" id="deep">
+    <div class="deep-inner">
+      <div class="deep-head on-court">
+        <h2>Ona zor bir şey sor.</h2>
+        <p class="deep-lede">
+          Zor olan kısım okuma: bir sonraki soruyu sormak, zayıf cevabı
+          reddetmek ve neyin dışarıda kaldığını söylemek.
+        </p>
+        <p class="figure-note">
+          Çalışan sunucuya karşı üç gerçek oturum. Aşağıdaki her rakam ve her
+          uyarı ondan geldi.
+        </p>
+      </div>
+
+      <article class="deep-case">
+        <div class="deep-copy on-court">
+          <h3>Bir sonraki soruyu senin yerine soruyor.</h3>
+          <p>
+            Tek bir eşik bir görüştür. İşe yarar bir cevap eşiği oynatır, ne
+            olduğunu gösterir, sonra rakamın nerede alıntılanmaya değmez hâle
+            geldiğini söyler.
+          </p>
+        </div>
+
+        <figure class="window deep-window" data-demo-host>
+          <video class="demo-video" muted playsinline preload="none" poster="../hard-1.jpg" aria-hidden="true">
+            <source src="../hard-1.mp4" type="video/mp4">
+          </video>
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics bağlı</span>
+          </div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">Fenerbahçe maç sonlarında iyi görünüyor. Kontrol et:
+              son iki dakikada fark üç sayı ve altındayken nasıl skor üretiyorlar? Tanımı
+              gevşetirsem tutuyor mu? Bir de rakama güvenilir mi, söyle.</p>
+            </div>
+
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> üç kritik-an eşiğini karşılaştırıyor
+            </p>
+
+            <div class="reply is-shown">
+              <p class="reply-line">Sezonun tamamında Fenerbahçe 100 hücumda 112.8 sayı
+              üretti. Son beş dakikaya ve beş sayı içindeki farka daraltınca 116.4'e
+              çıkıyor, 159 hücum üzerinden. Bir daha daralt, son iki dakika ve üç sayı
+              içinde, 144.2'ye sıçrıyor.</p>
+              <p class="reply-line">Sonuncusuna dikkat. 43 hücuma dayanıyor, yaklaşık yarım
+              maçlık, ve beşi bir oyuncu değişikliğinin üstüne denk geldi. Yön gerçek;
+              büyüklüğü kanıtlanmış değil. Bunlar sayılmış hücumlar, box score tahmini
+              değil; bu yüzden rakamı başka bir yerden alınmış bir tempo sayısıyla
+              karşılaştırma.</p>
+              <p class="verdict">
+                <span class="figure">144.2</span> kritik anlarda 100 hücum başına
+                <span class="qualifier">43 hücum üzerinden; bunu söylemesinin nedeni de bu</span>
+              </p>
+            </div>
+          </div>
+        </figure>
+      </article>
+
+      <article class="deep-case deep-case-flip">
+        <div class="deep-copy on-court">
+          <h3>Gösterişli cevabı reddediyor.</h3>
+          <p>
+            Her beşli cevabı arkasındaki hücum sayısını ve küçük örneklemin
+            gürültü olduğu uyarısını taşır. Kendi araç çıktısını okuyan bir
+            asistan buna göre davranır: 54 hücumdaki +76'lık beşli adıyla
+            anılır ve kenara konur; yüksek sesle tekrar edeceği, gerçekten süre
+            almış olandır.
+          </p>
+        </div>
+
+        <figure class="window deep-window" data-demo-host>
+          <video class="demo-video" muted playsinline preload="none" poster="../hard-2.jpg" aria-hidden="true">
+            <source src="../hard-2.mp4" type="video/mp4">
+          </video>
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics bağlı</span>
+          </div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">Panathinaikos'un bu sezonki en iyi beşlisi hangisi?</p>
+            </div>
+
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> her beşlinin arkasındaki örneklemi kontrol ediyor
+            </p>
+
+            <div class="reply is-shown">
+              <p class="reply-line">İlk cevabım cevap değildi. 25 hücum eşiğinde en iyi
+              Panathinaikos beşlisi Hernangomez–Holmes–Nunn–Osman–Shorts, +76.6 net, 54 hücum
+              üzerinden. Bu bir maçın yaklaşık çeyreği. Böyle bir rakam takım elbise giymiş
+              gürültüdür.</p>
+              <p class="reply-line">Çıtayı 100 hücuma çek, tam olarak bir beşli hayatta
+              kalıyor: Grant–Hayes-Davis–Lessort–Nunn–Osman, 133 hücumda +7.55. Buradaki
+              beşli rakamları içinde yüksek sesle tekrar edeceğim tek şey bu.</p>
+              <p class="verdict">
+                <span class="figure">+7.6</span> net rating
+                <span class="qualifier">133 hücum üzerinden; barajı geçen tek beşli</span>
+              </p>
+            </div>
+          </div>
+        </figure>
+      </article>
+
+      <article class="deep-case">
+        <div class="deep-copy on-court">
+          <h3>Neyi dışarıda bıraktığını söylüyor.</h3>
+          <p>
+            Bir doğrulama kuralını geçemeyen maçlar her cevaptan geri tutulur
+            ve cevap kaç tane olduğunu, neden olduğunu söyler. Hiçbir şey
+            silinmez, isteyebilirsin; ama bir rakamı alıntılamadan önce
+            söylenir, sonra değil.
+          </p>
+        </div>
+
+        <figure class="window deep-window" data-demo-host>
+          <video class="demo-video" muted playsinline preload="none" poster="../hard-3.jpg" aria-hidden="true">
+            <source src="../hard-3.mp4" type="video/mp4">
+          </video>
+          <div class="window-bar">
+            <span class="window-app">
+              <span class="app-avatar" style="--tint:#C15F3C">C</span>
+              <span>Claude</span>
+            </span>
+            <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics bağlı</span>
+          </div>
+          <div class="window-body deep-body">
+            <div class="from-you">
+              <p class="bubble-user">Bütün bunlar kaç maça dayanıyor? Bana söylemediğin bir
+              şey var mı?</p>
+            </div>
+
+            <p class="deep-thought">
+              <span>EuroLeague Analytics</span> kapsamı ve dışarıda bırakılanları kontrol ediyor
+            </p>
+
+            <div class="reply is-shown">
+              <p class="reply-line">İki sezonda 732 maç yüklü, 53'ü geri tutuluyor: 2024-25'te
+              22, 2025-26'da 31. Bu sezonu al: 402 maçın 371'i kullanılıyor. 31'in on yedisi
+              hücum sayım kontrolünü geçemedi, on ikisinde sahada olmadığı düşünülen bir
+              oyuncuya istatistik yazılmıştı, üçü resmi box score ile dakikalarda uyuşmadı,
+              birinde de çözemediğim bir oyuncu değişikliği vardı.</p>
+              <p class="reply-line">Bunu aramam gerekmedi. Her cevap bunu taşıyor; eksik
+              olanı söylenmeden sana bir rakam veremem. Maçlar silinmiş değil, dahil etmemi
+              isteyebilirsin; ama o zaman bunu söylerim.</p>
+              <p class="verdict">
+                <span class="figure">679</span> / 732 maç kullanıldı
+                <span class="qualifier">dışarıda kalan 53'ünün adı var, saklanmıyor</span>
+              </p>
+            </div>
+          </div>
+        </figure>
+      </article>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="how-inner on-court">
+      <h2>Arkasında ne var.</h2>
+
+      <dl class="facts">
+        <div>
+          <dt>732</dt>
+          <dd>maç yüklü, 2024-25 ve 2025-26 sezonlarından; 2026-27 her gece
+              dolmaya devam ediyor</dd>
+        </div>
+        <div>
+          <dt>53</dt>
+          <dd>maç bir doğrulama kontrolünü geçemediği için geri tutuldu; sen
+              istemedikçe hiçbir cevaba girmiyor</dd>
+        </div>
+        <div>
+          <dt>11</dt>
+          <dd>araç, hepsi salt okunur, hepsi depoda belgelenmiş</dd>
+        </div>
+      </dl>
+
+      <p class="how-note">
+        Sayım istatistikleri resmi box score'dan. Hücumlar, beşliler,
+        sahada/saha dışı ve 100 hücum başına her oran
+        <span class="marker">bu projenin oyun akışından kendi yeniden
+        kurgusu</span>; her cevap sana hangisini verdiğini söyler.
+        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Kaynağı oku</a>
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner on-court">
+    <span>EuroLeague Analytics</span>
+    <nav aria-label="Alt menü">
+      <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Kaynak</a>
+      <a class="quiet-link" href="../privacy.html">Gizlilik</a>
+      <a class="quiet-link" href="../support.html">Destek</a>
+      <a class="quiet-link" href="../?lang=en" lang="en" hreflang="en">English</a>
+    </nav>
+    <span class="footer-note">
+      Euroleague Basketball ile bağlantılı değildir. Veriler onların herkese
+      açık API'sinden.
+    </span>
+  </div>
+</footer>
+
+<script src="../hero.js" defer></script>
+<script src="../demo-video.js" defer></script>
+<script src="../shots.js" defer></script>
+<script src="../lineups.js" defer></script>
+<script src="../ask.js" defer></script>
+<script src="../motion.js" defer></script>
+</body>
+</html>

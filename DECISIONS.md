@@ -3631,6 +3631,79 @@ launch material) sits between the hero and the first claim, under the same
 playback rule as every recording, starting muted with a button that turns the
 sound on.
 
+## 63. Player name lookup treats a hyphen and a space as the same character
+
+**Decided 2026-09-06.** In a live session `el_get_player_on_off` answered
+"no player matches" for `Horton-Tucker`. Measured that day against the
+warehouse: the source stores the player as `HORTON TUCKER, TALEN`, without the
+hyphen, while 11 other surnames keep theirs (`WEILER-BABB, NICK`,
+`LOPEZ-AROSTEGUI, XABI`). The API is inconsistent, and a caller cannot know
+which spelling it chose for a given player.
+
+**What changed.** `resolve_player` folds `-` into a space on both the stored
+display name and the search term before the `ilike` comparison. `Horton-Tucker`
+and `Weiler Babb` now both resolve; id lookups are untouched; ambiguity
+handling is untouched.
+
+**What it does not fix.** Forename-first input (`Talen Horton-Tucker`) still
+fails, by design: names are stored `SURNAME, FORENAME` and the error message
+already tells the caller to try the surname alone or pass an id. Widening the
+match to word order is a separate decision with its own ambiguity cost.
+
+**Condition.** The fold is limited to the hyphen. If a future season shows a
+third spelling of the same surname (an apostrophe, a diacritic), measure it
+across the season first and extend the fold with that measurement, not by
+guessing.
+
+## 64. The Turkish page lives at /tr/, is reached by a first-language redirect, and every script sentence comes from the page
+
+**Decided 2026-09-06.** Decision 53 left open how the Turkish page is reached.
+Built that day, and checked in a browser whose first language is Turkish:
+`site/tr/index.html` is the Turkish page, written rather than translated; the
+English page's head carries a small inline script that sends a browser whose
+*first* preferred language is Turkish to `/tr/`; the Turkish page never
+redirects, so nobody can be bounced between the two.
+
+**The way out.** The Turkish page's footer links to `../?lang=en`. That query
+records the choice in `localStorage` and the redirect stands down for it, on
+that visit and every later one. The English page's footer carries the quiet
+link the other way. A prominent switch was rejected in the design record and
+stays rejected.
+
+**Only the first language counts.** `navigator.languages[0]`, not any entry in
+the list. A reader who lists Turkish third is not a Turkish reader in the
+sense that matters here, and sending them away from the page they opened is
+the trap the escape hatch exists to avoid.
+
+**Scripts hold no sentence the page can carry.** The scripts used to write
+seven English sentences into the page themselves: the hint under a recording,
+the sound button, the play pill, the shot chart's closing label, the lineup
+swap note and the three position words. Each now reads `data-text-<key>` from
+`<body>` and falls back to its English. The Turkish page carries every key,
+and `test_the_turkish_page_carries_every_sentence_the_scripts_can_show`
+lists the keys from the scripts themselves, so a key added to a script without
+its Turkish text fails in the test rather than on the page.
+
+**Data is found from the script's address, not the page's.** `shots.js` and
+`lineups.js` fetched `data/<file>.json` relative to the page, which from `/tr/`
+is `/tr/data/`, which does not exist and fails silently into an empty court.
+Both now resolve against `document.currentScript.src`. Checked: from `/tr/`
+both requests go to `/data/` and return 200.
+
+**What stays English on the Turkish page, and why.** The recordings, because
+they are recordings of Claude answering in English and a dubbed transcript
+would be a fabrication; the drawn transcripts beneath them are the same
+answers rendered in Turkish, every figure and caveat as it came back. The
+assistants' menu names, because the English interface is what was checked
+against the vendors' documentation and the Turkish interface was not; the
+page says so. Privacy and support pages, which are linked from the Turkish
+footer in English and are not yet written in Turkish.
+
+**Condition.** If a script gains a sentence, it goes through `data-text-*` or
+the test fails. If the site ever moves to a host that can read
+`Accept-Language`, the redirect moves server-side and the inline script goes;
+the storage key and `?lang=en` contract stay so old links keep working.
+
 ## Rules to add to the project instruction file
 
 ```

@@ -18,7 +18,23 @@ from urllib.parse import urlparse
 from euroleague.mcp.tools import TOOL_NAMES
 
 SITE_DIR = Path("site")
-HTML_FILES = ("index.html", "privacy.html", "support.html")
+# The Turkish page lives one directory down, so every relative reference in it
+# climbs with "../". The checks below resolve each reference against the page's
+# own directory and then require the result to stay inside site/.
+HTML_FILES = ("index.html", "privacy.html", "support.html", "tr/index.html")
+TURKISH_PAGE = SITE_DIR / "tr" / "index.html"
+
+
+def _resolve_inside_site(page: str, reference: str) -> Path:
+    """Where a relative href or src in `page` lands, or fail if it leaves site/."""
+    bare = reference.split("#", 1)[0].split("?", 1)[0]
+    target = ((SITE_DIR / page).parent / bare).resolve()
+    assert target.is_relative_to(SITE_DIR.resolve()), (
+        f"In {page}: '{reference}' resolves outside the site directory to {target}"
+    )
+    return target
+
+
 DOC_FILES = ("SPONSOR_ONE_PAGER.md", "LAUNCH_COPY.md", "OWNER_LAUNCH_STEPS.md")
 LAUNCH_THREAD = Path("docs/LAUNCH_THREAD_FINAL.md")
 CHATGPT_SUBMISSION_RECORD = Path("docs/CHATGPT_APP_SUBMISSION.md")
@@ -148,7 +164,11 @@ def test_html_files_have_valid_html5_structure() -> None:
         assert '<meta charset="UTF-8">' in content, f"{filename} missing UTF-8 charset"
         assert '<meta name="viewport"' in content, f"{filename} missing viewport meta tag"
         assert "<title>" in content and "</title>" in content, f"{filename} missing <title>"
-        assert "<body>" in content and "</body>" in content, f"{filename} missing <body> tags"
+        # The Turkish page's <body> carries data-text attributes, so the tag
+        # is matched by name rather than as a bare "<body>".
+        assert re.search(r"<body[\s>]", content) and "</body>" in content, (
+            f"{filename} missing <body> tags"
+        )
 
 
 def test_internal_links_and_stylesheets_resolve() -> None:
@@ -161,7 +181,7 @@ def test_internal_links_and_stylesheets_resolve() -> None:
 
         # Check stylesheets
         for sheet_href in parser.stylesheets:
-            target = SITE_DIR / sheet_href
+            target = _resolve_inside_site(filename, sheet_href)
             assert target.is_file(), (
                 f"In {filename}: stylesheet '{sheet_href}' not found at {target}"
             )
@@ -171,10 +191,14 @@ def test_internal_links_and_stylesheets_resolve() -> None:
             parsed = urlparse(href)
             if parsed.scheme or href.startswith("#"):
                 continue
-            # Strip fragment e.g. "index.html#features" -> "index.html"
-            base_href = href.split("#", 1)[0]
+            # Strip fragment and query, e.g. "index.html#features" -> "index.html"
+            base_href = href.split("#", 1)[0].split("?", 1)[0]
             if base_href:
-                target = SITE_DIR / base_href
+                target = _resolve_inside_site(filename, href)
+                # "../" from the Turkish page names the site root; the root is
+                # served as index.html.
+                if target.is_dir():
+                    target = target / "index.html"
                 assert target.is_file(), (
                     f"In {filename}: broken relative link '{href}' (resolves to {target})"
                 )
@@ -222,12 +246,118 @@ def test_zero_trackers_and_third_party_scripts() -> None:
             assert not re.match(r"(?:[a-z][a-z0-9+.-]*:)?//", script_src, re.IGNORECASE), (
                 f"In {filename}: script is loaded from another origin: {script_src}"
             )
-            assert not script_src.startswith("/") and ".." not in script_src, (
+            assert not script_src.startswith("/"), (
                 f"In {filename}: script escapes the site directory: {script_src}"
             )
-            assert (SITE_DIR / script_src).is_file(), (
+            assert _resolve_inside_site(filename, script_src).is_file(), (
                 f"In {filename}: script '{script_src}' is not shipped with the site"
             )
+
+
+def test_the_turkish_page_is_reached_by_redirect_and_can_always_be_left() -> None:
+    """Decision 53: a Turkish browser is sent to /tr/, and nobody is trapped there.
+
+    What this checks: the English page carries the redirect, the redirect only
+    fires for a Turkish browser language, it stands down when the visitor has
+    chosen English, and each page names the other for search engines and for
+    the visitor. What it cannot check: that a real browser takes the redirect,
+    which needs a browser with its language set to Turkish.
+    """
+    index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
+    turkish_text = TURKISH_PAGE.read_text(encoding="utf-8")
+
+    assert '<html lang="tr">' in turkish_text
+    assert '<html lang="en">' in index_text
+
+    # The redirect: inline, before anything renders, and conditional.
+    head = index_text.split("</head>", 1)[0]
+    assert "navigator.language" in head, "index.html must read the browser language"
+    assert "tr/" in head, "the redirect must name the Turkish page"
+    assert "lang=en" in head, "a visitor who asked for English must not be redirected"
+    assert "navigator.language" not in turkish_text, (
+        "the Turkish page must never redirect; it is where the redirect lands"
+    )
+
+    # Each page tells search engines about the other.
+    for page_text, page_name in ((index_text, "index.html"), (turkish_text, "tr/index.html")):
+        assert 'hreflang="en"' in page_text, f"{page_name} lacks the English alternate"
+        assert 'hreflang="tr"' in page_text, f"{page_name} lacks the Turkish alternate"
+        assert 'hreflang="x-default"' in page_text, f"{page_name} lacks the default alternate"
+
+    # The way out, in both directions. The English link carries lang=en so the
+    # redirect does not immediately send the visitor back.
+    assert "../?lang=en" in turkish_text or "../index.html?lang=en" in turkish_text, (
+        "the Turkish page needs a link back to English that disarms the redirect"
+    )
+    assert 'href="tr/"' in index_text, "the English page needs a quiet link to Turkish"
+
+
+def test_the_turkish_page_shares_the_english_page_s_assets_and_claims() -> None:
+    """The Turkish page is the same product, so it loads the same scripts and figures.
+
+    Authored copy may differ sentence by sentence; the scripts, the recordings
+    and the one coverage figure may not. A script listed on one page and not
+    the other means one language gets a broken section.
+    """
+    index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
+    turkish_text = TURKISH_PAGE.read_text(encoding="utf-8")
+
+    def scripts_of(text: str) -> set[str]:
+        parser = LinkExtractor()
+        parser.feed(text)
+        return {Path(src).name for src in parser.scripts}
+
+    assert scripts_of(turkish_text) == scripts_of(index_text)
+
+    for section_id in ("film", "shots", "lineups", "connect", "deep", "how"):
+        assert f'id="{section_id}"' in turkish_text, f"Turkish page lacks section {section_id}"
+
+    assert "732" in turkish_text, "the Turkish page must state the same games-loaded figure"
+    assert "https://euroleague-analytics-mcp.fly.dev/mcp" in turkish_text
+
+    # The recordings are the same files; the Turkish page must not carry
+    # copies of its own.
+    for media in ("hero-demo.mp4", "launch-film.mp4", "hard-1.mp4", "hard-2.mp4", "hard-3.mp4"):
+        assert f"../{media}" in turkish_text, f"Turkish page does not reuse {media}"
+
+
+def test_the_turkish_page_carries_every_sentence_the_scripts_can_show() -> None:
+    """Decision 53: scripts hold no Turkish, so the page must supply each string.
+
+    The scripts read `data-text-<key>` from <body> and fall back to English.
+    A key the Turkish page forgets shows an English sentence in the middle of
+    a Turkish page, silently. This test lists the keys from the scripts
+    themselves, so a new key added to a script without its Turkish text fails
+    here rather than on the page.
+    """
+    keys: set[str] = set()
+    for script in SITE_DIR.glob("*.js"):
+        script_text = script.read_text(encoding="utf-8")
+        keys.update(re.findall(r'text\("([a-z]+(?:-[a-z]+)*)"', script_text))
+        keys.update(re.findall(r'data-text-([a-z]+(?:-[a-z]+)*)"', script_text))
+    # The position words are looked up by the data's values, not by a literal.
+    keys.update({"position-guard", "position-forward", "position-center"})
+    assert keys, "no data-text keys found in the scripts; the lookup has moved"
+
+    body_tag = re.search(r"<body[^>]*>", TURKISH_PAGE.read_text(encoding="utf-8"))
+    assert body_tag is not None
+    for key in sorted(keys):
+        assert f'data-text-{key}="' in body_tag.group(0), (
+            f"tr/index.html <body> lacks data-text-{key}; a script would show English there"
+        )
+
+
+def test_site_scripts_locate_their_data_from_their_own_address() -> None:
+    """A script served to /tr/ must still find site/data/, so the path is not page-relative.
+
+    fetch("data/x.json") resolves against the page, and from /tr/ that is
+    /tr/data/x.json, which does not exist. Resolving against the script's own
+    URL gives the same answer from every page that loads it.
+    """
+    for name in ("shots.js", "lineups.js"):
+        text = (SITE_DIR / name).read_text(encoding="utf-8")
+        assert 'fetch("data/' not in text, f"{name} still fetches relative to the page"
+        assert "document.currentScript" in text, f"{name} does not resolve data from its own URL"
 
 
 def test_launch_documentation_files_exist() -> None:
