@@ -7,6 +7,9 @@
 
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+  // Same reveal curve and tempo as the stylesheet, so every appearance on the page lands alike.
+  var REVEAL = "opacity var(--dur-swift) var(--ease-swift), transform var(--dur-swift) var(--ease-swift)";
+
   var tabs = Array.prototype.slice.call(document.querySelectorAll(".qa-tab"));
   var panels = Array.prototype.slice.call(document.querySelectorAll(".qa-panel"));
   var container = document.getElementById("qa");
@@ -56,17 +59,17 @@
     answerCard.style.transform = "translateY(8px) scale(0.99)";
 
     window.requestAnimationFrame(function () {
-      queryRow.style.transition = "opacity 280ms cubic-bezier(0.16, 1, 0.3, 1), transform 280ms cubic-bezier(0.16, 1, 0.3, 1)";
+      queryRow.style.transition = REVEAL;
       queryRow.style.opacity = "1";
       queryRow.style.transform = "none";
 
       window.setTimeout(function () {
-        proofRow.style.transition = "opacity 320ms cubic-bezier(0.16, 1, 0.3, 1), transform 320ms cubic-bezier(0.16, 1, 0.3, 1)";
+        proofRow.style.transition = REVEAL;
         proofRow.style.opacity = "1";
         proofRow.style.transform = "none";
 
         window.setTimeout(function () {
-          answerCard.style.transition = "opacity 380ms cubic-bezier(0.16, 1, 0.3, 1), transform 380ms cubic-bezier(0.16, 1, 0.3, 1)";
+          answerCard.style.transition = REVEAL;
           answerCard.style.opacity = "1";
           answerCard.style.transform = "none";
         }, 180);

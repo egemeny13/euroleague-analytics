@@ -38,6 +38,22 @@
   --gutter:         clamp(1rem, 4vw, 4.5rem);
   --max-w:          1160px;
   --max-wide:       1280px;
+
+  /* Motion: two curves, two tempos. Every transition on the page uses one pair.
+     swift  = things that appear, move or count (long, soft landing)
+     snappy = hover, focus and colour changes (short, no overshoot) */
+  --ease-swift:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snappy:    cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-swift:      720ms;
+  --dur-snappy:     220ms;
+
+  /* Shape: three radii. Circles keep 50%. */
+  --r-sm:           4px;
+  --r-md:           10px;
+  --r-pill:         999px;
+
+  /* One shadow on the whole page, and only under the primary action. */
+  --glow:           0 4px 14px rgba(234, 88, 12, 0.28);
 }
 
 *, *::before, *::after {
@@ -66,7 +82,7 @@ body {
 :focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
 }
 
 .skip {
@@ -77,7 +93,7 @@ body {
   background: var(--ink);
   color: #fff;
   padding: 0.6rem 1.2rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   text-decoration: none;
 }
 .skip:focus {
@@ -202,7 +218,7 @@ main, .topbar {
   font-weight: 500;
   color: var(--ink-soft);
   text-decoration: none;
-  transition: color 150ms ease;
+  transition: color var(--dur-snappy) var(--ease-snappy);
   white-space: nowrap;
 }
 .nav-link:hover,
@@ -221,13 +237,13 @@ main, .topbar {
   font-size: 0.92rem;
   line-height: 1;
   padding: 0.75rem 1.4rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   text-decoration: none;
   border: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 180ms ease, transform 180ms ease;
-  box-shadow: 0 1px 2px rgba(234, 88, 12, 0.2);
+  transition: background var(--dur-snappy) var(--ease-snappy), transform var(--dur-snappy) var(--ease-snappy);
+  box-shadow: var(--glow);
 }
 .button-solid:hover {
   background: var(--ball-deep);
@@ -258,12 +274,12 @@ main, .topbar {
   font-size: 1.02rem;
   line-height: 1;
   padding: 0.95rem 1.8rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   text-decoration: none;
   border: 1px solid var(--hairline-dark);
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 180ms ease, background 180ms ease;
+  transition: border-color var(--dur-snappy) var(--ease-snappy), background var(--dur-snappy) var(--ease-snappy);
 }
 .button-quiet:hover {
   border-color: var(--ink);
@@ -385,11 +401,8 @@ main, .topbar {
 .qa-console {
   background: var(--paper-card);
   border: 1px solid var(--hairline);
-  border-radius: 16px;
+  border-radius: var(--r-md);
   overflow: hidden;
-  box-shadow:
-    0 1px 3px rgba(18, 15, 13, 0.04),
-    0 24px 48px -28px rgba(18, 15, 13, 0.14);
 }
 
 .qa-selector {
@@ -410,7 +423,7 @@ main, .topbar {
   text-align: left;
   cursor: pointer;
   font-family: var(--font-sans);
-  transition: background 180ms ease, color 180ms ease;
+  transition: background var(--dur-snappy) var(--ease-snappy), color var(--dur-snappy) var(--ease-snappy);
   position: relative;
 }
 .qa-tab:last-child {
@@ -485,7 +498,7 @@ main, .topbar {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 0.25rem 0.55rem;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   background: var(--ink);
   color: #fff;
   flex: none;
@@ -505,7 +518,7 @@ main, .topbar {
   padding: 0.85rem 1.15rem;
   background: var(--paper-deep);
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--r-md);
 }
 
 .query-indicator {
@@ -575,7 +588,7 @@ main, .topbar {
   padding: 1.5rem 1.6rem;
   background: var(--paper);
   border: 1px solid var(--hairline);
-  border-radius: 12px;
+  border-radius: var(--r-md);
 }
 
 .qa-answer-intro {
@@ -600,7 +613,7 @@ main, .topbar {
   background: #fff;
   border: 1px solid var(--hairline);
   padding: 0.35rem 0.8rem 0.35rem 0.35rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: 0.88rem;
 }
 .lineup-roster .role {
@@ -744,7 +757,7 @@ main, .topbar {
 .crest {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: var(--club);
   flex: none;
 }
@@ -824,11 +837,8 @@ main, .topbar {
   position: relative;
   background: var(--paper-card);
   border: 1px solid var(--hairline);
-  border-radius: 14px;
+  border-radius: var(--r-md);
   padding: 0.85rem;
-  box-shadow:
-    0 1px 3px rgba(18, 15, 13, 0.04),
-    0 20px 40px -26px rgba(18, 15, 13, 0.1);
 }
 
 .halfcourt {
@@ -856,7 +866,7 @@ main, .topbar {
 }
 
 #shot-marks {
-  transition: opacity 320ms ease;
+  transition: opacity var(--dur-swift) var(--ease-swift);
 }
 #shot-marks.is-dimmed {
   opacity: 0.2;
@@ -875,7 +885,7 @@ main, .topbar {
   width: min(18rem, 82%);
   transform: translate(-50%, 0);
   opacity: 0;
-  transition: opacity 340ms ease, transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity var(--dur-swift) var(--ease-swift), transform var(--dur-swift) var(--ease-swift);
   pointer-events: none;
   z-index: 10;
 }
@@ -900,9 +910,8 @@ main, .topbar {
   background: #fff;
   border: 1px solid var(--hairline);
   border-left: 3px solid var(--ball);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 0.85rem 1rem;
-  box-shadow: 0 16px 36px -20px rgba(18, 15, 13, 0.4);
 }
 
 .callout-flag {
@@ -913,7 +922,7 @@ main, .topbar {
   font-weight: 600;
   font-size: 0.72rem;
   padding: 0.25rem 0.55rem;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   line-height: 1;
 }
 
@@ -942,7 +951,7 @@ main, .topbar {
 .callout-score i {
   width: 9px;
   height: 9px;
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   background: var(--club);
 }
 .callout-score b {
@@ -954,7 +963,7 @@ main, .topbar {
 .chartbar {
   margin-top: 0.9rem;
   opacity: 0;
-  transition: opacity 280ms ease;
+  transition: opacity var(--dur-swift) var(--ease-swift);
 }
 .chartbar.is-running,
 .chartbar.is-settling {
@@ -972,7 +981,7 @@ main, .topbar {
   position: relative;
   height: 3px;
   background: var(--hairline);
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   overflow: hidden;
 }
 
@@ -984,7 +993,7 @@ main, .topbar {
 }
 
 .chartbar.is-settling .chartbar-fill {
-  transition: width 650ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width var(--dur-swift) var(--ease-swift);
 }
 
 /* Lineups flip */
@@ -1009,13 +1018,13 @@ main, .topbar {
 }
 
 .unit-metric {
-  border-radius: 8px;
+  border-radius: var(--r-md);
 }
 .unit-metric.is-changing {
-  animation: figure-pulse 760ms ease-out;
+  animation: figure-pulse var(--dur-swift) var(--ease-swift);
 }
 .unit-figure.is-changing {
-  animation: figure-swap 640ms cubic-bezier(0.4, 0, 0.2, 1);
+  animation: figure-swap var(--dur-swift) var(--ease-swift);
 }
 
 @keyframes figure-swap {
@@ -1074,12 +1083,12 @@ main, .topbar {
   font-size: 0.84rem;
   font-weight: 600;
   padding: 0.5rem 1rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--hairline-dark);
   background: var(--paper-card);
   color: var(--ink-soft);
   cursor: pointer;
-  transition: all 180ms ease;
+  transition: background var(--dur-snappy) var(--ease-snappy), color var(--dur-snappy) var(--ease-snappy), border-color var(--dur-snappy) var(--ease-snappy);
 }
 .lineup-btn:hover {
   border-color: var(--ink);
@@ -1096,12 +1105,9 @@ main, .topbar {
   position: relative;
   background: var(--paper-card);
   border: 1px solid var(--hairline);
-  border-radius: 14px;
+  border-radius: var(--r-md);
   padding: 0.85rem;
   overflow: hidden;
-  box-shadow:
-    0 1px 3px rgba(18, 15, 13, 0.04),
-    0 20px 40px -26px rgba(18, 15, 13, 0.1);
 }
 
 .floor-court {
@@ -1112,7 +1118,7 @@ main, .topbar {
 
 .floor-paint {
   fill: transparent;
-  transition: fill 520ms ease;
+  transition: fill var(--dur-swift) var(--ease-swift);
 }
 .floor-paint.is-empty {
   fill: rgba(234, 88, 12, 0.12);
@@ -1132,9 +1138,9 @@ main, .topbar {
   align-items: center;
   gap: 0.25rem;
   transition:
-    left 640ms cubic-bezier(0.16, 1, 0.3, 1),
-    top 640ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 380ms ease;
+    left var(--dur-swift) var(--ease-swift),
+    top var(--dur-swift) var(--ease-swift),
+    opacity var(--dur-swift) var(--ease-swift);
 }
 
 .player-disc {
@@ -1148,8 +1154,7 @@ main, .topbar {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(18, 15, 13, 0.2);
-  transition: background 380ms ease, transform 380ms ease;
+  transition: background var(--dur-swift) var(--ease-swift), transform var(--dur-swift) var(--ease-swift);
 }
 
 .player-name {
@@ -1184,13 +1189,12 @@ main, .topbar {
   transform: translateX(-50%);
   margin: 0;
   padding: 0.35rem 0.85rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--ball);
   color: #fff;
   font-size: 0.76rem;
   font-weight: 600;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
 }
 
 /* Ensure single-column stacking on mobile with proper specificity */
@@ -1362,7 +1366,7 @@ main, .topbar {
 .flow-step {
   background: var(--paper-card);
   border: 1px solid var(--hairline);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   padding: 1.4rem 1.3rem;
   display: flex;
   flex-direction: column;
@@ -1397,7 +1401,7 @@ main, .topbar {
   font-size: 0.74rem;
   background: var(--paper-deep);
   border: 1px solid var(--hairline);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 0.4rem 0.55rem;
   overflow-wrap: break-word;
   color: var(--ink);
@@ -1458,7 +1462,7 @@ main, .topbar {
   padding: 0.85rem 1rem 0.85rem 1.25rem;
   background: #fff;
   border: 1px solid var(--hairline-dark);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   flex-wrap: wrap;
 }
 .address-box code {
@@ -1476,11 +1480,11 @@ main, .topbar {
   color: #fff;
   background: var(--ink);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 0.55rem 1.1rem;
   cursor: pointer;
   flex: none;
-  transition: background 180ms ease;
+  transition: background var(--dur-snappy) var(--ease-snappy);
 }
 .copy-btn:hover {
   background: #000;
@@ -1511,7 +1515,7 @@ main, .topbar {
   padding: 0.65rem 0.95rem;
   margin-bottom: -1px;
   cursor: pointer;
-  transition: color 150ms ease, border-color 150ms ease;
+  transition: color var(--dur-snappy) var(--ease-snappy), border-color var(--dur-snappy) var(--ease-snappy);
 }
 .client-tab:hover {
   color: var(--ink);
@@ -1599,7 +1603,7 @@ main, .topbar {
   padding: 0.9rem 1.15rem;
   background: #fff;
   border: 1px solid var(--hairline-dark);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   overflow-x: auto;
   font-family: var(--font-mono);
   font-size: 0.82rem;
@@ -1737,7 +1741,7 @@ main, .topbar {
   background: var(--ball);
   color: #fff;
   padding: 0.15rem 0.45rem;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
 }
 
 .page-content {
@@ -1783,7 +1787,7 @@ main, .topbar {
   background: var(--paper-deep);
   border: 1px solid var(--hairline);
   padding: 1rem 1.2rem;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   overflow-x: auto;
   font-family: var(--font-mono);
   font-size: 0.84rem;
