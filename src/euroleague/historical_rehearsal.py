@@ -410,7 +410,6 @@ def run_database_rehearsal(
         "raw_game": len(raw_games),
         "raw_boxscore_player": sum(len(g.players) for g in raw_games),
         "raw_boxscore_team": sum(len(g.teams) for g in raw_games),
-        "raw_event": sum(len(g.events) for g in raw_games),
         "raw_shot": len(raw_shots),
     }
     derived_counts = {

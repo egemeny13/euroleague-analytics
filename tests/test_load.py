@@ -21,9 +21,15 @@ def _parsed_game(fixture_cache, gamecode: int = 1):
     return parse_cached_game(fixture_cache, "E2024", schedule_game)
 
 
-def test_one_game_uses_one_transaction_and_copies_all_four_raw_tables(
+def test_one_game_uses_one_transaction_and_copies_all_three_raw_tables(
     fixture_cache, loader_connection
 ) -> None:
+    """Since migration 0023 the event stream is stored once, in `game_event`.
+
+    The loader still reports how many events the game parsed - `events_parsed`
+    - so the operator sees the game's volume, but no raw table receives them
+    and no statement the loader runs may name the dropped table.
+    """
     parsed = _parsed_game(fixture_cache)
     connection = loader_connection()
 
@@ -36,20 +42,25 @@ def test_one_game_uses_one_transaction_and_copies_all_four_raw_tables(
         "raw_game": 1,
         "raw_boxscore_player": len(parsed.players),
         "raw_boxscore_team": 4,
-        "raw_event": len(parsed.events),
+        "events_parsed": len(parsed.events),
     }
+    assert counts["events_parsed"] > 0, "a game with no events would make this check vacuous"
     assert list(connection.copied) == [
         "stage_raw_game",
         "stage_raw_boxscore_player",
         "stage_raw_boxscore_team",
-        "stage_raw_event",
     ]
-    assert connection.copied["stage_raw_event"][0][2] == 0
+    statements = [query.lower() for query, _ in connection.executions]
+    assert statements, "the loader must actually talk to the database"
+    assert not any("raw_event" in query for query in statements), (
+        "the loader named raw_event or stage_raw_event; that table was dropped by 0023"
+    )
 
 
 def test_copy_failure_rolls_back_the_whole_game(fixture_cache, loader_connection) -> None:
+    """The failure lands on the last raw table staged, so the first two are already in."""
     parsed = _parsed_game(fixture_cache)
-    connection = loader_connection(fail_table="stage_raw_event")
+    connection = loader_connection(fail_table="stage_raw_boxscore_team")
 
     with pytest.raises(RuntimeError, match="COPY failed"):
         load_game(connection, parsed)
@@ -112,7 +123,7 @@ def test_complete_season_load_vacuums_analyzes_replaced_tables(
             "raw_game": 1,
             "raw_boxscore_player": len(parsed.players),
             "raw_boxscore_team": len(parsed.teams),
-            "raw_event": len(parsed.events),
+            "events_parsed": len(parsed.events),
         },
     )
 
@@ -129,5 +140,5 @@ def test_complete_season_load_vacuums_analyzes_replaced_tables(
         if query.lstrip().upper().startswith("VACUUM")
     ]
     assert maintenance_queries == [
-        "VACUUM (ANALYZE) raw_game, raw_boxscore_player, raw_boxscore_team, raw_event"
+        "VACUUM (ANALYZE) raw_game, raw_boxscore_player, raw_boxscore_team"
     ]

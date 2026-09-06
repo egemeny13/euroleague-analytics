@@ -355,7 +355,6 @@ def test_rehearsal_with_dummy_connection(
         "raw_game": 331,
         "raw_boxscore_player": 7_883,
         "raw_boxscore_team": 1_324,
-        "raw_event": 172_265,
         "raw_shot": 50_159,
         "player": 296,
         "team": 18,
@@ -382,7 +381,10 @@ def test_rehearsal_with_dummy_connection(
     assert result.exclusions.excluded_games == 25
     assert round(result.exclusions.exclusion_rate_pct, 2) == 7.55
     assert result.raw_counts["raw_game"] == 331
-    assert result.raw_counts["raw_event"] == 172_265
+    # The event stream is stored once, in `game_event`, since migration 0023
+    # dropped `raw_event` (DECISIONS.md item 68): the parsed event count is
+    # reconciled through the derived counts and has no raw entry any more.
+    assert "raw_event" not in result.raw_counts
     assert result.derived_counts["game_event"] == 172_265
     assert result.derived_counts["possession"] == 47_460
     assert any("CREATE SCHEMA" in query for query, _ in conn.executions)
@@ -440,7 +442,6 @@ def test_cli_execution_with_dummy_db(
         "raw_game": 331,
         "raw_boxscore_player": 7_883,
         "raw_boxscore_team": 1_324,
-        "raw_event": 172_265,
         "raw_shot": 50_159,
         "player": 296,
         "team": 18,

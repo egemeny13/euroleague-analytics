@@ -43,7 +43,14 @@ MOVED_SEASON = "E2025"
 # them, and why a change would mean something other than the move happened.
 E2024_BASELINE: dict[str, tuple[int, str]] = {
     "raw_game": (330, "706239e43e0f039eea2e09c0447fba4b"),
-    "raw_event": (176_483, "8903cbc6336b21f2a94a3d2212219f87"),
+    # `game_event_source` replaced `raw_event` when migration 0023 dropped
+    # that table (Decision 68). It hashes the eleven source columns of
+    # `game_event` by name. Captured 2026-09-07 on the disposable database,
+    # whose `raw_event` fingerprint equalled production's 8903cbc6... before
+    # the table went, so the two loads were byte-identical; the production
+    # capture after the apply must equal this value, and a difference there
+    # is a finding, never a baseline to overwrite.
+    "game_event_source": (176_483, "ed8de487b6be091b24ad73ad3848c19d"),
     "raw_shot": (51_193, "7eb905723f2626f32d9f7c364d95d085"),
     "raw_boxscore_player": (7_863, "986a2671f24298557a86d6111cc63fe8"),
     "raw_boxscore_team": (1_320, "30ddfdfa405dee9650247635711b5908"),
@@ -59,7 +66,7 @@ E2024_BASELINE: dict[str, tuple[int, str]] = {
 # population rather than content.
 E2025_BASELINE_COUNTS: dict[str, int] = {
     "raw_game": 402,
-    "raw_event": 222_976,
+    "game_event_source": 222_976,
     "raw_shot": 64_137,
     "raw_boxscore_player": 9_540,
     "raw_boxscore_team": 1_608,
@@ -75,7 +82,9 @@ E2025_BASELINE_COUNTS: dict[str, int] = {
 # read-only on 2026-08-26 after the approved Order 9 game 344 reconciliation.
 E2025_BASELINE: dict[str, tuple[int, str]] = {
     "raw_game": (402, "b46eb1342f15a03578fcbcff6e9900e1"),
-    "raw_event": (222_976, "2a47f5c93746ba5edb419edfb2f6d7fe"),
+    # See the E2024 note: captured 2026-09-07 on the disposable database, whose
+    # `raw_event` fingerprint equalled production's 2a47f5c9... at the time.
+    "game_event_source": (222_976, "45d38508903ea43a514b6b51f14797b1"),
     "raw_shot": (64_137, "3c701196fc4e0f0c93bd23dadf53c693"),
     "raw_boxscore_player": (9_540, "110608ac93b854c6172b8ac7924a5c69"),
     "raw_boxscore_team": (1_608, "6da594c87af498c8065488db18a5f2e0"),

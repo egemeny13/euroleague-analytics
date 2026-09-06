@@ -1,0 +1,31 @@
+-- migrations/0023_drop_raw_event.up.sql
+--
+-- Drops raw_event, the parsed mirror of the play-by-play stream, from the hot
+-- database. Tier D of the hot window space plan; DECISIONS.md item 68.
+--
+-- WHY. The event stream was stored twice: raw_event as the API said it, and
+-- game_event as the derived copy with lineups, corrected clock, possession
+-- and stint numbers. Together they were 224 MB of a 325 MB warehouse on
+-- 2026-09-06, raw_event alone 70.9 MB. The MCP server never reads raw_event
+-- and cannot under the el_reader grant. Every rebuild reads the cache and the
+-- checksummed archive, never this table. The bytes it held are not lost: the
+-- archive keeps every response body under its SHA-256.
+--
+-- WHAT IS LOST, stated so nobody rediscovers it. (1) The in-database,
+-- cache-free comparison of two independently loaded copies of the event
+-- stream; the gate now compares game_event to the parsed cache, which needs
+-- the cache present and checks against the source bytes instead. (2) A table
+-- holding points_a / points_b as the API supplied them, blanks included;
+-- game_event carries only the forward-filled score, and the archive keeps
+-- the original. (3) The foreign key from game_event to raw_event. (4) The
+-- E2024 / E2025 raw_event checksum chain kept since 2026-08-16; a new chain
+-- starts over the eleven source columns game_event carries
+-- (warehouse_snapshot's game_event_source entry).
+--
+-- THE DOWN MIGRATION RESTORES THE SHAPE, NOT THE ROWS. Rows come back only by
+-- running the loader from the cache, and the loader no longer writes this
+-- table. The down file exists so the up/down/up/down gate can run on an empty
+-- database; it is not a way back on a loaded one.
+
+alter table game_event drop constraint game_event_raw_fkey;
+drop table raw_event;

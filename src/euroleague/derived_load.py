@@ -503,9 +503,6 @@ def stage_obsolete_dimension_candidates(cursor: Any, season_code: str, gamecode:
         SELECT player_id
         FROM raw_boxscore_player WHERE season_code = %s AND gamecode = %s
         UNION SELECT player_id
-        FROM raw_event
-        WHERE season_code = %s AND gamecode = %s AND player_id IS NOT NULL
-        UNION SELECT player_id
         FROM raw_shot
         WHERE season_code = %s AND gamecode = %s AND player_id IS NOT NULL
         UNION SELECT player_id
@@ -522,7 +519,7 @@ def stage_obsolete_dimension_candidates(cursor: Any, season_code: str, gamecode:
                    (stored.player_id_5)
         ) AS players (player_id)
         """,
-        params * 5,
+        params * 4,
     )
 
 
@@ -562,9 +559,6 @@ def prune_obsolete_dimensions(cursor: Any) -> None:
           AND NOT EXISTS (
               SELECT 1 FROM raw_boxscore_player
               WHERE player_id = obsolete.player_id
-          )
-          AND NOT EXISTS (
-              SELECT 1 FROM raw_event WHERE player_id = obsolete.player_id
           )
           AND NOT EXISTS (
               SELECT 1 FROM raw_shot WHERE player_id = obsolete.player_id

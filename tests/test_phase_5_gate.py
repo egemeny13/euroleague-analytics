@@ -5,6 +5,7 @@ from __future__ import annotations
 import psycopg
 import pytest
 
+from euroleague.cache import ResponseCache
 from euroleague.config import DatabaseSettings
 from euroleague.derived import (
     build_dimensions,
@@ -33,10 +34,16 @@ from euroleague.gate import (
 # Measured on 2026-08-19 against the compacted two-season warehouse: 732 games
 # across E2024 and E2025, 254,492,672 bytes of public relations above the empty
 # baseline. Recorded in docs/STORAGE_COMPACTION_RESULT.md.
+#
+# Migration 0023 drops `raw_event`, which cost 96,905.1 of those bytes per
+# game (DECISIONS.md item 68). The per-game total below still includes that
+# table and must be re-measured on production after the migration is applied;
+# until then the live size gate is expected to read below the band, and the
+# figure here is the pre-migration measurement, not a new baseline. The other
+# three tables are untouched by the migration and their figures stand.
 MEASURED_BYTES_PER_GAME = 347_667.6
 MEASURED_TABLE_BYTES_PER_GAME = {
     "game_event": 159_206.8,
-    "raw_event": 96_905.1,
     "possession": 39_404.4,
     "raw_shot": 26_646.4,
 }
@@ -68,8 +75,11 @@ def test_live_phase_5_base_gate() -> None:
     """Break caught: persisted dimensions or events drift from the raw layer."""
     settings = DatabaseSettings.from_env()
 
+    # Since migration 0023 the event rows are proved against the parsed cache
+    # rather than against `raw_event`, so the gate needs the cache.
+    cache = ResponseCache("exploration/cache")
     with psycopg.connect(settings.url()) as connection:
-        counts = assert_phase5_base_reconciles(connection, "E2024")
+        counts = assert_phase5_base_reconciles(connection, cache, "E2024")
 
     assert counts == {
         "player": 306,

@@ -267,14 +267,17 @@ def rebuild_revised_game(
         # longer parses into loadable rows - then fails before anything stored
         # has been deleted.
         counts.update(stage_raw_game_rows(cursor, parsed))
+        counts["events_parsed"] = len(parsed.events)
         counts["raw_shot"] = stage_raw_shot_rows(cursor, season_code, gamecode, shots)
         counts.update(stage_dimension_rows(cursor, game_dimensions))
         counts.update(stage_attached_game_rows(cursor, game_events, game_rows))
         stage_obsolete_dimension_candidates(cursor, season_code, gamecode)
 
-        # Derived rows go before raw rows: `game_event` references `raw_event`
-        # with `on delete cascade`, and deleting the parent first would remove
-        # rows this transaction is accounting for explicitly.
+        # Derived rows go first. Since migration 0023 `game_event` no longer
+        # references a raw table, so the order is no longer forced by a
+        # cascade; it stays because `delete_derived_game_rows` has its own
+        # load-bearing order among the derived tables, and because every count
+        # in this transaction is meant to be explicit rather than a side effect.
         delete_derived_game_rows(cursor, season_code, gamecode)
         delete_raw_shot_rows(cursor, season_code, gamecode)
         delete_raw_game_rows(cursor, season_code, gamecode)
@@ -383,7 +386,7 @@ def load_new_raw_games(
             totals[table] = totals.get(table, 0) + count
         progress(
             f"[{index:>3}/{len(games)}] game {gamecode:>3}: "
-            f"{counts['raw_event']:,} events, {counts['raw_boxscore_player']:,} players"
+            f"{counts['events_parsed']:,} events, {counts['raw_boxscore_player']:,} players"
         )
     return totals
 

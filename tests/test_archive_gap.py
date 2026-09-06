@@ -55,9 +55,12 @@ class _StubConnection:
             )
             """
         )
+        # `game_event` stands in for the PlaybyPlay row count since migration
+        # 0023 dropped `raw_event` (DECISIONS.md item 68). Only the columns
+        # the reconciliation query reads are declared.
         cur.execute(
             """
-            CREATE TABLE raw_event (
+            CREATE TABLE game_event (
                 season_code TEXT,
                 gamecode INTEGER,
                 ingest_index INTEGER
@@ -75,11 +78,11 @@ def test_reconcile_reports_gap_on_synthesized_missing_and_short_archive() -> Non
     db = _StubConnection()
     cur = db.conn.cursor()
 
-    # E2024: 330 games in raw_game, raw_event, raw_shot;
+    # E2024: 330 games in raw_game, game_event, raw_shot;
     # raw_api_response has 330 Boxscore, 330 PlaybyPlay, but 0 Points (GAP!)
     for g in range(1, 331):
         cur.execute("INSERT INTO raw_game VALUES ('E2024', ?)", (g,))
-        cur.execute("INSERT INTO raw_event VALUES ('E2024', ?, 1)", (g,))
+        cur.execute("INSERT INTO game_event VALUES ('E2024', ?, 1)", (g,))
         cur.execute("INSERT INTO raw_shot VALUES ('E2024', ?, 1)", (g,))
         cur.execute("INSERT INTO raw_api_response VALUES ('E2024', 'Boxscore', ?)", (g,))
         cur.execute("INSERT INTO raw_api_response VALUES ('E2024', 'PlaybyPlay', ?)", (g,))
@@ -87,7 +90,7 @@ def test_reconcile_reports_gap_on_synthesized_missing_and_short_archive() -> Non
     # E2025: 402 games, fully archived for Boxscore, PlaybyPlay, Points (CLEAN!)
     for g in range(1, 403):
         cur.execute("INSERT INTO raw_game VALUES ('E2025', ?)", (g,))
-        cur.execute("INSERT INTO raw_event VALUES ('E2025', ?, 1)", (g,))
+        cur.execute("INSERT INTO game_event VALUES ('E2025', ?, 1)", (g,))
         cur.execute("INSERT INTO raw_shot VALUES ('E2025', ?, 1)", (g,))
         cur.execute("INSERT INTO raw_api_response VALUES ('E2025', 'Boxscore', ?)", (g,))
         cur.execute("INSERT INTO raw_api_response VALUES ('E2025', 'PlaybyPlay', ?)", (g,))

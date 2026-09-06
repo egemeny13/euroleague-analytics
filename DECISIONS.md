@@ -3798,6 +3798,59 @@ apply are the numbers to record.
 stint or possession, it gets its index back through a decision with a
 measured query, not by restoring these five. Re-measure after E2026 loads.
 
+## 68. The event stream is stored once: `raw_event` leaves the hot database
+
+**Decided 2026-09-07 by the owner**, after the four proofs the table carried
+were explained in plain language and the owner said the trade was
+acceptable. Tier D of the hot window space plan; migration 0023. This
+amends Decision 8 (the target shape of the hot window no longer includes
+`raw_event`) and Decision 21 (bytes per game must be re-measured on
+production after the apply; the 347,667.6 figure included 96,905.1 bytes
+per game of `raw_event`).
+
+**What was true before.** The play-by-play stream was written twice from the
+same cached file: `raw_event` as the parser produced it, `game_event` as the
+derived loader produced it with lineups, corrected clock, possession and
+stint numbers. `game_event` referenced `raw_event` by foreign key. The gate
+proved the two copies agreed inside the database. Measured 2026-09-06 on
+production: `raw_event` 70,934,528 bytes with its indexes, 28 % of the cost
+of a game; the MCP server never read it and could not under `el_reader`;
+every rebuild read the cache, never the table.
+
+**What is true now.** The loader writes three raw tables and reports the
+parsed event count as `events_parsed`. `game_event` is the only table holding
+the stream. The gate proves it against the source in two ways:
+`assert_warehouse_reconciles` counts `game_event` per game against the
+parser, and `assert_phase5_base_reconciles` compares the eleven source
+columns of every row to the parsed cache, matched by key and never sorted.
+`warehouse_snapshot` hashes those eleven columns by name as
+`game_event_source`; a derived column added later cannot move it.
+
+**The four things lost, named.** (1) A cache-free in-database comparison of
+two copies; the replacement needs the cache present, which the nightly
+workflow restores before anything runs, and checks against the source bytes
+rather than a second table. (2) A table holding `points_a` / `points_b` as
+the API supplied them; the archive keeps them and audits already go there.
+(3) The foreign key from `game_event` to a raw table. (4) The raw checksum
+chain kept since 2026-08-16. On 2026-09-07 the disposable database, loaded
+from the local cache, reproduced production's `raw_event` checksums exactly
+(E2024 `8903cbc6…`, E2025 `2a47f5c9…`), which is what licenses the new chain
+to start from that same load: `game_event_source` E2024
+`ed8de487b6be091b24ad73ad3848c19d` over 176,483 rows, E2025
+`45d38508903ea43a514b6b51f14797b1` over 222,976 rows.
+
+**What the down migration is.** Shape only. It recreates the table and the
+foreign key on an empty database so the up/down/up/down gate can run. On a
+loaded database it cannot bring rows back; only the loader could, and the
+loader no longer writes the table. This is stated in the migration header.
+
+**Condition.** The production `game_event_source` checksums captured after
+the apply must equal the two above; a difference is a finding to
+investigate, never a baseline to overwrite. `events_parsed` must equal the
+`game_event` count for every game the gate checks. Decision 21's bytes per
+game is re-measured on production once E2026 has games, and Decision 20's
+window arithmetic is redone from that figure.
+
 ## Rules to add to the project instruction file
 
 ```

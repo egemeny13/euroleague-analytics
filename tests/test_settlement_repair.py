@@ -46,7 +46,7 @@ FIRST = datetime(2026, 9, 24, 20, 0, tzinfo=UTC)
 def _summary(gamecode: int) -> object:
     class _Summary:
         def as_log_line(self) -> str:
-            return f"rebuilt E2026 game {gamecode} from 12 cached game(s): raw_event=458"
+            return f"rebuilt E2026 game {gamecode} from 12 cached game(s): events_parsed=458"
 
     return _Summary()
 

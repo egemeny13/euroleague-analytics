@@ -89,8 +89,11 @@ the event stream as a bug.
   untouched with a checksum. Never "restore" the padding to a table in the name
   of faithfulness: it reintroduces the silent-join failure and gains nothing the
   cache does not already hold.
-- **`raw_event` does not carry `player_name`, `dorsal` or `playinfo`, and there
-  is no one-to-one side table holding them.** Measured across all 176,483 E2024
+- **The event stream is stored once, in `game_event`, and it does not carry
+  `player_name`, `dorsal` or `playinfo`; there is no one-to-one side table
+  holding them.** (`raw_event`, the parsed mirror, was dropped by migration 0023
+  on 2026-09-07, Decision 68; the gate now proves `game_event` against the
+  parsed cache.) Measured across all 176,483 E2024
   events they are 37.44 % of the row payload, and nothing uses them - not
   identity, not ordering, not lineup reconstruction, not possession boundaries.
   When an audit needs the exact source string, open the archived payload and
@@ -235,7 +238,7 @@ the event stream as a bug.
   than a detail.** Before any production backfill, load one complete season
   into a staging table with its real primary key, measure table plus indexes
   with `pg_total_relation_size`, and project the *whole* warehouse - not
-  `raw_event` alone. If the projection exceeds 500 MB, every season still goes
+  `game_event` alone. If the projection exceeds 500 MB, every season still goes
   into the immutable archive and only the hot PostgreSQL window shrinks. Do not
   pick that window size before the other tables have been measured.
 

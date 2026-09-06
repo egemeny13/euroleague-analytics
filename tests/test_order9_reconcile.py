@@ -21,8 +21,8 @@ def _snapshot(**counts: int) -> dict[str, TableFingerprint]:
 
 
 def _transition() -> dict[str, dict[str, TableFingerprint]]:
-    raw_2024 = _snapshot(raw_game=330, raw_event=176_483)
-    raw_2025 = _snapshot(raw_game=402, raw_event=222_976)
+    raw_2024 = _snapshot(raw_game=330, game_event_source=176_483)
+    raw_2025 = _snapshot(raw_game=402, game_event_source=222_976)
     derived_2024 = _snapshot(
         lineup=5_985,
         lineup_stint=13_927,
@@ -61,8 +61,8 @@ def test_order9_transition_accepts_only_the_intended_derived_change() -> None:
 @pytest.mark.parametrize(
     ("snapshot_name", "table"),
     [
-        ("raw_2024_after", "raw_event"),
-        ("raw_2025_after", "raw_event"),
+        ("raw_2024_after", "game_event_source"),
+        ("raw_2025_after", "game_event_source"),
         ("derived_2024_after", "possession"),
         ("derived_2025_after", "game_quality"),
     ],
