@@ -6,8 +6,34 @@
 <title>EuroLeague Analytics — European basketball for your AI assistant</title>
 <meta name="description" content="Connect EuroLeague play-by-play data to Claude, ChatGPT or Gemini and ask in your own words. Exact possessions, five-man lineups and shot locations, reconstructed from the play-by-play.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="en" href="https://euroleague.egemenyucelen.me/">
+<link rel="alternate" hreflang="tr" href="https://euroleague.egemenyucelen.me/tr/">
+<link rel="alternate" hreflang="x-default" href="https://euroleague.egemenyucelen.me/">
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
+<!-- A browser whose first language is Turkish is sent to the Turkish page
+     (Decision 53). Two things stop it: ?lang=en on the address, which is what
+     the Turkish page's "English" link carries, and the choice that link
+     recorded on an earlier visit. Only the first preferred language counts,
+     so a reader who merely lists Turkish third stays here. Without storage
+     or without script the English page simply shows, which is the safe
+     default. -->
+<script>
+(function () {
+  try {
+    var params = new URLSearchParams(location.search);
+    if (params.get("lang") === "en") {
+      localStorage.setItem("site-lang", "en");
+      return;
+    }
+    if (localStorage.getItem("site-lang") === "en") return;
+    var first = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+    if (/^tr(-|$)/i.test(first)) location.replace("tr/" + location.hash);
+  } catch (error) {
+    /* No storage or no URL API: stay on the English page. */
+  }
+})();
+</script>
 </head>
 <body>
 
@@ -779,6 +805,7 @@
       <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Source</a>
       <a class="quiet-link" href="privacy.html">Privacy</a>
       <a class="quiet-link" href="support.html">Support</a>
+      <a class="quiet-link" href="tr/" lang="tr" hreflang="tr">Türkçe</a>
     </nav>
     <span class="footer-note">
       Not affiliated with Euroleague Basketball. Data from their public API.

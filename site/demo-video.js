@@ -72,11 +72,20 @@
      anywhere on it seeks; arrow keys step two seconds; the recording keeps its
      play/pause state across a seek. Clicking the recording itself toggles
      play and pause, the way every video player a visitor has met does. */
+  /* Every sentence this script shows a visitor comes from the page when the
+     page carries it (data-text-* on <body>), so the Turkish page can say it in
+     Turkish without a Turkish string ever living in a script (Decision 53).
+     The English here is the fallback for a page that carries nothing. */
+  function text(key, fallback) {
+    var value = document.body && document.body.getAttribute("data-text-" + key);
+    return value || fallback;
+  }
+
   function addProgress(video) {
     var bar = document.createElement("div");
     bar.className = "demo-progress";
     bar.setAttribute("role", "slider");
-    bar.setAttribute("aria-label", "Position in the recording");
+    bar.setAttribute("aria-label", text("scrub-label", "Position in the recording"));
     bar.setAttribute("aria-valuemin", "0");
     bar.setAttribute("aria-valuemax", "100");
     bar.tabIndex = 0;
@@ -92,7 +101,7 @@
        same words appear under the two drawn figures, which pause the same way. */
     var hint = document.createElement("p");
     hint.className = "demo-hint";
-    hint.textContent = "Click to pause, drag the line to move.";
+    hint.textContent = text("hint", "Click to pause, drag the line to move.");
     bar.insertAdjacentElement("afterend", hint);
 
     /* A recording with a soundtrack (data-sound) starts muted, because that is
@@ -102,7 +111,11 @@
       var sound = document.createElement("button");
       sound.type = "button";
       sound.className = "demo-sound";
-      var label = function () { sound.textContent = video.muted ? "Turn the sound on" : "Turn the sound off"; };
+      var label = function () {
+        sound.textContent = video.muted
+          ? text("sound-on", "Turn the sound on")
+          : text("sound-off", "Turn the sound off");
+      };
       label();
       sound.addEventListener("click", function () {
         video.muted = !video.muted;
@@ -279,7 +292,7 @@
 
       var relabel = function () {
         glyph.textContent = video.paused ? "▶" : "❚❚";
-        word.textContent = video.paused ? "Play" : "Pause";
+        word.textContent = video.paused ? text("play", "Play") : text("pause", "Pause");
       };
       video.addEventListener("play", relabel);
       video.addEventListener("pause", relabel);

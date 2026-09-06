@@ -160,7 +160,13 @@
           bar.classList.add("is-settling");
           /* Not "the last event": the spotlight is the shot that decided the
              game, and in this one a missed attempt follows it. */
-          if (barLabel) barLabel.textContent = "The shot that won the title";
+          if (barLabel) {
+            /* From the page when it carries the sentence (data-text-* on
+               <body>), so the Turkish page says it in Turkish; see
+               demo-video.js and Decision 53. */
+            barLabel.textContent = (document.body && document.body.getAttribute("data-text-winning-shot"))
+              || "The shot that won the title";
+          }
           setBar(100);
         }
         var chosen = shots[spotlight[spotlight.length - 1]];
@@ -247,7 +253,10 @@
     io.observe(court);
   }
 
-  fetch("data/shots.json")
+  /* Resolved against this script's own address, not the page's: the Turkish
+     page lives in /tr/ and loads this file from the root, and a page-relative
+     "data/shots.json" would look for /tr/data/ and find nothing. */
+  fetch(new URL("data/shots.json", document.currentScript.src))
     .then(function (response) {
       if (!response.ok) throw new Error("shots.json " + response.status);
       return response.json();
