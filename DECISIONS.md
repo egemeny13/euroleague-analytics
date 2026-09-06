@@ -3550,6 +3550,10 @@ What stands: the hero recording (Decision 60), the three "Ask it something
 hard" recordings, now numbered 01-03 and separated by hairlines at the owner's
 request, and Case 2's re-read heading ("It refuses the flashy answer.").
 
+The three hard-section clips open on the question already sent: the owner
+judged that watching it typed a fourth time, after the hero, showed the
+visitor nothing new.
+
 **Playback rules, set by the owner the same evening and kept in
 `site/demo-video.js` alone:** nothing loads until its host is within half a
 screen (`preload="none"`, so a visitor who leaves from the hero pays for no
