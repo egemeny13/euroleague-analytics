@@ -1309,7 +1309,30 @@ body { position: relative; }
 
 main, .topbar { position: relative; z-index: 1; }
 
-/* ---------- the ask window ---------- */
+/* ---------- the ask stage: recordings, chosen by chip (Decision 61) ---------- */
+
+.ask-stage {
+  margin-top: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.ask-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* The recordings are 1360x980; reserving the ratio keeps the chips from
+     jumping when the first clip's metadata arrives. */
+  aspect-ratio: 1360 / 980;
+  background: var(--surface);
+}
+.chip.is-playing {
+  color: var(--ink);
+  border-color: var(--ball);
+}
+
+/* ---------- the ask window (the drawn version, retired 2026-09-06) ---------- */
 
 .ask-window { margin-top: 2rem; }
 

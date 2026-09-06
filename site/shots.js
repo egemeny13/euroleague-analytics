@@ -55,7 +55,7 @@
      and the last one STEP_MS later per shot - the same tempo as the drawn
      version, because it IS the drawn version, filmed. */
   var video = document.getElementById("shots-video");
-  var POUR_START = 0.45;   // seconds into the recording, measured 2026-09-06
+  var POUR_START = 0.35;   // seconds into the recording, measured 2026-09-06 (clip starts 0.1 s into the capture)
 
   /* ---- a clock that only runs while the section is being looked at ----
      One pending step at a time, which is all this sequence ever has. Pausing

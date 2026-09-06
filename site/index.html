@@ -403,16 +403,39 @@
     <div class="ask-inner">
       <h2>Now ask it yourself.</h2>
       <p class="ask-lede">
-        The same window, and this time you drive it. Each answer was produced by
-        the same query your own assistant would run — no number here was typed
+        Three questions, three recordings of Claude answering them over this
+        server. Pick one and watch it go and read — no number here was typed
         by hand.
       </p>
 
-      <!-- The same window component as the hero, so the visitor recognises
-           where they are: this is what it looks like once it is connected. The
-           chips sit where the text field is, as suggestions, because a chip is
-           the only input this can safely accept. -->
-      <figure class="window ask-window">
+      <!-- RECORDINGS, NOT A DRAWN WINDOW (Decision 61). Each chip plays a real
+           capture of Claude answering that question with this server connected,
+           made the way the hero's was (Decision 60): incognito chat, Low
+           effort, no cursor, no name. The chips are the only input, as before -
+           a chip is the only thing this can safely accept - and each one now
+           selects a clip rather than a canned transcript. The first chip plays
+           the hero's own recording; the same file, so the two cannot disagree.
+
+           Before any click the stage shows a still of the empty chat. A visitor
+           who asked for less motion sees exactly that until they choose a
+           question: a click is their choice, not the page's. -->
+      <div class="ask-stage" id="ask-stage">
+        <video class="ask-video" id="ask-video" muted playsinline preload="none"
+               poster="ask-idle.jpg"
+               aria-label="Claude, with EuroLeague Analytics connected, answering the question you picked"></video>
+        <div class="chips" id="chips" role="group" aria-label="Questions you can ask">
+          <button type="button" class="chip" data-clip="hero-demo">Which five wins games for Fenerbahce?</button>
+          <button type="button" class="chip" data-clip="ask-fastest">Which team plays fastest this season?</button>
+          <button type="button" class="chip" data-clip="ask-clutch">How many clutch possessions were there this season, last two minutes within three points?</button>
+          <!-- A fourth chip, "What happens to Fenerbahce when Horton-Tucker
+               sits?", was recorded on 2026-09-06 and dropped: the assistant
+               called el_get_player_on_off three times, got nothing back, and
+               answered that the player had not joined the club yet. That is a
+               question for the tool, not for the page. -->
+        </div>
+      </div>
+
+      <figure class="window ask-window" hidden>
         <div class="window-bar">
           <span class="window-app">
             <span class="app-avatar" style="--tint:#1A1512">You</span>
@@ -461,7 +484,6 @@
           </div>
         </div>
 
-        <div class="chips" id="chips" role="group" aria-label="Questions you can ask"></div>
       </figure>
     </div>
   </section>
