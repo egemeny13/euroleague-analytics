@@ -527,6 +527,101 @@ h1 {
   .caret { animation: none; opacity: 0; }
 }
 
+/* ---------- the launch film ----------
+   Between the hero and the first claim (owner, 2026-09-06). One wide card on
+   the same ground as the recordings; the section keeps the page's rhythm
+   rather than announcing itself with a heading. */
+.film {
+  position: relative;
+  padding: 0 var(--gutter) clamp(3rem, 5.5vw, 5.5rem);
+}
+/* Wider than the text columns, out to the rails: the film is the one thing on
+   the page allowed to be bigger than the words beside it. Measured from
+   antigravity.google on 2026-09-06 at the owner's request: their video wrapper
+   is a 36 px-rounded shape with no border, no shadow, no padding and no
+   controls, the picture edge to edge, autoplaying muted in a loop, set wider
+   than the copy column. The radius is this element's own; every other panel
+   keeps the three-step scale above. */
+.film-inner { max-width: 1200px; margin: 0 auto; }
+.film-stage {
+  border-radius: 36px;
+  overflow: hidden;
+  background: var(--stage);
+}
+.film-stage > .demo-video {
+  display: block;
+  aspect-ratio: 16 / 9;
+  border-radius: 36px;
+  object-fit: cover;
+}
+/* The film's own ground is the page's paper, so a borderless shape would have
+   no edge; one hairline, inside the radius, gives it one. */
+.film-stage { box-shadow: inset 0 0 0 1px var(--hairline); }
+
+/* It grows in as it arrives (demo-video.js sets the scale from the scroll
+   position, 0.5 below the fold to 1 two thirds of the way up), from its bottom
+   centre, as antigravity's does. Under reduced motion the script never runs
+   and the shape simply sits at its size. */
+.film-stage {
+  position: relative;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .film-stage { transform: none !important; }
+}
+
+/* Over the film the pointer is the control: the system cursor goes, and a
+   white pill that reads Play or Pause follows the hand. Only where there is a
+   fine pointer to follow. */
+@media (hover: hover) and (pointer: fine) {
+  .film-stage[data-cursor] { cursor: none; }
+}
+.demo-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.4rem 0.85rem 1.1rem;
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  font-family: var(--text);
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0);
+  transition: opacity var(--dur-hover) var(--ease-hover);
+  will-change: transform;
+  z-index: 2;
+}
+.demo-cursor.is-shown { opacity: 1; }
+.demo-cursor-glyph { font-size: 0.8em; }
+/* Progress line and hint sit under the shape, not inside it, in the film's
+   own column. */
+.film-inner > .demo-progress,
+.film-inner > .demo-hint { margin-left: 36px; margin-right: 36px; }
+
+.demo-sound {
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-left: 0.4rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.demo-sound:hover { color: var(--ink); }
+
 /* ---------- a claim and its evidence ----------
    Left column states one thing. Right column shows only that thing. Nothing in
    a section argues two points; the last attempt did and could not be read. */
@@ -630,8 +725,10 @@ h1 {
   background: var(--ink-faint);
 }
 
-/* The two drawn figures pause on a click, like the recordings. */
+/* The two drawn figures pause on a click, like the recordings. The sidelines'
+   throw-in marks also mark the film. */
 .halfcourt, .floor { cursor: pointer; }
+.film { position: relative; }
 
 /* The one-line hint under every figure that can be paused. Set like a figure
    note: small, faint, and gone from the eye once it has been read. */
@@ -1280,6 +1377,14 @@ main, .topbar { position: relative; z-index: 1; }
   margin: 1rem 0 0;
   max-width: 48ch;
   color: var(--ink-soft);
+}
+
+/* The sentence that saves the visitor an attempt: no assistant connects itself. */
+.connect-honest {
+  margin: 1.6rem 0 0;
+  max-width: 56ch;
+  font-size: 0.95rem;
+  color: var(--ink);
 }
 
 .address {

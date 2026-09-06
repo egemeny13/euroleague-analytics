@@ -82,8 +82,11 @@
     bar.tabIndex = 0;
     var fill = document.createElement("i");
     bar.appendChild(fill);
-    /* Directly under the recording, before any caption the host carries. */
-    video.insertAdjacentElement("afterend", bar);
+    /* Directly under the recording, before any caption the host carries. When
+       the recording sits inside its own shape (the film's rounded wrapper),
+       the bar goes under the shape instead. */
+    var anchor = (video.parentElement !== hostOf(video)) ? video.parentElement : video;
+    anchor.insertAdjacentElement("afterend", bar);
 
     /* One quiet line so a visitor knows the recording is theirs to drive. The
        same words appear under the two drawn figures, which pause the same way. */
@@ -91,6 +94,24 @@
     hint.className = "demo-hint";
     hint.textContent = "Click to pause, drag the line to move.";
     bar.insertAdjacentElement("afterend", hint);
+
+    /* A recording with a soundtrack (data-sound) starts muted, because that is
+       the only way a browser lets it start on its own. One quiet button turns
+       the sound on; the same button turns it off again. */
+    if (video.hasAttribute("data-sound")) {
+      var sound = document.createElement("button");
+      sound.type = "button";
+      sound.className = "demo-sound";
+      var label = function () { sound.textContent = video.muted ? "Turn the sound on" : "Turn the sound off"; };
+      label();
+      sound.addEventListener("click", function () {
+        video.muted = !video.muted;
+        if (!video.muted && video.paused) { held = video; video.play().catch(function () {}); }
+        label();
+      });
+      hint.appendChild(document.createTextNode(" "));
+      hint.appendChild(sound);
+    }
 
     function seekTo(clientX) {
       var rect = bar.getBoundingClientRect();
@@ -203,4 +224,80 @@
   });
 
   document.addEventListener("visibilitychange", reconcile);
+
+  /* ---- the film's two extra behaviours, measured on antigravity.google
+     (2026-09-06) at the owner's request ----
+
+     1. It arrives by growing. Their video section sits at scale 0.5 while it
+        is below the fold and reaches 1 by the time its top edge has travelled
+        about two thirds of the viewport, growing from its bottom centre. The
+        same here, driven by the scroll position on each frame, and skipped
+        entirely for a visitor who asked for less motion.
+
+     2. The cursor becomes the control. Over the film the system pointer is
+        hidden and a white pill follows the hand, reading Pause or Play - the
+        same click the whole page uses, now labelled where the eye already is.
+        A visitor with no fine pointer (a phone) never sees it. */
+
+  var grow = reduced.matches ? [] : Array.prototype.slice.call(document.querySelectorAll("[data-grow-in]"));
+  if (grow.length) {
+    var vh = window.innerHeight;
+    var paint = function () {
+      grow.forEach(function (el) {
+        var top = el.getBoundingClientRect().top;
+        var p = Math.max(0, Math.min(1, (vh - top) / (vh * 0.65)));
+        el.style.transform = "scale(" + (0.5 + 0.5 * p).toFixed(4) + ")";
+      });
+    };
+    var queued = false;
+    var onScroll = function () {
+      /* A hidden tab gets no animation frames; paint straight away there so
+         the shape is right the moment the tab is shown again. */
+      if (document.visibilityState !== "visible") { paint(); return; }
+      if (queued) return;
+      queued = true;
+      window.requestAnimationFrame(function () { queued = false; paint(); });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", function () { vh = window.innerHeight; onScroll(); });
+    paint();
+  }
+
+  if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    Array.prototype.slice.call(document.querySelectorAll("[data-cursor]")).forEach(function (stage) {
+      var video = stage.querySelector("video");
+      if (!video) return;
+      var pill = document.createElement("div");
+      pill.className = "demo-cursor";
+      pill.setAttribute("aria-hidden", "true");
+      var glyph = document.createElement("span");
+      glyph.className = "demo-cursor-glyph";
+      var word = document.createElement("span");
+      pill.appendChild(glyph);
+      pill.appendChild(word);
+      stage.appendChild(pill);
+
+      var relabel = function () {
+        glyph.textContent = video.paused ? "▶" : "❚❚";
+        word.textContent = video.paused ? "Play" : "Pause";
+      };
+      video.addEventListener("play", relabel);
+      video.addEventListener("pause", relabel);
+      relabel();
+
+      var follow = function (event) {
+        var r = stage.getBoundingClientRect();
+        pill.style.transform = "translate(" + (event.clientX - r.left) + "px, " + (event.clientY - r.top) + "px) translate(-50%, -50%) scale(1)";
+        pill.classList.add("is-shown");
+      };
+      stage.addEventListener("pointermove", follow);
+      stage.addEventListener("mousemove", follow);
+      stage.addEventListener("pointerleave", function () {
+        pill.classList.remove("is-shown");
+      });
+      stage.addEventListener("mouseleave", function () {
+        pill.classList.remove("is-shown");
+      });
+    });
+  }
 })();

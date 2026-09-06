@@ -156,6 +156,29 @@
     </div>
   </section>
 
+  <!-- The launch film, 49 seconds, placed between the hero and the first
+       claim at the owner's request (2026-09-06). It plays under the same rule
+       as every recording: nothing loads until it is near, nothing plays off
+       screen, one thing at a time, a click pauses, the line scrubs. It starts
+       muted because a browser allows nothing else without a gesture; the
+       button under it turns the sound on. -->
+  <section class="film" id="film">
+    <div class="film-inner" data-demo-host>
+      <!-- The wrapper is the 36 px shape; the host is the column, so the
+           progress line and the hint land under the shape rather than inside
+           it. The film is the launch cut without its closing joke (the site
+           version ends on the address card at 38.5 s; the full 49 s cut stays
+           with the launch material). -->
+      <div class="film-stage" data-grow-in data-cursor>
+        <video class="demo-video" id="launch-film" muted loop playsinline preload="none"
+               poster="launch-film.jpg" data-sound
+               aria-label="EuroLeague Analytics launch film, 38 seconds">
+          <source src="launch-film.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+  </section>
+
   <section class="claim" id="shots">
     <div class="claim-inner">
       <div class="claim-copy">
@@ -400,9 +423,9 @@
     <div class="connect-inner">
       <h2>Connect it once.</h2>
       <p class="connect-lede">
-        There is one address, and it is the whole of the setup. Any assistant
-        that speaks MCP takes it — there is nothing to install, and nothing to
-        configure afterwards.
+        There is one address, and it is the whole of the setup. You paste it
+        once, in your assistant's settings, and sign in with Google. Nothing is
+        installed and nothing is configured afterwards.
       </p>
 
       <div class="address">
@@ -410,50 +433,72 @@
         <button class="copy" type="button" id="copy-url" data-copied="Copied" data-select="Press Ctrl+C">Copy</button>
       </div>
 
+      <!-- THE ONE THING PEOPLE TRY FIRST, answered before they try it. Every
+           assistant here adds a connector from its settings and none of them
+           can do it from a chat message - not for a pasted address, not for a
+           link to this page. Saying so up front saves the visitor the attempt.
+           Checked against each vendor's own documentation on 6 September 2026;
+           the sources are in DECISIONS.md, item 62. -->
+      <p class="connect-honest">
+        You cannot ask the assistant to connect itself — pasting this page or
+        the address into a chat does nothing. It takes one visit to settings.
+        Pick yours:
+      </p>
+
+      <!-- Order and default follow who actually visits: ChatGPT first, then
+           Gemini, then Claude. Claude is the shortest path (four clicks, free
+           plan included), and the Gemini panel says so, because the free
+           Gemini app cannot add a custom connector at all. -->
       <div class="clients">
         <div class="client-tabs" role="tablist" aria-label="Choose your assistant">
-          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true">Claude</button>
-          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="false">ChatGPT</button>
+          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="true">ChatGPT</button>
           <button class="client-tab" type="button" role="tab" id="tab-gemini" aria-controls="panel-gemini" aria-selected="false">Gemini</button>
+          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="false">Claude</button>
           <button class="client-tab" type="button" role="tab" id="tab-editor" aria-controls="panel-editor" aria-selected="false">Editors &amp; CLIs</button>
         </div>
 
-        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
-          <p class="client-status client-status-verified">Verified — connected and answering</p>
-          <ol class="howto">
-            <li>Open <b>Settings</b>, then <b>Connectors</b>.</li>
-            <li>Choose <b>Add custom connector</b> and paste the address above.</li>
-            <li>Sign in with Google when Claude opens the sign-in window.</li>
-            <li>Ask it something. Eleven tools appear under the connector's name.</li>
-          </ol>
-          <p class="howto-alt">In Claude Code instead:</p>
-<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
-        </div>
-
-        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
-          <p class="client-status client-status-review">In review — submitted to the ChatGPT app directory on 2 September 2026</p>
+        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt">
+          <p class="client-status client-status-review">Paid plans only, and in review for the ChatGPT app directory since 2 September 2026</p>
           <p class="client-note">
-            Once it is approved you will add it by name, with no address to
-            paste. Until then it connects the developer way, and the server
-            already speaks everything the Apps SDK asks for.
+            ChatGPT adds custom connectors on Plus, Pro and Business, on the
+            web, with Developer mode switched on. When the directory listing is
+            approved you will add it by name; until then, this is the way.
           </p>
           <ol class="howto">
-            <li>Turn on <b>Developer mode</b> in <b>Settings → Connectors</b>.</li>
-            <li>Choose <b>Create</b>, paste the address, and pick <b>OAuth</b>.</li>
-            <li>Sign in with Google.</li>
+            <li>Open <b>Settings → Security and login</b> and switch on <b>Developer mode</b>.</li>
+            <li>Go to <b>Settings → Plugins</b> (this section was called Connectors until mid-2026), then <b>+</b>.</li>
+            <li>Name it <b>EuroLeague Analytics</b>, paste the address above under <b>Connection</b>, and pick <b>OAuth</b>.</li>
+            <li>Sign in with Google when ChatGPT opens the sign-in window, then turn the connector on in a chat.</li>
           </ol>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
-          <p class="client-status client-status-verified">Verified — connected and answering, in both the CLI and Antigravity</p>
+          <p class="client-status client-status-expected">Not in the free Gemini app yet — Gemini Spark and the Gemini CLI only</p>
+          <p class="client-note">
+            The Gemini app you use for free has no place to add a custom
+            connector. Two routes work today, and both are checked:
+          </p>
           <ol class="howto">
-            <li>In the Gemini CLI, one command:</li>
+            <li>With <b>Gemini Spark</b> (Google AI Pro or Ultra, personal account, 18+): <b>Settings &amp; help → Connected apps → Custom apps for Spark → Add a custom app</b>, paste the address, sign in with Google.</li>
+            <li>With the <b>Gemini CLI</b> on a computer, one command:</li>
           </ol>
 <pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
-          <ol class="howto howto-continued">
-            <li>In Antigravity: add the same address under <b>MCP servers</b>.</li>
-            <li>Check it with <code>gemini mcp list</code> — it should report connected.</li>
+          <p class="howto-alt">
+            If neither is yours, the shortest path is the Claude tab: the free
+            plan takes one custom connector, and it is four clicks.
+          </p>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude" hidden>
+          <p class="client-status client-status-verified">Verified — connected and answering, on the free plan too</p>
+          <ol class="howto">
+            <li>Open <b>Customize</b>, then <b>Connectors</b>.</li>
+            <li>Click <b>+</b>, choose <b>Add custom connector</b>, paste the address above, click <b>Add</b>.</li>
+            <li>Sign in with Google when Claude opens the sign-in window.</li>
+            <li>In a chat, open <b>+</b> → <b>Connectors</b> and switch it on. Eleven tools appear under its name.</li>
           </ol>
+          <p class="howto-alt">Works in Claude on the web, on desktop and on the phone. In Claude Code instead:</p>
+<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-editor" aria-labelledby="tab-editor" hidden>
