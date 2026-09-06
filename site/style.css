@@ -1767,6 +1767,14 @@ main, .topbar { position: relative; z-index: 1; }
 }
 
 .deep-window { margin: 0; }
+/* Once its recording can play, the window IS the recording (Decision 61):
+   the drawn bar and transcript hide, and the video carries its own frame. */
+.deep-window.has-video {
+  border: 0;
+  background: transparent;
+}
+.deep-window.has-video > .window-bar,
+.deep-window.has-video > .deep-body { display: none; }
 .deep-body {
   display: flex;
   flex-direction: column;
