@@ -398,10 +398,20 @@ def assert_same_fingerprints(
         raise AssertionError(f"Fingerprint mismatch for {comparison}: {mismatches}")
 
 
-def rehearsal_role_names(schema_name: str) -> tuple[str, str]:
-    """Return deterministic run-scoped roles for a disposable migration rehearsal."""
+def rehearsal_role_names(schema_name: str) -> tuple[str, str, str]:
+    """Return deterministic run-scoped roles for a disposable migration rehearsal.
+
+    One name per persistent role the migrations create: `el_reader` (0013),
+    `el_usage_writer` (0016) and `el_tester` (0020). The third was missing
+    until 2026-09-07, so a rehearsal schema granted privileges to the real
+    `el_tester` and the migration gate could not drop that role afterwards.
+    """
     suffix = sha256(schema_name.encode("utf-8")).hexdigest()[:16]
-    return (f"rehearsal_reader_{suffix}", f"rehearsal_usage_writer_{suffix}")
+    return (
+        f"rehearsal_reader_{suffix}",
+        f"rehearsal_usage_writer_{suffix}",
+        f"rehearsal_tester_{suffix}",
+    )
 
 
 def rewrite_rehearsal_migration(
@@ -410,6 +420,7 @@ def rewrite_rehearsal_migration(
     quoted_schema: str,
     reader_role: str,
     usage_writer_role: str,
+    tester_role: str,
 ) -> str:
     """Retarget public-schema DDL and persistent roles to one disposable run."""
     rewritten = sql_text.replace("public.", f"{quoted_schema}.")
@@ -426,6 +437,7 @@ end
 $$;""",
     )
     rewritten = rewritten.replace("el_usage_writer", usage_writer_role)
+    rewritten = rewritten.replace("el_tester", tester_role)
     return rewritten.replace("el_reader", reader_role)
 
 
@@ -441,12 +453,13 @@ def apply_current_migrations(connection: Any) -> None:
             sql_text = migration.read_text(encoding="utf-8")
             if cur_schema and cur_schema not in ("public", "pg_catalog"):
                 quoted_schema = sql.Identifier(str(cur_schema)).as_string(connection)
-                reader_role, usage_writer_role = rehearsal_role_names(str(cur_schema))
+                reader_role, usage_writer_role, tester_role = rehearsal_role_names(str(cur_schema))
                 sql_text = rewrite_rehearsal_migration(
                     sql_text,
                     quoted_schema=quoted_schema,
                     reader_role=reader_role,
                     usage_writer_role=usage_writer_role,
+                    tester_role=tester_role,
                 )
             cursor.execute(sql_text)
 
