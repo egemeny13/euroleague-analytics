@@ -107,7 +107,7 @@ def test_new_view_gate_runs_from_an_absent_or_already_applied_state(
         def url(self) -> str:
             return "postgresql://unused"
 
-    monkeypatch.setattr(gate.DatabaseSettings, "from_env", lambda: FakeSettings())
+    monkeypatch.setattr(gate, "load_test_database_settings", lambda: FakeSettings())
 
     def run(initial_signature: list[tuple], argv: list[str]) -> FakeCursor:
         cursor = FakeCursor(initial_signature)
@@ -137,3 +137,20 @@ def test_0014_game_officials_view_migration_sql_is_valid() -> None:
     down_sql = (migrations_root / "0014_game_officials_view.down.sql").read_text(encoding="utf-8")
     gate.validate_view_only_sql(up_sql, "up", "v_game_officials")
     gate.validate_view_only_sql(down_sql, "down", "v_game_officials")
+
+
+def test_the_gate_can_only_reach_the_disposable_database() -> None:
+    """Break caught 2026-09-07: a wrong variable name silently fell through to
+    `DATABASE_URL` - production - because the script called
+    `DatabaseSettings.from_env()` directly. It must use `load_test_database_settings`,
+    which refuses anything not naming `euroleague_test` on port 5433, and it must
+    never read `DATABASE_URL` at all. See `DECISIONS.md` item 71.
+    """
+    source = (
+        Path(__file__).resolve().parent.parent / "scripts" / "view_migration_gate.py"
+    ).read_text(encoding="utf-8")
+    assert "from_env" not in source
+    assert "load_test_database_settings" in source
+    # EL_TEST_DATABASE_URL is expected (it is the disposable-only variable); the
+    # bare production variable name must not appear anywhere else in the file.
+    assert "DATABASE_URL" not in source.replace("EL_TEST_DATABASE_URL", "")

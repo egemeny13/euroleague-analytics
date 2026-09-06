@@ -3948,6 +3948,64 @@ the eight codes plus `RV`, enforced by
 code appears in `PLAYTYPE` in a future season, that test fails and it is a
 decision to make - not silently folded into `committed`, `bench` or `drawn`.
 
+## 71. The view migration gate can only reach the disposable database
+
+**Decided 2026-09-07 by the owner**, after a read-only check of production.
+
+**What was run.** While rehearsing migration 0024
+(`v_foul_event`, item 70), the task brief instructed
+`EL_TEST_DATABASE_URL=postgresql://gate:gate@localhost:5433/euroleague_test
+python scripts/view_migration_gate.py 0024_foul_event_view v_foul_event
+--new-view`. `scripts/view_migration_gate.py` did not read
+`EL_TEST_DATABASE_URL` anywhere - it called `DatabaseSettings.from_env()`
+directly, which reads the application's live connection variable and falls
+back to `.env` when that variable is unset in the environment. Because only
+`EL_TEST_DATABASE_URL` had been set, the call silently fell through to
+`.env`'s value.
+
+**What stopped it.** The script sends the full migration file - `create
+view`, `comment on view`, `revoke`, two `grant` statements - as one
+multi-statement string in a single `cursor.execute()` call. PostgreSQL's
+simple-query protocol treats a semicolon-separated multi-statement string as
+one implicit transaction: the batch failed partway through, on `grant
+select ... to el_tester` naming a role that does not exist outside the
+disposable database, and that failure rolled back everything in the same
+string, including the `create view` that ran first.
+
+**What the read-only check found.** The owner checked production afterwards:
+no `v_foul_event`, no new or changed role, and the migration ledger
+unchanged. The rollback held. It held because of PostgreSQL's transactional
+semantics for a multi-statement batch, not because of any control in the
+script - the same wrong variable pointed at a script whose down step
+completes before failing would not have had that same accidental backstop.
+
+**The change.** `scripts/view_migration_gate.py` now calls
+`load_test_database_settings()` from `euroleague.incremental_confirmation` -
+the same function `scripts/migration_gate.py` has used since Decision 44 -
+instead of `DatabaseSettings.from_env()`. That function refuses to build a
+connection for anything not naming `euroleague_test` on port 5433, checked
+before a connection is opened, and it never reads the application's live
+connection variable at all. A wrong or missing disposable-database variable
+now fails immediately and loudly instead of silently resolving to whatever
+`.env` holds. `tests/test_view_migration_gate.py` asserts the script's source
+contains no `from_env`, does call `load_test_database_settings`, and that the
+application's live connection variable name does not appear anywhere in the
+file outside the disposable variable's own name.
+
+**Precedent.** Decision 44 made the identical change to
+`scripts/migration_gate.py` for the identical reason: a script whose cycle
+ends in `drop` must not be reachable by a stray variable name. This item
+closes the same gap in the one other script that runs DDL against a
+database chosen by an environment variable.
+
+**Condition.** Every script that runs migration DDL against a chosen
+database reads `EL_TEST_DATABASE_URL` through `load_test_database_settings`,
+never the application's own connection-string variable directly. A new such
+script that reads the live variable, or that calls
+`DatabaseSettings.from_env()` for this purpose, fails a test rather than
+shipping quietly - the same shape of guard `test_view_migration_gate.py` adds
+here.
+
 ## Rules to add to the project instruction file
 
 ```

@@ -7,14 +7,36 @@ was run once, on 2026-08-09, and it expired the moment Phase 4 loaded a season:
 This is the honest equivalent for one narrow shape of migration: creating a new
 view, or replacing an existing view while keeping its column names, types and
 order. Such a migration writes no row and drops no table, so its cycle can be
-run against the warehouse itself. Anything that touches a table still needs a
-fresh empty database, and this script refuses to help with that: it checks the
-column signatures at every step and fails if the cycle does not restore the
-expected state.
+rehearsed on a disposable database. Anything that touches a table still needs
+a fresh empty database, and this script refuses to help with that: it checks
+the column signatures at every step and fails if the cycle does not restore
+the expected state.
+
+WHY THIS ONLY TAKES `EL_TEST_DATABASE_URL`. It used to build its connection
+from the same variable the rest of the application reads for its live
+connection, and that variable names production. This script's cycle is up,
+down, up: the `down` step runs a real `drop view` (or `create or replace
+view` back to the prior definition) against whatever it is pointed at. On
+2026-09-07, while rehearsing migration 0024, a task brief named the wrong
+environment variable (`EL_TEST_DATABASE_URL`, which this script did not read
+at all), so the call silently fell back to the application's own variable via
+`.env`. The up/down/up batch is sent as one multi-statement string, which
+PostgreSQL's simple-query protocol executes as a single implicit transaction;
+the batch failed partway through on a role that does not exist outside the
+disposable database, and that failure rolled the whole thing back before
+anything committed. The owner's read-only check of production afterwards
+found no `v_foul_event`, no role or ledger change - the rollback held, but
+only by that accident, not by any control in this script. The gate now takes
+the same disposable-only variable `scripts/migration_gate.py` takes
+(Decision 44), which refuses any value not naming `euroleague_test` on port
+5433 before a connection is opened, so a wrong variable name fails loudly
+instead of falling through to the live connection string. See
+`DECISIONS.md` item 71.
 
 Usage:
 
-    python scripts/view_migration_gate.py 0005_game_winner v_game
+    EL_TEST_DATABASE_URL=postgresql://gate:gate@localhost:5433/euroleague_test \
+        python scripts/view_migration_gate.py 0005_game_winner v_game
     python scripts/view_migration_gate.py 0006_shot_data_view v_shot_data --new-view
 
 Use `--new-view` to repeat the gate after a create-view migration is already
@@ -36,7 +58,7 @@ import psycopg
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from euroleague.config import DatabaseSettings  # noqa: E402
+from euroleague.incremental_confirmation import load_test_database_settings  # noqa: E402
 
 MIGRATIONS_ROOT = REPO_ROOT / "migrations"
 
@@ -189,7 +211,7 @@ def main(argv: list[str]) -> int:
     validate_view_only_sql(up_sql, "up", view)
     validate_view_only_sql(down_sql, "down", view)
 
-    url = DatabaseSettings.from_env().url()
+    url = load_test_database_settings().url()
     with psycopg.connect(url, autocommit=True) as connection, connection.cursor() as cursor:
         before = signature(cursor, view)
         if repeat_new_view and before:
