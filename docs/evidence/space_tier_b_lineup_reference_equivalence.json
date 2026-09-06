@@ -1,0 +1,11 @@
+{
+  "measured": "2026-09-07",
+  "where": "disposable PostgreSQL 17.11, each season loaded from the local cache into its own schema",
+  "question": "Is the set of lineups referenced by game_event rows the same as the set referenced by lineup_stint rows? Tier B moves three queries from the first to the second.",
+  "query": "select (select count(*) from lineup l where exists (select 1 from game_event e where e.season_code = $1 and l.lineup_id in (e.home_lineup_id, e.away_lineup_id))) as by_event, (select count(*) from lineup l where exists (select 1 from lineup_stint s where s.season_code = $1 and l.lineup_id in (s.home_lineup_id, s.away_lineup_id))) as by_stint, (select count(*) from lineup) as all_lineups, (select count(*) from lineup_stint s where not exists (select 1 from game_event e where e.season_code = s.season_code and e.gamecode = s.gamecode and e.stint_index = s.stint_index)) as stints_without_events",
+  "results": {
+    "E2024": {"by_event": 5985, "by_stint": 5985, "all_lineups": 5985, "stints_without_events": 0},
+    "E2025": {"by_event": 7281, "by_stint": 7281, "all_lineups": 7281, "stints_without_events": 0}
+  },
+  "what_this_does_not_establish": "Equality on a season where a stint has no events. None exists in either season; the gate's unattached_events and event_stint_mismatches invariants are what make the two questions equivalent by construction rather than by coincidence."
+}

@@ -1,0 +1,356 @@
+{
+  "stage": "before-tier-b",
+  "season": "E2025",
+  "schema": "space_e2025",
+  "sizes": {
+    "tables": {
+      "game_event": 67149824,
+      "raw_event": 29433856,
+      "possession": 17014784,
+      "raw_shot": 10403840,
+      "lineup_stint": 4694016,
+      "raw_boxscore_player": 2187264,
+      "lineup": 1974272,
+      "player_game_minutes": 1310720,
+      "raw_boxscore_team": 368640,
+      "raw_game": 204800,
+      "game_quality": 131072,
+      "player": 73728,
+      "team_season": 49152,
+      "roster_registration": 40960,
+      "team": 32768,
+      "raw_api_response": 32768,
+      "person_game_link": 32768,
+      "mcp_row_usage": 24576,
+      "game_source_state": 16384,
+      "mcp_row_daily_budget": 16384,
+      "season_progress": 16384,
+      "raw_api_fetch": 16384,
+      "mcp_row_budget_policy": 16384
+    },
+    "indexes": {
+      "game_event_pkey": 7069696,
+      "raw_event_pkey": 7053312,
+      "game_event_possession_idx": 3555328,
+      "game_event_away_lineup_idx": 2482176,
+      "game_event_home_lineup_idx": 2449408,
+      "game_event_stint_idx": 2146304,
+      "game_event_player_idx": 2097152,
+      "possession_clutch_idx": 2064384,
+      "raw_shot_pkey": 2031616,
+      "possession_pkey": 1884160,
+      "game_event_playtype_idx": 1564672,
+      "possession_defense_lineup_idx": 1081344,
+      "possession_offense_lineup_idx": 1056768,
+      "possession_stint_idx": 868352,
+      "lineup_pkey": 581632,
+      "lineup_stint_pkey": 573440,
+      "lineup_stint_away_lineup_idx": 565248,
+      "lineup_stint_home_lineup_idx": 532480,
+      "player_game_minutes_pkey": 401408,
+      "raw_boxscore_player_pkey": 401408,
+      "player_game_minutes_team_idx": 106496,
+      "raw_boxscore_player_team_idx": 106496,
+      "player_game_minutes_player_idx": 98304,
+      "lineup_player_5_idx": 98304,
+      "raw_boxscore_player_player_idx": 98304,
+      "lineup_player_3_idx": 90112,
+      "raw_boxscore_team_pkey": 90112,
+      "lineup_team_code_idx": 90112,
+      "lineup_player_2_idx": 90112,
+      "lineup_player_1_idx": 90112,
+      "lineup_player_4_idx": 90112,
+      "raw_game_pkey": 32768,
+      "raw_game_utc_date_idx": 32768,
+      "game_quality_pkey": 32768,
+      "player_pkey": 16384,
+      "team_season_team_code_idx": 16384,
+      "team_season_pkey": 16384,
+      "game_quality_excluded_idx": 16384,
+      "team_pkey": 16384,
+      "person_game_link_pkey": 8192,
+      "raw_api_fetch_response_id_fetched_at_idx": 8192,
+      "raw_api_fetch_pkey": 8192,
+      "raw_api_response_current_idx": 8192,
+      "raw_api_response_identity_idx": 8192,
+      "season_progress_pkey": 8192,
+      "roster_registration_pkey": 8192,
+      "game_source_state_pkey": 8192,
+      "roster_registration_response_array_key": 8192,
+      "roster_registration_team_idx": 8192,
+      "roster_registration_person_idx": 8192,
+      "raw_api_response_pkey": 8192,
+      "person_game_link_player_unique": 8192,
+      "person_game_link_person_idx": 8192,
+      "mcp_row_budget_policy_pkey": 8192,
+      "mcp_row_daily_budget_pkey": 8192,
+      "mcp_row_usage_pkey": 8192,
+      "mcp_row_usage_usage_date_idx": 8192
+    },
+    "total": 135241728
+  },
+  "samples": {
+    "gamecode": 1,
+    "player": "P012640",
+    "team": "PAM",
+    "lineup": "6e0b7898e29d7948f303b314b90fd062"
+  },
+  "explain": {
+    "loader.delete_derived_one_game_game_event": {
+      "ms": 2.203,
+      "indexes_used": [
+        "game_event_stint_idx"
+      ],
+      "seq_scans": [],
+      "plan": "Delete on game_event  (cost=0.29..924.12 rows=0 width=0) (actual time=0.690..0.691 rows=0 loops=1)\n  Buffers: shared hit=586 read=17 dirtied=14\n  ->  Index Scan using game_event_stint_idx on game_event  (cost=0.29..924.12 rows=538 width=6) (actual time=0.123..0.403 rows=546 loops=1)\n        Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n        Buffers: shared hit=40 read=17\nPlanning:\n  Buffers: shared hit=11\nPlanning Time: 0.170 ms\nExecution Time: 2.203 ms"
+    },
+    "loader.delete_derived_one_game_possession": {
+      "ms": 1.544,
+      "indexes_used": [
+        "possession_stint_idx"
+      ],
+      "seq_scans": [],
+      "plan": "Delete on possession  (cost=0.29..252.65 rows=0 width=0) (actual time=0.614..0.614 rows=0 loops=1)\n  Buffers: shared hit=285 read=8 dirtied=3\n  ->  Index Scan using possession_stint_idx on possession  (cost=0.29..252.65 rows=146 width=6) (actual time=0.046..0.076 rows=142 loops=1)\n        Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n        Buffers: shared read=5\nPlanning:\n  Buffers: shared hit=8 read=5\nPlanning Time: 3.103 ms\nTrigger for constraint game_event_possession_fkey: time=0.894 calls=142\nExecution Time: 1.544 ms"
+    },
+    "loader.delete_derived_one_game_lineup_stint": {
+      "ms": 1.132,
+      "indexes_used": [],
+      "seq_scans": [],
+      "plan": "Delete on lineup_stint  (cost=0.29..73.84 rows=0 width=0) (actual time=0.115..0.116 rows=0 loops=1)\n  Buffers: shared hit=96 read=3 dirtied=1\n  ->  Index Scan using lineup_stint_pkey on lineup_stint  (cost=0.29..73.84 rows=40 width=6) (actual time=0.056..0.060 rows=45 loops=1)\n        Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n        Buffers: shared read=3\nPlanning:\n  Buffers: shared hit=8 read=3\nPlanning Time: 2.103 ms\nTrigger for constraint possession_stint_fkey: time=0.456 calls=45\nTrigger for constraint game_event_stint_fkey: time=0.520 calls=45\nExecution Time: 1.132 ms"
+    },
+    "loader.delete_raw_event_one_game": {
+      "ms": 5.427,
+      "indexes_used": [],
+      "seq_scans": [],
+      "plan": "Delete on raw_event  (cost=0.42..884.53 rows=0 width=0) (actual time=0.731..0.732 rows=0 loops=1)\n  Buffers: shared hit=1095 read=12 dirtied=7\n  ->  Index Scan using raw_event_pkey on raw_event  (cost=0.42..884.53 rows=537 width=6) (actual time=0.106..0.326 rows=546 loops=1)\n        Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n        Buffers: shared read=12\nPlanning:\n  Buffers: shared hit=8 read=1\nPlanning Time: 1.255 ms\nTrigger for constraint game_event_raw_fkey: time=4.359 calls=546\nExecution Time: 5.427 ms"
+    },
+    "gate.raw_event_fingerprint": {
+      "ms": 2073.535,
+      "indexes_used": [],
+      "seq_scans": [],
+      "plan": "Aggregate  (cost=16999.02..16999.03 rows=1 width=40) (actual time=2072.514..2072.515 rows=1 loops=1)\n  Buffers: shared hit=12 read=3572 written=1407\n  ->  Index Scan using raw_event_pkey on raw_event t  (cost=0.42..13654.38 rows=222976 width=97) (actual time=0.022..284.678 rows=222976 loops=1)\n        Index Cond: (season_code = 'E2025'::text)\n        Buffers: shared hit=12 read=3572 written=1407\nPlanning:\n  Buffers: shared hit=48\nPlanning Time: 0.178 ms\nExecution Time: 2073.535 ms"
+    },
+    "prune.not_exists_raw_event": {
+      "ms": 34.74,
+      "indexes_used": [],
+      "seq_scans": [
+        "->  Seq Scan on raw_event  (cost=0.00..4956.76 rows=222976 width=7) (actual time=0.011..7.617 rows=222976 loops=1)",
+        "->  Seq Scan on player obsolete  (cost=0.00..6.51 rows=351 width=7) (actual time=5.647..5.679 rows=351 loops=1)"
+      ],
+      "plan": "Aggregate  (cost=7885.22..7885.23 rows=1 width=8) (actual time=34.710..34.712 rows=1 loops=1)\n  Buffers: shared hit=2729 read=1 written=1\n  ->  Hash Right Anti Join  (cost=10.90..7885.17 rows=21 width=0) (actual time=34.699..34.706 rows=16 loops=1)\n        Hash Cond: (raw_event.player_id = obsolete.player_id)\n        Buffers: shared hit=2729 read=1 written=1\n        ->  Seq Scan on raw_event  (cost=0.00..4956.76 rows=222976 width=7) (actual time=0.011..7.617 rows=222976 loops=1)\n              Buffers: shared hit=2727\n        ->  Hash  (cost=6.51..6.51 rows=351 width=7) (actual time=5.708..5.709 rows=351 loops=1)\n              Buckets: 1024  Batches: 1  Memory Usage: 22kB\n              Buffers: shared hit=2 read=1 written=1\n              ->  Seq Scan on player obsolete  (cost=0.00..6.51 rows=351 width=7) (actual time=5.647..5.679 rows=351 loops=1)\n                    Buffers: shared hit=2 read=1 written=1\nPlanning:\n  Buffers: shared hit=30 read=4 written=1\nPlanning Time: 4.383 ms\nExecution Time: 34.740 ms"
+    },
+    "prune.not_exists_raw_shot": {
+      "ms": 23.959,
+      "indexes_used": [],
+      "seq_scans": [
+        "->  Seq Scan on raw_shot  (cost=0.00..1658.37 rows=64137 width=7) (actual time=0.017..18.805 rows=64137 loops=1)",
+        "->  Seq Scan on player obsolete  (cost=0.00..6.51 rows=351 width=7) (actual time=0.006..0.019 rows=351 loops=1)"
+      ],
+      "plan": "Aggregate  (cost=2492.27..2492.28 rows=1 width=8) (actual time=23.937..23.938 rows=1 loops=1)\n  Buffers: shared hit=3 read=1017 written=179\n  ->  Hash Right Anti Join  (cost=10.90..2492.20 rows=29 width=0) (actual time=23.927..23.933 rows=22 loops=1)\n        Hash Cond: (raw_shot.player_id = obsolete.player_id)\n        Buffers: shared hit=3 read=1017 written=179\n        ->  Seq Scan on raw_shot  (cost=0.00..1658.37 rows=64137 width=7) (actual time=0.017..18.805 rows=64137 loops=1)\n              Buffers: shared read=1017 written=179\n        ->  Hash  (cost=6.51..6.51 rows=351 width=7) (actual time=0.038..0.038 rows=351 loops=1)\n              Buckets: 1024  Batches: 1  Memory Usage: 22kB\n              Buffers: shared hit=3\n              ->  Seq Scan on player obsolete  (cost=0.00..6.51 rows=351 width=7) (actual time=0.006..0.019 rows=351 loops=1)\n                    Buffers: shared hit=3\nPlanning:\n  Buffers: shared hit=9 read=1\nPlanning Time: 0.744 ms\nExecution Time: 23.959 ms"
+    },
+    "prune.not_exists_game_event": {
+      "ms": 109.108,
+      "indexes_used": [
+        "game_event_player_idx"
+      ],
+      "seq_scans": [
+        "->  Seq Scan on player obsolete  (cost=0.00..6.51 rows=351 width=7) (actual time=0.013..0.094 rows=351 loops=1)"
+      ],
+      "plan": "Aggregate  (cost=1817.40..1817.41 rows=1 width=8) (actual time=109.075..109.076 rows=1 loops=1)\n  Buffers: shared hit=47043 read=256 written=77\n  ->  Nested Loop Anti Join  (cost=0.29..1817.35 rows=20 width=0) (actual time=12.014..109.056 rows=16 loops=1)\n        Buffers: shared hit=47043 read=256 written=77\n        ->  Seq Scan on player obsolete  (cost=0.00..6.51 rows=351 width=7) (actual time=0.013..0.094 rows=351 loops=1)\n              Buffers: shared hit=3\n        ->  Index Only Scan using game_event_player_idx on game_event  (cost=0.29..1594.85 rows=638 width=7) (actual time=0.309..0.309 rows=1 loops=351)\n              Index Cond: (player_id = obsolete.player_id)\n              Heap Fetches: 30\n              Buffers: shared hit=47040 read=256 written=77\nPlanning:\n  Buffers: shared hit=9\nPlanning Time: 0.411 ms\nExecution Time: 109.108 ms"
+    },
+    "prune.lineup_referenced_by_game_event": {
+      "ms": 1.884,
+      "indexes_used": [
+        "game_event_home_lineup_idx",
+        "game_event_away_lineup_idx"
+      ],
+      "seq_scans": [],
+      "plan": "Aggregate  (cost=319.54..319.55 rows=1 width=8) (actual time=1.864..1.864 rows=1 loops=1)\n  Buffers: shared hit=3 read=6 written=3\n  ->  Bitmap Heap Scan on game_event  (cost=9.51..319.32 rows=85 width=0) (actual time=1.857..1.861 rows=23 loops=1)\n        Recheck Cond: ((home_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text) OR (away_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text))\n        Heap Blocks: exact=3\n        Buffers: shared hit=3 read=6 written=3\n        ->  BitmapOr  (cost=9.51..9.51 rows=85 width=0) (actual time=1.840..1.840 rows=0 loops=1)\n              Buffers: shared read=6 written=3\n              ->  Bitmap Index Scan on game_event_home_lineup_idx  (cost=0.00..4.74 rows=42 width=0) (actual time=0.867..0.868 rows=35 loops=1)\n                    Index Cond: (home_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text)\n                    Buffers: shared read=3 written=1\n              ->  Bitmap Index Scan on game_event_away_lineup_idx  (cost=0.00..4.74 rows=42 width=0) (actual time=0.970..0.970 rows=0 loops=1)\n                    Index Cond: (away_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text)\n                    Buffers: shared read=3 written=2\nPlanning:\n  Buffers: shared hit=14\nPlanning Time: 0.178 ms\nExecution Time: 1.884 ms"
+    },
+    "prune.lineup_referenced_by_lineup_stint": {
+      "ms": 0.064,
+      "indexes_used": [],
+      "seq_scans": [],
+      "plan": "Aggregate  (cost=33.83..33.84 rows=1 width=8) (actual time=0.050..0.050 rows=1 loops=1)\n  Buffers: shared hit=1 read=4\n  ->  Bitmap Heap Scan on lineup_stint  (cost=8.62..33.82 rows=7 width=0) (actual time=0.048..0.049 rows=1 loops=1)\n        Recheck Cond: ((home_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text) OR (away_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text))\n        Heap Blocks: exact=1\n        Buffers: shared hit=1 read=4\n        ->  BitmapOr  (cost=8.62..8.62 rows=7 width=0) (actual time=0.041..0.041 rows=0 loops=1)\n              Buffers: shared read=4\n              ->  Bitmap Index Scan on lineup_stint_home_lineup_idx  (cost=0.00..4.31 rows=3 width=0) (actual time=0.030..0.030 rows=1 loops=1)\n                    Index Cond: (home_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text)\n                    Buffers: shared read=2\n              ->  Bitmap Index Scan on lineup_stint_away_lineup_idx  (cost=0.00..4.31 rows=3 width=0) (actual time=0.011..0.011 rows=0 loops=1)\n                    Index Cond: (away_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text)\n                    Buffers: shared read=2\nPlanning:\n  Buffers: shared hit=14\nPlanning Time: 0.124 ms\nExecution Time: 0.064 ms"
+    },
+    "mcp.shot_data_coverage": {
+      "ms": 159.645,
+      "indexes_used": [
+        "game_event_playtype_idx"
+      ],
+      "seq_scans": [
+        "->  Seq Scan on raw_game g  (cost=0.00..17.02 rows=402 width=18) (actual time=4.027..4.484 rows=402 loops=3)",
+        "->  Seq Scan on raw_shot s  (cost=0.00..1818.71 rows=64137 width=22) (actual time=0.401..14.499 rows=64137 loops=3)"
+      ],
+      "plan": "Finalize Aggregate  (cost=11507.96..11507.97 rows=1 width=16) (actual time=145.893..159.224 rows=1 loops=1)\n  Buffers: shared hit=3604 read=5185 written=2276\n  ->  Gather  (cost=11507.74..11507.95 rows=2 width=16) (actual time=143.571..159.210 rows=3 loops=1)\n        Workers Planned: 2\n        Workers Launched: 2\n        Buffers: shared hit=3604 read=5185 written=2276\n        ->  Partial Aggregate  (cost=10507.74..10507.75 rows=1 width=16) (actual time=102.314..102.318 rows=1 loops=3)\n              Buffers: shared hit=3604 read=5185 written=2276\n              ->  Hash Left Join  (cost=3709.44..10082.84 rows=28327 width=11) (actual time=31.857..99.255 rows=22519 loops=3)\n                    Hash Cond: ((e.gamecode = s.gamecode) AND (e.numberofplay = s.num_anot))\n                    Buffers: shared hit=3604 read=5185 written=2276\n                    ->  Hash Join  (cost=928.68..7153.36 rows=28327 width=17) (actual time=6.631..66.608 rows=22519 loops=3)\n                          Hash Cond: (e.gamecode = g.gamecode)\n                          Buffers: shared hit=553 read=5185 written=2276\n                          ->  Parallel Bitmap Heap Scan on game_event e  (cost=906.63..7056.17 rows=28327 width=24) (actual time=2.012..56.372 rows=22519 loops=3)\n                                Recheck Cond: ((season_code = 'E2025'::text) AND (playtype = ANY ('{2FGM,2FGA,3FGM,3FGA,FTM,FTA}'::text[])))\n                                Heap Blocks: exact=3042\n                                Buffers: shared hit=461 read=5173 written=2270\n                                ->  Bitmap Index Scan on game_event_playtype_idx  (cost=0.00..889.63 rows=67985 width=0) (actual time=3.276..3.276 rows=67566 loops=1)\n                                      Index Cond: ((season_code = 'E2025'::text) AND (playtype = ANY ('{2FGM,2FGA,3FGM,3FGA,FTM,FTA}'::text[])))\n                                      Buffers: shared hit=1 read=57 written=10\n                          ->  Hash  (cost=17.02..17.02 rows=402 width=18) (actual time=4.542..4.543 rows=402 loops=3)\n                                Buckets: 1024  Batches: 1  Memory Usage: 29kB\n                                Buffers: shared hit=24 read=12 written=6\n                                ->  Seq Scan on raw_game g  (cost=0.00..17.02 rows=402 width=18) (actual time=4.027..4.484 rows=402 loops=3)\n                                      Filter: (season_code = 'E2025'::text)\n                                      Buffers: shared hit=24 read=12 written=6\n                    ->  Hash  (cost=1818.71..1818.71 rows=64137 width=22) (actual time=25.009..25.010 rows=64137 loops=3)\n                          Buckets: 65536  Batches: 1  Memory Usage: 4020kB\n                          Buffers: shared hit=3051\n                          ->  Seq Scan on raw_shot s  (cost=0.00..1818.71 rows=64137 width=22) (actual time=0.401..14.499 rows=64137 loops=3)\n                                Filter: (season_code = 'E2025'::text)\n                                Buffers: shared hit=3051\nPlanning:\n  Buffers: shared hit=63 read=5 written=1\nPlanning Time: 4.229 ms\nExecution Time: 159.645 ms"
+    },
+    "mcp.shot_data_by_player": {
+      "ms": 5.408,
+      "indexes_used": [
+        "game_event_player_idx"
+      ],
+      "seq_scans": [
+        "->  Seq Scan on player pl  (cost=0.00..7.39 rows=1 width=22) (actual time=0.029..0.030 rows=1 loops=1)"
+      ],
+      "plan": "Limit  (cost=23.12..1120.42 rows=50 width=158) (actual time=4.542..5.288 rows=50 loops=1)\n  Buffers: shared hit=732 read=11 written=11\n  ->  Incremental Sort  (cost=23.12..6036.30 rows=274 width=158) (actual time=4.541..5.284 rows=50 loops=1)\n        Sort Key: e.gamecode, e.ingest_index\n        Presorted Key: e.gamecode\n        Full-sort Groups: 2  Sort Methods: top-N heapsort, quicksort  Average Memory: 30kB  Peak Memory: 30kB\n        Buffers: shared hit=732 read=11 written=11\n        ->  Nested Loop Left Join  (cost=1.13..6023.97 rows=274 width=158) (actual time=3.218..5.250 rows=62 loops=1)\n              Buffers: shared hit=732 read=11 written=11\n              ->  Nested Loop Left Join  (cost=0.84..4561.57 rows=274 width=67) (actual time=2.570..3.934 rows=62 loops=1)\n                    Buffers: shared hit=554 read=5 written=5\n                    ->  Nested Loop  (cost=0.84..4550.75 rows=274 width=52) (actual time=2.530..3.883 rows=62 loops=1)\n                          Join Filter: (g.gamecode = e.gamecode)\n                          Rows Removed by Join Filter: 24956\n                          Buffers: shared hit=551 read=5 written=5\n                          ->  Merge Left Join  (cost=0.55..95.33 rows=201 width=26) (actual time=0.797..0.829 rows=35 loops=1)\n                                Merge Cond: (g.gamecode = q.gamecode)\n                                Filter: (NOT COALESCE(q.excluded_by_default, false))\n                                Rows Removed by Filter: 2\n                                Buffers: shared hit=2 read=5 written=5\n                                ->  Index Scan using raw_game_pkey on raw_game g  (cost=0.27..52.75 rows=402 width=18) (actual time=0.703..0.712 rows=37 loops=1)\n                                      Index Cond: (season_code = 'E2025'::text)\n                                      Buffers: shared hit=2 read=2 written=2\n                                ->  Index Scan using game_quality_pkey on game_quality q  (cost=0.27..36.56 rows=402 width=26) (actual time=0.089..0.094 rows=37 loops=1)\n                                      Index Cond: (season_code = 'E2025'::text)\n                                      Buffers: shared read=3 written=3\n                          ->  Materialize  (cost=0.29..2804.57 rows=548 width=36) (actual time=0.001..0.057 rows=715 loops=35)\n                                Buffers: shared hit=549\n                                ->  Index Scan using game_event_player_idx on game_event e  (cost=0.29..2801.83 rows=548 width=36) (actual time=0.023..1.154 rows=734 loops=1)\n                                      Index Cond: ((season_code = 'E2025'::text) AND (player_id = 'P012640'::text))\n                                      Filter: (playtype = ANY ('{2FGM,2FGA,3FGM,3FGA,FTM,FTA}'::text[]))\n                                      Rows Removed by Filter: 1078\n                                      Buffers: shared hit=549\n                    ->  Materialize  (cost=0.00..7.39 rows=1 width=22) (actual time=0.001..0.001 rows=1 loops=62)\n                          Buffers: shared hit=3\n                          ->  Seq Scan on player pl  (cost=0.00..7.39 rows=1 width=22) (actual time=0.029..0.030 rows=1 loops=1)\n                                Filter: (player_id = 'P012640'::text)\n                                Rows Removed by Filter: 237\n                                Buffers: shared hit=3\n              ->  Index Scan using raw_shot_pkey on raw_shot s  (cost=0.29..5.28 rows=1 width=24) (actual time=0.020..0.020 rows=1 loops=62)\n                    Index Cond: ((season_code = 'E2025'::text) AND (gamecode = e.gamecode) AND (num_anot = e.numberofplay))\n                    Buffers: shared hit=178 read=6 written=6\nPlanning:\n  Buffers: shared hit=30\nPlanning Time: 0.967 ms\nExecution Time: 5.408 ms"
+    },
+    "mcp.shot_data_by_team": {
+      "ms": 4.662,
+      "indexes_used": [
+        "game_event_stint_idx"
+      ],
+      "seq_scans": [],
+      "plan": "Limit  (cost=42.41..431.44 rows=50 width=158) (actual time=4.565..4.571 rows=50 loops=1)\n  Buffers: shared hit=632 read=14 written=14\n  ->  Incremental Sort  (cost=42.41..16568.10 rows=2124 width=158) (actual time=4.565..4.568 rows=50 loops=1)\n        Sort Key: e.gamecode, e.ingest_index\n        Presorted Key: e.gamecode\n        Full-sort Groups: 1  Sort Method: quicksort  Average Memory: 33kB  Peak Memory: 33kB\n        Pre-sorted Groups: 1  Sort Method: quicksort  Average Memory: 37kB  Peak Memory: 37kB\n        Buffers: shared hit=632 read=14 written=14\n        ->  Nested Loop Left Join  (cost=1.29..16508.01 rows=2124 width=158) (actual time=2.545..4.510 rows=94 loops=1)\n              Buffers: shared hit=632 read=14 written=14\n              ->  Nested Loop Left Join  (cost=1.00..13183.56 rows=2124 width=67) (actual time=1.844..3.569 rows=94 loops=1)\n                    Buffers: shared hit=360 read=11 written=11\n                    ->  Nested Loop  (cost=0.84..13074.26 rows=2124 width=52) (actual time=1.812..3.481 rows=94 loops=1)\n                          Buffers: shared hit=338 read=11 written=11\n                          ->  Merge Left Join  (cost=0.55..95.33 rows=201 width=26) (actual time=0.029..0.051 rows=18 loops=1)\n                                Merge Cond: (g.gamecode = q.gamecode)\n                                Filter: (NOT COALESCE(q.excluded_by_default, false))\n                                Rows Removed by Filter: 1\n                                Buffers: shared hit=6\n                                ->  Index Scan using raw_game_pkey on raw_game g  (cost=0.27..52.75 rows=402 width=18) (actual time=0.015..0.019 rows=19 loops=1)\n                                      Index Cond: (season_code = 'E2025'::text)\n                                      Buffers: shared hit=3\n                                ->  Index Scan using game_quality_pkey on game_quality q  (cost=0.27..36.56 rows=402 width=26) (actual time=0.012..0.015 rows=19 loops=1)\n                                      Index Cond: (season_code = 'E2025'::text)\n                                      Buffers: shared hit=3\n                          ->  Index Scan using game_event_stint_idx on game_event e  (cost=0.29..64.46 rows=11 width=36) (actual time=0.156..0.190 rows=5 loops=18)\n                                Index Cond: ((season_code = 'E2025'::text) AND (gamecode = g.gamecode))\n                                Filter: ((codeteam = 'PAM'::text) AND (playtype = ANY ('{2FGM,2FGA,3FGM,3FGA,FTM,FTA}'::text[])))\n                                Rows Removed by Filter: 533\n                                Buffers: shared hit=332 read=11 written=11\n                    ->  Memoize  (cost=0.16..0.18 rows=1 width=22) (actual time=0.001..0.001 rows=1 loops=94)\n                          Cache Key: e.player_id\n                          Cache Mode: logical\n                          Hits: 83  Misses: 11  Evictions: 0  Overflows: 0  Memory Usage: 2kB\n                          Buffers: shared hit=22\n                          ->  Index Scan using player_pkey on player pl  (cost=0.15..0.17 rows=1 width=22) (actual time=0.002..0.002 rows=1 loops=11)\n                                Index Cond: (player_id = e.player_id)\n                                Buffers: shared hit=22\n              ->  Index Scan using raw_shot_pkey on raw_shot s  (cost=0.29..1.50 rows=1 width=24) (actual time=0.009..0.009 rows=1 loops=94)\n                    Index Cond: ((season_code = 'E2025'::text) AND (gamecode = e.gamecode) AND (num_anot = e.numberofplay))\n                    Buffers: shared hit=272 read=3 written=3\nPlanning:\n  Buffers: shared hit=4\nPlanning Time: 1.261 ms\nExecution Time: 4.662 ms"
+    },
+    "mcp.shot_data_one_game": {
+      "ms": 1.064,
+      "indexes_used": [],
+      "seq_scans": [],
+      "plan": "Limit  (cost=1.40..506.03 rows=50 width=158) (actual time=0.663..0.997 rows=50 loops=1)\n  Buffers: shared hit=219 read=1 written=1\n  ->  Nested Loop Left Join  (cost=1.40..1656.59 rows=164 width=158) (actual time=0.663..0.994 rows=50 loops=1)\n        Join Filter: (s.num_anot = e.numberofplay)\n        Rows Removed by Join Filter: 1334\n        Buffers: shared hit=219 read=1 written=1\n        ->  Nested Loop Left Join  (cost=1.11..1001.99 rows=164 width=67) (actual time=0.048..0.176 rows=50 loops=1)\n              Buffers: shared hit=215\n              ->  Nested Loop  (cost=0.97..954.92 rows=164 width=52) (actual time=0.040..0.117 rows=50 loops=1)\n                    Buffers: shared hit=115\n                    ->  Index Scan using game_event_pkey on game_event e  (cost=0.42..936.28 rows=164 width=36) (actual time=0.017..0.077 rows=50 loops=1)\n                          Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n                          Filter: (playtype = ANY ('{2FGM,2FGA,3FGM,3FGA,FTM,FTA}'::text[]))\n                          Rows Removed by Filter: 110\n                          Buffers: shared hit=109\n                    ->  Materialize  (cost=0.55..16.60 rows=1 width=26) (actual time=0.000..0.001 rows=1 loops=50)\n                          Buffers: shared hit=6\n                          ->  Nested Loop Left Join  (cost=0.55..16.60 rows=1 width=26) (actual time=0.017..0.019 rows=1 loops=1)\n                                Buffers: shared hit=6\n                                ->  Index Scan using raw_game_pkey on raw_game g  (cost=0.27..8.29 rows=1 width=18) (actual time=0.010..0.011 rows=1 loops=1)\n                                      Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n                                      Buffers: shared hit=3\n                                ->  Index Scan using game_quality_pkey on game_quality q  (cost=0.27..8.29 rows=1 width=26) (actual time=0.006..0.006 rows=1 loops=1)\n                                      Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n                                      Buffers: shared hit=3\n              ->  Index Scan using player_pkey on player pl  (cost=0.15..0.29 rows=1 width=22) (actual time=0.001..0.001 rows=1 loops=50)\n                    Index Cond: (player_id = e.player_id)\n                    Buffers: shared hit=100\n        ->  Materialize  (cost=0.29..265.29 rows=155 width=24) (actual time=0.012..0.014 rows=28 loops=50)\n              Buffers: shared hit=4 read=1 written=1\n              ->  Index Scan using raw_shot_pkey on raw_shot s  (cost=0.29..264.52 rows=155 width=24) (actual time=0.606..0.629 rows=158 loops=1)\n                    Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n                    Buffers: shared hit=4 read=1 written=1\nPlanning:\n  Buffers: shared hit=69\nPlanning Time: 0.868 ms\nExecution Time: 1.064 ms"
+    },
+    "mcp.possessions_clutch": {
+      "ms": 4.766,
+      "indexes_used": [
+        "possession_stint_idx"
+      ],
+      "seq_scans": [],
+      "plan": "Limit  (cost=9.22..135.06 rows=50 width=166) (actual time=4.312..4.724 rows=50 loops=1)\n  Buffers: shared hit=44 read=35 written=32\n  ->  Incremental Sort  (cost=9.22..3396.86 rows=1346 width=166) (actual time=4.311..4.720 rows=50 loops=1)\n        Sort Key: p.gamecode, p.possession_index\n        Presorted Key: p.gamecode\n        Full-sort Groups: 2  Sort Methods: top-N heapsort, quicksort  Average Memory: 36kB  Peak Memory: 36kB\n        Buffers: shared hit=44 read=35 written=32\n        ->  Nested Loop  (cost=0.83..3360.26 rows=1346 width=166) (actual time=0.057..4.679 rows=69 loops=1)\n              Buffers: shared hit=44 read=35 written=32\n              ->  Merge Left Join  (cost=0.55..95.33 rows=201 width=34) (actual time=0.025..0.049 rows=12 loops=1)\n                    Merge Cond: (g.gamecode = q.gamecode)\n                    Filter: (NOT COALESCE(q.excluded_by_default, false))\n                    Buffers: shared hit=6\n                    ->  Index Scan using raw_game_pkey on raw_game g  (cost=0.27..52.75 rows=402 width=26) (actual time=0.012..0.017 rows=12 loops=1)\n                          Index Cond: (season_code = 'E2025'::text)\n                          Buffers: shared hit=3\n                    ->  Index Scan using game_quality_pkey on game_quality q  (cost=0.27..36.56 rows=402 width=26) (actual time=0.009..0.012 rows=12 loops=1)\n                          Index Cond: (season_code = 'E2025'::text)\n                          Buffers: shared hit=3\n              ->  Index Scan using possession_stint_idx on possession p  (cost=0.29..16.17 rows=7 width=125) (actual time=0.344..0.384 rows=6 loops=12)\n                    Index Cond: ((season_code = 'E2025'::text) AND (gamecode = g.gamecode))\n                    Filter: ((seconds_remaining_at_start <= 300) AND (abs(margin_at_start) <= 5))\n                    Rows Removed by Filter: 138\n                    Buffers: shared hit=38 read=35 written=32\nPlanning:\n  Buffers: shared hit=54 read=1 written=1\nPlanning Time: 0.529 ms\nExecution Time: 4.766 ms"
+    },
+    "mcp.possessions_by_lineup": {
+      "ms": 0.743,
+      "indexes_used": [],
+      "seq_scans": [
+        "->  Seq Scan on raw_game g  (cost=0.00..17.02 rows=402 width=26) (actual time=0.009..0.073 rows=402 loops=1)"
+      ],
+      "plan": "Limit  (cost=59.86..59.88 rows=8 width=166) (actual time=0.697..0.699 rows=2 loops=1)\n  Buffers: shared hit=19 read=2 written=2\n  ->  Sort  (cost=59.86..59.88 rows=8 width=166) (actual time=0.697..0.698 rows=2 loops=1)\n        Sort Key: p.gamecode, p.possession_index\n        Sort Method: quicksort  Memory: 25kB\n        Buffers: shared hit=19 read=2 written=2\n        ->  Nested Loop Left Join  (cost=26.67..59.74 rows=8 width=166) (actual time=0.685..0.691 rows=2 loops=1)\n              Buffers: shared hit=19 read=2 written=2\n              ->  Hash Join  (cost=26.40..56.60 rows=8 width=143) (actual time=0.675..0.678 rows=2 loops=1)\n                    Hash Cond: (p.gamecode = g.gamecode)\n                    Buffers: shared hit=13 read=2 written=2\n                    ->  Bitmap Heap Scan on possession p  (cost=4.35..34.53 rows=8 width=125) (actual time=0.549..0.550 rows=2 loops=1)\n                          Recheck Cond: (offense_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text)\n                          Filter: (season_code = 'E2025'::text)\n                          Heap Blocks: exact=1\n                          Buffers: shared hit=1 read=2 written=2\n                          ->  Bitmap Index Scan on possession_offense_lineup_idx  (cost=0.00..4.35 rows=8 width=0) (actual time=0.537..0.537 rows=2 loops=1)\n                                Index Cond: (offense_lineup_id = '6e0b7898e29d7948f303b314b90fd062'::text)\n                                Buffers: shared read=2 written=2\n                    ->  Hash  (cost=17.02..17.02 rows=402 width=26) (actual time=0.117..0.117 rows=402 loops=1)\n                          Buckets: 1024  Batches: 1  Memory Usage: 32kB\n                          Buffers: shared hit=12\n                          ->  Seq Scan on raw_game g  (cost=0.00..17.02 rows=402 width=26) (actual time=0.009..0.073 rows=402 loops=1)\n                                Filter: (season_code = 'E2025'::text)\n                                Buffers: shared hit=12\n              ->  Index Scan using game_quality_pkey on game_quality q  (cost=0.27..0.38 rows=1 width=26) (actual time=0.005..0.005 rows=1 loops=2)\n                    Index Cond: ((season_code = 'E2025'::text) AND (gamecode = g.gamecode))\n                    Buffers: shared hit=6\nPlanning Time: 0.656 ms\nExecution Time: 0.743 ms"
+    },
+    "mcp.play_by_play_one_game_playtype": {
+      "ms": 0.262,
+      "indexes_used": [
+        "game_event_stint_idx"
+      ],
+      "seq_scans": [
+        "->  Seq Scan on player pl  (cost=0.00..6.51 rows=351 width=22) (actual time=0.007..0.027 rows=351 loops=1)"
+      ],
+      "plan": "Limit  (cost=954.62..954.72 rows=42 width=184) (actual time=0.232..0.236 rows=44 loops=1)\n  Buffers: shared hit=63\n  ->  Sort  (cost=954.62..954.72 rows=42 width=184) (actual time=0.232..0.234 rows=44 loops=1)\n        Sort Key: e.ingest_index\n        Sort Method: quicksort  Memory: 36kB\n        Buffers: shared hit=63\n        ->  Hash Left Join  (cost=11.74..953.49 rows=42 width=184) (actual time=0.103..0.218 rows=44 loops=1)\n              Hash Cond: (e.player_id = pl.player_id)\n              Buffers: shared hit=63\n              ->  Nested Loop  (cost=0.84..942.48 rows=42 width=152) (actual time=0.034..0.140 rows=44 loops=1)\n                    Buffers: shared hit=60\n                    ->  Nested Loop Left Join  (cost=0.55..16.60 rows=1 width=26) (actual time=0.013..0.013 rows=1 loops=1)\n                          Buffers: shared hit=6\n                          ->  Index Scan using raw_game_pkey on raw_game g  (cost=0.27..8.29 rows=1 width=18) (actual time=0.007..0.008 rows=1 loops=1)\n                                Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n                                Buffers: shared hit=3\n                          ->  Index Scan using game_quality_pkey on game_quality q  (cost=0.27..8.29 rows=1 width=26) (actual time=0.004..0.004 rows=1 loops=1)\n                                Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n                                Buffers: shared hit=3\n                    ->  Index Scan using game_event_stint_idx on game_event e  (cost=0.29..925.46 rows=42 width=136) (actual time=0.020..0.119 rows=44 loops=1)\n                          Index Cond: ((season_code = 'E2025'::text) AND (gamecode = '1'::smallint))\n                          Filter: (playtype = '2FGM'::text)\n                          Rows Removed by Filter: 502\n                          Buffers: shared hit=54\n              ->  Hash  (cost=6.51..6.51 rows=351 width=22) (actual time=0.063..0.063 rows=351 loops=1)\n                    Buckets: 1024  Batches: 1  Memory Usage: 28kB\n                    Buffers: shared hit=3\n                    ->  Seq Scan on player pl  (cost=0.00..6.51 rows=351 width=22) (actual time=0.007..0.027 rows=351 loops=1)\n                          Buffers: shared hit=3\nPlanning:\n  Buffers: shared hit=37\nPlanning Time: 0.412 ms\nExecution Time: 0.262 ms"
+    },
+    "mcp.lineup_stats_season": {
+      "ms": 55.011,
+      "indexes_used": [],
+      "seq_scans": [
+        "->  Seq Scan on possession p  (cost=0.00..1966.53 rows=59482 width=43) (actual time=0.015..30.020 rows=59482 loops=1)",
+        "->  Seq Scan on raw_game g  (cost=0.00..17.02 rows=402 width=18) (actual time=0.006..0.064 rows=402 loops=1)",
+        "->  Seq Scan on game_quality q  (cost=0.00..10.03 rows=402 width=11) (actual time=0.805..2.037 rows=402 loops=1)"
+      ],
+      "plan": "Limit  (cost=2687.45..2687.50 rows=20 width=41) (actual time=54.779..54.783 rows=20 loops=1)\n  Buffers: shared hit=49 read=1191 written=962\n  ->  Sort  (cost=2687.45..2702.44 rows=5997 width=41) (actual time=54.779..54.781 rows=20 loops=1)\n        Sort Key: (count(*)) DESC\n        Sort Method: top-N heapsort  Memory: 27kB\n        Buffers: shared hit=49 read=1191 written=962\n        ->  HashAggregate  (cost=2467.90..2527.87 rows=5997 width=41) (actual time=54.035..54.443 rows=6443 loops=1)\n              Group Key: p.offense_lineup_id\n              Batches: 1  Memory Usage: 977kB\n              Buffers: shared hit=49 read=1191 written=962\n              ->  Hash Left Join  (cost=37.10..2319.20 rows=29741 width=33) (actual time=2.223..46.400 rows=54724 loops=1)\n                    Hash Cond: (g.gamecode = q.gamecode)\n                    Filter: (NOT COALESCE(q.excluded_by_default, false))\n                    Rows Removed by Filter: 4758\n                    Buffers: shared hit=49 read=1191 written=962\n                    ->  Hash Join  (cost=22.05..2146.36 rows=59482 width=43) (actual time=0.126..38.202 rows=59482 loops=1)\n                          Hash Cond: (p.gamecode = g.gamecode)\n                          Buffers: shared hit=48 read=1187 written=958\n                          ->  Seq Scan on possession p  (cost=0.00..1966.53 rows=59482 width=43) (actual time=0.015..30.020 rows=59482 loops=1)\n                                Filter: (season_code = 'E2025'::text)\n                                Buffers: shared hit=36 read=1187 written=958\n                          ->  Hash  (cost=17.02..17.02 rows=402 width=18) (actual time=0.102..0.102 rows=402 loops=1)\n                                Buckets: 1024  Batches: 1  Memory Usage: 29kB\n                                Buffers: shared hit=12\n                                ->  Seq Scan on raw_game g  (cost=0.00..17.02 rows=402 width=18) (actual time=0.006..0.064 rows=402 loops=1)\n                                      Filter: (season_code = 'E2025'::text)\n                                      Buffers: shared hit=12\n                    ->  Hash  (cost=10.03..10.03 rows=402 width=11) (actual time=2.087..2.088 rows=402 loops=1)\n                          Buckets: 1024  Batches: 1  Memory Usage: 26kB\n                          Buffers: shared hit=1 read=4 written=4\n                          ->  Seq Scan on game_quality q  (cost=0.00..10.03 rows=402 width=11) (actual time=0.805..2.037 rows=402 loops=1)\n                                Filter: (season_code = 'E2025'::text)\n                                Buffers: shared hit=1 read=4 written=4\nPlanning Time: 0.340 ms\nExecution Time: 55.011 ms"
+    },
+    "gate.in_out_pairs_scoped": {
+      "ms": 0.856,
+      "indexes_used": [
+        "game_event_stint_idx"
+      ],
+      "seq_scans": [],
+      "plan": "GroupAggregate  (cost=10.90..2567.03 rows=359 width=18) (actual time=0.819..0.819 rows=0 loops=1)\n  Group Key: gamecode, period, codeteam, markertime\n  Filter: (count(*) FILTER (WHERE (playtype = 'IN'::text)) <> count(*) FILTER (WHERE (playtype = 'OUT'::text)))\n  Rows Removed by Filter: 129\n  Buffers: shared hit=86\n  ->  Incremental Sort  (cost=10.90..2555.24 rows=364 width=21) (actual time=0.368..0.706 rows=374 loops=1)\n        Sort Key: gamecode, period, codeteam, markertime\n        Presorted Key: gamecode\n        Full-sort Groups: 3  Sort Method: quicksort  Average Memory: 27kB  Peak Memory: 27kB\n        Pre-sorted Groups: 3  Sort Method: quicksort  Average Memory: 29kB  Peak Memory: 29kB\n        Buffers: shared hit=86\n        ->  Index Scan using game_event_stint_idx on game_event  (cost=0.29..2543.20 rows=364 width=21) (actual time=0.061..0.457 rows=374 loops=1)\n              Index Cond: ((season_code = 'E2025'::text) AND (gamecode = ANY ('{1,2,3}'::smallint[])))\n              Filter: (playtype = ANY ('{IN,OUT}'::text[]))\n              Rows Removed by Filter: 1272\n              Buffers: shared hit=86\nPlanning:\n  Buffers: shared hit=5\nPlanning Time: 0.265 ms\nExecution Time: 0.856 ms"
+    },
+    "mcp.describe_shot_events_by_season": {
+      "ms": 13.522,
+      "indexes_used": [
+        "game_event_playtype_idx"
+      ],
+      "seq_scans": [],
+      "plan": "GroupAggregate  (cost=0.29..3504.59 rows=1 width=14) (actual time=13.503..13.504 rows=1 loops=1)\n  Group Key: season_code\n  Buffers: shared hit=133 read=133 written=103\n  ->  Index Only Scan using game_event_playtype_idx on game_event  (cost=0.29..3164.65 rows=67985 width=6) (actual time=0.018..10.413 rows=67557 loops=1)\n        Index Cond: (playtype = ANY ('{2FGM,2FGA,3FGM,3FGA,FTM,FTA}'::text[]))\n        Heap Fetches: 192\n        Buffers: shared hit=133 read=133 written=103\nPlanning Time: 0.097 ms\nExecution Time: 13.522 ms"
+    }
+  },
+  "rebuild": {
+    "games": 402,
+    "delete_seconds": 15.858648299996275,
+    "load_seconds": 208.9957700999803
+  },
+  "sizes_after_rebuild": {
+    "tables": {
+      "game_event": 74891264,
+      "raw_event": 29433856,
+      "possession": 18489344,
+      "raw_shot": 10403840,
+      "lineup_stint": 5046272,
+      "raw_boxscore_player": 2187264,
+      "lineup": 1974272,
+      "player_game_minutes": 1458176,
+      "raw_boxscore_team": 368640,
+      "raw_game": 204800,
+      "game_quality": 139264,
+      "player": 122880,
+      "team_season": 49152,
+      "roster_registration": 40960,
+      "team": 32768,
+      "raw_api_response": 32768,
+      "person_game_link": 32768,
+      "mcp_row_usage": 24576,
+      "season_progress": 16384,
+      "game_source_state": 16384,
+      "mcp_row_daily_budget": 16384,
+      "mcp_row_budget_policy": 16384,
+      "raw_api_fetch": 16384
+    },
+    "indexes": {
+      "game_event_pkey": 7077888,
+      "raw_event_pkey": 7053312,
+      "game_event_possession_idx": 4759552,
+      "game_event_playtype_idx": 2760704,
+      "game_event_away_lineup_idx": 2670592,
+      "game_event_home_lineup_idx": 2596864,
+      "game_event_stint_idx": 2547712,
+      "game_event_player_idx": 2433024,
+      "possession_pkey": 2244608,
+      "possession_clutch_idx": 2129920,
+      "raw_shot_pkey": 2031616,
+      "possession_defense_lineup_idx": 1122304,
+      "possession_offense_lineup_idx": 1114112,
+      "possession_stint_idx": 1032192,
+      "lineup_stint_pkey": 679936,
+      "lineup_pkey": 581632,
+      "lineup_stint_away_lineup_idx": 565248,
+      "lineup_stint_home_lineup_idx": 532480,
+      "player_game_minutes_pkey": 466944,
+      "raw_boxscore_player_pkey": 401408,
+      "player_game_minutes_team_idx": 106496,
+      "raw_boxscore_player_team_idx": 106496,
+      "player_game_minutes_player_idx": 106496,
+      "lineup_player_5_idx": 98304,
+      "raw_boxscore_player_player_idx": 98304,
+      "lineup_player_3_idx": 90112,
+      "lineup_player_2_idx": 90112,
+      "lineup_player_1_idx": 90112,
+      "lineup_player_4_idx": 90112,
+      "lineup_team_code_idx": 90112,
+      "raw_boxscore_team_pkey": 90112,
+      "player_pkey": 40960,
+      "raw_game_pkey": 32768,
+      "raw_game_utc_date_idx": 32768,
+      "game_quality_pkey": 32768,
+      "team_season_team_code_idx": 16384,
+      "game_quality_excluded_idx": 16384,
+      "team_season_pkey": 16384,
+      "team_pkey": 16384,
+      "mcp_row_usage_usage_date_idx": 8192,
+      "person_game_link_pkey": 8192,
+      "raw_api_fetch_response_id_fetched_at_idx": 8192,
+      "raw_api_fetch_pkey": 8192,
+      "raw_api_response_current_idx": 8192,
+      "raw_api_response_identity_idx": 8192,
+      "game_source_state_pkey": 8192,
+      "roster_registration_response_array_key": 8192,
+      "roster_registration_pkey": 8192,
+      "roster_registration_team_idx": 8192,
+      "roster_registration_person_idx": 8192,
+      "season_progress_pkey": 8192,
+      "raw_api_response_pkey": 8192,
+      "person_game_link_player_unique": 8192,
+      "person_game_link_person_idx": 8192,
+      "mcp_row_budget_policy_pkey": 8192,
+      "mcp_row_daily_budget_pkey": 8192,
+      "mcp_row_usage_pkey": 8192
+    },
+    "total": 145014784
+  }
+}

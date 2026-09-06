@@ -305,7 +305,11 @@ def fingerprint_relations(
     assert_current_schema(connection, expected_schema)
     scope, extra_params = _scope_sql(gamecodes)
     params = (season_code, *extra_params)
-    lineup_scope, lineup_extra = _scope_sql(gamecodes, alias="event")
+    # Lineups are scoped through lineup_stint, not game_event: every event
+    # carries its stint's lineup ids, the two sets are measured equal on E2024
+    # and E2025, and lineup_stint keeps its lineup indexes after migration
+    # 0022 removed game_event's. See DECISIONS.md item 67.
+    lineup_scope, lineup_extra = _scope_sql(gamecodes, alias="stint")
     lineup_params = (season_code, *lineup_extra)
     queries: dict[str, tuple[str, tuple]] = {
         "game_event": (
@@ -320,9 +324,9 @@ def fingerprint_relations(
             _fingerprint_query(
                 "lineup",
                 "SELECT t.* FROM lineup t WHERE EXISTS ("
-                "SELECT 1 FROM game_event event WHERE "
+                "SELECT 1 FROM lineup_stint stint WHERE "
                 f"{lineup_scope} AND t.lineup_id IN "
-                "(event.home_lineup_id, event.away_lineup_id))",
+                "(stint.home_lineup_id, stint.away_lineup_id))",
                 "lineup_id",
             ),
             lineup_params,
