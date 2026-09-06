@@ -31,7 +31,7 @@
   "use strict";
 
   var STEP_MS = 26;      // between shots, once the section is on screen
-  var SETTLE_MS = 650;   // after the last shot, before the card opens
+  var SETTLE_MS = 640;   // after the last shot, before the card opens; equals --dur-move in style.css
   var CARD_MS = 6000;    // on-screen time the card stays, then it closes for good
   var DOT_R = 21;        // centimetres on the court, not pixels on the screen
 
@@ -176,7 +176,9 @@
           { opacity: 0, transform: "scale(0.2)" },
           { opacity: 1, transform: "scale(1)" }
         ],
-        { duration: 360, easing: "cubic-bezier(.2,.8,.3,1)", fill: "both" }
+        /* The same curve as --ease-move in style.css; the Web Animations API
+           cannot read a CSS variable, so the numbers are repeated here. */
+        { duration: 360, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "both" }
       );
       counter.textContent = String(++i);
       /* Held short of full: the remaining sliver belongs to the pause. */

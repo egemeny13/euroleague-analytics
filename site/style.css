@@ -32,6 +32,26 @@
 
   --gutter: clamp(1.25rem, 5vw, 5.5rem);
   --measure: 62ch;
+
+  /* Motion, measured 2026-09-06: eight different curves and eleven durations
+     were in this file, so nothing on the page moved like anything else. Now two
+     curves and three tempos, and every transition below picks from them.
+       move   = something travels or a value changes (a player, the bar, a number)
+       reveal = something appears or steps back (a reply, a card, a dimmed layer)
+       hover  = colour and border feedback under the cursor
+     Scripts that time themselves against these hold the same numbers:
+     SETTLE_MS in shots.js is --dur-move, SWAP_OUT_MS in lineups.js is 30% of it. */
+  --ease-move:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-hover: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-move:   640ms;
+  --dur-reveal: 380ms;
+  --dur-hover:  200ms;
+
+  /* Shape: fifteen radii were in use. Three now, and circles keep 50%. */
+  --r-sm:   4px;
+  --r-md:   8px;
+  --r-lg:   12px;
+  --r-pill: 999px;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -51,7 +71,7 @@ body {
 :focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
 }
 
 .skip {
@@ -65,7 +85,7 @@ body {
   background: var(--ink);
   color: var(--paper);
   padding: 0.6rem 1rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   text-decoration: none;
 }
 
@@ -152,7 +172,7 @@ body {
   font-size: 0.9rem;
   line-height: 1;
   padding: 0.7rem 1.15rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   text-decoration: none;
 }
 .button-solid:hover { background: var(--ball-deep); }
@@ -225,11 +245,8 @@ h1 {
   margin: 0;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   overflow: hidden;
-  box-shadow:
-    0 1px 2px rgba(16, 21, 28, 0.03),
-    0 22px 45px -30px rgba(16, 21, 28, 0.35);
 }
 
 .window-bar {
@@ -261,7 +278,7 @@ h1 {
 .app-avatar {
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: var(--r-md);
   flex: none;
   background: var(--tint, var(--ink));
   color: #fff;
@@ -269,7 +286,7 @@ h1 {
   font-weight: 700;
   display: grid;
   place-items: center;
-  transition: background 300ms ease;
+  transition: background var(--dur-hover) var(--ease-hover);
 }
 
 .window-state {
@@ -308,7 +325,7 @@ h1 {
   font-size: 0.98rem;
   line-height: 1.45;
   padding: 0.6rem 0.9rem;
-  border-radius: 15px 15px 5px 15px;
+  border-radius: var(--r-lg) var(--r-lg) var(--r-sm) var(--r-lg);
   text-align: left;
 }
 
@@ -334,8 +351,8 @@ h1 {
   visibility: hidden;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 420ms cubic-bezier(.2,.6,.2,1),
-              transform 420ms cubic-bezier(.2,.6,.2,1);
+  transition: opacity var(--dur-reveal) var(--ease-move),
+              transform var(--dur-reveal) var(--ease-move);
 }
 .reply.is-shown {
   visibility: visible;
@@ -362,7 +379,7 @@ h1 {
   align-items: center;
   gap: 0.45rem;
   border: 1px solid var(--hairline);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 0.25rem 0.75rem 0.25rem 0.25rem;
   font-size: 0.87rem;
 }
@@ -413,7 +430,7 @@ h1 {
   margin: 0 0.9rem 0.9rem;
   padding: 0.6rem 0.55rem 0.6rem 0.85rem;
   border: 1px solid var(--hairline);
-  border-radius: 11px;
+  border-radius: var(--r-lg);
   background: var(--paper);
 }
 
@@ -429,7 +446,7 @@ h1 {
   width: 24px;
   height: 24px;
   flex: none;
-  border-radius: 7px;
+  border-radius: var(--r-md);
   background: var(--hairline);
   position: relative;
 }
@@ -554,7 +571,7 @@ h1 {
 .chartbar {
   margin: 0.9rem 0 0;
   opacity: 0;
-  transition: opacity 260ms ease;
+  transition: opacity var(--dur-reveal) var(--ease-move);
 }
 .chartbar.is-running,
 .chartbar.is-settling { opacity: 1; }
@@ -584,7 +601,7 @@ h1 {
    easing of its own. The final run to full is the one deliberate glide, and it
    lasts exactly as long as the pause before the card opens. */
 .chartbar.is-settling .chartbar-fill {
-  transition: width 650ms cubic-bezier(.4, 0, .2, 1);
+  transition: width var(--dur-move) var(--ease-move);
 }
 
 /* A caption is a footnote, not a paragraph. It was set at 60ch and ran the
@@ -643,7 +660,7 @@ h1 {
 .crest {
   width: 11px;
   height: 11px;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: var(--club);
   flex: none;
 }
@@ -655,7 +672,7 @@ h1 {
 }
 
 /* While one shot is being talked about, the rest step back. */
-#shot-marks { transition: opacity 320ms ease; }
+#shot-marks { transition: opacity var(--dur-reveal) var(--ease-move); }
 #shot-marks.is-dimmed { opacity: 0.22; }
 
 .shot-halo {
@@ -676,7 +693,7 @@ h1 {
   grid-area: 1 / 1;
   visibility: hidden;
   opacity: 0;
-  transition: opacity 300ms ease;
+  transition: opacity var(--dur-reveal) var(--ease-move);
 }
 .window-body > .exchange.is-current {
   visibility: visible;
@@ -694,7 +711,7 @@ h1 {
   color: var(--ink-faint);
   visibility: hidden;
   opacity: 0;
-  transition: opacity 280ms ease;
+  transition: opacity var(--dur-reveal) var(--ease-move);
 }
 .working.is-shown { visibility: visible; opacity: 1; }
 
@@ -735,7 +752,7 @@ h1 {
   width: min(17rem, 74%);
   transform: translate(-50%, 0);
   opacity: 0;
-  transition: opacity 340ms ease, transform 340ms cubic-bezier(.2,.7,.3,1);
+  transition: opacity var(--dur-reveal) var(--ease-move), transform var(--dur-reveal) var(--ease-move);
   pointer-events: none;
 }
 .callout.is-open {
@@ -761,9 +778,8 @@ h1 {
   background: var(--surface);
   border: 1px solid var(--hairline);
   border-left: 3px solid var(--ball);
-  border-radius: 9px;
+  border-radius: var(--r-md);
   padding: 0.8rem 0.95rem 0.85rem;
-  box-shadow: 0 18px 38px -26px rgba(26, 21, 18, 0.5);
 }
 
 .callout-flag {
@@ -776,7 +792,7 @@ h1 {
   line-height: 1;
   letter-spacing: 0.01em;
   padding: 0.28rem 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
 }
 
 .callout-who {
@@ -806,7 +822,7 @@ h1 {
 .callout-score i {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   background: var(--club);
   flex: none;
 }
@@ -846,7 +862,7 @@ h1 {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   padding: 0.75rem;
   /* A marker walking on or off travels past the sideline. Nothing it does may
      end up drawn on the page outside this card. */
@@ -863,7 +879,7 @@ h1 {
    it is the one thing the eye is sent to. */
 .floor-paint {
   fill: transparent;
-  transition: fill 520ms ease;
+  transition: fill var(--dur-move) var(--ease-move);
 }
 .floor-paint.is-empty { fill: rgba(234, 88, 12, 0.10); }
 
@@ -886,9 +902,9 @@ h1 {
   align-items: center;
   gap: 0.28rem;
   transition:
-    left 620ms cubic-bezier(.4, 0, .2, 1),
-    top 620ms cubic-bezier(.4, 0, .2, 1),
-    opacity 380ms ease;
+    left var(--dur-move) var(--ease-move),
+    top var(--dur-move) var(--ease-move),
+    opacity var(--dur-reveal) var(--ease-move);
 }
 
 .player-disc {
@@ -902,8 +918,7 @@ h1 {
   font-family: var(--figures);
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
-  box-shadow: 0 1px 0 rgba(26, 21, 18, 0.18);
-  transition: background 380ms ease, transform 380ms ease;
+  transition: background var(--dur-reveal) var(--ease-move), transform var(--dur-reveal) var(--ease-move);
 }
 
 .player-name {
@@ -945,7 +960,7 @@ h1 {
   transform: translateX(-50%);
   margin: 0;
   padding: 0.35rem 0.8rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--ball);
   color: #fff;
   max-width: none;
@@ -988,10 +1003,10 @@ h1 {
   100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
 }
 
-.unit-metric { border-radius: 8px; }
-.unit-metric.is-changing { animation: figure-pulse 760ms ease-out; }
+.unit-metric { border-radius: var(--r-md); }
+.unit-metric.is-changing { animation: figure-pulse var(--dur-move) var(--ease-move); }
 .unit-figure.is-changing {
-  animation: figure-swap 640ms cubic-bezier(.4, 0, .2, 1);
+  animation: figure-swap var(--dur-move) var(--ease-move);
   transform-origin: left center;
 }
 
@@ -1004,7 +1019,7 @@ h1 {
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   color: var(--ball);
-  transition: color 380ms ease;
+  transition: color var(--dur-reveal) var(--ease-move);
 }
 /* Both numbers are measured, so both are the measured-value colour. Muting the
    negative one would be the page taking a side about which unit is the real
@@ -1096,10 +1111,10 @@ h1 {
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 0.6rem 1.05rem;
   cursor: pointer;
-  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+  transition: border-color var(--dur-hover) var(--ease-hover), background var(--dur-hover) var(--ease-hover), color var(--dur-hover) var(--ease-hover);
 }
 .chip:hover { border-color: var(--ink-faint); }
 .chip.is-chosen {
@@ -1113,7 +1128,7 @@ h1 {
   min-height: 9.5rem;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   padding: 1.4rem 1.5rem;
 }
 
@@ -1256,7 +1271,7 @@ main, .topbar { position: relative; z-index: 1; }
   color: var(--ink-faint);
   background: var(--paper-deep);
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 0.5rem 0.75rem;
 }
 .toolcall-name { color: var(--ink-soft); }
@@ -1366,10 +1381,10 @@ main, .topbar { position: relative; z-index: 1; }
   color: var(--ink-soft);
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 0.5rem 0.9rem;
   cursor: pointer;
-  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+  transition: border-color var(--dur-hover) var(--ease-hover), background var(--dur-hover) var(--ease-hover), color var(--dur-hover) var(--ease-hover);
 }
 .chip:hover { border-color: var(--ink-faint); color: var(--ink); }
 /* Spent, not disabled. It stays clickable, and the mark is only a record of
@@ -1412,7 +1427,7 @@ main, .topbar { position: relative; z-index: 1; }
   padding: 0.75rem 0.75rem 0.75rem 1.05rem;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
 }
 .address code {
   font-family: var(--figures);
@@ -1430,7 +1445,7 @@ main, .topbar { position: relative; z-index: 1; }
   color: #fff;
   background: var(--ink);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 0.5rem 0.95rem;
   cursor: pointer;
   flex: none;
@@ -1554,7 +1569,7 @@ main, .topbar { position: relative; z-index: 1; }
   font-size: 0.82em;
   background: var(--paper-deep);
   border: 1px solid var(--hairline);
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   padding: 0.1em 0.4em;
   overflow-wrap: break-word;
 }
@@ -1579,7 +1594,7 @@ main, .topbar { position: relative; z-index: 1; }
   padding: 1rem 1.15rem;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   overflow-x: auto;
   font-family: var(--figures);
   font-size: 0.82rem;
@@ -1763,7 +1778,7 @@ main, .topbar { position: relative; z-index: 1; }
      paint a block over everything between. Cloned, each line gets its own band,
      which is what a pen would leave. */
   padding: 0 0.15em;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   color: var(--ink-soft);
   background-image: linear-gradient(var(--hairline), var(--hairline));
   background-repeat: no-repeat;
@@ -1773,7 +1788,7 @@ main, .topbar { position: relative; z-index: 1; }
   background-size: 0 0.92em;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
-  transition: background-size 620ms cubic-bezier(.2, .7, .3, 1), color 420ms ease;
+  transition: background-size var(--dur-move) var(--ease-move), color var(--dur-reveal) var(--ease-move);
 }
 .marker.is-marked {
   color: var(--ink);

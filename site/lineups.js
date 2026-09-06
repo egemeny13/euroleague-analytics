@@ -35,7 +35,7 @@
 
   var HOLD_STRONG_MS = 2800;  // the first unit, before anything moves
   var LEAVE_MS = 700;         // Birch walking off
-  var SPREAD_MS = 620;        // the four who stay, opening up
+  var SPREAD_MS = 640;        // the four who stay, opening up; equals --dur-move in style.css
   var ARRIVE_MS = 760;        // Baldwin walking on
   var HOLD_WEAK_MS = 4200;    // the second unit, before it goes back
 
