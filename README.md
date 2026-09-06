@@ -218,6 +218,7 @@ Both paths must agree with the published `<expected_answer>`.
 - **Privacy Policy**: [euroleague.egemenyucelen.me/privacy.html](https://euroleague.egemenyucelen.me/privacy.html)
 - **Support & FAQ**: [euroleague.egemenyucelen.me/support.html](https://euroleague.egemenyucelen.me/support.html)
 - **Sponsorship One-Pager**: [`docs/SPONSOR_ONE_PAGER.md`](docs/SPONSOR_ONE_PAGER.md)
+- **Scope of version 1**: [`docs/SCOPE.md`](docs/SCOPE.md) — what the eleven tools do, what is left out on purpose, and why
 - **Decision Log**: [`DECISIONS.md`](DECISIONS.md)
 - **Phase Reports**: [`docs/`](docs/)
 

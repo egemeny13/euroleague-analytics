@@ -3704,6 +3704,47 @@ the test fails. If the site ever moves to a host that can read
 `Accept-Language`, the redirect moves server-side and the inline script goes;
 the storage key and `?lang=en` contract stay so old links keep working.
 
+## 65. Version 1 is scope-frozen at eleven tools, and the API's season surface is left out on purpose
+
+**Decided 2026-09-06.** The owner asked whether the server was finished, whether
+every tool was there, and whether the public API had been used to the end.
+Measured that day: eight roadmap phases closed, the goal queue empty, eleven
+tools in the registry, and the three things the project's first paragraph
+promises - exact possessions, four factors, lineup on/off - all served.
+
+**What the API still holds, measured rather than assumed.** Fifteen season-level
+URLs were probed and recorded in `exploration/SEASON_ENDPOINT_PROBE.md`. The API
+publishes season totals per player and per club, standings after each round, the
+season schedule, and a v3 statistics surface. A seventh v1 game endpoint,
+`Evolution`, gives the score margin by minute. None of these is read by the
+warehouse, and this decision says none of them will be in version 1.
+
+**Why leave them out.** Each is either a number the warehouse already derives
+exactly from the event stream, or a total the league publishes that carries no
+derived value. Loading the league's own season totals would put a second answer
+beside ours with no way to say which is right; `CLAUDE.md` calls that a wrapper
+and rules it out of scope. Standings are a sort over `raw_game`. The schedule is
+already read for settlement and answers when a team plays, not how.
+
+**Where the sorting lives.** `docs/SCOPE.md` holds three lists: what version 1
+does, what it leaves out on purpose with the reason per row, and what it will
+never do. `tests/test_scope_document.py` reads the tool names from the registry
+and fails when the first list and the registry disagree in either direction, so
+a tool cannot be added or removed without the document following.
+
+**What "done" means after this.** Done in the rules' sense: every gate passed,
+every metric tested, the surface frozen. Not done in `CONTEXT.md`'s sense,
+because nobody outside the invite list has judged it. That judgement is
+`ROADMAP.md` Phase 9, and the goal queue fills only from what Phase 9 returns,
+never from what the API still has.
+
+**Condition.** A tool moves from the second list to the first by a decision here
+with its reason, a validation test with ground truth or an invariant, and a row
+in `docs/SCOPE.md`. A pull request that adds a tool without those three is
+incomplete, whatever else it does. If Phase 9 returns a request for one of the
+left-out surfaces from a reader who knows the game, that is the evidence this
+decision asks for, and it reopens.
+
 ## Rules to add to the project instruction file
 
 ```
