@@ -3518,10 +3518,20 @@ screenshots of real conversations for that section; the same three costs from
 the Decision 60 table apply and are accepted. The replay record in the source
 comments stays, so the figures in the screenshots remain checkable.
 
-**Status at the time of writing.** Shot chart and floor: landed. Ask-it-yourself
-recordings: the Fenerbahce clip exists (it is the hero's); the other three are
-being recorded. Hard-section screenshots: not started. Each lands in its own
-commit and this entry is amended when the section is complete.
+**Status, end of 2026-09-06.** All landed on `site/polish`. Shot chart and floor:
+recordings of themselves. Ask-it-yourself: three chips, three recordings
+(Fenerbahce five = the hero's file; fastest team, 78.03 possessions per game;
+clutch at two minutes / three points, 646 possessions). A fourth, Horton-Tucker
+on/off, was recorded and dropped: `el_get_player_on_off` returned nothing three
+times and the assistant concluded the player had not joined the club - a tool
+question, open. Hard section: the "screenshots" became short recordings after
+the first take showed an answer three screens long; each clip ends resting on
+the finished answer so it can be read. Case 2's heading was re-read against its
+recording ("It refuses the flashy answer."). What every recording taught about
+questions: name the season, the thresholds and the warehouse in the question
+itself, or a fresh incognito chat asks for clarification instead of calling a
+tool. The recipe and the scripts live with the launch material outside this
+repository (`hero-recording-brief.md`, `recorder/`).
 
 ## Rules to add to the project instruction file
 
