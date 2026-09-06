@@ -4006,6 +4006,42 @@ script that reads the live variable, or that calls
 shipping quietly - the same shape of guard `test_view_migration_gate.py` adds
 here.
 
+## 72. Possession end reasons and timeouts are served through the existing tools
+
+**Decided 2026-09-07.** `possession.end_reason` was already populated on
+every row and already exposed as a filter on `el_get_possessions`; the gap
+was aggregation and discoverability, not data. `el_get_play_by_play` already
+returns timeout events (`TOUT`, `TOUT_TV`, `CCH`) via `playtype`; the gap was
+that its description did not say so. Neither gap needed a new tool, a new
+view, or a new column.
+
+**The measurement.** Measured 2026-09-07 on E2025 (402 games): `end_reason`
+is one of exactly five values on every possession - `made_shot` 24,536,
+`defensive_rebound` 18,654, `turnover` 9,962, `made_free_throw` 5,295,
+`end_of_period` 1,035 - summing to the season's 59,482 possessions. Timeout
+codes `TOUT` (2,633, team-level, blank player), `TOUT_TV` (1,592, no team),
+`CCH` (729, team-level) already come back from `el_get_play_by_play` when
+filtered by `playtype`. Rehearsed the end-reason invariant on the disposable
+database against both loaded seasons: E2024 (47,829 possessions) and E2025
+(59,482 possessions) each sum exactly and show no value outside the five.
+`docs/evidence/possession_end_reasons_rehearsal.json`.
+
+**The change.** `get_possessions` gained an `aggregate_by` argument
+(`team` | `end_reason` | `team_and_end_reason`), used only when
+`aggregate=true`; `aggregate=true` with no `aggregate_by` keeps today's
+per-team summary unchanged. `end_reason` and `team_and_end_reason` add
+`share_of_team_possessions`, computed as a window function so a caller can
+read, in one query, how a team's possessions split across the five ways they
+end. `el_get_possessions`'s `end_reason` filter description now names all
+five real values and states that `other` is a reserved value the measured
+data has never populated. `el_get_play_by_play`'s description now names the
+three timeout `playtype` codes and says to filter by `playtype` to list them
+with their clock.
+
+**Condition.** A sixth `end_reason` value appearing in the data fails
+`tests/test_possession_end_reasons.py` and is a decision, not a silent
+addition to the known set or to the `other` catch-all.
+
 ## Rules to add to the project instruction file
 
 ```

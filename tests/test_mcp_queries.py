@@ -873,6 +873,43 @@ def test_possessions_aggregate_rejects_strings_and_null():
         get_possessions(cursor, {"season": "E2024", "aggregate": None})
 
 
+def test_possessions_aggregate_by_end_reason_returns_one_row_per_team_and_reason() -> None:
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2025",)]),
+            (
+                ["team_code", "end_reason", "possessions", "share_of_team_possessions"],
+                [("BER", "turnover", 700, 14.02)],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(402, 402, None, None, 402, None)],
+            ),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+    response = get_possessions(
+        cursor, {"season": "E2025", "aggregate": True, "aggregate_by": "team_and_end_reason"}
+    )
+    assert response["rows"][0]["end_reason"] == "turnover"
+    assert "group by 1, 2" in cursor.statements[1]
+    assert "share_of_team_possessions" in cursor.statements[1]
+
+
+def test_possessions_reject_an_unknown_aggregate_by() -> None:
+    cursor = RecordingCursor([(["season_code"], [("E2025",)])])
+    with pytest.raises(ValueError, match="aggregate_by must be one of"):
+        get_possessions(cursor, {"season": "E2025", "aggregate": True, "aggregate_by": "lineup"})
+
+
 @pytest.mark.parametrize(
     ("query_fn", "extra_args"),
     [

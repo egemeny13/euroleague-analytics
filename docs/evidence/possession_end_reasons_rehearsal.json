@@ -1,0 +1,30 @@
+{
+  "E2024": {
+    "schema": "space_e2024",
+    "total_possessions": 47829,
+    "counted_total": 47829,
+    "matches": true,
+    "by_end_reason": {
+      "made_shot": 19759,
+      "defensive_rebound": 15011,
+      "turnover": 8129,
+      "made_free_throw": 4101,
+      "end_of_period": 829
+    },
+    "unknown_end_reasons": []
+  },
+  "E2025": {
+    "schema": "space_e2025",
+    "total_possessions": 59482,
+    "counted_total": 59482,
+    "matches": true,
+    "by_end_reason": {
+      "made_shot": 24536,
+      "defensive_rebound": 18654,
+      "turnover": 9962,
+      "made_free_throw": 5295,
+      "end_of_period": 1035
+    },
+    "unknown_end_reasons": []
+  }
+}
