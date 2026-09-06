@@ -62,6 +62,22 @@
   var index = 0;
   var timer = null;
 
+  /* The screen recording, when there is one (Decision 60). demo-video.js owns
+     loading, playing, the one-at-a-time rule and the progress bar; it fires
+     "demo-video-ready" on the video once the browser can play the file. This
+     script only stops cycling the drawn window at that point. A missing or
+     unplayable file fires nothing, and the page behaves as it did before the
+     recording existed. */
+  var video = document.getElementById("hero-video");
+  var hasVideo = false;
+
+  if (video) {
+    video.addEventListener("demo-video-ready", function () {
+      hasVideo = true;
+      window.clearTimeout(timer);
+    });
+  }
+
   function parts(exchange) {
     return {
       question: exchange.getAttribute("data-question") || "",
@@ -115,6 +131,7 @@
   }
 
   function play() {
+    if (hasVideo) return;
     show(index);
     reset(exchanges[index]);
     var p = parts(exchanges[index]);

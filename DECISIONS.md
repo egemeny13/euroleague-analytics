@@ -3424,6 +3424,163 @@ not establish that the live `#ask` chips further up the page will ever answer
 questions of this shape: those run a locked allowlist of recorded answers, and
 Decision 6's live endpoint is still unbuilt.
 
+## 60. The hero shows a screen recording of the real thing, and the drawn window is its fallback
+
+**Decided 2026-09-06 by the owner**, reversing one rule in the launch site's
+design record (section 10: "No autoplaying video anywhere. The hero conversation
+is text and CSS"). His words, reviewing the live page: the drawn assistant window
+reads as a fake window, and he wanted "a screen recording, like a demo".
+
+**Why the drawn window was there, and why the reason no longer wins.** Section 9
+of the design record forbids imitating anyone's interface, and the window was
+built neutral for that reason: a name, a brand colour, no logo, no copied
+chrome. That neutrality is exactly what reads as fake. A recording of Claude
+with this server connected is not an imitation; it is the product doing the
+thing the page asks the visitor to go and do. The imitation rule stands. The
+no-video rule is the one that gives way, and the costs it was protecting
+against are accepted knowingly:
+
+| Cost the old rule avoided | What happens now |
+|---|---|
+| Weight | One recording, 12-18 s, cropped to the app window, target 2-3 MB as H.264 plus WebM, `preload="metadata"`, poster frame first |
+| Goes stale when the client's interface changes | Accepted. Re-record; the brief for doing so lives with the launch material outside this repository |
+| Cannot be translated | Accepted. The Turkish page, when authored, needs its own recording or keeps the drawn window |
+| Blurs on displays the author did not own | Recorded at 1280 px wide with the client's text one step larger, shown at 560 px, so it is downscaled everywhere |
+
+**The condition.** The recording is an upgrade, never a dependency. `hero.js`
+hides the drawn window and stops cycling it only when the browser fires
+`canplay`; a missing or unplayable file leaves the page exactly as it was on
+2026-09-05. The video is muted, loops, plays only while on screen, and under
+`prefers-reduced-motion` shows its poster and does not run. Autoplay of a muted
+inline video is what browsers permit without a gesture; if a browser refuses,
+the poster stands and nothing errors.
+
+**What is not decided.** Whether other sections get recordings. The "Ask it
+something hard" windows stay HTML (Decision 59): they are transcripts read
+against a replay record, and a recording of them would be a picture of homework.
+
+**Recorded outside this repository:** the shot list the owner records from,
+`E:\dev\euroleague-analytics-launch\hero-recording-brief.md`. The recording
+itself lands as `site/hero-demo.mp4`, `site/hero-demo.webm` and
+`site/hero-demo.jpg`. Until it does, the slot is empty and the window shows.
+
+**Landed 2026-09-06, second take.** The first take was rejected by the owner
+for four things and each is now a rule for any re-recording: no cursor in
+frame (the Claude-in-Chrome extension draws one at page centre on every tool
+call, so nothing may call the extension while the tab is being captured); no
+personal name (the greeting keeps the logo and reads "Good evening"); typing at
+a human pace, character by character; and the whole answer visible (the
+transcript scrolls to its end before the clip stops). Two further takes came
+back in Turkish under the account's cross-conversation memory; the recording
+is made in an incognito chat on Low effort, which gives a short English answer.
+
+## 61. Every animated figure on the site plays as a recording of itself; the scripts become fallbacks
+
+**Decided 2026-09-06 by the owner**, extending Decision 60 from the hero to the
+rest of the page. His words: the site should play video recordings rather than
+run scripts, for the shot chart, the substitution floor, the "Now ask it
+yourself" window and the "Ask it something hard" windows alike.
+
+**Two kinds of recording, and they are not the same claim.**
+
+- *The shot chart and the floor* are this site's own figures. There is no
+  assistant to film, so they are recorded from this page itself - Playwright,
+  CDP screencast at 2x, cropped to the card - and the recording is, pixel for
+  pixel, the drawn animation. Nothing is imitated and nothing is new; what
+  changes is that every visitor now sees the same frames at the same tempo,
+  and a slow device no longer stutters the pour.
+- *The "Now ask it yourself" chips* were a drawn window replaying canned
+  answers. Each chip now plays a real recording of Claude answering that
+  question over this server, made the way the hero was (Decision 60). The
+  chips were never live (Decision 6's endpoint is unbuilt), so nothing is lost;
+  what is gained is that the window stops being a drawing of an assistant.
+  Decision 9's rule against imitating anyone's interface is what made the
+  owner reject the drawn window, and it is why the answer is a recording and
+  not a closer imitation.
+
+**The condition, shared with Decision 60.** A recording is an upgrade, never a
+dependency. Every drawn figure stays in the markup and is what shows until the
+browser fires `canplay`; a missing or unplayable file leaves the page as it was.
+Under `prefers-reduced-motion` the drawn figure shows in its finished state and
+no recording starts. `site/demo-video.js` is the single place this rule lives.
+
+**Numbers beside a recording follow its clock.** The shot counter and the floor's
+net rating and possessions used to be driven by the same script that drew the
+animation. They now read the video's `currentTime` against beats measured in
+the clip (`POUR_START` in shots.js; `LEAVE_AT`, `ARRIVE_AT`, `BACK_AT` in
+lineups.js). **Re-recording a clip means re-measuring those numbers**; the
+comments say how they were read.
+
+**What this reverses.** Decision 59 kept "Ask it something hard" as HTML
+transcript rather than screenshots for three reasons: staleness, translation,
+and sharpness on unknown displays. The owner has weighed those and chosen
+screenshots of real conversations for that section; the same three costs from
+the Decision 60 table apply and are accepted. The replay record in the source
+comments stays, so the figures in the screenshots remain checkable.
+
+**Status, end of 2026-09-06, after the owner's review of the built page.**
+Three of the four moves above were reversed the same evening, each with a reason
+worth keeping:
+
+- **The shot chart and the floor are scripts again.** Their recordings were
+  taken through the CDP screencast, which emits frames only as the compositor
+  produces them; the result ran visibly below the scripts' own frame rate and
+  the owner saw it at once (his note: the frame rate had dropped). A recording of an animation this
+  page can run itself gains nothing and loses smoothness. The two court cards
+  keep one change from that day: their ground is now `--stage`, the colour
+  sampled from the recorded Claude window, so a drawing and a recording read
+  as the same kind of card.
+- **"Now ask it yourself" is gone.** With the hero already showing the assistant
+  answer a question, a second window that only replayed clips was a repeat;
+  the owner removed it rather than keep three more recordings on the page.
+  The clips (fastest team, clutch), `asks.json`, `ask.js`'s first block and the
+  section's styles were deleted. The finding about Horton-Tucker on/off
+  (`el_get_player_on_off` returning nothing) stands as an open tool question.
+- **No recording scrolls any more.** The scripted scroll at the end of each
+  take ran a three-screen answer past the reader in two seconds; the middle
+  was never readable. The cuts now hold the finished answer as stills - top,
+  middle, bottom for the two long answers, top and bottom for the others -
+  four seconds each with a short dissolve. No re-recording was needed: the
+  stills are frames from the existing takes. A rule for cutting these: tab
+  capture emits no frames while the screen is static, so every segment is
+  padded to a fixed duration before the dissolve offsets are computed, or the
+  dissolves land early.
+
+What stands: the hero recording (Decision 60), the three "Ask it something
+hard" recordings, now numbered 01-03 and separated by hairlines at the owner's
+request, and Case 2's re-read heading ("It refuses the flashy answer.").
+
+The three hard-section clips open on the question already sent: the owner
+judged that watching it typed a fourth time, after the hero, showed the
+visitor nothing new.
+
+**Second review, same night, clip by clip.** The stills-with-dissolve cut was
+itself rejected: the dissolve read as an effect, and two of the four clips had
+answers that fit the frame and needed no scroll or still at all. The rule that
+came out of it: **if the answer fits, end on it and hold; if it does not, either
+cut hard between as many scenes as the answer has parts (the clutch answer has
+three - text, chart, verdict), or re-record with a slow scroll written into the
+capture so the whole answer passes at reading speed.** Case 3 was re-recorded
+that way (the live answer changed in wording, not in figures). No dissolves
+anywhere. The page was also pulled in toward its centre line at the owner's
+request (columns 1180 to 1100 px, rails 1280 to 1200, a wider gutter).
+
+**Playback rules, set by the owner the same evening and kept in
+`site/demo-video.js` alone:** nothing loads until its host is within half a
+screen (`preload="none"`, so a visitor who leaves from the hero pays for no
+clip); nothing plays until it is on screen, and it pauses when it leaves or the
+tab hides; only one recording plays at a time, the highest on the page; and a
+2 px progress bar sits under each recording, drawn in ink on the court's
+hairline because progress is not a measured value. The hero recording now
+follows the same file instead of its own copy of the logic. The WebM copies
+were dropped - for these mostly-still clips VP9 came out larger than H.264, and
+H.264 plays everywhere - as was the unused `preview.mp4` (6.6 MB). What
+every recording taught about questions: name the season, the thresholds and the
+warehouse in the question itself, or a fresh incognito chat asks for
+clarification instead of calling a tool. The recipe and the scripts live with
+the launch material outside this repository (`hero-recording-brief.md`,
+`recorder/`).
+
 ## Rules to add to the project instruction file
 
 ```

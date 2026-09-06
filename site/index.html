@@ -45,7 +45,21 @@
         </div>
       </div>
 
-      <div class="hero-demo">
+      <div class="hero-demo" id="hero-demo" data-demo-host>
+        <!-- A recording of the real thing: Claude, this server connected, one
+             question asked and answered. Decision 60. Loading, playing, the
+             one-at-a-time rule and the progress bar are demo-video.js's, the
+             same as every other recording on the page. If the file is missing
+             or cannot play, the host never gets .has-video and the drawn window
+             below carries on exactly as before - the recording is an upgrade,
+             never a dependency. Under prefers-reduced-motion the drawn window
+             shows its finished state and nothing loads. -->
+        <video class="hero-video demo-video" id="hero-video" muted loop playsinline
+               preload="none" poster="hero-demo.jpg"
+               aria-label="Claude, with EuroLeague Analytics connected, answering which five wins games for Fenerbahce">
+          <source src="hero-demo.mp4" type="video/mp4">
+        </video>
+
         <figure class="window" aria-labelledby="demo-caption">
           <div class="window-bar">
             <span class="window-app">
@@ -219,6 +233,10 @@
              chart finishes filling. Its position is computed from that shot's
              own coordinates, so it cannot drift away from the dot it points
              at. Every fact in it was read out of the play-by-play. -->
+        <!-- The overlay is inset by the card's padding, so the card's
+             percentage position is a percentage of the court and not of the
+             frame around it - the same arrangement as .floor-players. -->
+        <div class="court-overlay">
         <div class="callout" id="winner-card" hidden>
           <span class="callout-leader" aria-hidden="true"></span>
           <div class="callout-body">
@@ -260,6 +278,7 @@
           </div>
         </div>
         </div>
+        </div>
 
         <!-- The bar is the anticipation. Without it the chart fills in under
              three seconds with no warning and the card that follows arrives
@@ -272,6 +291,7 @@
             <span class="chartbar-fill" id="chart-fill"></span>
           </div>
         </div>
+        <p class="demo-hint">Click the court to pause.</p>
 
         <!-- Short, but neither claim may be dropped: free throws are absent for
              a reason, and the four dots behind the baseline are real. A caption
@@ -359,75 +379,9 @@
 
           <p class="floor-empty" id="floor-empty" hidden>No centre on the floor</p>
         </div>
+        <p class="demo-hint">Click the floor to pause.</p>
 
       </div>
-    </div>
-  </section>
-
-  <section class="ask" id="ask">
-    <div class="ask-inner">
-      <h2>Now ask it yourself.</h2>
-      <p class="ask-lede">
-        The same window, and this time you drive it. Each answer was produced by
-        the same query your own assistant would run — no number here was typed
-        by hand.
-      </p>
-
-      <!-- The same window component as the hero, so the visitor recognises
-           where they are: this is what it looks like once it is connected. The
-           chips sit where the text field is, as suggestions, because a chip is
-           the only input this can safely accept. -->
-      <figure class="window ask-window">
-        <div class="window-bar">
-          <span class="window-app">
-            <span class="app-avatar" style="--tint:#1A1512">You</span>
-            <span>Your assistant</span>
-          </span>
-          <span class="window-state"><i class="live-dot"></i>EuroLeague Analytics connected</span>
-        </div>
-
-        <!-- THE EMPTY STATE IS THE INVITATION, and it used to be an
-             instruction: "Pick one of the questions below." in faint grey, in
-             an otherwise empty box. The owner, reading the built page as a
-             visitor: this section is pale and motionless, so I do not feel like
-             clicking anything.
-
-             The scorer is the character, and he is the one thing on this page
-             that is waiting for you. He is at the scorer's table, which is what
-             this project is - somebody writing down every event as it happens.
-             The pen is the only orange in the drawing because the pen is the
-             part doing the recording.
-
-             Two other directions were drawn and are one line of markup away:
-             site/_mascots.html holds all three side by side. He is removed from
-             the panel by ask.js the moment a question is asked, which is the
-             point of him: he was waiting, and now he has gone to read. -->
-        <div class="window-body ask-body" id="ask-answer" aria-live="polite">
-          <div class="ask-empty">
-            <svg class="mascot" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-              <g class="mascot-body">
-                <circle cx="34" cy="24" r="12.5" stroke="var(--ink-soft)" stroke-width="2.2"/>
-                <g class="mascot-eyes">
-                  <circle cx="30" cy="23" r="2.6" fill="var(--ink)"/>
-                  <circle cx="39" cy="23" r="2.6" fill="var(--ink)"/>
-                </g>
-                <path d="M16 56 A18 18 0 0 1 52 56" stroke="var(--ink-soft)" stroke-width="2.2"/>
-                <path d="M6 56 H74" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
-                <path d="M48 56 V44 H70 V56" stroke="var(--ink-faint)" stroke-width="1.8"/>
-                <path d="M53 51 H65 M53 47 H65" stroke="var(--ink-faint)" stroke-width="1.8"/>
-                <path d="M58 46 L67 33" stroke="var(--ink-soft)" stroke-width="2.2" stroke-linecap="round"/>
-                <path d="M67 33 L70 29" stroke="var(--ball)" stroke-width="3.2" stroke-linecap="round"/>
-              </g>
-            </svg>
-            <p class="ask-invite">
-              <b>Ask me something.</b>
-              <span>Pick one of the questions below and I will go and read it.</span>
-            </p>
-          </div>
-        </div>
-
-        <div class="chips" id="chips" role="group" aria-label="Questions you can ask"></div>
-      </figure>
     </div>
   </section>
 
@@ -582,7 +536,14 @@
           </p>
         </div>
 
-        <figure class="window deep-window">
+        <!-- Recorded 2026-09-06 (Decision 61): Claude, this server connected,
+             asked exactly this, Medium effort. The drawn transcript below is the
+             fallback and the reduced-motion version; its replay record stays in
+             the comments. -->
+        <figure class="window deep-window" data-demo-host>
+          <video class="demo-video" muted playsinline preload="none" poster="hard-1.jpg" aria-hidden="true">
+            <source src="hard-1.mp4" type="video/mp4">
+          </video>
           <div class="window-bar">
             <span class="window-app">
               <span class="app-avatar" style="--tint:#C15F3C">C</span>
@@ -624,16 +585,20 @@
 
       <article class="deep-case deep-case-flip">
         <div class="deep-copy on-court">
-          <h3>It takes its own answer back.</h3>
+          <h3>It refuses the flashy answer.</h3>
           <p>
             Every lineup response carries the possessions behind it and a
             warning that small samples are noise. An assistant that reads its
-            own tool output will act on that — and the second answer is the
-            real one.
+            own tool output acts on that: the +76 five on 54 possessions is
+            named and set aside, and the one it would repeat out loud is the
+            one with real minutes.
           </p>
         </div>
 
-        <figure class="window deep-window">
+        <figure class="window deep-window" data-demo-host>
+          <video class="demo-video" muted playsinline preload="none" poster="hard-2.jpg" aria-hidden="true">
+            <source src="hard-2.mp4" type="video/mp4">
+          </video>
           <div class="window-bar">
             <span class="window-app">
               <span class="app-avatar" style="--tint:#C15F3C">C</span>
@@ -680,7 +645,10 @@
           </p>
         </div>
 
-        <figure class="window deep-window">
+        <figure class="window deep-window" data-demo-host>
+          <video class="demo-video" muted playsinline preload="none" poster="hard-3.jpg" aria-hidden="true">
+            <source src="hard-3.mp4" type="video/mp4">
+          </video>
           <div class="window-bar">
             <span class="window-app">
               <span class="app-avatar" style="--tint:#C15F3C">C</span>
@@ -774,6 +742,7 @@
 </footer>
 
 <script src="hero.js" defer></script>
+<script src="demo-video.js" defer></script>
 <script src="shots.js" defer></script>
 <script src="lineups.js" defer></script>
 <script src="ask.js" defer></script>
