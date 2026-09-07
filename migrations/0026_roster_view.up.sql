@@ -26,7 +26,7 @@ registration as (
         season_code, team_code, source_person_code, jersey_number, position_name,
         height_cm, weight_kg, birth_date, country_code, start_at, end_at
     from roster_registration where role_code = 'J'
-    order by season_code, team_code, source_person_code, start_at desc
+    order by season_code, team_code, source_person_code, start_at desc, source_registration_id desc
 )
 select
     b.season_code, b.team_code, b.player_id, p.display_name, l.source_person_code,
@@ -50,7 +50,9 @@ comment on view v_roster is
     'One row per (season, team, player) that reached a box score, with biography from '
     'roster_registration linked through person_game_link by observed stat lines, never '
     'by name (Decision 27). A player without a link, or without a registration row, '
-    'still appears here with a null biography: the row is defined by the box score.';
+    'still appears here with a null biography: the row is defined by the box score. '
+    'The most recent registration by start_at wins; source_registration_id desc is the '
+    'tiebreak for two registrations sharing one start_at.';
 
 revoke all on table public.v_roster from anon, authenticated;
 grant select on table public.v_roster to el_reader;

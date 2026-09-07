@@ -1412,7 +1412,13 @@ def get_roster(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     the observed-stat-line link (person_game_link), never through name matching. A
     player with no link, or no matching registration row, still appears here with a
     null biography, because the row's existence is defined by the box score.
+
+    Roster membership itself is never filtered by quarantine: v_roster has no
+    game-level quarantine join, and dropping a player because his only game was
+    quarantined would be wrong for a roster. include_quarantined changes only the
+    coverage and exclusion notes attached to the response.
     """
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
     offset = validate_offset(arguments.get("offset"))
@@ -1447,13 +1453,16 @@ def get_roster(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
 
     return build_response(
         rows=rows,
-        coverage=coverage_for(cursor, season_code, False),
-        excluded=exclusions_for(cursor, season_code, False),
+        coverage=coverage_for(cursor, season_code, include_quarantined),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
         limit=limit,
         offset=offset,
         total_available=total,
         caveats=[
             "Biography comes from the league's registration feed, linked to the "
             "box-score player by observed stat lines, never by name (Decision 27).",
+            "Roster rows count every box-score appearance, quarantined games "
+            "included; include_quarantined changes only the coverage and "
+            "exclusion notes.",
         ],
     )

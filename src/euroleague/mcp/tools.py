@@ -712,7 +712,9 @@ def build_registry(
                 "registration feed. The biography is attached through the observed-stat-line "
                 "link, never by matching names, so it can be missing for a player the link "
                 "did not find; a null biography still means the player appeared in the box "
-                "score. games_played counts box score rows, not necessarily minutes played."
+                "score. games_played counts box score rows, not necessarily minutes played. "
+                "Roster rows count every box-score appearance, quarantined games included; "
+                "include_quarantined changes only the coverage and exclusion notes."
             ),
             input_schema=_schema(
                 {

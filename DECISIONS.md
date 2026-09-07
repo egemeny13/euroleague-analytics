@@ -4161,8 +4161,9 @@ season have a null `birth_date` or a null `height_cm`.
 
 **The change.** `v_roster` (migration 0026) is keyed by (season_code,
 team_code, player_id) against `raw_boxscore_player`, left-joined to the
-most recent (by `start_at`) `role_code = 'J'` registration row for the
-linked person on that team and season. A player with no link, or no
+most recent (by `start_at`, tiebroken by `source_registration_id desc` for
+two registrations sharing one `start_at`) `role_code = 'J'` registration row
+for the linked person on that team and season. A player with no link, or no
 matching registration row, still appears with a null biography, because the
 row's existence is defined by the box score, not by whether the link or the
 registration happened to be found. `age_on_season_start` is measured against
@@ -4178,9 +4179,16 @@ down migration revokes exactly those three grants. `queries.get_roster`
 filters by season (required), and optionally by team (via `resolve_team`)
 and player (via `resolve_player`), ordered by `team_code, games_played
 desc, player_id`, paginated with the standard coverage and exclusions
-envelope. The response carries one caveat: the biography is linked by
-observed stat lines, never by name (Decision 27). There is no
-`minutes_basis`, because the response carries no minutes or seconds column.
+envelope. `include_quarantined` behaves like every other tool for the
+coverage and exclusion notes (`coverage_for`/`exclusions_for`), but never
+filters the roster rows themselves: `v_roster` has no game-level quarantine
+join, and dropping a player because his only game was quarantined would be
+wrong for a roster. The response carries two caveats: the biography is
+linked by observed stat lines, never by name (Decision 27); and roster rows
+count every box-score appearance, quarantined games included, with
+`include_quarantined` changing only the coverage and exclusion notes. There
+is no `minutes_basis`, because the response carries no minutes or seconds
+column.
 
 **Condition.** The mechanical invariant
 (`tests/test_roster_view_invariants.py`, `warehouse`-marked, E2024 and
