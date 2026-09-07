@@ -392,6 +392,40 @@ def test_on_off_returns_one_on_row_and_one_off_row():
     assert STRADDLE_CAVEAT in response["caveats"]
 
 
+def test_player_on_off_applies_the_clutch_thresholds_to_both_sides() -> None:
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2025",)]),
+            (["player_id"], [("P012774",)]),
+            (
+                ["is_on_court", "possessions", "points_for", "points_against", "net_rating"],
+                [(True, 40, 44, 38, 15.0), (False, 30, 30, 33, -10.0)],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(402, 402, None, None, 402, None)],
+            ),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+    response = get_player_on_off(
+        cursor,
+        {"season": "E2025", "player": "P012774", "max_seconds_remaining": 300, "max_margin": 5},
+    )
+    sql = cursor.statements[2]
+    assert sql.count("seconds_remaining_at_start <= %s") == 2
+    assert sql.count("abs(margin_at_start) <= %s") == 2
+    assert response["rows"][0]["net_rating"] == 15.0
+
+
 class _SqliteCursorAdapter:
     """Adapts an in-memory sqlite3 connection to execute psycopg queries with %s params."""
 

@@ -411,7 +411,9 @@ def build_registry(
                 "present, NOT a measure of the player's individual value - it depends on "
                 "his teammates and on the opponent's units. The off split includes games "
                 "he did not play. Pass team for a player who appeared for more than one "
-                "club in the season."
+                "club in the season. Pass max_seconds_remaining and max_margin to restrict "
+                "both sides of the split to clutch possessions - the warehouse bakes in no "
+                "definition of clutch, so state yours."
             ),
             input_schema=_schema(
                 {
@@ -423,6 +425,17 @@ def build_registry(
                     "team": {
                         "type": "string",
                         "description": "Restrict to one club, for a player who moved mid-season.",
+                    },
+                    "max_seconds_remaining": {
+                        "type": "integer",
+                        "description": (
+                            "Possessions starting with at most this many seconds left in "
+                            "the game. 300 is the last five minutes of a 40-minute game."
+                        ),
+                    },
+                    "max_margin": {
+                        "type": "integer",
+                        "description": "Possessions starting within this many points either way.",
                     },
                 },
                 required=["season", "player"],

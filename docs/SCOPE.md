@@ -30,7 +30,7 @@ raw or corrected.
 | `el_get_team_stats` | A team's season: four factors, offensive and defensive rating, pace. |
 | `el_get_player_stats` | A player's season, per game and per 100 possessions. |
 | `el_get_lineup_stats` | Five-player lineups: possessions, offensive, defensive and net rating. |
-| `el_get_player_on_off` | The team's net rating with a player on court against off court. |
+| `el_get_player_on_off` | The team's net rating with a player on court against off court; accepts the caller's clutch thresholds (max_seconds_remaining, max_margin), applied to both splits. |
 | `el_get_possessions` | Possession rows with start margin and clock, so any clutch definition is a filter; can aggregate by team, end reason, or both. |
 | `el_get_fouls` | Fouls committed and drawn by type, per player, team or game; reconciles to the box score. |
 

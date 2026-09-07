@@ -4048,6 +4048,49 @@ codes and says to filter by `playtype` to list them with their clock.
 `tests/test_possession_end_reasons.py` and is a decision, not a silent
 addition to the known set or to the `other` catch-all.
 
+## 73. Player on/off accepts the same clutch filters as possessions
+
+**Decided 2026-09-07.** `el_get_player_on_off` reported a player's on/off
+split over an entire season, with no way to narrow either side to close
+games. `el_get_possessions` already carries `max_seconds_remaining` and
+`max_margin` as ordinary filters on `v_possession` columns (Decision 6); the
+same two arguments now apply to `el_get_player_on_off`'s underlying
+`v_possession` aggregates, on both the on-court and off-court side of the
+split, so a caller can ask "how did the team do with him on the floor in
+clutch minutes, against without him" without a second tool or a stored
+threshold.
+
+**The change.** `get_player_on_off` builds one `clutch_clause` /
+`clutch_params` pair from `max_seconds_remaining` and `max_margin`, exactly
+as `get_possessions` does, and splices the clause into both the `offense` and
+`defense` CTEs that back the on/off split - the clutch filter must narrow
+both sides identically, or the on-plus-off invariant breaks for reasons that
+look like a bug rather than a filter working as designed. `el_get_player_on_off`'s
+schema gains the two properties, copied verbatim from `el_get_possessions`.
+When either threshold is set, the response adds the caveat: "Clutch
+thresholds are the caller's; the warehouse bakes in none. Small samples are
+noisy: state the possession count beside any rating."
+
+**The validation.** No external ground truth exists for a filtered on/off
+split, and none is claimed. The mechanical invariant instead:
+`tests/test_player_clutch_invariants.py` (`warehouse`-marked, E2024 and
+E2025) picks the player with the most on-court offensive possessions in the
+season by query, and asserts his clutch on-court possessions plus his clutch
+off-court possessions equal his team's clutch total from `v_possession`
+directly, and that both filtered counts are no larger than their unfiltered
+counterparts. Rehearsed on the disposable database: E2025 (`P007975`, `ZAL`)
+- 131 on-court plus 19 off-court clutch possessions equal the team's 150
+clutch possessions, against 2,130 / 914 / 3,044 unfiltered; E2024 (`P005985`,
+`MCO`) - 133 plus 8 equal 141, against 2,125 / 771 / 2,896 unfiltered. Both
+seasons hold the invariant exactly.
+`docs/evidence/player_clutch_rehearsal.json`.
+
+**Condition.** This is a mechanical invariant, not a check on which side of
+the split a possession lands on: it would not catch a possession credited to
+the wrong side as long as the two sides still summed correctly. If a future
+rebuild changes how `offense_lineup_id` / `defense_lineup_id` membership is
+computed, re-run the rehearsal rather than trusting the invariant alone.
+
 ## Rules to add to the project instruction file
 
 ```
