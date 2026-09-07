@@ -1,5 +1,13 @@
 # Derived Layer Expansion Implementation Plan
 
+> **Note on decision numbers:** Decision numbers in this plan are one lower
+> than the ones recorded: Decision 71 (the view gate guard) was inserted
+> during Task 1, so Task 2 is 72, Task 3 is 73, Task 4 is 74, Task 5 is 75,
+> Task 6 is 76, Task 7 is 77, and Task 8 is 78. Decision 79 lifts the
+> eleven-tool freeze that Decision 65 set, amending it to fourteen now that
+> Tasks 2, 4 and 5 (Decisions 72, 74 and 75) each added a tool under its
+> condition.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Expose, for the E2024 to E2026 seasons, everything the warehouse already
