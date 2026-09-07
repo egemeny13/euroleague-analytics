@@ -1,7 +1,227 @@
 {
-  "generated": "2026-09-07 (fix round 2 of 5)",
+  "generated": "2026-09-07 (fix round 3 of 5)",
   "generated_by": "tests/test_season_totals_oracle.py, Decision 78",
-  "note": "Two league sources are compared. The v3 traditional endpoint publishes per-game averages (rounded_average comparison, one rounding increment of tolerance). The v2 club endpoint publishes exact season totals (exact_count comparison, zero tolerance except two named, exact KNOWN_LEAGUE_DISCREPANCIES entries) and is the stronger oracle.",
+  "note": "Two league sources are compared. The v3 traditional endpoint publishes per-game averages (rounded_average comparison, half a rounding increment of default tolerance, with six named KNOWN_ROUNDING_CASES exceptions). The v2 club endpoint publishes exact season totals (exact_count comparison, zero tolerance except three named KNOWN_LEAGUE_DISCREPANCIES entries) and is the stronger oracle. Club totals are disk-cache only, one file per club per season, and are never archived into raw_api_response - Decision 78 fix round 3.",
+  "cached_files": {
+    "E2024": {
+      "v3_players": {
+        "path": "exploration/cache/E2024/season_totals_players.json",
+        "bytes": 85820,
+        "sha256": "98bd0677e77d7f0dce388c67733fb1412ba5cac62a03e948f5cc842daf9ed135"
+      },
+      "v3_teams": {
+        "path": "exploration/cache/E2024/season_totals_teams.json",
+        "bytes": 12552,
+        "sha256": "217b6b0a4a6decdfe2e6dce535fdd99ccad371dc087f40477ea5d57a4f88f664"
+      },
+      "v2_clubs": {
+        "ASV": {
+          "path": "exploration/cache/E2024/season_totals_clubs/ASV.json",
+          "bytes": 1451,
+          "sha256": "890e9e9bdc853418e2f0a0e8cf689e56a4b02ed7c6581d5c0f4dbf7f3faaaf89"
+        },
+        "BAR": {
+          "path": "exploration/cache/E2024/season_totals_clubs/BAR.json",
+          "bytes": 1480,
+          "sha256": "9286d6bb2d15d5eed5f254f228c908e1f68d62b6d59d06d1824bad030f51dfed"
+        },
+        "BAS": {
+          "path": "exploration/cache/E2024/season_totals_clubs/BAS.json",
+          "bytes": 1455,
+          "sha256": "2f2081ed55cadede72637755a1f6613ad9c70dfd277233c0a906c63a5d4969e8"
+        },
+        "BER": {
+          "path": "exploration/cache/E2024/season_totals_clubs/BER.json",
+          "bytes": 1486,
+          "sha256": "1eafb074ee9b43b314019ad4d5c56604c6617577941c39a72e16134bb2d40b3c"
+        },
+        "IST": {
+          "path": "exploration/cache/E2024/season_totals_clubs/IST.json",
+          "bytes": 1451,
+          "sha256": "90462e6262bf7171592929360b7268d766dcd215c99050a43a7bc40dda10a5eb"
+        },
+        "MAD": {
+          "path": "exploration/cache/E2024/season_totals_clubs/MAD.json",
+          "bytes": 1187,
+          "sha256": "2c4ade81f74e9bbfd7112929d2ea10d5bf057ebc8ac27da83389e28b44023f7c"
+        },
+        "MCO": {
+          "path": "exploration/cache/E2024/season_totals_clubs/MCO.json",
+          "bytes": 1460,
+          "sha256": "86b8de3e8e6229c3961e20e204f87830142b744837908838b1fe3ef65fdd140f"
+        },
+        "MIL": {
+          "path": "exploration/cache/E2024/season_totals_clubs/MIL.json",
+          "bytes": 1450,
+          "sha256": "2c9745183afff682225296557ddcc81cae96786a95ce96fb227475b8b8ae3509"
+        },
+        "MUN": {
+          "path": "exploration/cache/E2024/season_totals_clubs/MUN.json",
+          "bytes": 1439,
+          "sha256": "416abdc2fee12cf5cfe7787f27b1c2b53e3fbafa927081eab092054fe21d93f6"
+        },
+        "OLY": {
+          "path": "exploration/cache/E2024/season_totals_clubs/OLY.json",
+          "bytes": 1166,
+          "sha256": "5beca391eb6f50de109aca9d35e906f8d7ceb95a49c28ba361398f5c47af4b0e"
+        },
+        "PAN": {
+          "path": "exploration/cache/E2024/season_totals_clubs/PAN.json",
+          "bytes": 1477,
+          "sha256": "d24a9334a2e2d6e2d7727de2513893c58e0f4834bb41cc08daf9a93522159cc2"
+        },
+        "PAR": {
+          "path": "exploration/cache/E2024/season_totals_clubs/PAR.json",
+          "bytes": 1454,
+          "sha256": "b2726fdba626af62eeb19fc21e472017d6fadbd24805766f234ccc629a1e8c15"
+        },
+        "PRS": {
+          "path": "exploration/cache/E2024/season_totals_clubs/PRS.json",
+          "bytes": 1468,
+          "sha256": "041711a78e6312486807ad2d1cdf38e2b277f67264101b0ec6f635fa9022a820"
+        },
+        "RED": {
+          "path": "exploration/cache/E2024/season_totals_clubs/RED.json",
+          "bytes": 1436,
+          "sha256": "baf91b688b6b7d0e1460fb5d22c8f25d99978d911d08f3564ac16a30fa167704"
+        },
+        "TEL": {
+          "path": "exploration/cache/E2024/season_totals_clubs/TEL.json",
+          "bytes": 1440,
+          "sha256": "2d57ce75170aacf640fbc621153028c520cb29134504a162073447f11be503b5"
+        },
+        "ULK": {
+          "path": "exploration/cache/E2024/season_totals_clubs/ULK.json",
+          "bytes": 1479,
+          "sha256": "ec4863a993bf0eae70d24d76f32f8c95888d5193e28cd0de641cffdacc272e15"
+        },
+        "VIR": {
+          "path": "exploration/cache/E2024/season_totals_clubs/VIR.json",
+          "bytes": 1449,
+          "sha256": "330ed294fec554897cb19eb44995d193ed84803767332b92f52c11cb06c3151f"
+        },
+        "ZAL": {
+          "path": "exploration/cache/E2024/season_totals_clubs/ZAL.json",
+          "bytes": 1466,
+          "sha256": "31ecdfe5e0952cc9ea764bf18708e7973c6dbfa42644e29f4876cad188e12b3b"
+        }
+      }
+    },
+    "E2025": {
+      "v3_players": {
+        "path": "exploration/cache/E2025/season_totals_players.json",
+        "bytes": 85920,
+        "sha256": "0fc2e6b7f66b21d85ee7733ce3155fc85d1dedb25ff766038b9fc1af12a3fed6"
+      },
+      "v3_teams": {
+        "path": "exploration/cache/E2025/season_totals_teams.json",
+        "bytes": 13946,
+        "sha256": "b3edce68cf250391586872486257f3e423973472ac40005eacb51ce3bcc798a5"
+      },
+      "v2_clubs": {
+        "ASV": {
+          "path": "exploration/cache/E2025/season_totals_clubs/ASV.json",
+          "bytes": 1466,
+          "sha256": "e18cc25eac4a76ceef5a8f9459fc86aa0f186abffc38bda2aa002bd116674002"
+        },
+        "BAR": {
+          "path": "exploration/cache/E2025/season_totals_clubs/BAR.json",
+          "bytes": 1185,
+          "sha256": "0b80a31c69d5caf97b277145dc0e624a9b132de9e881b096260ed63f230dd622"
+        },
+        "BAS": {
+          "path": "exploration/cache/E2025/season_totals_clubs/BAS.json",
+          "bytes": 1469,
+          "sha256": "bec570692e9a567882448ec628f0a99371b53472273e69ebb29d3a2f7a706581"
+        },
+        "DUB": {
+          "path": "exploration/cache/E2025/season_totals_clubs/DUB.json",
+          "bytes": 1464,
+          "sha256": "3edbd541a6393db48d2c43c4b1416ff309236b46be042499d30853440171e35d"
+        },
+        "HTA": {
+          "path": "exploration/cache/E2025/season_totals_clubs/HTA.json",
+          "bytes": 1468,
+          "sha256": "a7fb3e7590fb76115e127e2156cbb20b1d8a2dbe0e6586305280124ce26f82b0"
+        },
+        "IST": {
+          "path": "exploration/cache/E2025/season_totals_clubs/IST.json",
+          "bytes": 1439,
+          "sha256": "d6bfe14fdbe433f0c377f87646586507b5f112ad8be853e0a344ae372a23934c"
+        },
+        "MAD": {
+          "path": "exploration/cache/E2025/season_totals_clubs/MAD.json",
+          "bytes": 1461,
+          "sha256": "26c0ed720093e9f8bd40c88aa45cc99c68e5806e3c6ec6468632d24f7b390112"
+        },
+        "MCO": {
+          "path": "exploration/cache/E2025/season_totals_clubs/MCO.json",
+          "bytes": 1479,
+          "sha256": "89b6bf0e82a5b6e7dd491deced9db46b76d67224efcb3e9ab1977047d5fd683b"
+        },
+        "MIL": {
+          "path": "exploration/cache/E2025/season_totals_clubs/MIL.json",
+          "bytes": 1453,
+          "sha256": "d7f0fc1cc62d299d5fd4ac9d22c6c43b2c72d78f8eecb8c2419be657a4b755d8"
+        },
+        "MUN": {
+          "path": "exploration/cache/E2025/season_totals_clubs/MUN.json",
+          "bytes": 1456,
+          "sha256": "50a5e0afd41eed97cab0556b927bf132d1dc47d1f06090a21686c22c8369f727"
+        },
+        "OLY": {
+          "path": "exploration/cache/E2025/season_totals_clubs/OLY.json",
+          "bytes": 1468,
+          "sha256": "4d83bc73a5bd379ec681917962c857f2334faae04a9ab05b70c7e784e3537b67"
+        },
+        "PAM": {
+          "path": "exploration/cache/E2025/season_totals_clubs/PAM.json",
+          "bytes": 1472,
+          "sha256": "4b6a18e25aec1eb2562b543c6fad2c813bd6f1063e562dc7d8e7aff3387c78ec"
+        },
+        "PAN": {
+          "path": "exploration/cache/E2025/season_totals_clubs/PAN.json",
+          "bytes": 1452,
+          "sha256": "e4e99989e6f5a56973212e01855daf58b58ed996cb7eacc9627d5a16dc00b151"
+        },
+        "PAR": {
+          "path": "exploration/cache/E2025/season_totals_clubs/PAR.json",
+          "bytes": 1426,
+          "sha256": "f52ce867452e4109e8582e48b78b540b0f526616f796f3bcb3cf558d8f22fee1"
+        },
+        "PRS": {
+          "path": "exploration/cache/E2025/season_totals_clubs/PRS.json",
+          "bytes": 1469,
+          "sha256": "178ae4015d0c954f40d7d120aeb661d7dcc26cc02911ed9a5f21f1292064e41b"
+        },
+        "RED": {
+          "path": "exploration/cache/E2025/season_totals_clubs/RED.json",
+          "bytes": 1478,
+          "sha256": "36f7627e9e2c5f0f00fc0c18ae2ecbd04a0365bd434b17fef24586666367d286"
+        },
+        "TEL": {
+          "path": "exploration/cache/E2025/season_totals_clubs/TEL.json",
+          "bytes": 1451,
+          "sha256": "a258a51c3b8434b74760d78e58c2a21a9b5999c06d1ae382f6560d35ed3111b1"
+        },
+        "ULK": {
+          "path": "exploration/cache/E2025/season_totals_clubs/ULK.json",
+          "bytes": 1479,
+          "sha256": "913f92c9bf88ebcba77232f77dfba1d05acf0c9ea9ffca6da29402941a66dd62"
+        },
+        "VIR": {
+          "path": "exploration/cache/E2025/season_totals_clubs/VIR.json",
+          "bytes": 1457,
+          "sha256": "97b254a9f8c3adccdf55b6f4d7433b143f875275414f8ebb0a2079b3445fd920"
+        },
+        "ZAL": {
+          "path": "exploration/cache/E2025/season_totals_clubs/ZAL.json",
+          "bytes": 1466,
+          "sha256": "faca4a519a66845b602a2a5188f9d198887bd28c6a72c1030bb9dbe82545552b"
+        }
+      }
+    }
+  },
   "seasons": {
     "E2024": {
       "team_average_oracle_v3": {
@@ -34,89 +254,120 @@
           "points": {
             "published_field": "pointsScored",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "field_goals_made_2": {
             "published_field": "twoPointersMade",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "field_goals_attempted_2": {
             "published_field": "twoPointersAttempted",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "field_goals_made_3": {
             "published_field": "threePointersMade",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "field_goals_attempted_3": {
             "published_field": "threePointersAttempted",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "free_throws_made": {
             "published_field": "freeThrowsMade",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "free_throws_attempted": {
             "published_field": "freeThrowsAttempted",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "offensive_rebounds": {
             "published_field": "offensiveRebounds",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "defensive_rebounds": {
             "published_field": "defensiveRebounds",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "total_rebounds": {
             "published_field": "totalRebounds",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "assists": {
             "published_field": "assists",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "steals": {
             "published_field": "steals",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "turnovers": {
             "published_field": "turnovers",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "blocks_favour": {
             "published_field": "blocks",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "blocks_against": {
             "published_field": "blocksAgainst",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "fouls_commited": {
             "published_field": "foulsCommited",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "fouls_received": {
             "published_field": "foulsDrawn",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           }
         },
+        "known_rounding_cases": {
+          "MAD/field_goals_made_2": {
+            "our_rounded_average": 20.9,
+            "published_average": 21.0
+          },
+          "RED/defensive_rebounds": {
+            "our_rounded_average": 22.6,
+            "published_average": 22.5
+          }
+        },
+        "known_rounding_cases_reproduced_exactly": [
+          "MAD/field_goals_made_2",
+          "RED/defensive_rebounds"
+        ],
         "mismatches": [],
         "verdict": "PASS"
       },
@@ -268,89 +519,130 @@
           "points": {
             "published_field": "pointsScored",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "field_goals_made_2": {
             "published_field": "twoPointersMade",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "field_goals_attempted_2": {
             "published_field": "twoPointersAttempted",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "field_goals_made_3": {
             "published_field": "threePointersMade",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "field_goals_attempted_3": {
             "published_field": "threePointersAttempted",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "free_throws_made": {
             "published_field": "freeThrowsMade",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "free_throws_attempted": {
             "published_field": "freeThrowsAttempted",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "offensive_rebounds": {
             "published_field": "offensiveRebounds",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "defensive_rebounds": {
             "published_field": "defensiveRebounds",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "total_rebounds": {
             "published_field": "totalRebounds",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "assists": {
             "published_field": "assists",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "steals": {
             "published_field": "steals",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "turnovers": {
             "published_field": "turnovers",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "blocks_favour": {
             "published_field": "blocks",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "blocks_against": {
             "published_field": "blocksAgainst",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "fouls_commited": {
             "published_field": "foulsCommited",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           },
           "fouls_received": {
             "published_field": "foulsDrawn",
             "comparison": "rounded_average",
-            "detected_precision": 1
+            "detected_precision": 1,
+            "tolerance": "half a rounding increment, unless named in known_rounding_cases"
           }
         },
+        "known_rounding_cases": {
+          "BAR/field_goals_made_2": {
+            "our_rounded_average": 21.1,
+            "published_average": 21.0
+          },
+          "BAR/field_goals_made_3": {
+            "our_rounded_average": 9.7,
+            "published_average": 9.6
+          },
+          "BAR/field_goals_attempted_3": {
+            "our_rounded_average": 25.9,
+            "published_average": 25.8
+          },
+          "MIL/field_goals_attempted_2": {
+            "our_rounded_average": 35.9,
+            "published_average": 36.0
+          }
+        },
+        "known_rounding_cases_reproduced_exactly": [
+          "BAR/field_goals_attempted_3",
+          "BAR/field_goals_made_2",
+          "BAR/field_goals_made_3",
+          "MIL/field_goals_attempted_2"
+        ],
         "mismatches": [],
         "verdict": "PASS"
       },

@@ -13,13 +13,16 @@ matches our total exactly for every team in both seasons. Every other field
 is compared here as a **rounded average**: `our exact sum / games_played`,
 rounded to the decimal precision the payload itself uses (detected from the
 published values, not assumed - see `_column_precision`), asserted equal to
-the published average. A difference of more than one rounding increment
-(for example 0.1 at one-decimal precision) is a real mismatch; up to one
-increment is tolerated, because a genuine `.x5` boundary value can round
-differently under two independent implementations (Python's round-half-to-
-even versus whatever the league's server uses) with neither side wrong.
-Measured worst case across every team and column in both seasons: exactly
-one increment (0.1), at that boundary - never more.
+the published average within **half a rounding increment** (0.05 at
+one-decimal precision) - fix round 3 tightened this from a full increment.
+A `(team, column)` pair exceeding half an increment is a real mismatch
+unless it is named exactly in `KNOWN_ROUNDING_CASES`, each with a one-line
+reason: four are genuine `.x5` rounding-boundary values (the unrounded
+average ends in exactly `5` at the next decimal place, so round-half-to-even
+and the league's own rounding can legitimately land on different neighbours);
+two are not rounding artifacts at all but the same two `KNOWN_LEAGUE_DISCREPANCIES`
+entries below crossing the averaging tolerance too, because a small exact-total
+gap divided by a season's games can still exceed half an increment.
 
 **The v2 club endpoint (`.../clubs/{code}/stats`) publishes exact season
 totals.** Its `accumulated` object is confirmed against real E2025 data: club
@@ -29,9 +32,12 @@ MAD exactly, with no rounding involved anywhere - see
 oracle CLAUDE.md's "external ground truth" standard actually wants: an exact
 count, not an average recomputation. `raw_api_response`'s archive identity
 (`season_code`, `endpoint`, `gamecode`) has no column for a club code, so
-this endpoint - unlike every other archived surface - is cached as ONE
-merged file per season, `season_totals_clubs.json`, keyed by club code
-(`ResponseCache.club_totals_path`, `ArchiveFetcher.fetch_club_season_totals`).
+this endpoint is never archived there at all - Decision 78 fix round 3. It is
+cached as one file per club per season, exactly like every other endpoint's
+per-response layout, at `season_totals_clubs/<club_code>.json`
+(`ResponseCache.club_total_path`, `ArchiveFetcher.fetch_club_season_totals`);
+a first version merged every club's parsed content into one file, which wrote
+parsed data rather than a club's exact response bytes, and was removed.
 
 **Player identity: no player-level oracle, on either endpoint.** The v3
 players payload keys each row by `player.code`, a bare digit-string person
@@ -137,6 +143,29 @@ CLUB_COLUMN_MAP: dict[str, str] = {
 }
 
 
+# Keyed by (season_code, team_code, our_field) -> (our_rounded_average, published_average).
+# Every entry is a (team, column) pair whose deviation exceeds half a rounding
+# increment - the default tolerance - each with its own one-line reason.
+KNOWN_ROUNDING_CASES: dict[tuple[str, str, str], tuple[float, float]] = {
+    # Unrounded average is 838/40 = 20.95, exactly on the rounding boundary.
+    # round-half-to-even gives 20.9; the league's own rounding gives 21.0.
+    ("E2024", "MAD", "field_goals_made_2"): (20.9, 21.0),
+    # Unrounded average is 842/40 = 21.05, exactly on the rounding boundary.
+    ("E2025", "BAR", "field_goals_made_2"): (21.1, 21.0),
+    # Unrounded average is 386/40 = 9.65, exactly on the rounding boundary.
+    ("E2025", "BAR", "field_goals_made_3"): (9.7, 9.6),
+    # Unrounded average is 1034/40 = 25.85, exactly on the rounding boundary.
+    ("E2025", "BAR", "field_goals_attempted_3"): (25.9, 25.8),
+    # NOT a rounding artifact: the same KNOWN_LEAGUE_DISCREPANCIES entry below
+    # (our exact total 791 vs. the league's 789, a gap of 2) divided by 35
+    # games still crosses half an increment.
+    ("E2024", "RED", "defensive_rebounds"): (22.6, 22.5),
+    # NOT a rounding artifact: the same KNOWN_LEAGUE_DISCREPANCIES entry below
+    # (our exact total 1366 vs. the league's 1367, a gap of 1) divided by 38
+    # games still crosses half an increment.
+    ("E2025", "MIL", "field_goals_attempted_2"): (35.9, 36.0),
+}
+
 # Keyed by (season_code, club_code, our_field) -> (our_value, published_value).
 # Each entry is a measured disagreement between the league's own two systems
 # - never our defect, since the box score side is already validated exactly
@@ -218,14 +247,30 @@ def _column_precision(published_by_team: dict[str, dict], field: str) -> int:
 
 
 def compare_team_average_columns(
-    published: dict, ours: dict[str, dict[str, int]], column_map: dict[str, str]
-) -> list[tuple[str, str, float, float]]:
+    season_code: str,
+    published: dict,
+    ours: dict[str, dict[str, int]],
+    column_map: dict[str, str],
+    known_rounding_cases: dict[tuple[str, str, str], tuple[float, float]],
+) -> tuple[list[tuple[str, str, float, float]], set[tuple[str, str, str]]]:
     """Compare `games_played` exactly and every other column as a rounded average.
 
-    Returns `(team_code, our_field, our_value, published_value)` for every
-    disagreement - `our_value` is the rounded average for averaged columns,
-    or the raw count for `games_played`. A team present on only one side is
-    itself a mismatch, recorded with the missing side as `None`.
+    Returns `(mismatches, matched_known_rounding_cases)`.
+
+    `mismatches` is `(team_code, our_field, our_value, published_value)` for
+    every disagreement exceeding half a rounding increment that is NOT
+    accounted for by `known_rounding_cases` - `our_value` is the rounded
+    average for averaged columns, or the raw count for `games_played`. A team
+    present on only one side is itself a mismatch, recorded with the missing
+    side as `None`. A deviation within half an increment is not reported at
+    all - it is the ordinary noise of two independent averaging
+    implementations agreeing to the precision the payload publishes.
+
+    `matched_known_rounding_cases` is the set of `(season, team, column)` keys
+    from `known_rounding_cases` that reproduced exactly as recorded. The
+    caller must assert this equals every key for this season, so a case that
+    quietly stops exceeding the tolerance (a correction on either side) is
+    itself noticed rather than silently absorbed.
     """
     published_by_team = {row["team"]["code"]: row for row in published["teams"]}
     precisions = {
@@ -233,6 +278,7 @@ def compare_team_average_columns(
         for our_field, published_field in column_map.items()
     }
     mismatches: list[tuple[str, str, float, float]] = []
+    matched_known_rounding_cases: set[tuple[str, str, str]] = set()
 
     all_teams = set(ours) | set(published_by_team)
     for team_code in sorted(all_teams):
@@ -255,10 +301,17 @@ def compare_team_average_columns(
                 mismatches.append((team_code, our_field, None, published_value))
                 continue
             our_average = round(our_total / games_played, precision)
-            tolerance = (10 ** (-precision)) + 1e-9
-            if abs(our_average - published_value) > tolerance:
-                mismatches.append((team_code, our_field, our_average, published_value))
-    return mismatches
+            half_increment_tolerance = (10 ** (-precision)) / 2 + 1e-9
+            diff = abs(our_average - published_value)
+            if diff <= half_increment_tolerance:
+                continue
+            key = (season_code, team_code, our_field)
+            expected = known_rounding_cases.get(key)
+            if expected is not None and expected == (our_average, published_value):
+                matched_known_rounding_cases.add(key)
+                continue
+            mismatches.append((team_code, our_field, our_average, published_value))
+    return mismatches, matched_known_rounding_cases
 
 
 def compare_club_exact_totals(
@@ -297,6 +350,9 @@ def compare_club_exact_totals(
         if our_row is None or not club_rows:
             mismatches.append((club_code, "<club presence>", None, None))
             continue
+        assert len(club_rows) == 1, (
+            f"club {club_code} has {len(club_rows)} v2 season-totals rows, expected exactly 1"
+        )
         accumulated = club_rows[0]["accumulated"]
         for our_field, published_field in column_map.items():
             our_value = our_row.get(our_field, 0)
@@ -320,9 +376,10 @@ def test_our_team_season_totals_equal_the_leagues_published_averages(season_code
     """External ground truth: the league's own v3 season averages.
 
     `our exact sum / games_played`, rounded to the payload's own precision,
-    must equal the published average within one rounding increment - see the
-    module docstring for why exactly one increment is tolerated rather than
-    zero.
+    must equal the published average within half a rounding increment, or
+    match one of the six `KNOWN_ROUNDING_CASES` exactly - see the module
+    docstring for why half an increment is the default tolerance and why two
+    of those six named cases are not rounding artifacts at all.
 
     WHAT THIS CANNOT DETECT. A defect that shifted every team's total by the
     same fixed ratio would still divide out to the same average and pass
@@ -334,9 +391,13 @@ def test_our_team_season_totals_equal_the_leagues_published_averages(season_code
     published = cache.read_season_totals_json(season_code, "teams")
     ours = team_totals_from_cache(cache, season_code)
 
-    mismatches = compare_team_average_columns(published, ours, TEAM_COLUMN_MAP)
+    mismatches, matched_known_rounding_cases = compare_team_average_columns(
+        season_code, published, ours, TEAM_COLUMN_MAP, KNOWN_ROUNDING_CASES
+    )
+    expected_known_rounding_cases = {key for key in KNOWN_ROUNDING_CASES if key[0] == season_code}
 
     assert mismatches == []
+    assert matched_known_rounding_cases == expected_known_rounding_cases
 
 
 @pytest.mark.parametrize("season_code", ["E2024", "E2025"])
@@ -354,7 +415,7 @@ def test_our_club_season_totals_equal_the_leagues_exact_totals(season_code: str)
     page and the mapping needs a decision to update, not a silent pass.
     """
     cache = FULL_CACHE
-    club_totals_by_club = cache.read_club_totals_json(season_code)
+    club_totals_by_club = cache.read_club_totals(season_code)
     ours = team_totals_from_cache(cache, season_code)
 
     mismatches, matched_known_discrepancies = compare_club_exact_totals(

@@ -86,41 +86,74 @@ def test_fixture_cache_reads_the_committed_schedule_subset(fixture_cache) -> Non
     }
 
 
-def test_club_totals_path_is_one_merged_file_per_season(tmp_path) -> None:
+def test_club_total_path_is_one_file_per_club_per_season(tmp_path) -> None:
     cache = ResponseCache(tmp_path)
 
-    assert cache.club_totals_path("E2024") == tmp_path / "E2024" / "season_totals_clubs.json"
+    assert cache.club_total_path("E2024", "BER") == (
+        tmp_path / "E2024" / "season_totals_clubs" / "BER.json"
+    )
 
 
-def test_read_club_totals_json_names_the_missing_file(tmp_path) -> None:
+def test_read_club_total_json_names_the_missing_file(tmp_path) -> None:
     cache = ResponseCache(tmp_path)
 
-    with pytest.raises(FileNotFoundError, match=r"season_totals_clubs\.json"):
-        cache.read_club_totals_json("E2024")
+    with pytest.raises(FileNotFoundError, match=r"BER\.json"):
+        cache.read_club_total_json("E2024", "BER")
 
 
-def test_read_club_totals_json_returns_the_merged_body_unreshaped(tmp_path) -> None:
+def test_read_club_total_json_returns_the_cached_body_unreshaped(tmp_path) -> None:
     cache = ResponseCache(tmp_path)
-    path = cache.club_totals_path("E2024")
+    path = cache.club_total_path("E2024", "BER")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(json.dumps({"BER": [{"accumulated": {}}]}).encode())
+    path.write_bytes(json.dumps([{"accumulated": {}}]).encode())
 
-    assert cache.read_club_totals_json("E2024") == {"BER": [{"accumulated": {}}]}
+    assert cache.read_club_total_json("E2024", "BER") == [{"accumulated": {}}]
 
 
-def test_responses_yields_season_totals_only_when_cached(tmp_path) -> None:
+def test_club_total_codes_lists_every_cached_club_alphabetically(tmp_path) -> None:
+    cache = ResponseCache(tmp_path)
+    for club_code in ("ZAL", "ASV", "BER"):
+        path = cache.club_total_path("E2024", club_code)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(json.dumps([{"accumulated": {}}]).encode())
+
+    assert cache.club_total_codes("E2024") == ["ASV", "BER", "ZAL"]
+
+
+def test_club_total_codes_is_empty_when_nothing_is_cached(tmp_path) -> None:
+    cache = ResponseCache(tmp_path)
+
+    assert cache.club_total_codes("E2024") == []
+
+
+def test_read_club_totals_returns_every_cached_club_keyed_by_code(tmp_path) -> None:
+    cache = ResponseCache(tmp_path)
+    for club_code, points in (("ASV", 100), ("BER", 200)):
+        path = cache.club_total_path("E2024", club_code)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(json.dumps([{"accumulated": {"points": points}}]).encode())
+
+    assert cache.read_club_totals("E2024") == {
+        "ASV": [{"accumulated": {"points": 100}}],
+        "BER": [{"accumulated": {"points": 200}}],
+    }
+
+
+def test_responses_never_yields_club_totals(tmp_path) -> None:
+    """Break caught: club totals must never be archived - Decision 78 fix round 3."""
     cache = ResponseCache(tmp_path)
     schedule_path = cache.schedule_path("E2025")
     schedule_path.parent.mkdir(parents=True, exist_ok=True)
     schedule_path.write_bytes(json.dumps({"data": [], "total": 0}).encode())
     teams_path = cache.season_totals_path("E2025", "teams")
     teams_path.write_bytes(json.dumps({"total": 0, "teams": []}).encode())
-    club_totals_path = cache.club_totals_path("E2025")
-    club_totals_path.write_bytes(json.dumps({"BER": [{"accumulated": {}}]}).encode())
+    club_path = cache.club_total_path("E2025", "BER")
+    club_path.parent.mkdir(parents=True, exist_ok=True)
+    club_path.write_bytes(json.dumps([{"accumulated": {}}]).encode())
 
     endpoints = [response.endpoint for response in cache.responses("E2025")]
 
-    assert endpoints == ["Schedule", "SeasonTotalsTeams", "ClubSeasonTotals"]
+    assert endpoints == ["Schedule", "SeasonTotalsTeams"]
 
 
 def test_fixture_cache_enumerates_every_response_without_fetching(

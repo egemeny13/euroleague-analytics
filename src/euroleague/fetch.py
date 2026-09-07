@@ -7,7 +7,7 @@ import os
 import re
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
@@ -278,6 +278,7 @@ class ArchiveFetcher:
         require_fresh_schedule: bool = False,
         include_roster: bool = False,
         include_season_totals: bool = False,
+        include_club_totals: bool = False,
     ) -> None:
         self.transport = transport
         self.cache = ResponseCache(cache_root)
@@ -293,6 +294,7 @@ class ArchiveFetcher:
         self.require_fresh_schedule = require_fresh_schedule
         self.include_roster = include_roster
         self.include_season_totals = include_season_totals
+        self.include_club_totals = include_club_totals
         self._counters = _Counters()
         self._next_request_at: float | None = None
         self._started_at = 0.0
@@ -501,23 +503,27 @@ class ArchiveFetcher:
         return observation
 
     def fetch_club_season_totals(self, season_code: str, club_code: str) -> FetchObservation:
-        """Fetch one club's v2 season totals and merge it into the season's file.
+        """Fetch and cache one club's exact v2 season-totals response.
 
-        `raw_api_response`'s archive identity is `(season_code, endpoint,
-        gamecode)`, and `gamecode` is a positive-integer column with no room
-        for a club code - see `ResponseCache.club_totals_path`. So this
-        endpoint, unlike `Roster` or the v3 season totals, is cached as ONE
-        merged file per season, keyed by club code, and re-archived under one
-        identity - `("ClubSeasonTotals", None)` - every time a club is added.
-        That means what gets written to disk and archived is the *merged*
-        file's bytes, not the single club's raw response bytes; the
-        fetch log still records the exact bytes that one HTTP request
-        returned, because `_request_with_retry` logs before this method does
-        any merging. Decision 78.
+        Written to disk before any parsing, and re-fetched (with the
+        previous body preserved beside it via `_preserve_superseded` if it
+        changed) exactly like every other cached endpoint - see
+        `ResponseCache.club_total_path`.
 
-        The returned `FetchObservation` describes the one club actually
-        fetched - its `body` is that club's exact response - which is what a
-        caller checking "did club X's fetch succeed" wants to see.
+        **This response is never archived into `raw_api_response`, and never
+        will be through this method.** `raw_api_response`'s archive identity
+        is `(season_code, endpoint, gamecode)`; `gamecode` is a
+        positive-integer column with no room for a club code, so there is no
+        identity this response can honestly be filed under. An earlier
+        version of this method worked around that by archiving a merged
+        multi-club file under a synthetic identity whose URL did not produce
+        those exact bytes - precisely what Decision 7's "immutable,
+        checksum-addressed versions" rule forbids, since the archived body
+        would not be reproducible from the identity's own URL. That workaround
+        was removed - Decision 78 fix round 3. Club totals are validation-
+        oracle input only, live in the disk cache, and archiving them would
+        need a schema change to `raw_api_response` (a club-code column),
+        decided separately.
         """
         observation = self._request_with_retry(
             season_code=season_code,
@@ -531,27 +537,14 @@ class ArchiveFetcher:
                 f"Could not fetch season totals for club {club_code} in {season_code}: "
                 f"{status}. Keep the existing cache and retry later."
             )
-        club_payload = json.loads(observation.body)
-        path = self.cache.club_totals_path(season_code)
-        merged: dict[str, object] = {}
-        previous = None
-        if path.is_file():
-            previous = path.read_bytes()
-            merged = json.loads(previous)
-        merged[club_code] = club_payload
-        merged_body = (json.dumps(merged, sort_keys=True, separators=(",", ":")) + "\n").encode(
-            "utf-8"
-        )
-        merged_observation = replace(observation, body=merged_body)
-        if previous is not None and previous != merged_body:
+        path = self.cache.club_total_path(season_code, club_code)
+        previous = path.read_bytes() if path.is_file() else None
+        if previous is not None and previous != observation.body:
             _preserve_superseded(path, previous)
-        if previous == merged_body:
-            self._counters.fetched_files += 1
-            self._counters.fetched_bytes += len(merged_body)
-            if self.successful_observation is not None:
-                self.successful_observation(merged_observation)
-        else:
-            self._cache_successful_observation(merged_observation, path, game_response=False)
+        if previous != observation.body:
+            _write_exact(path, observation.body)
+        self._counters.fetched_files += 1
+        self._counters.fetched_bytes += observation.byte_length
         return observation
 
     def fetch_club_totals_for_season(self, season_code: str) -> dict[str, FetchObservation]:
@@ -728,6 +721,11 @@ class ArchiveFetcher:
         schedule = self._read_or_fetch_schedule(season_code)
         games = list(schedule["data"])
         played_games = [game for game in games if game.get("played") is True]
+        if self.include_club_totals:
+            # Needs the schedule, which is why this runs here rather than
+            # alongside the roster/season-totals calls above. Never archived
+            # - see `fetch_club_season_totals`.
+            self.fetch_club_totals_for_season(season_code)
         season_totals_targets = 2 if self.include_season_totals else 0
         total_targets = (
             len(played_games) * len(ENDPOINTS) + int(self.include_roster) + season_totals_targets

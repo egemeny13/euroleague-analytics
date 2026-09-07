@@ -256,17 +256,16 @@ def test_include_season_totals_fetches_both_kinds_once_per_season(tmp_path) -> N
     assert (tmp_path / "E2025" / "season_totals_teams.json").exists()
 
 
-def test_club_season_totals_fetch_merges_into_one_file_keyed_by_club(tmp_path) -> None:
+def test_club_season_totals_fetch_writes_the_exact_body_per_club(tmp_path) -> None:
     ber_body = json.dumps([{"accumulated": {"pointsScored": 100}}]).encode()
     asv_body = json.dumps([{"accumulated": {"pointsScored": 200}}]).encode()
-    observations = []
     transport = RecordingTransport(
         [
             StubResponse(200, {}, ber_body),
             StubResponse(200, {}, asv_body),
         ]
     )
-    fetcher = make_fetcher(tmp_path, transport, successful_observation=observations.append)
+    fetcher = make_fetcher(tmp_path, transport)
 
     ber_observation = fetcher.fetch_club_season_totals("E2025", "BER")
     asv_observation = fetcher.fetch_club_season_totals("E2025", "ASV")
@@ -275,39 +274,65 @@ def test_club_season_totals_fetch_merges_into_one_file_keyed_by_club(tmp_path) -
     assert asv_observation.body == asv_body
     assert transport.calls[0][0].endswith("/seasons/E2025/clubs/BER/stats")
     assert transport.calls[1][0].endswith("/seasons/E2025/clubs/ASV/stats")
-    merged = json.loads((tmp_path / "E2025" / "season_totals_clubs.json").read_bytes())
-    assert merged == {
-        "BER": [{"accumulated": {"pointsScored": 100}}],
-        "ASV": [{"accumulated": {"pointsScored": 200}}],
-    }
-    # What gets archived is the merged file's bytes, not the raw per-club body.
-    assert (
-        observations[0].body
-        == json.dumps(
-            {"BER": [{"accumulated": {"pointsScored": 100}}]}, sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
-        + b"\n"
-    )
-    assert json.loads(observations[1].body) == merged  # merged file grew to hold both clubs
-    assert observations[0].endpoint == "ClubSeasonTotals"
-    assert observations[0].gamecode is None
+    assert (tmp_path / "E2025" / "season_totals_clubs" / "BER.json").read_bytes() == ber_body
+    assert (tmp_path / "E2025" / "season_totals_clubs" / "ASV.json").read_bytes() == asv_body
+    assert ber_observation.endpoint == "ClubSeasonTotals"
+    assert ber_observation.gamecode is None
 
 
-def test_club_season_totals_refetch_of_the_same_club_body_is_a_no_op_write(tmp_path) -> None:
+def test_club_season_totals_fetch_never_calls_the_archive_callback(tmp_path) -> None:
+    """Break caught: Decision 78 fix round 3 - club totals are never archived.
+
+    An earlier version of this method archived a synthetic merged-file
+    observation whose URL did not produce the archived bytes, which Decision
+    7 forbids. The fix is not "archive something else instead" - it is
+    "never call the archive callback for this endpoint at all".
+    """
+    body = json.dumps([{"accumulated": {"pointsScored": 100}}]).encode()
+    observations = []
+    transport = RecordingTransport([StubResponse(200, {}, body)])
+    fetcher = make_fetcher(tmp_path, transport, successful_observation=observations.append)
+
+    fetcher.fetch_club_season_totals("E2025", "BER")
+
+    assert observations == []
+
+
+def test_club_season_totals_refetch_of_the_same_body_preserves_nothing_extra(tmp_path) -> None:
     body = json.dumps([{"accumulated": {"pointsScored": 100}}]).encode()
     transport = RecordingTransport([StubResponse(200, {}, body), StubResponse(200, {}, body)])
     fetcher = make_fetcher(tmp_path, transport)
 
     fetcher.fetch_club_season_totals("E2025", "BER")
-    path = tmp_path / "E2025" / "season_totals_clubs.json"
+    path = tmp_path / "E2025" / "season_totals_clubs" / "BER.json"
     first_write = path.read_bytes()
     fetcher.fetch_club_season_totals("E2025", "BER")
 
     assert path.read_bytes() == first_write
     assert not any(
-        p.name.startswith("season_totals_clubs.") and p.name != "season_totals_clubs.json"
-        for p in (tmp_path / "E2025").glob("season_totals_clubs.*")
+        p.name != "BER.json" for p in (tmp_path / "E2025" / "season_totals_clubs").glob("BER.*")
     )
+
+
+def test_club_season_totals_refetch_of_a_changed_body_preserves_the_previous_one(
+    tmp_path,
+) -> None:
+    """A changed club body is a real audit signal and must not be silently overwritten."""
+    old_body = json.dumps([{"accumulated": {"pointsScored": 100}}]).encode()
+    new_body = json.dumps([{"accumulated": {"pointsScored": 150}}]).encode()
+    transport = RecordingTransport(
+        [StubResponse(200, {}, old_body), StubResponse(200, {}, new_body)]
+    )
+    fetcher = make_fetcher(tmp_path, transport)
+
+    fetcher.fetch_club_season_totals("E2025", "BER")
+    fetcher.fetch_club_season_totals("E2025", "BER")
+
+    directory = tmp_path / "E2025" / "season_totals_clubs"
+    assert (directory / "BER.json").read_bytes() == new_body
+    superseded = [p for p in directory.glob("BER.*") if p.name != "BER.json"]
+    assert len(superseded) == 1
+    assert superseded[0].read_bytes() == old_body
 
 
 def test_fetch_club_totals_for_season_reads_club_codes_from_the_played_schedule(tmp_path) -> None:
@@ -347,6 +372,36 @@ def test_fetch_club_totals_for_season_reads_club_codes_from_the_played_schedule(
     assert set(observations) == {"ASV", "BER"}
     assert transport.calls[0][0].endswith("/clubs/ASV/stats")
     assert transport.calls[1][0].endswith("/clubs/BER/stats")
+
+
+def test_include_club_totals_fetches_every_played_club_once_per_season(tmp_path) -> None:
+    write_schedule(
+        tmp_path,
+        [
+            {
+                "gameCode": 1,
+                "played": True,
+                "local": {"club": {"code": "BER"}},
+                "road": {"club": {"code": "ASV"}},
+            }
+        ],
+    )
+    for endpoint in ENDPOINTS:
+        path = tmp_path / "E2025" / endpoint / "1.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"already cached")
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, json.dumps([{"accumulated": {}}]).encode()),
+            StubResponse(200, {}, json.dumps([{"accumulated": {}}]).encode()),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport, include_club_totals=True)
+
+    fetcher.fetch_season("E2025")
+
+    assert (tmp_path / "E2025" / "season_totals_clubs" / "ASV.json").exists()
+    assert (tmp_path / "E2025" / "season_totals_clubs" / "BER.json").exists()
 
 
 def test_game_stats_fetch_is_cached_before_its_archive_callback(tmp_path) -> None:
@@ -977,6 +1032,45 @@ def test_fetch_archive_can_only_restore_in_resume_mode() -> None:
 
     assert module.restore_for_resume is restore_for_resume
     assert "restore_current_season_cache" not in vars(module)
+
+
+def test_include_club_totals_flag_calls_fetch_club_totals_for_season(tmp_path, monkeypatch) -> None:
+    """Break caught: `--include-club-totals` must actually reach the fetch method.
+
+    Everything else is pre-cached so the plain (non-`--live`/`--archive`) CLI
+    path makes zero real HTTP calls; `ArchiveFetcher.fetch_club_totals_for_season`
+    is monkeypatched to a recorder, so this proves the flag is wired through to
+    the method, not that the method's own network behaviour works (that is
+    `test_include_club_totals_fetches_every_played_club_once_per_season`).
+    """
+    from euroleague.fetch import ArchiveFetcher
+
+    write_schedule(tmp_path, [{"gameCode": 1, "played": True}])
+    for endpoint in ("Boxscore", "PlaybyPlay", "Points"):
+        path = tmp_path / "E2025" / endpoint / "1.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"already cached")
+
+    calls: list[str] = []
+    monkeypatch.setattr(
+        ArchiveFetcher,
+        "fetch_club_totals_for_season",
+        lambda self, season_code: calls.append(season_code),
+    )
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "fetch_archive.py"
+    spec = importlib.util.spec_from_file_location("fetch_archive_include_club_totals", script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+        exit_code = module.main(["E2025", "--cache-root", str(tmp_path), "--include-club-totals"])
+    finally:
+        del sys.modules[spec.name]
+
+    assert exit_code == 0
+    assert calls == ["E2025"]
 
 
 def test_url_builders_derive_competition_code_for_all_supported_competitions() -> None:

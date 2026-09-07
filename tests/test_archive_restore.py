@@ -328,13 +328,14 @@ def test_restore_includes_optional_season_totals_snapshots(tmp_path):
     ]
 
 
-def test_restore_includes_an_optional_club_season_totals_snapshot(tmp_path):
-    """Break caught: the merged club-totals file has no `gamecode` to key on.
+def test_restore_rejects_a_club_season_totals_entry_as_an_unexpected_extra(tmp_path):
+    """Break caught: club totals must never be archived - Decision 78 fix round 3.
 
-    `ClubSeasonTotals` is one merged file per season - `raw_api_response` has
-    no column for a club code (Decision 78) - so it restores exactly like the
-    roster and v3 season-totals snapshots: one optional identity, gamecode
-    `None`.
+    `ClubSeasonTotals` is not in the optional-identity set. If one somehow
+    reached the archive index (a regression reintroducing the removed
+    merged-file archiving), the restore must refuse rather than silently
+    accept it as if it were as legitimate as `Roster` or the v3 season
+    totals.
     """
     connection, archive_storage = archived_season(played=())
     club_totals_body = b'{"BER":[{"accumulated":{}}]}'
@@ -343,11 +344,8 @@ def test_restore_includes_an_optional_club_season_totals_snapshot(tmp_path):
     archive_storage.objects[entry.storage_path] = compressed
     cache = ResponseCache(tmp_path)
 
-    summary = restore_current_season_cache(connection, cache, archive_storage, SEASON)
-
-    assert summary.restored_responses == 2
-    assert cache.read_club_totals_bytes(SEASON) == club_totals_body
-    assert archive_storage.downloaded_identities == [("Schedule", None), ("ClubSeasonTotals", None)]
+    with pytest.raises(ArchiveIndexError, match="extra"):
+        restore_current_season_cache(connection, cache, archive_storage, SEASON)
 
 
 def test_restore_creates_a_missing_cache_root_after_staging_succeeds(tmp_path):
