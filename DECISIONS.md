@@ -4752,6 +4752,37 @@ a reason to fall back to a manual cycle; the whole point of this script is
 that the manual cycle is the failure mode it exists to remove, not a
 fallback available when the script is inconvenient.
 
+## 81. Migrations reach production from the owner's terminal through a recorded script when the Supabase MCP is not connected
+
+**Decided 2026-09-07 by the owner**, by doing it: migrations 0021 to 0028
+and 0020 were applied with `scripts/apply_migration_with_evidence.py`, typed
+with the `!` prefix into the session, one migration per command, each after
+its pull request had merged. Decision 10's path through the Supabase MCP
+stays the default when that server is connected; this is the recorded
+alternative, not a replacement.
+
+**Why a script and not the agent.** The agent's attempt to run the same code
+was refused by the harness on 2026-09-07, and CLAUDE.md forbids retrying a
+refused command in another shape. The refusal is the control working as
+designed: `.claude/settings.json` keeps production writes behind "ask" and
+"deny", and a verbal approval does not change what the harness allows. The
+owner's terminal is the credential boundary.
+
+**What the script guarantees.** One transaction holds the up file and the
+ledger row Supabase's tooling would have written, so the production ledger
+and `migrations/README.md` keep agreeing; a stem already in the ledger is
+refused before anything is measured; whole-database and per-relation sizes
+are recorded before and after into `docs/evidence/`; down files are never
+read by it. `tests/test_apply_migration_with_evidence.py` pins those
+shapes. The per-game derived rebuild that migrations 0027 and 0028 needed
+has its own script, `scripts/rebuild_derived_rows.py`, with a
+disposable-only default and an explicit `--production` flag.
+
+**Condition.** Every production apply lands its evidence file and its
+"Applied on" ledger row in the same pull request that closes the work. A
+migration applied any other way is reconciled by re-apply, never by editing
+the ledger (CLAUDE.md, boundaries around production).
+
 ## Rules to add to the project instruction file
 
 ```
