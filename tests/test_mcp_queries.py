@@ -22,6 +22,7 @@ from euroleague.mcp.queries import (
     get_player_on_off,
     get_player_stats,
     get_possessions,
+    get_referee_stats,
     get_team_stats,
 )
 
@@ -1028,6 +1029,7 @@ def test_possessions_aggregate_by_team_and_end_reason_partitions_by_team() -> No
         (get_possessions, {}),
         (get_play_by_play, {"gamecode": 1}),
         (get_fouls, {}),
+        (get_referee_stats, {}),
     ],
 )
 def test_direct_query_path_rejects_string_include_quarantined(query_fn, extra_args):
@@ -1051,6 +1053,7 @@ def test_direct_query_path_rejects_string_include_quarantined(query_fn, extra_ar
         (get_possessions, {}),
         (get_play_by_play, {"gamecode": 1}),
         (get_fouls, {}),
+        (get_referee_stats, {}),
     ],
 )
 def test_direct_query_path_rejects_null_include_quarantined(query_fn, extra_args):
@@ -1674,3 +1677,44 @@ def test_fouls_reject_an_unknown_group_by() -> None:
     cursor = RecordingCursor([(["season_code"], [("E2025",)])])
     with pytest.raises(ValueError, match="group_by must be one of"):
         get_fouls(cursor, {"season": "E2025", "group_by": "referee"})
+
+
+def test_referee_stats_filters_by_code_or_name_and_groups_by_referee_code() -> None:
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2025",)]),
+            (["total"], [(1,)]),
+            (
+                [
+                    "referee_code",
+                    "referee_name",
+                    "games",
+                    "fouls_per_game",
+                    "home_fouls_per_game",
+                    "away_fouls_per_game",
+                    "home_win_rate",
+                    "possessions_per_game",
+                ],
+                [("OJCZ", "OZDEMIR, OGUZHAN", 40, 44.5, 22.1, 22.4, 51.0, 148.2)],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(402, 402, None, None, 402, None)],
+            ),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+
+    response = get_referee_stats(cursor, {"season": "E2025", "referee": "OJCZ"})
+
+    assert response["rows"][0]["referee_code"] == "OJCZ"
+    assert cursor.parameters[1] == ("E2025", "OJCZ", "%OJCZ%")
+    assert "group by referee_code" in cursor.statements[2]

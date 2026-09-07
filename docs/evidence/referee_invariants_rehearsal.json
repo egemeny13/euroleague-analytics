@@ -1,0 +1,14 @@
+{
+  "E2024": {
+    "schema": "space_e2024",
+    "referee_rows": 989,
+    "code_slots": 989,
+    "foul_disagreements": 0
+  },
+  "E2025": {
+    "schema": "space_e2025",
+    "referee_rows": 1204,
+    "code_slots": 1204,
+    "foul_disagreements": 0
+  }
+}

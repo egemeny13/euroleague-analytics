@@ -1347,3 +1347,58 @@ def get_fouls(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
             "Shooting versus non-shooting fouls are not in the data and are not inferred here.",
         ],
     )
+
+
+def get_referee_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """A referee's season: games, fouls per game, home-win rate, pace.
+
+    Every figure is a per-game average over the games the referee worked,
+    read from v_referee_game. There is no ground truth for a referee's
+    tendency, so the caveat says what the numbers are: descriptive, with the
+    sample size beside them, never a judgement.
+    """
+    include_quarantined = _boolean(arguments, "include_quarantined", False)
+    season_code = resolve_season(cursor, arguments["season"])
+    limit = clamp_limit(arguments.get("limit"))
+    offset = validate_offset(arguments.get("offset"))
+    conditions = ["season_code = %s"]
+    params: list[Any] = [season_code]
+    if not include_quarantined:
+        conditions.append("not excluded_by_default")
+    if arguments.get("referee"):
+        conditions.append("(referee_code = %s or referee_name ilike %s)")
+        value = str(arguments["referee"]).strip()
+        params.extend([value.upper(), f"%{value}%"])
+    where = " and ".join(conditions)
+    cursor.execute(
+        f"select count(distinct referee_code) as total from v_referee_game where {where}",
+        tuple(params),
+    )
+    total = _rows(cursor)[0]["total"]
+    cursor.execute(
+        f"select referee_code, min(referee_name) as referee_name, count(*) as games, "
+        f"round(avg(home_fouls + away_fouls)::numeric, 2) as fouls_per_game, "
+        f"round(avg(home_fouls)::numeric, 2) as home_fouls_per_game, "
+        f"round(avg(away_fouls)::numeric, 2) as away_fouls_per_game, "
+        f"round(100.0 * avg(case when home_won then 1 else 0 end)::numeric, 1) as home_win_rate, "
+        f"round(avg(possessions)::numeric, 1) as possessions_per_game "
+        f"from v_referee_game where {where} group by referee_code "
+        f"order by games desc, referee_code limit %s offset %s",
+        (*params, limit, offset),
+    )
+    rows = _rows(cursor)
+    return build_response(
+        rows=rows,
+        coverage=coverage_for(cursor, season_code, include_quarantined),
+        excluded=exclusions_for(cursor, season_code, include_quarantined),
+        limit=limit,
+        offset=offset,
+        total_available=total,
+        caveats=[
+            "These are averages over the games a referee worked, not effects: teams, "
+            "venues and opponents are not controlled for. Quote the games count beside "
+            "any figure.",
+            "A referee named in the box score with no code in the schedule is not "
+            "counted; one such slot exists in E2025 (game 11).",
+        ],
+    )

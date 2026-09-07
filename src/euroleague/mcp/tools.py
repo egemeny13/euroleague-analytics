@@ -1,4 +1,4 @@
-"""The twelve tool definitions.
+"""The thirteen tool definitions.
 
 Descriptions are read by the model at call time, so they are written as prompts
 rather than as code comments: what the tool answers, what the numbers mean, and
@@ -28,6 +28,7 @@ TOOL_NAMES: tuple[str, ...] = (
     "el_get_play_by_play",
     "el_get_shot_data",
     "el_get_fouls",
+    "el_get_referee_stats",
 )
 
 _INCLUDE_QUARANTINED = {
@@ -673,6 +674,32 @@ def build_registry(
                 required=["season"],
             ),
             query=queries.get_fouls,
+        ),
+        tool(
+            name="el_get_referee_stats",
+            title="Referee season aggregates",
+            description=(
+                "A referee's season: games worked, fouls per game (overall, home, away), "
+                "home-win rate, and pace, averaged over every game the referee worked. This "
+                "is a descriptive summary, not a causal claim: teams, venues, opponents, and "
+                "who else was on the crew are not controlled for, so a high or low figure "
+                "does not by itself mean the referee causes it. Quote the games count beside "
+                "any figure. Keyed on the schedule's stable referee code; a name published in "
+                "the box score with no matching schedule code is dropped and disclosed."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "referee": {
+                        "type": "string",
+                        "description": "Restrict to one referee, by code or by a name substring.",
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season"],
+            ),
+            query=queries.get_referee_stats,
         ),
     ]
     return {tool.name: tool for tool in tools}
