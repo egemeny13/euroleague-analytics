@@ -4091,6 +4091,52 @@ the wrong side as long as the two sides still summed correctly. If a future
 rebuild changes how `offense_lineup_id` / `defense_lineup_id` membership is
 computed, re-run the rehearsal rather than trusting the invariant alone.
 
+## 74. Referee season aggregates are an unpivot of games, keyed on the schedule's referee code
+
+**Decided 2026-09-07.** `el_get_referee_stats` is the thirteenth MCP tool.
+Referee identity and the box score's foul counts were both already in the
+warehouse, unjoined; this closes that gap without inferring anything new.
+
+**The measurement.** `v_referee_game` unpivots `v_game_officials`'s four
+referee slots into one row per referee per game (dropping null-code slots),
+joined to `raw_boxscore_team`'s per-game team foul totals and `v_team_game`'s
+summed possessions. Rehearsed 2026-09-07 on the disposable database against
+both loaded seasons: E2024 (989 referee rows) and E2025 (1,204 referee rows)
+each show the row count exactly equal to the schedule's non-null
+referee-code slot count, and zero rows disagree with `raw_boxscore_team` on
+`home_fouls`. `docs/evidence/referee_invariants_rehearsal.json`.
+
+**The stable-identifier claim.** The task brief for this tool states 70
+referee codes and 70 names in E2025 with none crossed, and one Boxscore
+name with no schedule code (game 11); that measurement was supplied as the
+basis for keying on `referee_code` rather than `referee_name`, and this
+decision inherits it rather than re-deriving it. `el_get_referee_stats`
+groups on `referee_code` and reports `min(referee_name)` per group for
+display, and its response states that a Boxscore-only name with no schedule
+code is dropped.
+
+**The change.** `v_referee_game` (migration 0025) grants `el_tester` select
+on `v_game_officials` (migration 0014, previously `el_reader`-only), so the
+new view resolves for testers under `security_invoker`; the down migration
+revokes it again. `queries.get_referee_stats` filters by season (required)
+and an optional `referee` (code, exact, or name substring via `ilike`),
+groups by `referee_code`, and returns games, fouls per game (overall, home,
+away), home-win rate, and possessions per game, paginated with the standard
+coverage and exclusions envelope. The response carries two caveats: the
+figures are descriptive averages over the games worked, not adjusted for
+opponent, venue, or crew composition; and the dropped no-schedule-code slot
+is named explicitly rather than silently absent from a referee's count.
+
+**Condition.** The mechanical invariant
+(`tests/test_referee_invariants.py`, `warehouse`-marked, E2024 and E2025)
+must keep holding: every non-quarantined game contributes exactly as many
+referee rows as it has non-null referee codes, and every row's foul figures
+equal its game's own box-score totals. A referee code that stops being a
+stable person identifier in a future season - two codes for one person, or
+one code for two people - is a decision to make, not a silent regrouping;
+nothing in this tool detects that condition on its own, so it rests on the
+brief's 70-codes/70-names measurement holding, not on an ongoing check.
+
 ## Rules to add to the project instruction file
 
 ```

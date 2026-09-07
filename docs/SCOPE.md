@@ -15,7 +15,7 @@ league already publishes is not derived.
 
 ## What version 1 does
 
-Twelve read-only tools, served identically over stdio and HTTP. Every response
+Thirteen read-only tools, served identically over stdio and HTTP. Every response
 states its data coverage, the games it excludes, and whether a minute figure is
 raw or corrected.
 
@@ -33,6 +33,7 @@ raw or corrected.
 | `el_get_player_on_off` | The team's net rating with a player on court against off court; accepts the caller's clutch thresholds (max_seconds_remaining, max_margin), applied to both splits. |
 | `el_get_possessions` | Possession rows with start margin and clock, so any clutch definition is a filter; can aggregate by team, end reason, or both. |
 | `el_get_fouls` | Fouls committed and drawn by type, per player, team or game; reconciles to the box score. |
+| `el_get_referee_stats` | A referee's season: games worked, fouls per game, home-win rate, pace; unpivoted from the schedule's officiating crew. |
 
 Under the tools, the warehouse: three v1 game endpoints (`Boxscore`,
 `PlaybyPlay`, `Points`) and one v2 endpoint (the per-season people list, for
