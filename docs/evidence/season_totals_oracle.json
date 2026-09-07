@@ -357,11 +357,14 @@
         "known_rounding_cases": {
           "MAD/field_goals_made_2": {
             "our_rounded_average": 20.9,
-            "published_average": 21.0
+            "published_average": 21.0,
+            "unrounded_average": "838 / 40 = 20.95",
+            "reason": ".x5 boundary: the unrounded average ends in exactly 5 at the next decimal place, so the two sides can land on different neighbours. Which neighbour is decided by the binary double, not by a half-to-even tie-break - 20.95 stores as 20.9499999999999992894..., below the midpoint, so it rounds down."
           },
           "RED/defensive_rebounds": {
             "our_rounded_average": 22.6,
-            "published_average": 22.5
+            "published_average": 22.5,
+            "reason": "Not rounding: same entry as KNOWN_LEAGUE_DISCREPANCIES (E2024 RED defensive_rebounds, our exact 791 vs the league's 789), a gap of 2 over 35 games that crosses the averaging tolerance too."
           }
         },
         "known_rounding_cases_reproduced_exactly": [
@@ -622,19 +625,26 @@
         "known_rounding_cases": {
           "BAR/field_goals_made_2": {
             "our_rounded_average": 21.1,
-            "published_average": 21.0
+            "published_average": 21.0,
+            "unrounded_average": "842 / 40 = 21.05",
+            "reason": ".x5 boundary: the unrounded average ends in exactly 5 at the next decimal place, so the two sides can land on different neighbours. Which neighbour is decided by the binary double, not by a half-to-even tie-break - 21.05 stores as 21.0500000000000007105..., above the midpoint, so it rounds up."
           },
           "BAR/field_goals_made_3": {
             "our_rounded_average": 9.7,
-            "published_average": 9.6
+            "published_average": 9.6,
+            "unrounded_average": "386 / 40 = 9.65",
+            "reason": ".x5 boundary: the unrounded average ends in exactly 5 at the next decimal place, so the two sides can land on different neighbours. Which neighbour is decided by the binary double, not by a half-to-even tie-break - 9.65 stores as 9.6500000000000003552..., above the midpoint, so it rounds up."
           },
           "BAR/field_goals_attempted_3": {
             "our_rounded_average": 25.9,
-            "published_average": 25.8
+            "published_average": 25.8,
+            "unrounded_average": "1034 / 40 = 25.85",
+            "reason": ".x5 boundary: the unrounded average ends in exactly 5 at the next decimal place, so the two sides can land on different neighbours. Which neighbour is decided by the binary double, not by a half-to-even tie-break - 25.85 stores as 25.8500000000000014210..., above the midpoint, so it rounds up."
           },
           "MIL/field_goals_attempted_2": {
             "our_rounded_average": 35.9,
-            "published_average": 36.0
+            "published_average": 36.0,
+            "reason": "Not rounding: same entry as KNOWN_LEAGUE_DISCREPANCIES (E2025 MIL field_goals_attempted_2, our exact 1366 vs the league's 1367), a gap of 1 over 38 games that crosses the averaging tolerance too."
           }
         },
         "known_rounding_cases_reproduced_exactly": [

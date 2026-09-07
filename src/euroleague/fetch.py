@@ -721,21 +721,30 @@ class ArchiveFetcher:
         schedule = self._read_or_fetch_schedule(season_code)
         games = list(schedule["data"])
         played_games = [game for game in games if game.get("played") is True]
+        club_totals_targets = 0
         if self.include_club_totals:
             # Needs the schedule, which is why this runs here rather than
             # alongside the roster/season-totals calls above. Never archived
-            # - see `fetch_club_season_totals`.
-            self.fetch_club_totals_for_season(season_code)
+            # - see `fetch_club_season_totals`. Each club fetched is one
+            # target, counted the same way the roster and the two v3
+            # season-totals files are, so `fetched=` in the progress line
+            # cannot exceed `[completed/total]`. The count comes from the
+            # returned mapping rather than from the schedule again, so it is
+            # the number of clubs actually fetched.
+            club_totals_targets = len(self.fetch_club_totals_for_season(season_code))
         season_totals_targets = 2 if self.include_season_totals else 0
         total_targets = (
-            len(played_games) * len(ENDPOINTS) + int(self.include_roster) + season_totals_targets
+            len(played_games) * len(ENDPOINTS)
+            + int(self.include_roster)
+            + season_totals_targets
+            + club_totals_targets
         )
         self._scheduled_games = len(games)
         self._played_games = len(played_games)
         self._unplayed_games = len(games) - len(played_games)
         self._total_targets = total_targets
         permanent_404s = self._permanent_404s()
-        completed_targets = int(self.include_roster) + season_totals_targets
+        completed_targets = int(self.include_roster) + season_totals_targets + club_totals_targets
 
         for game in played_games:
             gamecode = int(game["gameCode"])

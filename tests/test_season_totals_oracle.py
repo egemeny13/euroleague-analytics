@@ -18,8 +18,10 @@ one-decimal precision) - fix round 3 tightened this from a full increment.
 A `(team, column)` pair exceeding half an increment is a real mismatch
 unless it is named exactly in `KNOWN_ROUNDING_CASES`, each with a one-line
 reason: four are genuine `.x5` rounding-boundary values (the unrounded
-average ends in exactly `5` at the next decimal place, so round-half-to-even
-and the league's own rounding can legitimately land on different neighbours);
+average ends in exactly `5` at the next decimal place, where the two sides
+can legitimately land on different neighbours - which neighbour we land on
+is decided by the binary double, not by a half-to-even rule, so three of the
+four round up and one rounds down; see `KNOWN_ROUNDING_CASES`);
 two are not rounding artifacts at all but the same two `KNOWN_LEAGUE_DISCREPANCIES`
 entries below crossing the averaging tolerance too, because a small exact-total
 gap divided by a season's games can still exceed half an increment.
@@ -146,15 +148,27 @@ CLUB_COLUMN_MAP: dict[str, str] = {
 # Keyed by (season_code, team_code, our_field) -> (our_rounded_average, published_average).
 # Every entry is a (team, column) pair whose deviation exceeds half a rounding
 # increment - the default tolerance - each with its own one-line reason.
+#
+# WHY THE FOUR `.x5` CASES DO NOT ROUND THE SAME WAY. A decimal like 20.95
+# has no exact binary double, so `total / games` lands on the nearest double
+# instead, which sits just below or just above the true midpoint; `round`
+# then simply picks the nearer neighbour and never reaches its
+# half-to-even tie-break, because there is no tie. Measured with
+# `decimal.Decimal(838 / 40)`: 20.95 stores as 20.9499999999999992894...
+# (below, rounds down to 20.9), while 21.05, 9.65 and 25.85 all store just
+# above and round up. That is why three of the four go up and one goes down.
 KNOWN_ROUNDING_CASES: dict[tuple[str, str, str], tuple[float, float]] = {
-    # Unrounded average is 838/40 = 20.95, exactly on the rounding boundary.
-    # round-half-to-even gives 20.9; the league's own rounding gives 21.0.
+    # Unrounded average is 838/40 = 20.95, on the rounding boundary; the
+    # double stores just below it, so we give 20.9 and the league gives 21.0.
     ("E2024", "MAD", "field_goals_made_2"): (20.9, 21.0),
-    # Unrounded average is 842/40 = 21.05, exactly on the rounding boundary.
+    # Unrounded average is 842/40 = 21.05, on the rounding boundary; the
+    # double stores just above it, so we give 21.1 and the league gives 21.0.
     ("E2025", "BAR", "field_goals_made_2"): (21.1, 21.0),
-    # Unrounded average is 386/40 = 9.65, exactly on the rounding boundary.
+    # Unrounded average is 386/40 = 9.65, on the rounding boundary; the
+    # double stores just above it, so we give 9.7 and the league gives 9.6.
     ("E2025", "BAR", "field_goals_made_3"): (9.7, 9.6),
-    # Unrounded average is 1034/40 = 25.85, exactly on the rounding boundary.
+    # Unrounded average is 1034/40 = 25.85, on the rounding boundary; the
+    # double stores just above it, so we give 25.9 and the league gives 25.8.
     ("E2025", "BAR", "field_goals_attempted_3"): (25.9, 25.8),
     # NOT a rounding artifact: the same KNOWN_LEAGUE_DISCREPANCIES entry below
     # (our exact total 791 vs. the league's 789, a gap of 2) divided by 35

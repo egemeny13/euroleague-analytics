@@ -398,10 +398,16 @@ def test_include_club_totals_fetches_every_played_club_once_per_season(tmp_path)
     )
     fetcher = make_fetcher(tmp_path, transport, include_club_totals=True)
 
-    fetcher.fetch_season("E2025")
+    summary = fetcher.fetch_season("E2025")
 
     assert (tmp_path / "E2025" / "season_totals_clubs" / "ASV.json").exists()
     assert (tmp_path / "E2025" / "season_totals_clubs" / "BER.json").exists()
+    # Each club fetched is one target, exactly like the roster and the two v3
+    # season-totals files. Before fix round 4 the club fetches raised
+    # `fetched_files` without raising `total_targets`, so the progress line
+    # reported more files fetched than there were targets to fetch.
+    assert summary.total_targets == len(ENDPOINTS) + 2
+    assert summary.fetched_files == 2
 
 
 def test_game_stats_fetch_is_cached_before_its_archive_callback(tmp_path) -> None:
@@ -1052,11 +1058,15 @@ def test_include_club_totals_flag_calls_fetch_club_totals_for_season(tmp_path, m
         path.write_bytes(b"already cached")
 
     calls: list[str] = []
-    monkeypatch.setattr(
-        ArchiveFetcher,
-        "fetch_club_totals_for_season",
-        lambda self, season_code: calls.append(season_code),
-    )
+
+    def record(self, season_code: str) -> dict[str, object]:
+        # Returns a mapping, like the real method: the caller counts its
+        # clubs as fetch targets, so a recorder returning None would fail
+        # for a reason that has nothing to do with the CLI wiring.
+        calls.append(season_code)
+        return {"BER": object(), "ASV": object()}
+
+    monkeypatch.setattr(ArchiveFetcher, "fetch_club_totals_for_season", record)
 
     script = Path(__file__).resolve().parents[1] / "scripts" / "fetch_archive.py"
     spec = importlib.util.spec_from_file_location("fetch_archive_include_club_totals", script)

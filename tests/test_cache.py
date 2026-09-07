@@ -7,6 +7,7 @@ import json
 import pytest
 
 from euroleague.cache import ResponseCache
+from euroleague.fetch import _preserve_superseded
 
 
 def test_points_is_a_supported_coordinate_endpoint(tmp_path) -> None:
@@ -118,6 +119,28 @@ def test_club_total_codes_lists_every_cached_club_alphabetically(tmp_path) -> No
         path.write_bytes(json.dumps([{"accumulated": {}}]).encode())
 
     assert cache.club_total_codes("E2024") == ["ASV", "BER", "ZAL"]
+
+
+def test_club_total_codes_ignores_a_superseded_sibling_file(tmp_path) -> None:
+    """A re-fetched club's preserved old body must not appear as a club.
+
+    `_preserve_superseded` is the real production writer, called here rather
+    than imitated, so this test still fails if the sibling naming ever
+    changes. Its file is `<CLUB>.<digest>.json` in the same directory; a
+    stem-only listing would report `BER.<digest>` as a club that never
+    played, and the oracle would then look for its season totals and fail
+    with a missing-file error naming a club code that does not exist.
+    """
+    cache = ResponseCache(tmp_path)
+    path = cache.club_total_path("E2024", "BER")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(json.dumps([{"accumulated": {"points": 200}}]).encode())
+    _preserve_superseded(path, json.dumps([{"accumulated": {"points": 199}}]).encode())
+
+    siblings = sorted(p.name for p in path.parent.glob("*.json"))
+    assert len(siblings) == 2, siblings
+    assert cache.club_total_codes("E2024") == ["BER"]
+    assert list(cache.read_club_totals("E2024")) == ["BER"]
 
 
 def test_club_total_codes_is_empty_when_nothing_is_cached(tmp_path) -> None:

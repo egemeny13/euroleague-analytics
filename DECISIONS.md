@@ -4439,8 +4439,16 @@ increment fails unless it matches one of six recorded `(season, team,
 column)` keys exactly. Four are genuine rounding-boundary cases: the
 *unrounded* average ends in exactly `5` at the next decimal place (measured,
 not assumed - e.g. E2024 MAD `field_goals_made_2` is `838 / 40 = 20.95`
-exactly), where round-half-to-even and the league's own rounding can
-legitimately land on different neighbours with neither side wrong. The other
+exactly), where the two sides can legitimately land on different neighbours
+with neither side wrong. **Which neighbour is decided by the binary double,
+not by a half-to-even tie-break** (a correction made in fix round 4, where
+this paragraph previously credited round-half-to-even): a decimal ending in
+`5` has no exact double, so the division lands just below or just above the
+true midpoint and `round` picks the nearer value, never reaching its
+tie-break. Measured with `decimal.Decimal`: `838 / 40` stores as
+`20.9499999999999992894...` and rounds down to `20.9`, while `842 / 40`,
+`386 / 40` and `1034 / 40` all store just above their midpoints and round
+up - three of the four boundary cases round up, one rounds down. The other
 two are **not rounding artifacts at all**: E2024 RED `defensive_rebounds`
 and E2025 MIL `field_goals_attempted_2` are the same two entries in
 `KNOWN_LEAGUE_DISCREPANCIES` below, where the small exact-total gap (2

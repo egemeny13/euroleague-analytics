@@ -183,11 +183,20 @@ class ResponseCache:
 
         Sorted for determinism only - this orders a list of clubs, never
         events, and nothing here reorders any payload's own arrays.
+
+        Superseded bodies are skipped. A re-fetch that returns different
+        bytes keeps the body it replaced beside the canonical file as
+        `<CLUB>.<digest>.json` (`fetch._preserve_superseded`), whose stem is
+        `<CLUB>.<digest>` - not a club code. Returning that stem would invent
+        a club that never played, exactly as `gamecodes()` would invent a
+        game if it did not reject stems it cannot read as a gamecode. A club
+        code carries no dot, so any stem containing one is a superseded
+        sibling, never a club.
         """
         directory = self.root / season_code / "season_totals_clubs"
         if not directory.is_dir():
             return []
-        return sorted(path.stem for path in directory.glob("*.json"))
+        return sorted(path.stem for path in directory.glob("*.json") if "." not in path.stem)
 
     def read_club_totals(self, season_code: str) -> dict[str, Any]:
         """Every cached club's season totals for one season, keyed by club code."""
