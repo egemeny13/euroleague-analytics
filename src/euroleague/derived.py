@@ -9,6 +9,7 @@ from typing import Any, NamedTuple
 
 from euroleague.cache import ResponseCache
 from euroleague.events import EventRecord, parse_clock
+from euroleague.free_throws import group_free_throw_trips
 from euroleague.lineups import COACH_IDS
 from euroleague.possessions import count_game_possessions
 from euroleague.validation import validate_season
@@ -99,6 +100,7 @@ GAME_EVENT_ATTACHMENT_COLUMNS = (
     "away_lineup_id",
     "stint_index",
     "possession_index",
+    "free_throw_trip_id",
 )
 
 PLAYER_GAME_MINUTES_COLUMNS = (
@@ -175,7 +177,7 @@ class GameEventRow(NamedTuple):
     possession_index: int | None
     is_team_event: bool
     is_coach_event: bool
-    free_throw_trip_id: None
+    free_throw_trip_id: int | None
     attribution_suspect: bool
 
 
@@ -217,6 +219,7 @@ class GameEventAttachmentRow(NamedTuple):
     away_lineup_id: str
     stint_index: int
     possession_index: int | None
+    free_throw_trip_id: int | None = None
 
 
 class PlayerGameMinutesRow(NamedTuple):
@@ -337,6 +340,7 @@ def attach_game_event_references(
             away_lineup_id=by_key[key].away_lineup_id,
             stint_index=by_key[key].stint_index,
             possession_index=by_key[key].possession_index,
+            free_throw_trip_id=by_key[key].free_throw_trip_id,
         )
         for event, key in zip(events, event_keys, strict=True)
     )
@@ -830,6 +834,7 @@ def build_remaining_rows(cache: ResponseCache, season_code: str) -> RemainingDer
 
     possession_rows: list[PossessionRow] = []
     event_possession: dict[tuple[int, int], int] = {}
+    trip_by_game: dict[int, dict[int, int]] = {}
     gate_failures: set[int] = set()
     for gamecode, game_segments in segments_by_game.items():
         home_team, away_team = sides[gamecode]
@@ -846,6 +851,14 @@ def build_remaining_rows(cache: ResponseCache, season_code: str) -> RemainingDer
         possession_rows.extend(rows)
         for ingest_index, possession_index in attached.items():
             event_possession[(gamecode, ingest_index)] = possession_index
+        # The approved unsplit grouping (Decision 77): every free throw lands
+        # in exactly one trip, keyed by its own ingest_index. The multiple-
+        # award split stays an open owner question and is not stored here.
+        trip_by_game[gamecode] = {
+            shot.event.ingest_index: trip.trip_id
+            for trip in group_free_throw_trips(events)
+            for shot in trip.shots
+        }
         home_count = sum(1 for row in rows if row.offense_team_code == home_team)
         away_count = sum(1 for row in rows if row.offense_team_code == away_team)
         if abs(home_count - away_count) > POSSESSION_GATE_TOLERANCE:
@@ -888,6 +901,7 @@ def build_remaining_rows(cache: ResponseCache, season_code: str) -> RemainingDer
                 away_id,
                 segment.stint_index,
                 event_possession.get((segment.gamecode, events[position].ingest_index)),
+                trip_by_game[segment.gamecode].get(events[position].ingest_index),
             )
             for position in range(segment.start_position, segment.end_position + 1)
         )

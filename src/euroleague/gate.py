@@ -538,11 +538,12 @@ def assert_phase5_base_reconciles(
             """
             SELECT count(*) FROM game_event
             WHERE season_code = %s
-              AND free_throw_trip_id IS NOT NULL
+              AND ((playtype IN ('FTM', 'FTA') AND free_throw_trip_id IS NULL)
+                   OR (playtype NOT IN ('FTM', 'FTA') AND free_throw_trip_id IS NOT NULL))
             """,
             (season_code,),
         )
-        phase6_rows = int(cursor.fetchone()[0])
+        free_throw_trip_mismatches = int(cursor.fetchone()[0])
         cursor.execute(
             "SELECT count(*) FROM player WHERE player_id = ANY(%s)",
             (list(COACH_IDS),),
@@ -555,8 +556,11 @@ def assert_phase5_base_reconciles(
             f"game_event differs from the parsed cache for {season_code}: "
             f"{len(source_differences)} rows, first {sorted(source_differences)[:10]}."
         )
-    if phase6_rows:
-        raise AssertionError(f"Found {phase6_rows} game_event rows with a free-throw trip.")
+    if free_throw_trip_mismatches:
+        raise AssertionError(
+            f"Found {free_throw_trip_mismatches} game_event rows where free_throw_trip_id "
+            "does not agree with playtype (null on an FTM/FTA, or set on anything else)."
+        )
     if coach_players:
         raise AssertionError(f"Found {coach_players} coach pseudo-identifiers in player.")
     return {
@@ -766,12 +770,20 @@ def assert_phase5_reconciles(
             f"""
             SELECT count(*) FROM game_event
             WHERE season_code = %s {game_filter}
-              AND (home_lineup_id IS NULL OR away_lineup_id IS NULL OR stint_index IS NULL
-                   OR free_throw_trip_id IS NOT NULL)
+              AND (home_lineup_id IS NULL OR away_lineup_id IS NULL OR stint_index IS NULL)
             """,
             (season_code, *params_suffix),
         )
         unattached_events = int(cursor.fetchone()[0])
+        cursor.execute(
+            f"""
+            SELECT count(*) FROM game_event
+            WHERE season_code = %s {game_filter}
+              AND playtype IN ('FTM', 'FTA') AND free_throw_trip_id IS NULL
+            """,
+            (season_code, *params_suffix),
+        )
+        free_throws_without_trip = int(cursor.fetchone()[0])
         cursor.execute(
             f"""
             SELECT count(*)
@@ -908,6 +920,7 @@ def assert_phase5_reconciles(
     failures = {
         "wrong_width": wrong_width,
         "unattached_events": unattached_events,
+        "free_throws_without_trip": free_throws_without_trip,
         "event_stint_mismatches": event_stint_mismatches,
         "wrong_sides": wrong_sides,
         "unpaired_batches": unpaired_batches,

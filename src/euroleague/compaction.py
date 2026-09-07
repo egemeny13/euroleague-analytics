@@ -54,7 +54,13 @@ E2024_BASELINE: dict[str, tuple[int, str]] = {
     "raw_shot": (51_193, "7eb905723f2626f32d9f7c364d95d085"),
     "raw_boxscore_player": (7_863, "986a2671f24298557a86d6111cc63fe8"),
     "raw_boxscore_team": (1_320, "30ddfdfa405dee9650247635711b5908"),
-    "game_event": (176_483, "6efb53d2d053abbd634145b8bb655ceb"),
+    # Decision 77 attached the approved free-throw trip id to every FTM/FTA
+    # row. The count is unchanged - one nullable column filled in place, no
+    # row moved - but the content checksum moves because it hashes every
+    # column. Recaptured 2026-09-07 on the disposable database after
+    # rebuilding every game's derived rows through `replace_derived_games`;
+    # the production capture after the owner's rebuild must equal this value.
+    "game_event": (176_483, "208eb2e49036e7f0bcf544643bcf8fd0"),
     "lineup_stint": (13_927, "5643117a3abf966ccc6e9f63efbdc18a"),
     "player_game_minutes": (7_863, "89897157cf4e918165f7527e8dc42b81"),
     # Migration 0027 (Decision 76) added start_seconds_elapsed and
@@ -95,7 +101,9 @@ E2025_BASELINE: dict[str, tuple[int, str]] = {
     "raw_shot": (64_137, "3c701196fc4e0f0c93bd23dadf53c693"),
     "raw_boxscore_player": (9_540, "110608ac93b854c6172b8ac7924a5c69"),
     "raw_boxscore_team": (1_608, "6da594c87af498c8065488db18a5f2e0"),
-    "game_event": (222_976, "23c2544836c9b427a7be8430a1ee702b"),
+    # See the E2024 note: Decision 77 moved this fingerprint. Recaptured
+    # 2026-09-07 on the disposable database, same procedure.
+    "game_event": (222_976, "3c4f7a64f2da46947a7c843c7aaea737"),
     "lineup_stint": (17_790, "32ab77663e26ea8008d821b1f603326f"),
     "player_game_minutes": (9_540, "81606d5aa9ab6f014afd9c1936cba809"),
     # See the E2024 note: migration 0027 (Decision 76) moved this fingerprint.

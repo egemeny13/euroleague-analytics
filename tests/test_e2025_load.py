@@ -77,7 +77,12 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
     assert fingerprints == {
         "lineup": TableFingerprint(7_281, "fabfb8b61192e2efffe7c865cbbf9a44"),
         "lineup_stint": TableFingerprint(17_790, "32ab77663e26ea8008d821b1f603326f"),
-        "game_event": TableFingerprint(222_976, "23c2544836c9b427a7be8430a1ee702b"),
+        # Decision 77 attached the approved free-throw trip id to every
+        # FTM/FTA row. Recaptured 2026-09-07 on the disposable database
+        # after rebuilding every game's derived rows through
+        # replace_derived_games; this value must equal the production
+        # capture after the owner's rebuild.
+        "game_event": TableFingerprint(222_976, "3c4f7a64f2da46947a7c843c7aaea737"),
         "player_game_minutes": TableFingerprint(9_540, "81606d5aa9ab6f014afd9c1936cba809"),
         "game_quality": TableFingerprint(402, "ebe44c90defa90e56b050c548f3d90d7"),
         # Migration 0027 (Decision 76) added start_seconds_elapsed and
@@ -174,7 +179,9 @@ def test_live_e2024_fingerprints_match_order_5_and_order_9() -> None:
     assert derived == {
         "lineup": TableFingerprint(5_985, "31543e1aa887b06de60809550bd32ff8"),
         "lineup_stint": TableFingerprint(13_927, "5643117a3abf966ccc6e9f63efbdc18a"),
-        "game_event": TableFingerprint(176_483, "6efb53d2d053abbd634145b8bb655ceb"),
+        # See the E2025 note above: Decision 77 moved this fingerprint.
+        # Recaptured 2026-09-07 on the disposable database, same procedure.
+        "game_event": TableFingerprint(176_483, "208eb2e49036e7f0bcf544643bcf8fd0"),
         "player_game_minutes": TableFingerprint(7_863, "89897157cf4e918165f7527e8dc42b81"),
         "game_quality": TableFingerprint(330, "051207411ad379769325e5f9485b1925"),
         # See the E2025 note above: migration 0027 (Decision 76) moved this
