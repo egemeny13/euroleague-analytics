@@ -1,0 +1,108 @@
+{
+  "E2024": {
+    "season": "E2024",
+    "schema": "space_e2024",
+    "games": 330,
+    "delete_seconds": 2.578106100030709,
+    "load_seconds": 43.61160010000458,
+    "fta_without_trip_after_rebuild": 0,
+    "non_fta_with_trip_after_rebuild": 0,
+    "base_counts": {
+      "player": 306,
+      "team": 18,
+      "team_season": 18,
+      "game_event": 176483,
+      "possession": 47829
+    },
+    "derived_counts": {
+      "lineup": 5985,
+      "lineup_stint": 13927,
+      "game_event": 176483,
+      "player_game_minutes": 7863,
+      "game_quality": 330,
+      "possession": 47829,
+      "attribution_issues": 7,
+      "raw_minute_mismatches": 36,
+      "corrected_minute_mismatches": 4,
+      "corrected_event_rows": 32,
+      "suspect_event_rows": 7,
+      "minute_quarantine_games": [
+        43,
+        98
+      ],
+      "attribution_quarantine_games": [
+        23,
+        63,
+        72,
+        131,
+        139,
+        242,
+        323
+      ]
+    },
+    "game_event_fingerprint": {
+      "count": 176483,
+      "checksum": "208eb2e49036e7f0bcf544643bcf8fd0"
+    },
+    "game_event_source_fingerprint": {
+      "count": 176483,
+      "checksum": "ed8de487b6be091b24ad73ad3848c19d"
+    }
+  },
+  "E2025": {
+    "season": "E2025",
+    "schema": "space_e2025",
+    "games": 402,
+    "delete_seconds": 3.5415110000176355,
+    "load_seconds": 53.57556689996272,
+    "fta_without_trip_after_rebuild": 0,
+    "non_fta_with_trip_after_rebuild": 0,
+    "base_counts": {
+      "player": 351,
+      "team": 20,
+      "team_season": 20,
+      "game_event": 222976,
+      "possession": 59482
+    },
+    "derived_counts": {
+      "lineup": 7281,
+      "lineup_stint": 17790,
+      "game_event": 222976,
+      "player_game_minutes": 9540,
+      "game_quality": 402,
+      "possession": 59482,
+      "attribution_issues": 16,
+      "raw_minute_mismatches": 99,
+      "corrected_minute_mismatches": 14,
+      "corrected_event_rows": 96,
+      "suspect_event_rows": 16,
+      "minute_quarantine_games": [
+        21,
+        116,
+        215
+      ],
+      "attribution_quarantine_games": [
+        16,
+        49,
+        103,
+        121,
+        168,
+        214,
+        221,
+        240,
+        256,
+        257,
+        263,
+        384
+      ]
+    },
+    "game_event_fingerprint": {
+      "count": 222976,
+      "checksum": "3c4f7a64f2da46947a7c843c7aaea737"
+    },
+    "game_event_source_fingerprint": {
+      "count": 222976,
+      "checksum": "45d38508903ea43a514b6b51f14797b1"
+    }
+  }
+}

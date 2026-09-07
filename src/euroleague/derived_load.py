@@ -873,7 +873,8 @@ def load_remaining_rows(
                 home_lineup_id text NOT NULL,
                 away_lineup_id text NOT NULL,
                 stint_index integer NOT NULL,
-                possession_index integer
+                possession_index integer,
+                free_throw_trip_id integer
             ) ON COMMIT DROP
             """
         )

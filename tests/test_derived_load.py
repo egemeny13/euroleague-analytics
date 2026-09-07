@@ -506,7 +506,9 @@ def _complete_game(gamecode: int) -> tuple[tuple[GameEventRow, ...], RemainingDe
                 1,
             ),
         ),
-        event_attachments=(GameEventAttachmentRow("E2026", gamecode, 0, home_id, away_id, 0, 0),),
+        event_attachments=(
+            GameEventAttachmentRow("E2026", gamecode, 0, home_id, away_id, 0, 0, None),
+        ),
         player_minutes=(
             PlayerGameMinutesRow("E2026", gamecode, "H1", "AAA", 1, 1, 1, True, True, True),
         ),

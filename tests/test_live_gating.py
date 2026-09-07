@@ -23,6 +23,7 @@ class ScriptedPhase5Cursor:
         counts: tuple[int, int, int, int, int, int] = (10, 10, 100, 20, 1, 50),
         wrong_width: int = 0,
         unattached_events: int = 0,
+        free_throws_without_trip: int = 0,
         event_stint_mismatches: int = 0,
         wrong_sides: int = 0,
         unpaired_batches: int = 0,
@@ -37,6 +38,7 @@ class ScriptedPhase5Cursor:
         self.counts = counts
         self.wrong_width = wrong_width
         self.unattached_events = unattached_events
+        self.free_throws_without_trip = free_throws_without_trip
         self.event_stint_mismatches = event_stint_mismatches
         self.wrong_sides = wrong_sides
         self.unpaired_batches = unpaired_batches
@@ -61,6 +63,8 @@ class ScriptedPhase5Cursor:
             return self.counts
         if "length(lineup_id) <> 32" in q:
             return (self.wrong_width,)
+        if "free_throw_trip_id is null" in q:
+            return (self.free_throws_without_trip,)
         if "unattached_events" in q or "home_lineup_id is null" in q:
             return (self.unattached_events,)
         if "event_stint_mismatches" in q or "event.home_lineup_id is distinct from" in q:
@@ -135,6 +139,18 @@ def test_scripted_invariant_violation_raises_and_names_gamecode() -> None:
     message = str(exc_info.value)
     assert "42" in message
     assert "oncourt" in message
+
+
+def test_free_throws_without_trip_raises_and_names_the_reason() -> None:
+    """An FTM/FTA row missing its trip id fails assert_phase5_reconciles on its own line."""
+    cursor = ScriptedPhase5Cursor(free_throws_without_trip=3)
+    conn = ScriptedPhase5Connection(cursor)
+
+    with pytest.raises(AssertionError) as exc_info:
+        assert_phase5_reconciles(conn, "E2026", gamecodes=[42])
+
+    message = str(exc_info.value)
+    assert "free_throws_without_trip" in message
 
 
 def test_unquarantined_invariant_defect_fails_quarantine_controls() -> None:

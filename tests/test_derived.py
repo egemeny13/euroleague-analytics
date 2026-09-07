@@ -56,6 +56,7 @@ def _attachment(ingest_index: int) -> GameEventAttachmentRow:
         f"away-{ingest_index}",
         ingest_index + 10,
         ingest_index + 20,
+        ingest_index + 30,
     )
 
 
@@ -72,6 +73,7 @@ def test_event_references_merge_by_key_without_changing_source_order() -> None:
     assert attached[0].away_lineup_id == "away-0"
     assert attached[0].stint_index == 10
     assert attached[0].possession_index == 20
+    assert attached[0].free_throw_trip_id == 30
 
 
 def test_event_reference_merge_refuses_a_missing_attachment() -> None:

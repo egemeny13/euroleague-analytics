@@ -4278,6 +4278,90 @@ proving that every possession whose seconds break strict ordering carries a
 computation bug, not the documented clock defect, and must be treated as
 one - not folded into the measured rate.
 
+## 77. The stored free-throw trip id is the approved unsplit grouping; the multiple-award split stays an open owner question
+
+**Decided 2026-09-07.** `game_event.free_throw_trip_id` (already present in
+the schema; no migration) is now filled by `attach_game_event_references`,
+the same insert-time attachment path as `home_lineup_id`, `away_lineup_id`,
+`stint_index` and `possession_index` (Decision 22): a per-game call to
+`group_free_throw_trips` (`src/euroleague/free_throws.py`, approved in
+`docs/PHASE_6_POSSESSION_DEFINITIONS.md` section 8, row 3) builds
+`{ingest_index: trip_id}` next to `_possession_rows_for_game`, and the id
+rides into `GameEventAttachmentRow` and out through `attach_game_event_references`
+exactly as the lineup and possession references do. `build_game_events`
+itself still leaves the column `None`: it is Phase-6-shaped data, attached
+later, never written by an `UPDATE game_event`. Every `FTM`/`FTA` row gets a
+trip id and no other row does - measured zero exceptions on both rehearsal
+seasons (below) and on the full committed fixture set
+(`tests/test_free_throw_attachment.py`).
+
+**The id is unique within a game only.** `group_free_throw_trips` numbers
+trips per game (`trip_id = len(trips)`, restarting at 0 for every game), so
+the same integer recurs across different games; it is not a global surrogate
+key. Any comparison or join on `free_throw_trip_id` must carry `gamecode`
+(and `season_code`) alongside it. Recorded in the `GameEventRow.free_throw_trip_id`
+comment in `derived.py`; not repeated in `el_get_play_by_play`'s tool
+description because that tool already scopes every response to one gamecode.
+
+**What is stored, and what is not.** The stored id is the approved rule's
+*unsplit* grouping - the same grouping `ROADMAP.md`'s Phase 6 summary calls
+"done" for trip boundaries. Whether some trips silently hold two foul awards
+is a separate, unresolved question: `docs/FREE_THROW_TRIP_GROUPING_REPORT.md`
+and the module docstring in `free_throws.py` hand-verify three fixture cases
+(games 120, 159, 60) where a short group is provably two awards, and the
+correct handling of those - splitting the trip, or something else - is named
+in `ROADMAP.md` (~196-202) as needing the owner's decision because it changes
+whether a technical free throw ends a possession. This task stores neither a
+split id nor the `over_award_limit_reason` flag `group_free_throw_trips`
+already computes; both stay available on demand by calling the function
+directly. Storing a column ahead of that decision would either bake in the
+wrong split or need a second migration once the owner decides - the
+unsplit id is the only value both outcomes agree on.
+
+**The gate.** `assert_phase5_base_reconciles` used to require
+`free_throw_trip_id IS NULL` everywhere, because nothing wrote the column.
+It now requires the opposite of "everywhere" - every `FTM`/`FTA` row non-null,
+every other row null - and raises naming the mismatch count.
+`assert_phase5_reconciles`'s `unattached_events` count no longer folds in
+`free_throw_trip_id IS NOT NULL` (that disjunct only ever meant "Phase 6 has
+not run yet"); it gains a separate `free_throws_without_trip` count that must
+be zero, so a free throw silently losing its trip during a future change
+fails on its own line instead of being invisible inside a count that also
+covers missing lineup and stint references.
+
+**The rehearsal.** Ran 2026-09-07 on the disposable database
+(`space_e2024`, `space_e2025`, left over from Decision 76's rehearsal):
+deleted and reloaded every game's derived rows through `load_derived_rows`,
+then ran both gate functions against each schema. Both passed; zero
+`FTM`/`FTA` rows without a trip, zero non-free-throw rows with one, in both
+seasons. `docs/evidence/free_throw_trip_rehearsal.json`. The recaptured
+`game_event` fingerprints, now in `compaction.py` and `tests/test_e2025_load.py`:
+
+| Season | Count | Old checksum | New checksum |
+|---|---|---|---|
+| E2024 | 176,483 | `6efb53d2d053abbd634145b8bb655ceb` | `208eb2e49036e7f0bcf544643bcf8fd0` |
+| E2025 | 222,976 | `23c2544836c9b427a7be8430a1ee702b` | `3c4f7a64f2da46947a7c843c7aaea737` |
+
+`game_event_source` - the eleven source-only columns `warehouse_snapshot`
+hashes separately (Decision 68) - was confirmed unchanged in the same run:
+E2024 `ed8de487b6be091b24ad73ad3848c19d`, E2025 `45d38508903ea43a514b6b51f14797b1`,
+both equal to the values already recorded. Row counts are unchanged in both
+seasons - one nullable column filled, no row moved - and the production
+capture, taken by the owner after rebuilding through the same
+`prod_rebuild_derived.py` script used for Decision 76 (both tasks' rebuilds
+run together), must equal the new `game_event` values above and reproduce the
+unchanged `game_event_source` values.
+
+**No new tool.** `el_get_play_by_play` already serves `free_throw_trip_id`;
+this task only makes the column stop being `None`.
+
+**Condition.** `assert_phase5_base_reconciles` and `assert_phase5_reconciles`
+must keep enforcing exactly this: every `FTM`/`FTA` row carries a trip id,
+no other row does, and `free_throws_without_trip` is zero. If the owner later
+approves the multiple-award split, it lands as a new decision and, per
+Decision 22, as a further insert-time attachment through the same rebuild
+path - never an `UPDATE game_event` on the id this task stores.
+
 ## Rules to add to the project instruction file
 
 ```
@@ -4297,6 +4381,10 @@ one - not folded into the measured rate.
 - Report the measured rate of possessions straddling a substitution.
   A documented approximation without a measured magnitude is not
   documented.
+- `game_event.free_throw_trip_id` stores the approved unsplit free-throw
+  trip grouping. Whether some trips hold two foul awards is a separate,
+  unresolved question; do not treat the stored id as proof of a single
+  award.
 ```
 
 ## Contradictions found in the S16 sweep
