@@ -687,6 +687,35 @@ def test_the_clutch_filter_binds_both_thresholds_as_parameters():
     assert cursor.parameters[2][1:3] == (300, 5)
 
 
+def test_max_duration_seconds_binds_as_a_parameter_on_the_view_column():
+    """Break caught: a transition filter concatenated into SQL instead of bound."""
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2024",)]),
+            (["total"], [(0,)]),
+            (["gamecode", "possession_index"], []),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(306, 306, None, None, 306, None)],
+            ),
+            (["reason", "games"], [("possession_gate", 16)]),
+            (["games"], [(24,)]),
+        ]
+    )
+
+    get_possessions(cursor, {"season": "E2024", "max_duration_seconds": 6})
+
+    assert "duration_seconds <= %s" in cursor.statements[1]
+    assert cursor.parameters[1] == ("E2024", 6)
+
+
 def test_play_by_play_orders_by_ingest_index_and_nothing_else():
     cursor = RecordingCursor(
         [

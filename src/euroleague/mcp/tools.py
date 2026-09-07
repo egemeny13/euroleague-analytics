@@ -452,10 +452,13 @@ def build_registry(
                 "lineup, score margin, time remaining or how the possession ended. This "
                 "is how you answer any clutch question: pass max_seconds_remaining and "
                 "max_margin to state YOUR definition of clutch - the warehouse bakes in "
-                "none, because analysts disagree and the definition drifts. Possessions "
-                "are counted exactly from play-by-play events; never compare the count "
-                "with a box score estimate, which measures something different. Set "
-                "aggregate=true for one summary row per team instead of the raw rows."
+                "none, because analysts disagree and the definition drifts. Possession "
+                "length is served in seconds; a transition or fast-break definition is "
+                "the caller's threshold on max_duration_seconds, as clutch is on time "
+                "and margin. Possessions are counted exactly from play-by-play events; "
+                "never compare the count with a box score estimate, which measures "
+                "something different. Set aggregate=true for one summary row per team "
+                "instead of the raw rows."
             ),
             input_schema=_schema(
                 {
@@ -479,6 +482,17 @@ def build_registry(
                     "max_margin": {
                         "type": "integer",
                         "description": "Possessions starting within this many points either way.",
+                    },
+                    "max_duration_seconds": {
+                        "type": "integer",
+                        "description": (
+                            "Restrict to possessions lasting at most this many seconds, "
+                            "from the first event to the last. This is the caller's own "
+                            "threshold for a transition or fast-break possession - the "
+                            "warehouse bakes in no fixed definition, the same way clutch "
+                            "is a caller threshold on time and margin rather than a "
+                            "stored flag."
+                        ),
                     },
                     "end_reason": {
                         "type": "string",

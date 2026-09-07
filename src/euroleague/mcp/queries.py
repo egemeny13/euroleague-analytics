@@ -1078,6 +1078,10 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
     `seconds_remaining_at_start` are ordinary columns and clutch is an ordinary
     filter on them, which is why no threshold is baked into the warehouse and no
     rebuild is needed when somebody's definition of clutch changes.
+
+    Possession length is served in seconds; a transition or fast-break
+    definition is the caller's threshold on max_duration_seconds, as clutch is
+    on time and margin.
     """
     include_quarantined = _boolean(arguments, "include_quarantined", False)
     aggregate = _boolean(arguments, "aggregate", False)
@@ -1108,6 +1112,9 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
     if arguments.get("max_margin") is not None:
         conditions.append("abs(margin_at_start) <= %s")
         params.append(int(arguments["max_margin"]))
+    if arguments.get("max_duration_seconds") is not None:
+        conditions.append("duration_seconds <= %s")
+        params.append(int(arguments["max_duration_seconds"]))
     if arguments.get("end_reason"):
         conditions.append("end_reason = %s")
         params.append(arguments["end_reason"])
@@ -1133,7 +1140,8 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
                 f"  as points_per_100_possessions, "
                 f"count(*) filter (where straddles_substitution) as straddling_a_substitution, "
                 f"round(avg(seconds_remaining_at_start)::numeric, 1) "
-                f"  as mean_seconds_remaining_at_start "
+                f"  as mean_seconds_remaining_at_start, "
+                f"round(avg(duration_seconds)::numeric, 1) as mean_duration_seconds "
                 f"from v_possession where {where} group by 1 order by possessions desc",
                 tuple(params),
             )
@@ -1168,7 +1176,8 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
             f"select gamecode, possession_index, offense_team_code, defense_team_code, "
             f"offense_lineup_id, defense_lineup_id, points_scored, end_reason, "
             f"margin_at_start, seconds_remaining_at_start, straddles_substitution, "
-            f"start_ingest_index, end_ingest_index "
+            f"start_ingest_index, end_ingest_index, "
+            f"start_seconds_elapsed, end_seconds_elapsed, duration_seconds "
             f"from v_possession where {where} "
             f"order by gamecode, possession_index limit %s offset %s",
             (*params, limit, offset),
@@ -1190,6 +1199,13 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
             "Possessions are counted exactly from the event stream. Never compare them "
             "with a box score estimate such as FGA - ORB + TO + 0.44*FTA; the two are "
             "different quantities.",
+            "start_seconds_elapsed, end_seconds_elapsed and duration_seconds are seconds "
+            "since game start, taken from elapsed_seconds_raw. minutes_basis is reported "
+            "as corrected, but raw and corrected coincide on possession boundaries because "
+            "the correction touches only IN/OUT rows - the two clocks never disagree here. "
+            "duration_seconds can be negative in roughly 0.3% of possessions when a "
+            "documented MARKERTIME backward-clock step falls inside the possession; that "
+            "is a measured source-data defect, not a computation error.",
         ],
     )
 

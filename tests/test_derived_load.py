@@ -528,6 +528,8 @@ def _complete_game(gamecode: int) -> tuple[tuple[GameEventRow, ...], RemainingDe
                 0,
                 2400,
                 False,
+                0,
+                0,
             ),
         ),
     )

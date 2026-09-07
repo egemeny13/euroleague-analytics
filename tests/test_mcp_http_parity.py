@@ -21,7 +21,7 @@ from euroleague.mcp.http_app import (
 )
 from euroleague.mcp.tools import TOOL_NAMES, build_registry
 
-EXPECTED_TOOL_LIST_FINGERPRINT = "b68d2d8b075a808a0153c0fdaa58c908bb35cf28c9a27aad3329dcd45dd9507a"
+EXPECTED_TOOL_LIST_FINGERPRINT = "d98e06be0d4bd7416e5028e4f28c486ab90e10fddc57133a60b6f22e571608ef"
 
 
 def _registry() -> dict:
