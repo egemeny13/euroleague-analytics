@@ -223,3 +223,31 @@ You have the 5 configuration values ready:
 
 ### Correct Result
 Each tester can authenticate independently, connect their Claude Desktop instance, and query the 10 MCP tools. No tester ever receives or holds a database credential.
+
+## O8: Apply a Migration to Production
+
+When a pull request that adds `migrations/NNNN_name.up.sql` has merged and the
+Supabase MCP is not connected in the session, apply it yourself, one migration
+per command, in numeric order, typed with the `!` prefix so the output lands in
+the conversation:
+
+```
+! python scripts/apply_migration_with_evidence.py NNNN_name
+```
+
+The script runs the up file and the Supabase ledger row in one transaction,
+refuses a stem that is already recorded, and writes the before-and-after sizes
+to `docs/evidence/space_NNNN_name_production_apply.json`. Paste nothing else;
+the agent reads the evidence file, marks the row "Applied on" in
+`migrations/README.md`, and opens the pull request that records it.
+
+If the migration adds a column the derived loader fills (as 0027 did), the
+rows are filled by a per-game rebuild, never by an `UPDATE`:
+
+```
+! python scripts/rebuild_derived_rows.py E2024 --production
+! python scripts/rebuild_derived_rows.py E2025 --production
+```
+
+Each takes about fifteen minutes and checks its own result. Decision 81.
+
