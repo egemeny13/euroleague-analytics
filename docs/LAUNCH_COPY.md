@@ -44,10 +44,10 @@ Pre-drafted social announcement threads and launch posts in English for the publ
 > 📍 41,524 field goal attempts with verified court coordinates in E2024
 > 🗄️ Historical archive backfill running with a byte-for-byte restore gate on every completed season
 
-### Tweet 5 (11 MCP Tools for AI Assistants)
+### Tweet 5 (14 MCP Tools for AI Assistants)
 > Designed from scratch for LLMs:
 >
-> 11 read-only `el_` tools provide focused responses with strict token-aware pagination.
+> 14 read-only `el_` tools provide focused responses with strict token-aware pagination.
 >
 > Claude Desktop or Cursor can analyze lineup net ratings, Four Factors, and shot distributions through simple natural language.
 

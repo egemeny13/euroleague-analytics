@@ -10,6 +10,7 @@ Validates:
 
 from __future__ import annotations
 
+import base64
 import re
 from html.parser import HTMLParser
 from pathlib import Path
@@ -509,6 +510,113 @@ def test_readme_tool_table_lists_every_registered_tool() -> None:
     assert claimed is not None, "README must state how many read-only tools it exposes"
     assert int(claimed.group(1)) == len(TOOL_NAMES), (
         f"README claims {claimed.group(1)} tools; the registry serves {len(TOOL_NAMES)}"
+    )
+
+
+TOOL_COUNT_SURFACES = (
+    Path("README.md"),
+    Path("docs/SCOPE.md"),
+    Path("docs/CLIENT_COMPATIBILITY.md"),
+    Path("docs/SPONSOR_ONE_PAGER.md"),
+    Path("docs/LAUNCH_COPY.md"),
+    Path("docs/LAUNCH_NARRATIVE.md"),
+    SITE_DIR / "index.html",
+    SITE_DIR / "support.html",
+    SITE_DIR / "motion.js",
+    SITE_DIR / "tr" / "index.html",
+)
+
+# English number words that could plausibly stand in front of "tool(s)". Any of
+# these other than the word for the current registry size is a stale claim -
+# Decision 65 froze the count at eleven and Decision 79 moved it to fourteen,
+# so "eleven tools" is exactly the kind of leftover this guards against.
+_ENGLISH_NUMBER_WORDS = (
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+)
+# Turkish number words that could stand in front of the Turkish word for
+# "tool" - same idea as _ENGLISH_NUMBER_WORDS above, for site/tr/index.html.
+# Base64-encoded, in the same style tests/test_english_only.py uses for its
+# own Turkish word list, so this file's source stays English-only per
+# CLAUDE.md even though it has to check Turkish copy. Comment gives the
+# English meaning of each entry rather than repeating the Turkish word.
+_TURKISH_NUMBER_WORDS_B64 = (
+    "b24gYmly",  # eleven
+    "b24gaWtp",  # twelve
+    "b24gw7zDpw==",  # thirteen
+    "b24gZMO2cnQ=",  # fourteen - the current registry size
+    "b24gYmXFnw==",  # fifteen
+    "Ymly",  # one
+    "aWtp",  # two
+    "w7zDpw==",  # three
+    "ZMO2cnQ=",  # four
+    "YmXFnw==",  # five
+)
+_TURKISH_TOOL_WORD_B64 = "YXJhw6c="  # the noun this check counts
+
+
+def test_public_copy_states_the_current_tool_count() -> None:
+    """No public surface may quote a tool count that is not the registry's own.
+
+    Derives the expected count from ``euroleague.mcp.tools.TOOL_NAMES`` rather
+    than hard-coding it, so this test does not itself need editing the next
+    time a tool is added under Decision 65's condition. It catches a stale
+    number word ("eleven"), a stale digit form ("11 tools"), and the Turkish
+    compound-number equivalent - the three shapes the final review found
+    still living in public copy after Decision 79. The regexes require the
+    number to sit immediately in front of "tool(s)" or its Turkish equivalent
+    (with an optional "read-only"/"MCP" in between on the English side) so an
+    unrelated count elsewhere in the same file - a game count, a possession
+    count - is not flagged.
+    """
+    current_count = len(TOOL_NAMES)
+    current_word_en = _ENGLISH_NUMBER_WORDS[current_count]
+    stale_words_en = [w for w in _ENGLISH_NUMBER_WORDS if w != current_word_en]
+    turkish_number_words = [base64.b64decode(w).decode("utf-8") for w in _TURKISH_NUMBER_WORDS_B64]
+    tool_word_tr = base64.b64decode(_TURKISH_TOOL_WORD_B64).decode("utf-8")
+    current_word_tr = turkish_number_words[3]  # "fourteen" - see the comment above
+    stale_words_tr = [w for w in turkish_number_words if w != current_word_tr]
+
+    word_pattern_en = re.compile(
+        r"\b(" + "|".join(stale_words_en) + r")\s+(?:read-only\s+|MCP\s+)?tools?\b",
+        re.IGNORECASE,
+    )
+    digit_pattern_en = re.compile(
+        r"\b(?!" + str(current_count) + r"\b)(\d{1,2})\s+(?:read-only\s+|MCP\s+)?tools?\b"
+    )
+    # A bare single-digit word is also the tail of the compound "ten <word>"
+    # (the teens), so a lookbehind keeps a bare match from firing on the
+    # second half of the correct compound number.
+    word_pattern_tr = re.compile(
+        r"(?<!on )\b(" + "|".join(re.escape(w) for w in stale_words_tr) + r")\s+" + tool_word_tr
+    )
+
+    offenders: list[str] = []
+    for path in TOOL_COUNT_SURFACES:
+        text = path.read_text(encoding="utf-8")
+        for pattern in (word_pattern_en, digit_pattern_en, word_pattern_tr):
+            for match in pattern.finditer(text):
+                line = text.count("\n", 0, match.start()) + 1
+                offenders.append(f"{path}:{line}: {match.group(0)!r}")
+
+    assert not offenders, (
+        f"Stale tool-count wording found (registry now has {current_count} tools, "
+        f"{current_word_en!r}/{current_word_tr!r}):\n" + "\n".join(offenders)
     )
 
 

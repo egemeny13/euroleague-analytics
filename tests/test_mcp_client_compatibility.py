@@ -242,8 +242,8 @@ def test_protocol_negotiation_falls_back_to_latest_for_unsupported_version(mock_
 # ---------------------------------------------------------------------------
 
 
-def test_exactly_12_tools_discovered_with_full_annotations(mock_registry):
-    """Verify tools/list exposes exactly 12 tools with correct wire attributes."""
+def test_every_declared_tool_is_discovered_with_full_annotations(mock_registry):
+    """Verify tools/list exposes exactly the registered tools with correct wire attributes."""
     stdio_tools = published_tools(mock_registry)
     sdk_tools = sdk_tools_as_wire(mock_registry)
 

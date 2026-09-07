@@ -1261,7 +1261,8 @@ handful of users, not against a launch.
 ## Phase 9: external judgement. Opened 2026-09-06.
 
 Phases 1 to 8 are closed, the goal queue is empty, and `docs/SCOPE.md` freezes
-version 1 at eleven tools (Decision 65). Every remaining gate in this file has
+version 1 at fourteen tools (Decision 65, amended to fourteen by Decision 79).
+Every remaining gate in this file has
 been a test of the code. This one is a test of the product, and it is the only
 phase left.
 
