@@ -1,0 +1,45 @@
+{
+  "date": "2026-09-07",
+  "migrations": ["0027_possession_seconds", "0028_possession_view_seconds"],
+  "decision": 76,
+  "database": "disposable, euroleague_test on localhost:5433 (never production)",
+  "procedure": [
+    "Applied migrations/0027_possession_seconds.up.sql and migrations/0028_possession_view_seconds.up.sql to schemas space_e2024 and space_e2025, both already loaded from a prior rehearsal.",
+    "Confirmed start_seconds_elapsed and end_seconds_elapsed were added to possession with no data loss (row counts unchanged).",
+    "Rebuilt every game's derived rows for both seasons through delete_derived_game_rows plus load_derived_rows(gamecodes=None), matching replace_derived_games' per-game contract.",
+    "Confirmed zero null start_seconds_elapsed or end_seconds_elapsed rows remained after the rebuild, for both seasons.",
+    "Captured derived_snapshot(connection, season)[\"possession\"] for both seasons."
+  ],
+  "finding": "Migration 0027 as drafted in the task brief included a check constraint requiring end_seconds_elapsed >= start_seconds_elapsed. Measured against the full E2024 local cache (exploration/cache, 47,829 possessions): 139 possessions (0.291%) have end_seconds_elapsed < start_seconds_elapsed, by up to 60 seconds, and every one of the 139 contains an event flagged clock_moved_backwards - the documented MARKERTIME backward-clock defect (CLAUDE.md hard rule on event ordering). The fixture set already commits game 323 specifically for 'a full 60-second backwards clock step', and game 35 shows the same defect pushing a possession's start below its stint's start. A hard check constraint would have aborted the per-game rebuild for any game carrying this artifact, quarantining otherwise-valid data over a source clock glitch rather than a computation bug. The constraint was dropped from 0027; the invariant test in tests/test_possessions.py proves every ordering violation traces to a clock_moved_backwards event in the possession's span, never to an unflagged one.",
+  "results": {
+    "E2024": {
+      "games": 330,
+      "delete_seconds": 3.15,
+      "load_seconds": 45.27,
+      "null_seconds_after_rebuild": 0,
+      "possession_fingerprint_before": {
+        "count": 47829,
+        "checksum": "670595518dbe73679e6e09e42b71af7f"
+      },
+      "possession_fingerprint_after": {
+        "count": 47829,
+        "checksum": "d0953d3d854d169727828057092483ae"
+      }
+    },
+    "E2025": {
+      "games": 402,
+      "delete_seconds": 4.22,
+      "load_seconds": 49.20,
+      "null_seconds_after_rebuild": 0,
+      "possession_fingerprint_before": {
+        "count": 59482,
+        "checksum": "b0a2360f2504a1e4e33b03ec2d293ea4"
+      },
+      "possession_fingerprint_after": {
+        "count": 59482,
+        "checksum": "ecaacb969de2174c2c0311ab18b1f046"
+      }
+    }
+  },
+  "note": "Row counts are unchanged in both seasons - only two nullable columns were added, no row was inserted or deleted. The checksum moves because it hashes every column. The production capture, taken by the owner after applying 0027 and 0028 and rebuilding through replace_derived_games, must equal the *_after values recorded here."
+}

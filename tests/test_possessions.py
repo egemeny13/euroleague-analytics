@@ -7,7 +7,7 @@ from collections import Counter
 import pytest
 
 from euroleague.cache import ResponseCache
-from euroleague.derived import build_remaining_rows
+from euroleague.derived import build_game_events, build_remaining_rows
 from euroleague.events import EventRecord, flatten_play_by_play
 from euroleague.possessions import (
     EVENT_ROLES,
@@ -383,6 +383,80 @@ def test_a_possession_starting_inside_a_stint_is_credited_to_that_stint(
     for possession in straddling:
         stint = stints[(possession.gamecode, possession.stint_index)]
         assert possession.end_ingest_index > stint.end_ingest_index
+
+
+def test_possession_seconds_are_monotonic_and_inside_their_stint(
+    fixture_cache: ResponseCache,
+) -> None:
+    """Mechanical: a possession stays inside its stint and ends no earlier
+    than it starts, unless a documented MARKERTIME backward-clock step
+    (CLAUDE.md: "occasionally runs backwards ... around substitutions during
+    free throws") falls inside the possession - never for any other reason -
+    and the raw and corrected clocks agree on possession boundaries because
+    the correction touches only IN/OUT rows.
+
+    Measured on the full E2024 cache on 2026-09-07: 139 of 47,829 possessions
+    (0.291%) carry a clock_moved_backwards event in their span, by up to 60
+    seconds; every one of the strict-order violations traces to exactly one
+    of those events, never to an unflagged one. On the committed fixture set,
+    that is 16 possessions with end_seconds_elapsed < start_seconds_elapsed
+    and 2 possessions with start_seconds_elapsed < their stint's
+    start_elapsed_raw (game 35 and game 272; game 323's "full 60-second
+    backwards clock step" is the largest of the 16). Both counts are
+    asserted below, not just their sum, so a future fix that quietly stops
+    exercising one of the two shapes is caught.
+    """
+    rows = build_remaining_rows(fixture_cache, "E2024")
+    stints = {(stint.gamecode, stint.stint_index): stint for stint in rows.stints}
+
+    events_by_game: dict[int, list] = {}
+    for event in build_game_events(fixture_cache, "E2024"):
+        events_by_game.setdefault(event.gamecode, []).append(event)
+    positions_by_game = {
+        gamecode: {event.ingest_index: position for position, event in enumerate(events)}
+        for gamecode, events in events_by_game.items()
+    }
+    events_by_key = {
+        (event.gamecode, event.ingest_index): event
+        for events in events_by_game.values()
+        for event in events
+    }
+
+    ends_before_start = 0
+    starts_before_stint = 0
+    for possession in rows.possessions:
+        stint = stints[(possession.gamecode, possession.stint_index)]
+
+        start_event = events_by_key[(possession.gamecode, possession.start_ingest_index)]
+        assert start_event.elapsed_seconds_corrected == start_event.elapsed_seconds_raw
+        end_event = events_by_key[(possession.gamecode, possession.end_ingest_index)]
+        assert end_event.elapsed_seconds_corrected == end_event.elapsed_seconds_raw
+
+        positions = positions_by_game[possession.gamecode]
+        span = events_by_game[possession.gamecode][
+            positions[possession.start_ingest_index] : positions[possession.end_ingest_index] + 1
+        ]
+        clock_stepped_backwards = any(event.clock_moved_backwards for event in span)
+
+        possession_starts_before_stint = possession.start_seconds_elapsed < stint.start_elapsed_raw
+        possession_ends_before_start = (
+            possession.end_seconds_elapsed < possession.start_seconds_elapsed
+        )
+
+        if possession_starts_before_stint or possession_ends_before_start:
+            ends_before_start += possession_ends_before_start
+            starts_before_stint += possession_starts_before_stint
+            assert clock_stepped_backwards, (
+                f"possession {possession.gamecode}/{possession.possession_index} breaks "
+                "seconds ordering with no clock_moved_backwards event in its span - that "
+                "would be a computation bug, not the documented clock defect"
+            )
+        else:
+            assert possession.start_seconds_elapsed >= stint.start_elapsed_raw
+            assert possession.end_seconds_elapsed >= possession.start_seconds_elapsed
+
+    assert ends_before_start > 0, "the fixture set's clock-defect games must exercise this branch"
+    assert starts_before_stint > 0, "the fixture set's clock-defect games must exercise this branch"
 
 
 def test_a_game_failing_the_possession_gate_is_quarantined_not_dropped(

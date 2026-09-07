@@ -4199,6 +4199,85 @@ for that season, and no roster row has a null `birth_date`. A season where
 relax silently - the brief is explicit that this is measured, not assumed,
 and a season that breaks it needs its own decision.
 
+## 76. Possession seconds are stored from `elapsed_seconds_raw`, with no hard ordering constraint, and Decision 22's scope note is amended to name derived-table columns explicitly
+
+**Decided 2026-09-07.** `possession` gains `start_seconds_elapsed` and
+`end_seconds_elapsed` (migration 0027), seconds since game start at the
+possession's first and last event, served through `v_possession` alongside
+a computed `duration_seconds` (migration 0028) and through `el_get_possessions`
+as a new `max_duration_seconds` filter and `mean_duration_seconds` aggregate.
+Both columns are nullable: production rows already exist, Decision 22
+forbids `UPDATE`, and the columns are filled by a per-game rebuild through
+`replace_derived_games`, never an in-place `UPDATE`. This amends Decision
+22's scope note to say so explicitly - the rule was written for `game_event`
+and applies identically to any already-loaded derived table.
+
+**The finding.** The task brief for this migration specified a check
+constraint, `end_seconds_elapsed >= start_seconds_elapsed`. Measured against
+the full E2024 local cache (`exploration/cache`, 47,829 possessions): 139
+possessions (0.291%) have `end_seconds_elapsed < start_seconds_elapsed`, by
+up to 60 seconds, and every one of the 139 contains an event flagged
+`clock_moved_backwards` - the documented MARKERTIME backward-clock defect
+(the event-ordering hard rules). The fixture set already commits game 323
+specifically for "a full 60-second backwards clock step," and game 35 shows
+the same defect pushing a possession's start below its own stint's recorded
+start. A hard check constraint would abort the per-game rebuild for any game
+carrying this artifact, quarantining otherwise-valid data over a source
+clock glitch rather than a computation bug - the constraint was dropped from
+0027. `tests/test_possessions.py`'s invariant test instead proves every
+ordering violation traces to a `clock_moved_backwards` event inside the
+possession's span, never to an unflagged one, which is the mechanical proof
+this column ships with in place of a constraint that real data violates.
+
+**minutes_basis.** `el_get_possessions` keeps `minutes_basis="corrected"`,
+unchanged from before this task, with an added caveat that raw and corrected
+coincide on possession boundaries because the correction touches only
+IN/OUT rows - proven by the same invariant test for possession start events.
+`duration_seconds` is computed from `elapsed_seconds_raw` at both ends, so
+the practical difference is nil; keeping `"corrected"` avoids churn in the
+one existing test that names the value literally
+(`test_possessions_declare_a_minutes_basis_because_they_report_a_clock_value`)
+for no accuracy gain.
+
+**The rehearsal.** Migrations 0027 and 0028 were rehearsed 2026-09-07 on the
+disposable database against `space_e2024` and `space_e2025`: after applying
+both and rebuilding every game's derived rows through
+`delete_derived_game_rows` plus `load_derived_rows(gamecodes=None)`, zero
+`possession` rows had a null `start_seconds_elapsed` or
+`end_seconds_elapsed` in either season. `docs/evidence/possession_seconds_rehearsal.json`.
+The recaptured `possession` fingerprints, now in `compaction.py` and
+`tests/test_e2025_load.py`:
+
+| Season | Count | Old checksum | New checksum |
+|---|---|---|---|
+| E2024 | 47,829 | `670595518dbe73679e6e09e42b71af7f` | `d0953d3d854d169727828057092483ae` |
+| E2025 | 59,482 | `b0a2360f2504a1e4e33b03ec2d293ea4` | `ecaacb969de2174c2c0311ab18b1f046` |
+
+Row counts are unchanged in both seasons - only two nullable columns were
+added, no row moved - and the production capture, taken by the owner after
+applying 0027 and 0028 and rebuilding through `replace_derived_games`, must
+equal the new values above.
+
+**0028's down migration.** PostgreSQL refuses `create or replace view` when
+it would drop trailing columns ("cannot drop columns from view"), so 0028's
+down drops and recreates `v_possession`, then reapplies the three privilege
+grants (0011's revoke of `anon`/`authenticated`, 0013's and 0020's `select`
+for `el_reader`/`el_tester`) that a drop removes. `scripts/view_migration_gate.py`
+gave a false FAIL on this migration: its `signature()` helper filters
+`information_schema.columns` by `table_name` only, and this disposable
+database also carries `v_possession` in the `space_e2024` and `space_e2025`
+rehearsal schemas from an unrelated earlier task, cross-contaminating the
+column list once more than one schema holds the view. Gated manually
+instead, filtering explicitly by `table_schema = 'public'`: up (21 columns),
+down (18 columns, exactly the 0004/0011 signature, grants restored), up
+again (21 columns, identical to the first up, grants unchanged).
+
+**Condition.** The invariant test in `tests/test_possessions.py` must keep
+proving that every possession whose seconds break strict ordering carries a
+`clock_moved_backwards` event in its span. A violation that does not is a
+computation bug, not the documented clock defect, and must be treated as
+one - not folded into the measured rate.
+
 ## Rules to add to the project instruction file
 
 ```

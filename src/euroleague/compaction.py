@@ -57,7 +57,14 @@ E2024_BASELINE: dict[str, tuple[int, str]] = {
     "game_event": (176_483, "6efb53d2d053abbd634145b8bb655ceb"),
     "lineup_stint": (13_927, "5643117a3abf966ccc6e9f63efbdc18a"),
     "player_game_minutes": (7_863, "89897157cf4e918165f7527e8dc42b81"),
-    "possession": (47_829, "670595518dbe73679e6e09e42b71af7f"),
+    # Migration 0027 (Decision 76) added start_seconds_elapsed and
+    # end_seconds_elapsed to possession. The count is unchanged - only two
+    # columns were added, no row moved - but the content checksum moves
+    # because it hashes every column. Recaptured 2026-09-07 on the disposable
+    # database after applying 0027 and 0028 and rebuilding every game's
+    # derived rows through replace_derived_games; the production capture
+    # after the owner's apply must equal this value.
+    "possession": (47_829, "d0953d3d854d169727828057092483ae"),
     "game_quality": (330, "051207411ad379769325e5f9485b1925"),
 }
 
@@ -91,7 +98,9 @@ E2025_BASELINE: dict[str, tuple[int, str]] = {
     "game_event": (222_976, "23c2544836c9b427a7be8430a1ee702b"),
     "lineup_stint": (17_790, "32ab77663e26ea8008d821b1f603326f"),
     "player_game_minutes": (9_540, "81606d5aa9ab6f014afd9c1936cba809"),
-    "possession": (59_482, "b0a2360f2504a1e4e33b03ec2d293ea4"),
+    # See the E2024 note: migration 0027 (Decision 76) moved this fingerprint.
+    # Recaptured 2026-09-07 on the disposable database, same procedure.
+    "possession": (59_482, "ecaacb969de2174c2c0311ab18b1f046"),
     "game_quality": (402, "ebe44c90defa90e56b050c548f3d90d7"),
 }
 

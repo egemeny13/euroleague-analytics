@@ -80,7 +80,12 @@ def test_live_e2025_layers_match_the_complete_cache_measurements() -> None:
         "game_event": TableFingerprint(222_976, "23c2544836c9b427a7be8430a1ee702b"),
         "player_game_minutes": TableFingerprint(9_540, "81606d5aa9ab6f014afd9c1936cba809"),
         "game_quality": TableFingerprint(402, "ebe44c90defa90e56b050c548f3d90d7"),
-        "possession": TableFingerprint(59_482, "b0a2360f2504a1e4e33b03ec2d293ea4"),
+        # Migration 0027 (Decision 76) added start_seconds_elapsed and
+        # end_seconds_elapsed to possession. Recaptured 2026-09-07 on the
+        # disposable database after applying 0027 and 0028 and rebuilding
+        # every game's derived rows through replace_derived_games; this
+        # value must equal the production capture after the owner's apply.
+        "possession": TableFingerprint(59_482, "ecaacb969de2174c2c0311ab18b1f046"),
     }
 
 
@@ -172,5 +177,8 @@ def test_live_e2024_fingerprints_match_order_5_and_order_9() -> None:
         "game_event": TableFingerprint(176_483, "6efb53d2d053abbd634145b8bb655ceb"),
         "player_game_minutes": TableFingerprint(7_863, "89897157cf4e918165f7527e8dc42b81"),
         "game_quality": TableFingerprint(330, "051207411ad379769325e5f9485b1925"),
-        "possession": TableFingerprint(47_829, "670595518dbe73679e6e09e42b71af7f"),
+        # See the E2025 note above: migration 0027 (Decision 76) moved this
+        # fingerprint. Recaptured 2026-09-07 on the disposable database,
+        # same procedure.
+        "possession": TableFingerprint(47_829, "d0953d3d854d169727828057092483ae"),
     }

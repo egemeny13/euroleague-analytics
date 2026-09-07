@@ -31,7 +31,7 @@ raw or corrected.
 | `el_get_player_stats` | A player's season, per game and per 100 possessions. |
 | `el_get_lineup_stats` | Five-player lineups: possessions, offensive, defensive and net rating. |
 | `el_get_player_on_off` | The team's net rating with a player on court against off court; accepts the caller's clutch thresholds (max_seconds_remaining, max_margin), applied to both splits. |
-| `el_get_possessions` | Possession rows with start margin and clock, so any clutch definition is a filter; can aggregate by team, end reason, or both. |
+| `el_get_possessions` | Possession rows with start margin, clock and duration in seconds, so any clutch or transition definition is a filter (max_seconds_remaining, max_margin, max_duration_seconds); can aggregate by team, end reason, or both. |
 | `el_get_fouls` | Fouls committed and drawn by type, per player, team or game; reconciles to the box score. |
 | `el_get_referee_stats` | A referee's season: games worked, fouls per game, home-win rate, pace; unpivoted from the schedule's officiating crew. |
 | `el_get_roster` | A team's roster with biography (jersey, position, height, weight, birth date, country), linked to the box-score player by observed stat lines, never by name. |

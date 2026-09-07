@@ -130,6 +130,8 @@ POSSESSION_COLUMNS = (
     "margin_at_start",
     "seconds_remaining_at_start",
     "straddles_substitution",
+    "start_seconds_elapsed",
+    "end_seconds_elapsed",
 )
 
 GAME_QUALITY_COLUMNS = (
@@ -291,6 +293,8 @@ class PossessionRow(NamedTuple):
     margin_at_start: int
     seconds_remaining_at_start: int
     straddles_substitution: bool
+    start_seconds_elapsed: int
+    end_seconds_elapsed: int
 
 
 @dataclass(frozen=True)
@@ -758,6 +762,8 @@ def _possession_rows_for_game(
                 margin if offense_is_home else -margin,
                 total_seconds - start_event.elapsed_seconds_raw,
                 end_position > segment.end_position,
+                start_event.elapsed_seconds_raw,
+                events[end_position].elapsed_seconds_raw,
             )
         )
         # First possession to cover an event wins. Overlaps are rare and are
