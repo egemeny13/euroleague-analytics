@@ -1161,7 +1161,8 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
                 f"round(100.0 * sum(points_scored) / nullif(count(*), 0), 2) "
                 f"  as points_per_100_possessions, "
                 f"round(100.0 * count(*) / sum(count(*)) over ({over_clause}), 2) "
-                f"  as {share_column} "
+                f"  as {share_column}, "
+                f"round(avg(duration_seconds)::numeric, 1) as mean_duration_seconds "
                 f"from v_possession where {where} group by {group_columns} "
                 f"order by {group_columns}, possessions desc",
                 tuple(params),
@@ -1185,6 +1186,28 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
         rows = _rows(cursor)
         page_limit = limit
 
+    caveats = [
+        "margin_at_start is from the offense's point of view at the moment the possession began.",
+        "Possessions are counted exactly from the event stream. Never compare them "
+        "with a box score estimate such as FGA - ORB + TO + 0.44*FTA; the two are "
+        "different quantities.",
+        "start_seconds_elapsed, end_seconds_elapsed and duration_seconds are seconds "
+        "since game start, taken from elapsed_seconds_raw. minutes_basis is reported "
+        "as corrected, but raw and corrected coincide on possession boundaries because "
+        "the correction touches only IN/OUT rows - the two clocks never disagree here. "
+        "duration_seconds can be negative in roughly 0.3% of possessions when a "
+        "documented MARKERTIME backward-clock step falls inside the possession; that "
+        "is a measured source-data defect, not a computation error.",
+        "Rows loaded before the possession-seconds rebuild have null seconds and are "
+        "excluded by max_duration_seconds; el_describe_warehouse's coverage does not "
+        "yet report that state.",
+    ]
+    if arguments.get("max_duration_seconds") is not None:
+        caveats.append(
+            "Possessions with null seconds (loaded before migration 0027's rebuild) "
+            "are not counted."
+        )
+
     return build_response(
         rows=rows,
         coverage=coverage_for(cursor, season_code, include_quarantined),
@@ -1193,20 +1216,7 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
         limit=page_limit,
         offset=offset,
         total_available=total,
-        caveats=[
-            "margin_at_start is from the offense's point of view at the moment the "
-            "possession began.",
-            "Possessions are counted exactly from the event stream. Never compare them "
-            "with a box score estimate such as FGA - ORB + TO + 0.44*FTA; the two are "
-            "different quantities.",
-            "start_seconds_elapsed, end_seconds_elapsed and duration_seconds are seconds "
-            "since game start, taken from elapsed_seconds_raw. minutes_basis is reported "
-            "as corrected, but raw and corrected coincide on possession boundaries because "
-            "the correction touches only IN/OUT rows - the two clocks never disagree here. "
-            "duration_seconds can be negative in roughly 0.3% of possessions when a "
-            "documented MARKERTIME backward-clock step falls inside the possession; that "
-            "is a measured source-data defect, not a computation error.",
-        ],
+        caveats=caveats,
     )
 
 

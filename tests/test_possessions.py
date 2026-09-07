@@ -398,10 +398,13 @@ def test_possession_seconds_are_monotonic_and_inside_their_stint(
     Measured on the full E2024 cache on 2026-09-07: 139 of 47,829 possessions
     (0.291%) carry a clock_moved_backwards event in their span, by up to 60
     seconds; every one of the strict-order violations traces to exactly one
-    of those events, never to an unflagged one. The fixture set commits game
-    323 specifically for "a full 60-second backwards clock step" and game 35
-    for a minute mismatch from the same family of defect
-    (tests/fixtures/MANIFEST.json), so this branch is not vacuous here.
+    of those events, never to an unflagged one. On the committed fixture set,
+    that is 16 possessions with end_seconds_elapsed < start_seconds_elapsed
+    and 2 possessions with start_seconds_elapsed < their stint's
+    start_elapsed_raw (game 35 and game 272; game 323's "full 60-second
+    backwards clock step" is the largest of the 16). Both counts are
+    asserted below, not just their sum, so a future fix that quietly stops
+    exercising one of the two shapes is caught.
     """
     rows = build_remaining_rows(fixture_cache, "E2024")
     stints = {(stint.gamecode, stint.stint_index): stint for stint in rows.stints}
@@ -419,12 +422,15 @@ def test_possession_seconds_are_monotonic_and_inside_their_stint(
         for event in events
     }
 
-    affected_possessions = 0
+    ends_before_start = 0
+    starts_before_stint = 0
     for possession in rows.possessions:
         stint = stints[(possession.gamecode, possession.stint_index)]
 
         start_event = events_by_key[(possession.gamecode, possession.start_ingest_index)]
         assert start_event.elapsed_seconds_corrected == start_event.elapsed_seconds_raw
+        end_event = events_by_key[(possession.gamecode, possession.end_ingest_index)]
+        assert end_event.elapsed_seconds_corrected == end_event.elapsed_seconds_raw
 
         positions = positions_by_game[possession.gamecode]
         span = events_by_game[possession.gamecode][
@@ -432,11 +438,14 @@ def test_possession_seconds_are_monotonic_and_inside_their_stint(
         ]
         clock_stepped_backwards = any(event.clock_moved_backwards for event in span)
 
-        starts_before_stint = possession.start_seconds_elapsed < stint.start_elapsed_raw
-        ends_before_start = possession.end_seconds_elapsed < possession.start_seconds_elapsed
+        possession_starts_before_stint = possession.start_seconds_elapsed < stint.start_elapsed_raw
+        possession_ends_before_start = (
+            possession.end_seconds_elapsed < possession.start_seconds_elapsed
+        )
 
-        if starts_before_stint or ends_before_start:
-            affected_possessions += 1
+        if possession_starts_before_stint or possession_ends_before_start:
+            ends_before_start += possession_ends_before_start
+            starts_before_stint += possession_starts_before_stint
             assert clock_stepped_backwards, (
                 f"possession {possession.gamecode}/{possession.possession_index} breaks "
                 "seconds ordering with no clock_moved_backwards event in its span - that "
@@ -446,9 +455,8 @@ def test_possession_seconds_are_monotonic_and_inside_their_stint(
             assert possession.start_seconds_elapsed >= stint.start_elapsed_raw
             assert possession.end_seconds_elapsed >= possession.start_seconds_elapsed
 
-    assert affected_possessions > 0, (
-        "the fixture set's clock-defect games must exercise this branch"
-    )
+    assert ends_before_start > 0, "the fixture set's clock-defect games must exercise this branch"
+    assert starts_before_stint > 0, "the fixture set's clock-defect games must exercise this branch"
 
 
 def test_a_game_failing_the_possession_gate_is_quarantined_not_dropped(

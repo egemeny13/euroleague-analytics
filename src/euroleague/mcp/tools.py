@@ -491,7 +491,13 @@ def build_registry(
                             "threshold for a transition or fast-break possession - the "
                             "warehouse bakes in no fixed definition, the same way clutch "
                             "is a caller threshold on time and margin rather than a "
-                            "stored flag."
+                            "stored flag. About 0.3% of possessions carry a negative "
+                            "duration because the source game clock is measured to run "
+                            "backwards by up to a minute around some substitutions; those "
+                            "rows pass this filter at any positive threshold. Rows loaded "
+                            "before the possession-seconds rebuild have null seconds and "
+                            "are excluded by this filter; el_describe_warehouse's coverage "
+                            "does not yet report that state."
                         ),
                     },
                     "end_reason": {
