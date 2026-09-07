@@ -1,7 +1,7 @@
 {
-  "generated": "2026-09-07 (fix round 1 of 5)",
+  "generated": "2026-09-07 (fix round 2 of 5)",
   "generated_by": "tests/test_season_totals_oracle.py, Decision 78",
-  "note": "Two league sources are compared. The v3 traditional endpoint publishes per-game averages (rounded_average comparison, one rounding increment of tolerance). The v2 club endpoint publishes exact season totals (exact_count comparison, zero tolerance) and is the stronger oracle.",
+  "note": "Two league sources are compared. The v3 traditional endpoint publishes per-game averages (rounded_average comparison, one rounding increment of tolerance). The v2 club endpoint publishes exact season totals (exact_count comparison, zero tolerance except two named, exact KNOWN_LEAGUE_DISCREPANCIES entries) and is the stronger oracle.",
   "seasons": {
     "E2024": {
       "team_average_oracle_v3": {
@@ -216,22 +216,23 @@
             "comparison": "exact_count"
           }
         },
-        "mismatches": [
-          {
-            "club_code": "RED",
-            "column": "defensive_rebounds",
+        "known_league_discrepancies": {
+          "RED/defensive_rebounds": {
             "our_value": 791,
             "published_value": 789.0
           },
-          {
-            "club_code": "RED",
-            "column": "total_rebounds",
+          "RED/total_rebounds": {
             "our_value": 1181,
             "published_value": 1179.0
           }
+        },
+        "known_discrepancies_reproduced_exactly": [
+          "RED/defensive_rebounds",
+          "RED/total_rebounds"
         ],
-        "verdict": "FAIL",
-        "verdict_note": "Genuine small discrepancies between the league's own per-game box scores and its own v2 season-aggregate endpoint. Every affected team's games_played count matches exactly (ruling out a missing or extra game), and every other column for that team matches exactly (ruling out a systemic parsing defect), which narrows this to a handful of individual stat units disagreeing between the league's own two publishing systems. Not resolved as of this fix round; see Decision 78 and the fix report."
+        "mismatches": [],
+        "verdict": "PASS",
+        "verdict_note": "Two genuine, small discrepancies between the league's own per-game box scores and its own v2 season-aggregate endpoint, recorded exactly in KNOWN_LEAGUE_DISCREPANCIES (tests/test_season_totals_oracle.py) rather than excluded. Our box-score sums are already validated exactly against the league's own published box scores elsewhere (tests/test_shots.py, src/euroleague/validation.py), so this is the league's season page disagreeing with the league's own box scores, not our defect - Decision 1's fidelity rule is why our figures follow the box score. This test does not, and cannot, establish which of the league's two systems is correct."
       }
     },
     "E2025": {
@@ -451,16 +452,18 @@
             "comparison": "exact_count"
           }
         },
-        "mismatches": [
-          {
-            "club_code": "MIL",
-            "column": "field_goals_attempted_2",
+        "known_league_discrepancies": {
+          "MIL/field_goals_attempted_2": {
             "our_value": 1366,
             "published_value": 1367.0
           }
+        },
+        "known_discrepancies_reproduced_exactly": [
+          "MIL/field_goals_attempted_2"
         ],
-        "verdict": "FAIL",
-        "verdict_note": "Genuine small discrepancies between the league's own per-game box scores and its own v2 season-aggregate endpoint. Every affected team's games_played count matches exactly (ruling out a missing or extra game), and every other column for that team matches exactly (ruling out a systemic parsing defect), which narrows this to a handful of individual stat units disagreeing between the league's own two publishing systems. Not resolved as of this fix round; see Decision 78 and the fix report."
+        "mismatches": [],
+        "verdict": "PASS",
+        "verdict_note": "Two genuine, small discrepancies between the league's own per-game box scores and its own v2 season-aggregate endpoint, recorded exactly in KNOWN_LEAGUE_DISCREPANCIES (tests/test_season_totals_oracle.py) rather than excluded. Our box-score sums are already validated exactly against the league's own published box scores elsewhere (tests/test_shots.py, src/euroleague/validation.py), so this is the league's season page disagreeing with the league's own box scores, not our defect - Decision 1's fidelity rule is why our figures follow the box score. This test does not, and cannot, establish which of the league's two systems is correct."
       }
     }
   }

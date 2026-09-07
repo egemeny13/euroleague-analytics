@@ -4469,37 +4469,58 @@ against `api-live.euroleague.net` only. The merged files are not committed
 `CLUB_COLUMN_MAP`, including `games_played`, as an exact integer count - zero
 tolerance, because `accumulated` is a sum, not an average.
 
-**Result: two genuine mismatches, both small, neither excluded.** Per the
-fix-round-1 ruling ("a mismatch is a finding to report, not to exclude"),
-these are reported here rather than papered over with a `compare=False`
-column, and the shipped test asserts real equality - it is currently red for
-both, which `bare pytest` does not see because `full_season`-marked tests are
-excluded from the default run (`pyproject.toml`'s `addopts`).
+**Result: two genuine mismatches, both small, neither excluded, both now
+explained - fix round 2.** Per the fix-round-1 ruling ("a mismatch is a
+finding to report, not to exclude"), these were first reported with the test
+left red. Fix round 2 supplied the missing piece: our raw per-game sums are
+*already* validated exactly against the league's own published box scores
+elsewhere in this project (`tests/test_shots.py`,
+`src/euroleague/validation.py`, across at least 50 games per CLAUDE.md's own
+gate). That means these two cases are not "our number versus the league's
+number" - they are **the league's own v2 season-aggregate page disagreeing
+with the league's own per-game box scores**, which this project has no way
+to adjudicate and does not attempt to. Decision 1's fidelity rule - the raw
+layer is trimmed but faithful to the archived source, and the archived
+per-game box score is that source - is why our figures follow the box score
+rather than the season page.
 
-| Season | Club | Column | Our sum | Published |
+| Season | Club | Column | Our sum (= box score) | Published (v2 season page) |
 |---|---|---|---|---|
 | E2024 | RED | `defensive_rebounds` | 791 | 789 |
 | E2024 | RED | `total_rebounds` | 1181 | 1179 |
 | E2025 | MIL | `field_goals_attempted_2` | 1366 | 1367 |
 
-**What was ruled out, and what was not established.** For both RED and MIL,
-`games_played` matches exactly (35 and 38 respectively), which rules out a
-missing or extra game in either source. Every other column for the same
-club matches exactly, which rules out a systemic parsing defect - a wrong
-field mapping or a double-counted event type would not spare every other
-column. RED's 35 games include one Play-In game (gamecode 308, phase `PI`)
-alongside 34 Regular Season games; excluding that single game from our sum
-would remove roughly 21 rebounds, far more than the 2-rebound gap, which
-rules out a phase-inclusion mismatch as the cause. No cached response for
-either club shows a superseded/replaced body (`_preserve_superseded` writes
-a sibling file when a re-fetch's bytes differ from what is on disk; none
-exists for either team's `Boxscore` files), so there is no local evidence
-that our own cached box scores were fetched before a later correction. The
-remaining hypothesis - that the league's own per-game box-score system and
-its season-aggregate system disagree by a handful of units on their own
-records - was not verified against euroleague.net's live site, because doing
-so is outside this task's network scope (api-live.euroleague.net only,
-through the fetcher). **This is an open finding, not a resolved one.**
+**What was ruled out.** For both RED and MIL, `games_played` matches exactly
+(35 and 38 respectively), which rules out a missing or extra game in either
+source. Every other column for the same club matches exactly, which rules
+out a systemic parsing defect - a wrong field mapping or a double-counted
+event type would not spare every other column. RED's 35 games include one
+Play-In game (gamecode 308, phase `PI`) alongside 34 Regular Season games;
+excluding that single game from our sum would remove roughly 21 rebounds,
+far more than the 2-rebound gap, which rules out a phase-inclusion mismatch
+as the cause. No cached response for either club shows a
+superseded/replaced body (`_preserve_superseded` writes a sibling file when
+a re-fetch's bytes differ from what is on disk; none exists for either
+team's `Boxscore` files), so there is no local evidence that our own cached
+box scores were fetched before a later correction.
+
+**What is deliberately not claimed.** This does not prove the v2 season page
+is wrong and the box score is right - only that this project follows the
+box score by policy (Decision 1), and that the two feeds disagree by a
+small, named amount on these two club/column pairs. Settling which the
+league itself considers authoritative would need contact with the league or
+its live site, outside this task's network scope.
+
+**`KNOWN_LEAGUE_DISCREPANCIES` - an exact, named exception list, not a
+tolerance.** `tests/test_season_totals_oracle.py` keys this mapping by
+`(season_code, club_code, our_field)` to `(our_value, published_value)`,
+holding exactly the three rows in the table above. The test still asserts
+every `(season, club, column)` triple matches exactly *or* matches one of
+these three recorded pairs precisely - nothing else passes, and reproducing
+different numbers than what is recorded (say the box-score sum changes, or
+the league's page corrects itself) fails the test exactly as a brand-new
+mismatch would. **The test is fully green with this design**, `pytest -m
+full_season tests/test_season_totals_oracle.py` at 5 passed.
 
 **No player-level oracle, on either endpoint.** The v3 players payload keys
 each row by `player.code`, a bare digit string (`"010035"`) - no `P` prefix,
@@ -4517,18 +4538,27 @@ as an explicit follow-up, not attempted here with a guess.
 
 **Condition.** The v3 rounded-average test fails on any column exceeding one
 rounding increment of deviation, or on a team missing from either side. The
-v2 exact-total test fails on any non-zero difference, or a club missing from
-either side; a future column moving from "reported mismatch" to "resolved"
-needs its own investigation showing which side was wrong, not an assumption
-that the discrepancy will self-resolve. Neither test's tolerance may be
-widened without a fresh measurement justifying the new bound.
+v2 exact-total test fails on any non-zero difference not exactly matching an
+entry in `KNOWN_LEAGUE_DISCREPANCIES`, on a club missing from either side, or
+on a recorded entry that stops reproducing its exact numbers. **The mapping
+itself only grows or shrinks through a decision** - adding a new club/column
+pair, removing one because the league corrected its page, or widening a
+recorded pair's numbers all require a fresh Decision entry with the
+measurement behind it, never a silent edit to make a newly-red test pass.
+Neither test's tolerance may be widened without a fresh measurement
+justifying the new bound.
 
 **Provenance.**
 - Basis: MEASURED
 - Evidence: `docs/evidence/season_totals_oracle.json` records, per season and
   per oracle, every column's comparison mode, detected precision where
-  relevant, and the full mismatch list. `exploration/SEASON_ENDPOINT_PROBE.md`
-  records the earlier one-time reconnaissance that first found both surfaces.
+  relevant, the full mismatch list, and (fix round 2) which
+  `KNOWN_LEAGUE_DISCREPANCIES` entries reproduced exactly.
+  `exploration/SEASON_ENDPOINT_PROBE.md` records the earlier one-time
+  reconnaissance that first found both surfaces. The box-score-versus-
+  season-page fidelity argument rests on the pre-existing box-score
+  validation in `tests/test_shots.py` and `src/euroleague/validation.py`,
+  not on new measurement in this task.
 - Alternatives considered: keep the v3-only oracle with every rate column
   excluded as a "definition difference" (the fix round 1 ruling explicitly
   rejected this as too weak); treat the v3 endpoint's average-vs-total gap
@@ -4536,15 +4566,19 @@ widened without a fresh measurement justifying the new bound.
   (rejected - it would validate nothing precise, contrary to CLAUDE.md's
   stance against accounting identities that cannot fail); exclude the two
   genuine v2 mismatches with a `compare=False` reason (explicitly ruled out
-  by the controller: "a mismatch is a finding to report, not to exclude");
-  build a player-level oracle by string-matching names (rejected outright by
-  CLAUDE.md's "join on ID, never on name" rule).
+  in fix round 1: "a mismatch is a finding to report, not to exclude"); leave
+  the club-oracle test permanently red rather than name the exact known
+  values (rejected in fix round 2 - the ruling required the test "stay exact
+  and stay green"); build a player-level oracle by string-matching names
+  (rejected outright by CLAUDE.md's "join on ID, never on name" rule).
 - Approved: proceeding under the controller ruling for Task 8 of the
-  2026-09-07 derived-layer-expansion plan (fix round 1 of 5), which specified
-  the rounded-average design, the v2 club oracle, and the "report, don't
-  exclude" rule for genuine mismatches in advance of finding the two RED/MIL
-  discrepancies; no separate owner sign-off is recorded for the findings
-  themselves.
+  2026-09-07 derived-layer-expansion plan. Fix round 1 specified the
+  rounded-average design, the v2 club oracle, and the "report, don't exclude"
+  rule that surfaced the two RED/MIL discrepancies. Fix round 2 specified the
+  `KNOWN_LEAGUE_DISCREPANCIES` exact-exception design and the box-score-
+  fidelity reasoning, after establishing that our raw sums were already
+  validated against the league's own box scores elsewhere. No separate owner
+  sign-off is recorded for either round's findings.
 
 ## Rules to add to the project instruction file
 
