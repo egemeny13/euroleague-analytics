@@ -38,8 +38,11 @@ TESTER_ROLE = "el_tester"
 
 # The same views `el_reader` serves, plus v_game_officials and v_referee_game
 # (granted to el_tester in migration 0025 so el_get_referee_stats resolves for
-# testers under security_invoker). Migration 0011 made every one of these
-# security_invoker, so reaching them also requires the base-table grants.
+# testers under security_invoker), plus v_roster (migration 0026 grants
+# el_tester select on roster_registration and person_game_link so el_get_roster
+# resolves for testers under security_invoker too). Migration 0011 made every
+# one of these security_invoker, so reaching them also requires the base-table
+# grants.
 VIEWS = (
     "v_game",
     "v_team_game",
@@ -51,6 +54,7 @@ VIEWS = (
     "v_foul_event",
     "v_game_officials",
     "v_referee_game",
+    "v_roster",
 )
 
 # Read directly by queries.py rather than through any view.

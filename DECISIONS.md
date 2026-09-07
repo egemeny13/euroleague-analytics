@@ -4137,6 +4137,68 @@ one code for two people - is a decision to make, not a silent regrouping;
 nothing in this tool detects that condition on its own, so it rests on the
 brief's 70-codes/70-names measurement holding, not on an ongoing check.
 
+## 75. Roster biography is served by matching the box-score player to the league's registration feed through the observed stat-line link, never by name
+
+**Decided 2026-09-07.** `el_get_roster` is the fourteenth MCP tool. The
+league's registration feed (`roster_registration`, ingested since migration
+0012) and the observed-stat-line link to the box-score player id
+(`person_game_link`, Decision 27) were both already in the warehouse,
+unjoined into a single roster row; this closes that gap without inferring
+anything new.
+
+**The measurement.** The task brief for this tool states, for E2025: all 351
+player ids that reached a box score are linked to a v2 person through
+`person_game_link` with zero conflicts, and all 351 have a birth date in
+`roster_registration`; 373 of 374 roster players have a height. This decision
+inherits that measurement rather than re-deriving it. Rehearsed 2026-09-07 on
+the disposable database, after loading `roster_registration` and
+`person_game_link` from the local cache (both tables were empty in the
+rehearsal schemas until this task loaded them): `v_roster`'s row count equals
+`raw_boxscore_player`'s distinct (season, team, player) count exactly in both
+seasons - E2024 (312 rows) and E2025 (358 rows) - and zero rows in either
+season have a null `birth_date` or a null `height_cm`.
+`docs/evidence/roster_view_rehearsal.json`.
+
+**The change.** `v_roster` (migration 0026) is keyed by (season_code,
+team_code, player_id) against `raw_boxscore_player`, left-joined to the
+most recent (by `start_at`, tiebroken by `source_registration_id desc` for
+two registrations sharing one `start_at`) `role_code = 'J'` registration row
+for the linked person on that team and season. A player with no link, or no
+matching registration row, still appears with a null biography, because the
+row's existence is defined by the box score, not by whether the link or the
+registration happened to be found. `age_on_season_start` is measured against
+1 October of the season code's FIRST year: `E2024` is the 2023-24 season
+(the season code names the year the season ENDS in, per `_SEASON`'s
+"ending in" convention in `tools.py`), so the `make_date` year used is the
+season code's year minus one. Migration 0026 also completes two base-table
+grants that `v_roster` needs to resolve under `security_invoker`:
+`roster_registration` (0012) had been granted to neither `el_reader` nor
+`el_tester`, and is now granted to both; `person_game_link` (0017) had been
+granted to `el_reader` only, and is now also granted to `el_tester`. The
+down migration revokes exactly those three grants. `queries.get_roster`
+filters by season (required), and optionally by team (via `resolve_team`)
+and player (via `resolve_player`), ordered by `team_code, games_played
+desc, player_id`, paginated with the standard coverage and exclusions
+envelope. `include_quarantined` behaves like every other tool for the
+coverage and exclusion notes (`coverage_for`/`exclusions_for`), but never
+filters the roster rows themselves: `v_roster` has no game-level quarantine
+join, and dropping a player because his only game was quarantined would be
+wrong for a roster. The response carries two caveats: the biography is
+linked by observed stat lines, never by name (Decision 27); and roster rows
+count every box-score appearance, quarantined games included, with
+`include_quarantined` changing only the coverage and exclusion notes. There
+is no `minutes_basis`, because the response carries no minutes or seconds
+column.
+
+**Condition.** The mechanical invariant
+(`tests/test_roster_view_invariants.py`, `warehouse`-marked, E2024 and
+E2025) must keep holding: `v_roster`'s row count for a season equals the
+count of distinct (season, team, player) triples in `raw_boxscore_player`
+for that season, and no roster row has a null `birth_date`. A season where
+`missing_birth` stops being zero is a finding to report, not a condition to
+relax silently - the brief is explicit that this is measured, not assumed,
+and a season that breaks it needs its own decision.
+
 ## Rules to add to the project instruction file
 
 ```

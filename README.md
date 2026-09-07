@@ -42,9 +42,9 @@ Every number published by this warehouse is mechanically verified against offici
 
 ---
 
-## 3. The 13 MCP Tools
+## 3. The 14 MCP Tools
 
-The server exposes 13 read-only tools designed specifically for LLMs. Every response declares its data coverage, quarantined game exclusions, and whether minutes are raw or corrected.
+The server exposes 14 read-only tools designed specifically for LLMs. Every response declares its data coverage, quarantined game exclusions, and whether minutes are raw or corrected.
 
 | Tool | Purpose |
 |---|---|
@@ -61,13 +61,14 @@ The server exposes 13 read-only tools designed specifically for LLMs. Every resp
 | `el_get_possessions` | Individual possession records with start score, duration, ending reason, and clutch filters. |
 | `el_get_fouls` | Fouls committed and drawn by type, grouped by player, team, or game; reconciles to the box score. |
 | `el_get_referee_stats` | A referee's season: games worked, fouls per game, home-win rate, and pace; unpivoted from the schedule's officiating crew. |
+| `el_get_roster` | A team's roster with biography (jersey, position, height, weight, birth date, country), linked to the box-score player by observed stat lines, never by name. |
 
 ---
 
 ## 4. Generic MCP Client Setup
 
 The server remains a standard MCP server. The hosted and local transports publish the
-same 13 tools, input schemas, output schemas, and safety annotations. No ChatGPT-specific
+same 14 tools, input schemas, output schemas, and safety annotations. No ChatGPT-specific
 metadata is present in the tool registry.
 
 ### Hosted Streamable HTTP (recommended)
@@ -125,7 +126,7 @@ of the tool registry.
 3. Add a new MCP connection and enter
    `https://euroleague-analytics-mcp.fly.dev/mcp` as the public Streamable HTTP URL.
 4. Complete the OAuth sign-in.
-5. Review the discovered 13 tools and start a new conversation with the connection enabled.
+5. Review the discovered 14 tools and start a new conversation with the connection enabled.
 
 Developer mode availability can depend on the ChatGPT account and workspace policy. The
 current official flow is documented in OpenAI's
@@ -220,7 +221,7 @@ Both paths must agree with the published `<expected_answer>`.
 - **Privacy Policy**: [euroleague.egemenyucelen.me/privacy.html](https://euroleague.egemenyucelen.me/privacy.html)
 - **Support & FAQ**: [euroleague.egemenyucelen.me/support.html](https://euroleague.egemenyucelen.me/support.html)
 - **Sponsorship One-Pager**: [`docs/SPONSOR_ONE_PAGER.md`](docs/SPONSOR_ONE_PAGER.md)
-- **Scope of version 1**: [`docs/SCOPE.md`](docs/SCOPE.md) — what the thirteen tools do, what is left out on purpose, and why
+- **Scope of version 1**: [`docs/SCOPE.md`](docs/SCOPE.md) — what the fourteen tools do, what is left out on purpose, and why
 - **Decision Log**: [`DECISIONS.md`](DECISIONS.md)
 - **Phase Reports**: [`docs/`](docs/)
 

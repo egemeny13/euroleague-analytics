@@ -1,4 +1,4 @@
-"""The thirteen tool definitions.
+"""The fourteen tool definitions.
 
 Descriptions are read by the model at call time, so they are written as prompts
 rather than as code comments: what the tool answers, what the numbers mean, and
@@ -29,6 +29,7 @@ TOOL_NAMES: tuple[str, ...] = (
     "el_get_shot_data",
     "el_get_fouls",
     "el_get_referee_stats",
+    "el_get_roster",
 )
 
 _INCLUDE_QUARANTINED = {
@@ -700,6 +701,38 @@ def build_registry(
                 required=["season"],
             ),
             query=queries.get_referee_stats,
+        ),
+        tool(
+            name="el_get_roster",
+            title="Team roster with biography",
+            description=(
+                "A team's roster: every player who reached a box score that season, with "
+                "biography (jersey number, position, height, weight, birth date, age on "
+                "1 October of the season's first year, country) from the league's own "
+                "registration feed. The biography is attached through the observed-stat-line "
+                "link, never by matching names, so it can be missing for a player the link "
+                "did not find; a null biography still means the player appeared in the box "
+                "score. games_played counts box score rows, not necessarily minutes played. "
+                "Roster rows count every box-score appearance, quarantined games included; "
+                "include_quarantined changes only the coverage and exclusion notes."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "team": {
+                        "type": "string",
+                        "description": "Restrict to one team, by code or by club name.",
+                    },
+                    "player": {
+                        "type": "string",
+                        "description": "Restrict to one player, by id or by name.",
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season"],
+            ),
+            query=queries.get_roster,
         ),
     ]
     return {tool.name: tool for tool in tools}
