@@ -75,7 +75,7 @@ rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
-sse-starlette==3.4.8
+sse-starlette==3.4.10
     # via mcp
 starlette==1.6.0
     # via
