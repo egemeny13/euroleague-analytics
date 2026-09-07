@@ -475,13 +475,33 @@ def build_registry(
                             "made_free_throw",
                             "other",
                         ],
-                        "description": "Restrict to possessions that ended this way.",
+                        "description": (
+                            "Restrict to possessions that ended this way. Every possession "
+                            "carries exactly one of the five real values (made_shot, "
+                            "defensive_rebound, turnover, made_free_throw, end_of_period); "
+                            "'other' is a reserved safety net that the measured data has "
+                            "never populated. Pass aggregate=true with "
+                            "aggregate_by='end_reason' to see the full breakdown at once."
+                        ),
                     },
                     "aggregate": {
                         "type": "boolean",
                         "default": False,
                         "description": (
                             "True for one summary row per team instead of raw possessions."
+                        ),
+                    },
+                    "aggregate_by": {
+                        "type": "string",
+                        "enum": ["team", "end_reason", "team_and_end_reason"],
+                        "default": "team",
+                        "description": (
+                            "Only valid with aggregate=true; passing it with aggregate=false "
+                            "is rejected. 'team' (default): one row per team. 'end_reason': "
+                            "one row per way possessions ended, with share_of_all_possessions "
+                            "out of every possession in the filtered set. "
+                            "'team_and_end_reason': one row per team and end reason, with "
+                            "share_of_team_possessions out of that team's possessions only."
                         ),
                     },
                     "limit": _LIMIT,
@@ -502,7 +522,9 @@ def build_registry(
                 "Use it to see what actually happened in a stretch of a game rather than "
                 "a summary of it. Always narrow this tool with gamecode from el_find_games, "
                 "then paginate with from_index or offset; a full game is roughly 450 to "
-                "700 events."
+                "700 events. Timeouts are events too: playtype TOUT is a team timeout, "
+                "TOUT_TV a television timeout with no team, CCH a coach's challenge; filter "
+                "by playtype to list them with their clock."
             ),
             input_schema=_schema(
                 {

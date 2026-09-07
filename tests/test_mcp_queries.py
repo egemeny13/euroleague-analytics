@@ -873,6 +873,113 @@ def test_possessions_aggregate_rejects_strings_and_null():
         get_possessions(cursor, {"season": "E2024", "aggregate": None})
 
 
+def test_possessions_aggregate_by_end_reason_returns_one_row_per_team_and_reason() -> None:
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2025",)]),
+            (
+                ["team_code", "end_reason", "possessions", "share_of_team_possessions"],
+                [("BER", "turnover", 700, 14.02)],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(402, 402, None, None, 402, None)],
+            ),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+    response = get_possessions(
+        cursor, {"season": "E2025", "aggregate": True, "aggregate_by": "team_and_end_reason"}
+    )
+    assert response["rows"][0]["end_reason"] == "turnover"
+    assert "group by 1, 2" in cursor.statements[1]
+    assert "share_of_team_possessions" in cursor.statements[1]
+
+
+def test_possessions_reject_an_unknown_aggregate_by() -> None:
+    cursor = RecordingCursor([(["season_code"], [("E2025",)])])
+    with pytest.raises(ValueError, match="aggregate_by must be one of"):
+        get_possessions(cursor, {"season": "E2025", "aggregate": True, "aggregate_by": "lineup"})
+
+
+def test_possessions_reject_aggregate_by_without_aggregate() -> None:
+    """aggregate_by only means anything under aggregate=true; do not run a query first."""
+    cursor = RecordingCursor([])
+    with pytest.raises(
+        ValueError,
+        match=r"aggregate_by requires aggregate=true\. Set aggregate=true or drop aggregate_by\.",
+    ):
+        get_possessions(cursor, {"season": "E2025", "aggregate_by": "end_reason"})
+
+
+def test_possessions_aggregate_by_end_reason_shares_the_whole_filtered_set() -> None:
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2025",)]),
+            (
+                ["end_reason", "possessions", "share_of_all_possessions"],
+                [("turnover", 9962, 16.75)],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(402, 402, None, None, 402, None)],
+            ),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+    get_possessions(cursor, {"season": "E2025", "aggregate": True, "aggregate_by": "end_reason"})
+    statement = cursor.statements[1]
+    assert "share_of_all_possessions" in statement
+    assert "over ()" in statement
+    assert "partition by" not in statement
+
+
+def test_possessions_aggregate_by_team_and_end_reason_partitions_by_team() -> None:
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2025",)]),
+            (
+                ["team_code", "end_reason", "possessions", "share_of_team_possessions"],
+                [("BER", "turnover", 700, 14.02)],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(402, 402, None, None, 402, None)],
+            ),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+    get_possessions(
+        cursor, {"season": "E2025", "aggregate": True, "aggregate_by": "team_and_end_reason"}
+    )
+    statement = cursor.statements[1]
+    assert "partition by offense_team_code" in statement
+
+
 @pytest.mark.parametrize(
     ("query_fn", "extra_args"),
     [

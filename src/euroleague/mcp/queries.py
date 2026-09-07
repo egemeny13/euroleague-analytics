@@ -1057,6 +1057,10 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
     """
     include_quarantined = _boolean(arguments, "include_quarantined", False)
     aggregate = _boolean(arguments, "aggregate", False)
+    if arguments.get("aggregate_by") is not None and not aggregate:
+        raise ValueError(
+            "aggregate_by requires aggregate=true. Set aggregate=true or drop aggregate_by."
+        )
     season_code = resolve_season(cursor, arguments["season"])
     limit = clamp_limit(arguments.get("limit"))
     offset = validate_offset(arguments.get("offset"))
@@ -1087,17 +1091,49 @@ def get_possessions(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]
     where = " and ".join(conditions)
 
     if aggregate:
-        cursor.execute(
-            f"select offense_team_code as team_code, count(*) as possessions, "
-            f"sum(points_scored) as points, "
-            f"round(100.0 * sum(points_scored) / nullif(count(*), 0), 2) "
-            f"  as points_per_100_possessions, "
-            f"count(*) filter (where straddles_substitution) as straddling_a_substitution, "
-            f"round(avg(seconds_remaining_at_start)::numeric, 1) "
-            f"  as mean_seconds_remaining_at_start "
-            f"from v_possession where {where} group by 1 order by possessions desc",
-            tuple(params),
-        )
+        aggregate_by = arguments.get("aggregate_by") or "team"
+        groupings = {
+            "team": "offense_team_code as team_code",
+            "end_reason": "end_reason",
+            "team_and_end_reason": "offense_team_code as team_code, end_reason",
+        }
+        if aggregate_by not in groupings:
+            raise ValueError(
+                f"aggregate_by must be one of {', '.join(groupings)}, not {aggregate_by!r}."
+            )
+        if aggregate_by == "team":
+            cursor.execute(
+                f"select offense_team_code as team_code, count(*) as possessions, "
+                f"sum(points_scored) as points, "
+                f"round(100.0 * sum(points_scored) / nullif(count(*), 0), 2) "
+                f"  as points_per_100_possessions, "
+                f"count(*) filter (where straddles_substitution) as straddling_a_substitution, "
+                f"round(avg(seconds_remaining_at_start)::numeric, 1) "
+                f"  as mean_seconds_remaining_at_start "
+                f"from v_possession where {where} group by 1 order by possessions desc",
+                tuple(params),
+            )
+        else:
+            group_columns = "1" if aggregate_by == "end_reason" else "1, 2"
+            over_clause = (
+                "partition by offense_team_code" if aggregate_by == "team_and_end_reason" else ""
+            )
+            share_column = (
+                "share_of_team_possessions"
+                if aggregate_by == "team_and_end_reason"
+                else "share_of_all_possessions"
+            )
+            cursor.execute(
+                f"select {groupings[aggregate_by]}, count(*) as possessions, "
+                f"sum(points_scored) as points, "
+                f"round(100.0 * sum(points_scored) / nullif(count(*), 0), 2) "
+                f"  as points_per_100_possessions, "
+                f"round(100.0 * count(*) / sum(count(*)) over ({over_clause}), 2) "
+                f"  as {share_column} "
+                f"from v_possession where {where} group by {group_columns} "
+                f"order by {group_columns}, possessions desc",
+                tuple(params),
+            )
         rows = _rows(cursor)
         total = len(rows)
         page_limit = None
