@@ -1,0 +1,98 @@
+{
+  "measured": "2026-09-07",
+  "after": "rebuild_derived_rows E2024 and E2025 with --production",
+  "results": {
+    "E2024": {
+      "possession": {
+        "production": [
+          47829,
+          "d0953d3d854d169727828057092483ae"
+        ],
+        "baseline": [
+          47829,
+          "d0953d3d854d169727828057092483ae"
+        ],
+        "equal": true
+      },
+      "game_event": {
+        "production": [
+          176483,
+          "208eb2e49036e7f0bcf544643bcf8fd0"
+        ],
+        "baseline": [
+          176483,
+          "208eb2e49036e7f0bcf544643bcf8fd0"
+        ],
+        "equal": true
+      },
+      "game_event_source": {
+        "production": [
+          176483,
+          "ed8de487b6be091b24ad73ad3848c19d"
+        ],
+        "baseline": [
+          176483,
+          "ed8de487b6be091b24ad73ad3848c19d"
+        ],
+        "equal": true
+      },
+      "lineup_stint": {
+        "production": [
+          13927,
+          "5643117a3abf966ccc6e9f63efbdc18a"
+        ],
+        "baseline": [
+          13927,
+          "5643117a3abf966ccc6e9f63efbdc18a"
+        ],
+        "equal": true
+      }
+    },
+    "E2025": {
+      "possession": {
+        "production": [
+          59482,
+          "ecaacb969de2174c2c0311ab18b1f046"
+        ],
+        "baseline": [
+          59482,
+          "ecaacb969de2174c2c0311ab18b1f046"
+        ],
+        "equal": true
+      },
+      "game_event": {
+        "production": [
+          222976,
+          "3c4f7a64f2da46947a7c843c7aaea737"
+        ],
+        "baseline": [
+          222976,
+          "3c4f7a64f2da46947a7c843c7aaea737"
+        ],
+        "equal": true
+      },
+      "game_event_source": {
+        "production": [
+          222976,
+          "45d38508903ea43a514b6b51f14797b1"
+        ],
+        "baseline": [
+          222976,
+          "45d38508903ea43a514b6b51f14797b1"
+        ],
+        "equal": true
+      },
+      "lineup_stint": {
+        "production": [
+          17790,
+          "32ab77663e26ea8008d821b1f603326f"
+        ],
+        "baseline": [
+          17790,
+          "32ab77663e26ea8008d821b1f603326f"
+        ],
+        "equal": true
+      }
+    }
+  }
+}

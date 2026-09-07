@@ -1330,6 +1330,15 @@ migration at a time with sizes recorded in `docs/evidence/`:
 68's condition held: production's `game_event_source` checksums for E2024
 and E2025 equalled the rehearsal baselines on the day of the apply.
 
+**Applied on 2026-09-07 UTC, derived layer expansion (Decisions 70-79).**
+Migrations 0020 and 0024-0028 from the owner's terminal, then a per-game
+derived rebuild of E2024 and E2025 so possession seconds and free-throw trip
+ids filled. Database 264,424,595 to 283,634,835 bytes; the growth is rebuild
+bloat plus two integer columns, the treadmill Decision 28 describes. All
+eight production fingerprints (possession, game_event, game_event_source,
+lineup_stint, both seasons) equal the rehearsal baselines. The nightly
+per-game cost line (Decision 69) is the number to watch next.
+
 **What none of this establishes.** The production figures. Every number above
 is either the 2026-09-06 production measurement of what the migration removes
 or a rehearsal on one fresh season; the whole-database size before and after

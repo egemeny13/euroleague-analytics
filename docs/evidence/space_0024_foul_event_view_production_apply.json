@@ -1,0 +1,347 @@
+{
+  "migration": "0024_foul_event_view",
+  "supabase_version": "20260907120509",
+  "recorded_in_schema_migrations": [
+    "20260907120509",
+    "0024_foul_event_view"
+  ],
+  "started_utc": "2026-09-07T12:05:09.956239+00:00",
+  "finished_utc": "2026-09-07T12:05:10.201233+00:00",
+  "before": {
+    "database_bytes": 264416403,
+    "tables": {
+      "game_event": {
+        "heap": 101498880,
+        "indexes": 25780224,
+        "total": 127279104
+      },
+      "game_quality": {
+        "heap": 131072,
+        "indexes": 65536,
+        "total": 196608
+      },
+      "game_source_state": {
+        "heap": 8192,
+        "indexes": 8192,
+        "total": 16384
+      },
+      "lineup": {
+        "heap": 1449984,
+        "indexes": 1482752,
+        "total": 2932736
+      },
+      "lineup_stint": {
+        "heap": 6610944,
+        "indexes": 2965504,
+        "total": 9576448
+      },
+      "mcp_row_budget_policy": {
+        "heap": 8192,
+        "indexes": 8192,
+        "total": 16384
+      },
+      "mcp_row_daily_budget": {
+        "heap": 49152,
+        "indexes": 16384,
+        "total": 65536
+      },
+      "mcp_row_usage": {
+        "heap": 286720,
+        "indexes": 57344,
+        "total": 344064
+      },
+      "person_game_link": {
+        "heap": 1851392,
+        "indexes": 1597440,
+        "total": 3448832
+      },
+      "player": {
+        "heap": 90112,
+        "indexes": 40960,
+        "total": 131072
+      },
+      "player_game_minutes": {
+        "heap": 1548288,
+        "indexes": 1482752,
+        "total": 3031040
+      },
+      "possession": {
+        "heap": 22577152,
+        "indexes": 13803520,
+        "total": 36380672
+      },
+      "raw_api_fetch": {
+        "heap": 991232,
+        "indexes": 892928,
+        "total": 1884160
+      },
+      "raw_api_response": {
+        "heap": 4866048,
+        "indexes": 4325376,
+        "total": 9191424
+      },
+      "raw_boxscore_player": {
+        "heap": 2818048,
+        "indexes": 1015808,
+        "total": 3833856
+      },
+      "raw_boxscore_team": {
+        "heap": 442368,
+        "indexes": 147456,
+        "total": 589824
+      },
+      "raw_game": {
+        "heap": 180224,
+        "indexes": 81920,
+        "total": 262144
+      },
+      "raw_shot": {
+        "heap": 20242432,
+        "indexes": 5275648,
+        "total": 25518080
+      },
+      "roster_registration": {
+        "heap": 286720,
+        "indexes": 286720,
+        "total": 573440
+      },
+      "season_progress": {
+        "heap": 16384,
+        "indexes": 16384,
+        "total": 32768
+      },
+      "team": {
+        "heap": 16384,
+        "indexes": 16384,
+        "total": 32768
+      },
+      "team_season": {
+        "heap": 16384,
+        "indexes": 32768,
+        "total": 49152
+      }
+    },
+    "indexes": {
+      "game_source_state_pkey": 8192,
+      "season_progress_pkey": 16384,
+      "roster_registration_pkey": 73728,
+      "roster_registration_response_array_key": 73728,
+      "roster_registration_team_idx": 40960,
+      "roster_registration_person_idx": 73728,
+      "game_event_pkey": 17145856,
+      "game_event_playtype_idx": 3973120,
+      "game_event_player_idx": 4636672,
+      "game_quality_pkey": 49152,
+      "game_quality_excluded_idx": 16384,
+      "lineup_pkey": 794624,
+      "lineup_team_code_idx": 114688,
+      "lineup_player_1_idx": 114688,
+      "lineup_player_2_idx": 114688,
+      "lineup_player_3_idx": 114688,
+      "lineup_player_4_idx": 114688,
+      "lineup_player_5_idx": 114688,
+      "lineup_stint_pkey": 1368064,
+      "lineup_stint_home_lineup_idx": 802816,
+      "lineup_stint_away_lineup_idx": 794624,
+      "player_pkey": 40960,
+      "player_game_minutes_pkey": 958464,
+      "player_game_minutes_player_idx": 262144,
+      "player_game_minutes_team_idx": 262144,
+      "possession_pkey": 4644864,
+      "possession_offense_lineup_idx": 2531328,
+      "possession_defense_lineup_idx": 2490368,
+      "possession_clutch_idx": 4136960,
+      "raw_boxscore_player_pkey": 720896,
+      "raw_boxscore_player_player_idx": 147456,
+      "raw_boxscore_player_team_idx": 147456,
+      "raw_api_fetch_pkey": 376832,
+      "raw_api_fetch_response_id_fetched_at_idx": 516096,
+      "raw_api_response_pkey": 376832,
+      "raw_api_response_identity_idx": 2965504,
+      "raw_api_response_current_idx": 983040,
+      "raw_boxscore_team_pkey": 147456,
+      "raw_game_pkey": 40960,
+      "raw_game_utc_date_idx": 40960,
+      "raw_shot_pkey": 5275648,
+      "team_pkey": 16384,
+      "team_season_pkey": 16384,
+      "team_season_team_code_idx": 16384,
+      "mcp_row_usage_pkey": 40960,
+      "mcp_row_usage_usage_date_idx": 16384,
+      "mcp_row_budget_policy_pkey": 8192,
+      "mcp_row_daily_budget_pkey": 16384,
+      "person_game_link_pkey": 704512,
+      "person_game_link_player_unique": 712704,
+      "person_game_link_person_idx": 180224
+    }
+  },
+  "after": {
+    "database_bytes": 264416403,
+    "tables": {
+      "game_event": {
+        "heap": 101498880,
+        "indexes": 25780224,
+        "total": 127279104
+      },
+      "game_quality": {
+        "heap": 131072,
+        "indexes": 65536,
+        "total": 196608
+      },
+      "game_source_state": {
+        "heap": 8192,
+        "indexes": 8192,
+        "total": 16384
+      },
+      "lineup": {
+        "heap": 1449984,
+        "indexes": 1482752,
+        "total": 2932736
+      },
+      "lineup_stint": {
+        "heap": 6610944,
+        "indexes": 2965504,
+        "total": 9576448
+      },
+      "mcp_row_budget_policy": {
+        "heap": 8192,
+        "indexes": 8192,
+        "total": 16384
+      },
+      "mcp_row_daily_budget": {
+        "heap": 49152,
+        "indexes": 16384,
+        "total": 65536
+      },
+      "mcp_row_usage": {
+        "heap": 286720,
+        "indexes": 57344,
+        "total": 344064
+      },
+      "person_game_link": {
+        "heap": 1851392,
+        "indexes": 1597440,
+        "total": 3448832
+      },
+      "player": {
+        "heap": 90112,
+        "indexes": 40960,
+        "total": 131072
+      },
+      "player_game_minutes": {
+        "heap": 1548288,
+        "indexes": 1482752,
+        "total": 3031040
+      },
+      "possession": {
+        "heap": 22577152,
+        "indexes": 13803520,
+        "total": 36380672
+      },
+      "raw_api_fetch": {
+        "heap": 991232,
+        "indexes": 892928,
+        "total": 1884160
+      },
+      "raw_api_response": {
+        "heap": 4866048,
+        "indexes": 4325376,
+        "total": 9191424
+      },
+      "raw_boxscore_player": {
+        "heap": 2818048,
+        "indexes": 1015808,
+        "total": 3833856
+      },
+      "raw_boxscore_team": {
+        "heap": 442368,
+        "indexes": 147456,
+        "total": 589824
+      },
+      "raw_game": {
+        "heap": 180224,
+        "indexes": 81920,
+        "total": 262144
+      },
+      "raw_shot": {
+        "heap": 20242432,
+        "indexes": 5275648,
+        "total": 25518080
+      },
+      "roster_registration": {
+        "heap": 286720,
+        "indexes": 286720,
+        "total": 573440
+      },
+      "season_progress": {
+        "heap": 16384,
+        "indexes": 16384,
+        "total": 32768
+      },
+      "team": {
+        "heap": 16384,
+        "indexes": 16384,
+        "total": 32768
+      },
+      "team_season": {
+        "heap": 16384,
+        "indexes": 32768,
+        "total": 49152
+      }
+    },
+    "indexes": {
+      "game_source_state_pkey": 8192,
+      "season_progress_pkey": 16384,
+      "roster_registration_pkey": 73728,
+      "roster_registration_response_array_key": 73728,
+      "roster_registration_team_idx": 40960,
+      "roster_registration_person_idx": 73728,
+      "game_event_pkey": 17145856,
+      "game_event_playtype_idx": 3973120,
+      "game_event_player_idx": 4636672,
+      "game_quality_pkey": 49152,
+      "game_quality_excluded_idx": 16384,
+      "lineup_pkey": 794624,
+      "lineup_team_code_idx": 114688,
+      "lineup_player_1_idx": 114688,
+      "lineup_player_2_idx": 114688,
+      "lineup_player_3_idx": 114688,
+      "lineup_player_4_idx": 114688,
+      "lineup_player_5_idx": 114688,
+      "lineup_stint_pkey": 1368064,
+      "lineup_stint_home_lineup_idx": 802816,
+      "lineup_stint_away_lineup_idx": 794624,
+      "player_pkey": 40960,
+      "player_game_minutes_pkey": 958464,
+      "player_game_minutes_player_idx": 262144,
+      "player_game_minutes_team_idx": 262144,
+      "possession_pkey": 4644864,
+      "possession_offense_lineup_idx": 2531328,
+      "possession_defense_lineup_idx": 2490368,
+      "possession_clutch_idx": 4136960,
+      "raw_boxscore_player_pkey": 720896,
+      "raw_boxscore_player_player_idx": 147456,
+      "raw_boxscore_player_team_idx": 147456,
+      "raw_api_fetch_pkey": 376832,
+      "raw_api_fetch_response_id_fetched_at_idx": 516096,
+      "raw_api_response_pkey": 376832,
+      "raw_api_response_identity_idx": 2965504,
+      "raw_api_response_current_idx": 983040,
+      "raw_boxscore_team_pkey": 147456,
+      "raw_game_pkey": 40960,
+      "raw_game_utc_date_idx": 40960,
+      "raw_shot_pkey": 5275648,
+      "team_pkey": 16384,
+      "team_season_pkey": 16384,
+      "team_season_team_code_idx": 16384,
+      "mcp_row_usage_pkey": 40960,
+      "mcp_row_usage_usage_date_idx": 16384,
+      "mcp_row_budget_policy_pkey": 8192,
+      "mcp_row_daily_budget_pkey": 16384,
+      "person_game_link_pkey": 704512,
+      "person_game_link_player_unique": 712704,
+      "person_game_link_person_idx": 180224
+    }
+  },
+  "database_bytes_freed": 0
+}

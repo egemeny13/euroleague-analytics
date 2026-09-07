@@ -1,0 +1,20 @@
+{
+  "season": "E2024",
+  "production": true,
+  "games_rebuilt": 330,
+  "elapsed_seconds": 733.4775839999784,
+  "row_counts": {
+    "lineup": 11604,
+    "lineup_stint": 13927,
+    "game_event": 176483,
+    "game_event_attached": 176483,
+    "player_game_minutes": 7863,
+    "game_quality": 330,
+    "possession": 47829
+  },
+  "database_bytes_before": 264424595,
+  "database_bytes_after": 266161299,
+  "null_seconds_after_rebuild": 0,
+  "fta_without_trip_after_rebuild": 0,
+  "non_fta_with_trip_after_rebuild": 0
+}

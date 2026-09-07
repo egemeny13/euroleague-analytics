@@ -1,0 +1,20 @@
+{
+  "season": "E2025",
+  "production": true,
+  "games_rebuilt": 402,
+  "elapsed_seconds": 871.6149917999865,
+  "row_counts": {
+    "lineup": 14831,
+    "lineup_stint": 17790,
+    "game_event": 222976,
+    "game_event_attached": 222976,
+    "player_game_minutes": 9540,
+    "game_quality": 402,
+    "possession": 59482
+  },
+  "database_bytes_before": 266161299,
+  "database_bytes_after": 283634835,
+  "null_seconds_after_rebuild": 0,
+  "fta_without_trip_after_rebuild": 0,
+  "non_fta_with_trip_after_rebuild": 0
+}
