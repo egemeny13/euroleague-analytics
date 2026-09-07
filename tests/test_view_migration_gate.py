@@ -77,6 +77,13 @@ def test_new_view_gate_runs_from_an_absent_or_already_applied_state(
         def execute(self, sql: str, params: tuple = ()) -> None:
             lowered = sql.lower()
             if "information_schema.columns" in lowered:
+                # Break caught: a signature query with no table_schema predicate
+                # returns a same-named view's columns from a rehearsal schema
+                # instead of an empty result. Fail the fake exactly as a real,
+                # unscoped query would silently succeed against the wrong schema.
+                assert "table_schema" in lowered, (
+                    "signature() must scope its query with table_schema"
+                )
                 self._rows = list(self.current_signature)
             elif "create view v_shot_data" in lowered:
                 if self.current_signature:
@@ -137,6 +144,80 @@ def test_0014_game_officials_view_migration_sql_is_valid() -> None:
     down_sql = (migrations_root / "0014_game_officials_view.down.sql").read_text(encoding="utf-8")
     gate.validate_view_only_sql(up_sql, "up", "v_game_officials")
     gate.validate_view_only_sql(down_sql, "down", "v_game_officials")
+
+
+def test_0025_referee_game_view_migration_sql_is_valid() -> None:
+    """Break caught: 0025 grants select on v_game_officials (not the target
+    view) so its security_invoker view resolves for el_tester; the validator
+    used to reject any grant not naming the target. See DECISIONS.md item 80."""
+    gate = _load_gate_module()
+    migrations_root = Path(__file__).resolve().parent.parent / "migrations"
+    up_sql = (migrations_root / "0025_referee_game_view.up.sql").read_text(encoding="utf-8")
+    down_sql = (migrations_root / "0025_referee_game_view.down.sql").read_text(encoding="utf-8")
+    gate.validate_view_only_sql(up_sql, "up", "v_referee_game")
+    gate.validate_view_only_sql(down_sql, "down", "v_referee_game")
+
+
+def test_0026_roster_view_migration_sql_is_valid() -> None:
+    """Break caught: 0026 grants select on two base tables (roster_registration,
+    person_game_link), not the target view, for the same security_invoker
+    reason as 0025. See DECISIONS.md item 80."""
+    gate = _load_gate_module()
+    migrations_root = Path(__file__).resolve().parent.parent / "migrations"
+    up_sql = (migrations_root / "0026_roster_view.up.sql").read_text(encoding="utf-8")
+    down_sql = (migrations_root / "0026_roster_view.down.sql").read_text(encoding="utf-8")
+    gate.validate_view_only_sql(up_sql, "up", "v_roster")
+    gate.validate_view_only_sql(down_sql, "down", "v_roster")
+
+
+def test_validate_view_only_sql_still_rejects_privilege_beyond_select_and_other_ddl() -> None:
+    """Widening grant/revoke to any object must not widen it past select, and
+    must not open the door to DDL against an object other than the target."""
+    gate = _load_gate_module()
+
+    with pytest.raises(SystemExit, match="view-only"):
+        gate.validate_view_only_sql(
+            "grant insert on table public.game_event to el_reader;", "up", "v_roster"
+        )
+
+    with pytest.raises(SystemExit, match="view-only"):
+        gate.validate_view_only_sql(
+            "create table stolen(id integer); create view v_roster as select 1;",
+            "up",
+            "v_roster",
+        )
+
+
+def test_signature_query_names_table_schema() -> None:
+    """Break caught: `signature()` used to query information_schema.columns with
+    no table_schema predicate. On the disposable database, where rehearsal
+    schemas hold same-named views, that returns another schema's view instead
+    of an empty result, and the gate reports a false "the down migration did
+    not establish an empty baseline". See DECISIONS.md item 80.
+    """
+    gate = _load_gate_module()
+
+    class RecordingCursor:
+        def __init__(self) -> None:
+            self.executed_sql: str | None = None
+            self.executed_params: tuple | None = None
+
+        def execute(self, sql: str, params: tuple = ()) -> None:
+            self.executed_sql = sql
+            self.executed_params = params
+
+        def fetchall(self) -> list[tuple]:
+            return []
+
+    cursor = RecordingCursor()
+    gate.signature(cursor, "v_x")
+
+    lowered = cursor.executed_sql.lower()
+    assert "table_schema" in lowered
+    # The predicate must be bound to the current schema, not just present as
+    # text elsewhere in the query (e.g. in a column list).
+    assert "table_schema = current_schema()" in lowered or "table_schema = 'public'" in lowered
+    assert cursor.executed_params == ("v_x",)
 
 
 def test_the_gate_can_only_reach_the_disposable_database() -> None:

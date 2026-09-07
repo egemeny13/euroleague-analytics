@@ -4688,6 +4688,70 @@ expected number from `euroleague.mcp.tools.TOOL_NAMES` rather than a number
 hard-coded into the test, so this decision does not need a companion test
 edit the next time a tool is added correctly.
 
+## 80. `scripts/view_migration_gate.py` scopes its signature query to a schema and widens its grant/revoke allowance to any object
+
+**Decided 2026-09-07.** The derived-layer expansion (Tasks 1, 4, 5, 6 of
+`docs/superpowers/plans/2026-09-07-derived-layer-expansion.md`, the work
+recorded in Decisions 74-76) rehearsed migrations 0025 and 0026 on the
+disposable database and hit two defects in the gate itself, both of which
+forced a manual up/down/up cycle to substitute for the tool the project built
+to make that manual cycle unnecessary.
+
+**What was wrong.**
+
+1. `signature()` queried `information_schema.columns where table_name = %s`
+   with no `table_schema` predicate. On the disposable database, rehearsal
+   schemas created and dropped during the same session held same-named views
+   left over from an earlier rehearsal. The unscoped query could return that
+   other schema's columns instead of an empty result, and the gate reported a
+   false "the down migration did not establish an empty baseline" - a failure
+   that had nothing to do with the migration under test.
+2. `validate_view_only_sql()` accepted a `grant` or `revoke` only when the
+   object named was the migration's own target view. Migrations 0025 and 0026
+   are legitimate view-only migrations that also grant `select` on another
+   view (`v_game_officials`) and on two base tables (`roster_registration`,
+   `person_game_link`), because both new views are declared
+   `security_invoker = true` and only resolve for a caller who can already
+   read what they select from. The validator rejected both migrations
+   outright, and the gate could not run at all - not "ran and failed", refused
+   to start.
+
+Both defects were worked around by hand: running each migration's up, down,
+and up again directly against the disposable database and comparing column
+lists by eye, four times across the two migrations, which is exactly the
+unrehearsed manual cycle `DECISIONS.md` item 71 exists to prevent recurring.
+
+**The two rules.**
+
+1. `signature()`'s query now adds `and table_schema = current_schema()`,
+   matching the convention `scripts/migration_gate.py` already uses for its
+   own table listing (`table_schema = 'public'`). A signature query with no
+   schema predicate is not a defect specific to this script; it is checked by
+   `tests/test_view_migration_gate.py::test_signature_query_names_table_schema`
+   against the literal SQL text, so a future edit that drops the predicate
+   fails a test rather than waiting for another rehearsal schema collision.
+2. `validate_view_only_sql()` now allows a `grant` or `revoke` of `select`
+   (or `all`, for a `revoke ... from anon, authenticated`) on ANY table or
+   view, in both the up and down direction - not only the migration's target.
+   A privilege change creates or drops nothing, so it carries none of the risk
+   the one-view DDL boundary exists to contain.  `create`, `alter`, `drop`,
+   `truncate`, `insert`, `update`, `delete`, and `merge` remain forbidden
+   against anything but the target view; a `grant insert` or any privilege
+   beyond `select` is still rejected, and `create table` naming an unrelated
+   object is still rejected. Both are covered by
+   `tests/test_view_migration_gate.py::test_validate_view_only_sql_still_rejects_privilege_beyond_select_and_other_ddl`,
+   alongside verbatim passes of migrations 0025 and 0026's up and down files.
+
+**Condition.** `scripts/view_migration_gate.py` is the only sanctioned way to
+rehearse a view-only migration's up/down/up cycle on the disposable database.
+A migration the validator rejects is either genuinely not view-only - in which
+case it needs the empty-database gate in `scripts/migration_gate.py` instead -
+or it is a reason to change this decision by widening the validator further,
+with its own measurement of what the wider allowance lets through. It is never
+a reason to fall back to a manual cycle; the whole point of this script is
+that the manual cycle is the failure mode it exists to remove, not a
+fallback available when the script is inconvenient.
+
 ## Rules to add to the project instruction file
 
 ```

@@ -65,13 +65,22 @@ MIGRATIONS_ROOT = REPO_ROOT / "migrations"
 SIGNATURE = """
 select column_name, data_type, ordinal_position
 from information_schema.columns
-where table_name = %s
+where table_name = %s and table_schema = current_schema()
 order by ordinal_position
 """
 
 
 def signature(cursor, view: str) -> list[tuple]:
-    """The view's column names, types and order - what dependent views rely on."""
+    """The view's column names, types and order - what dependent views rely on.
+
+    Scoped to `current_schema()`, matching how `scripts/migration_gate.py` scopes
+    its own table listing to `'public'`. Without a schema predicate, a rehearsal
+    schema on the disposable database that happens to hold a same-named view
+    (or a same-named view left behind in another schema) makes this query
+    return that view's columns instead of an empty result, and the gate reports
+    a false "the down migration did not establish an empty baseline" - a defect
+    found during the derived layer expansion. See `DECISIONS.md` item 80.
+    """
     cursor.execute(SIGNATURE, (view,))
     return cursor.fetchall()
 
@@ -114,21 +123,38 @@ def _sql_statements(sql: str) -> list[str]:
 
 
 def validate_view_only_sql(sql: str, direction: str, view: str) -> None:
-    """Reject anything beyond this gate's one-view DDL boundary."""
+    """Reject anything beyond this gate's one-view DDL boundary.
+
+    `create`/`alter`/`drop`/`truncate`/`insert`/`update`/`delete`/`merge` are
+    only ever allowed against the target view - those statements create or
+    drop something, and rehearsing that safely is the whole point of scoping
+    this gate to one view.
+
+    `grant`/`revoke` of `select` (or `all`, for a `revoke ... from anon,
+    authenticated`) is allowed against ANY table or view, not only the target.
+    A privilege change creates or drops nothing, so it carries none of the risk
+    the gate exists to catch. Migrations 0025 and 0026 legitimately grant
+    `select` on another view (`v_game_officials`) and on two base tables
+    (`roster_registration`, `person_game_link`) so that a `security_invoker`
+    view resolves for the reader roles that need it; restricting privilege
+    statements to the target view rejected both migrations outright and forced
+    a manual up/down/up cycle in their place. See `DECISIONS.md` item 80.
+    Since migration 0011 every warehouse view must also be revoked from `anon`
+    and `authenticated` and granted to `el_reader`; a Supabase project grants
+    those two roles ALL privileges on a newly created view by default, measured
+    on 2026-08-28.
+    """
     without_comments = re.sub(r"--[^\n]*", "", sql)
     statements = _sql_statements(without_comments)
     target = re.escape(view)
-    # Grants on the target view are part of creating one correctly here, not an
-    # extra. Since migration 0011 every warehouse view must be revoked from
-    # `anon` and `authenticated` and granted to `el_reader`; a Supabase project
-    # grants those two roles ALL privileges on a newly created view by default,
-    # measured on 2026-08-28. A view shipped without these statements is either
-    # unreachable by the hosted server or exposed to the public anon role, so
-    # refusing them would push the security-critical half of the migration
-    # outside the gate rather than keep it inside.
+    any_object = r"(?:table\s+)?(?:public\.)?[a-zA-Z_][a-zA-Z0-9_]*"
     privilege_statements = (
-        re.compile(rf"^grant\s+.+\bon\s+(?:table\s+)?(?:public\.)?{target}\b", re.IGNORECASE),
-        re.compile(rf"^revoke\s+.+\bon\s+(?:table\s+)?(?:public\.)?{target}\b", re.IGNORECASE),
+        re.compile(rf"^grant\s+select\s+on\s+{any_object}\s+to\s+.+$", re.IGNORECASE),
+        re.compile(rf"^revoke\s+select\s+on\s+{any_object}\s+from\s+.+$", re.IGNORECASE),
+        re.compile(
+            rf"^revoke\s+all\s+on\s+{any_object}\s+from\s+anon\s*,\s*authenticated\s*$",
+            re.IGNORECASE,
+        ),
     )
 
     if direction == "up":
