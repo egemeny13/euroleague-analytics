@@ -328,6 +328,28 @@ def test_restore_includes_optional_season_totals_snapshots(tmp_path):
     ]
 
 
+def test_restore_includes_an_optional_club_season_totals_snapshot(tmp_path):
+    """Break caught: the merged club-totals file has no `gamecode` to key on.
+
+    `ClubSeasonTotals` is one merged file per season - `raw_api_response` has
+    no column for a club code (Decision 78) - so it restores exactly like the
+    roster and v3 season-totals snapshots: one optional identity, gamecode
+    `None`.
+    """
+    connection, archive_storage = archived_season(played=())
+    club_totals_body = b'{"BER":[{"accumulated":{}}]}'
+    entry, compressed = _entry(2, "ClubSeasonTotals", None, club_totals_body)
+    connection.rows.append(tuple(entry.__dict__.values()))
+    archive_storage.objects[entry.storage_path] = compressed
+    cache = ResponseCache(tmp_path)
+
+    summary = restore_current_season_cache(connection, cache, archive_storage, SEASON)
+
+    assert summary.restored_responses == 2
+    assert cache.read_club_totals_bytes(SEASON) == club_totals_body
+    assert archive_storage.downloaded_identities == [("Schedule", None), ("ClubSeasonTotals", None)]
+
+
 def test_restore_creates_a_missing_cache_root_after_staging_succeeds(tmp_path):
     """Break caught: a fresh ephemeral runner cannot install its verified staging tree."""
     connection, archive_storage = archived_season(played=(7,))

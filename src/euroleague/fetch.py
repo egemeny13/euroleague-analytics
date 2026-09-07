@@ -7,7 +7,7 @@ import os
 import re
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
@@ -194,6 +194,21 @@ def _season_totals_url(season_code: str, kind: str) -> str:
     return (
         f"https://api-live.euroleague.net/v3/competitions/{competition}/"
         f"statistics/{kind}/traditional?{query}"
+    )
+
+
+def _club_totals_url(season_code: str, club_code: str) -> str:
+    """Build the v2 club season-totals URL for one season and club.
+
+    This is the exact-total oracle counterpart to `_season_totals_url`'s v3
+    per-game averages: `[{accumulated, averagePerGame}]`, recorded in
+    `exploration/SEASON_ENDPOINT_PROBE.md`. Fetched only as a validation
+    oracle - Decision 78 - never as a source the warehouse loads.
+    """
+    competition = competition_for_season_code(season_code)
+    return (
+        f"https://api-live.euroleague.net/v2/competitions/{competition}/"
+        f"seasons/{season_code}/clubs/{club_code}/stats"
     )
 
 
@@ -484,6 +499,83 @@ class ArchiveFetcher:
         else:
             self._cache_successful_observation(observation, path, game_response=False)
         return observation
+
+    def fetch_club_season_totals(self, season_code: str, club_code: str) -> FetchObservation:
+        """Fetch one club's v2 season totals and merge it into the season's file.
+
+        `raw_api_response`'s archive identity is `(season_code, endpoint,
+        gamecode)`, and `gamecode` is a positive-integer column with no room
+        for a club code - see `ResponseCache.club_totals_path`. So this
+        endpoint, unlike `Roster` or the v3 season totals, is cached as ONE
+        merged file per season, keyed by club code, and re-archived under one
+        identity - `("ClubSeasonTotals", None)` - every time a club is added.
+        That means what gets written to disk and archived is the *merged*
+        file's bytes, not the single club's raw response bytes; the
+        fetch log still records the exact bytes that one HTTP request
+        returned, because `_request_with_retry` logs before this method does
+        any merging. Decision 78.
+
+        The returned `FetchObservation` describes the one club actually
+        fetched - its `body` is that club's exact response - which is what a
+        caller checking "did club X's fetch succeed" wants to see.
+        """
+        observation = self._request_with_retry(
+            season_code=season_code,
+            gamecode=None,
+            endpoint="ClubSeasonTotals",
+            url=_club_totals_url(season_code, club_code),
+        )
+        if observation is None or observation.http_status != 200:
+            status = "no response" if observation is None else f"HTTP {observation.http_status}"
+            raise FetchError(
+                f"Could not fetch season totals for club {club_code} in {season_code}: "
+                f"{status}. Keep the existing cache and retry later."
+            )
+        club_payload = json.loads(observation.body)
+        path = self.cache.club_totals_path(season_code)
+        merged: dict[str, object] = {}
+        previous = None
+        if path.is_file():
+            previous = path.read_bytes()
+            merged = json.loads(previous)
+        merged[club_code] = club_payload
+        merged_body = (json.dumps(merged, sort_keys=True, separators=(",", ":")) + "\n").encode(
+            "utf-8"
+        )
+        merged_observation = replace(observation, body=merged_body)
+        if previous is not None and previous != merged_body:
+            _preserve_superseded(path, previous)
+        if previous == merged_body:
+            self._counters.fetched_files += 1
+            self._counters.fetched_bytes += len(merged_body)
+            if self.successful_observation is not None:
+                self.successful_observation(merged_observation)
+        else:
+            self._cache_successful_observation(merged_observation, path, game_response=False)
+        return observation
+
+    def fetch_club_totals_for_season(self, season_code: str) -> dict[str, FetchObservation]:
+        """Fetch every played club's season totals for one season.
+
+        Club codes are read from the season's own cached schedule - played
+        games only - never guessed or hard-coded, per the controller ruling
+        for Decision 78. Requires the schedule to already be cached; this
+        method does not fetch it.
+        """
+        schedule = self.cache.read_schedule_json(season_code).get("data") or []
+        club_codes: set[str] = set()
+        for game in schedule:
+            if game.get("played") is not True:
+                continue
+            for side in ("local", "road"):
+                club = (game.get(side) or {}).get("club") or {}
+                code = club.get("code")
+                if code:
+                    club_codes.add(str(code))
+        return {
+            club_code: self.fetch_club_season_totals(season_code, club_code)
+            for club_code in sorted(club_codes)
+        }
 
     def fetch_game_stats(self, season_code: str, gamecode: int) -> FetchObservation:
         """Fetch, cache, then archive one v2 game stats response before parsing it."""
