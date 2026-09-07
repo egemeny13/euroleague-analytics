@@ -202,6 +202,214 @@ def test_incomplete_roster_page_is_cached_before_validation_refuses_it(tmp_path)
     assert (tmp_path / "E2026" / "roster.json").read_bytes() == body
 
 
+def test_season_totals_fetch_is_cached_exactly_for_players_and_teams(tmp_path) -> None:
+    players_body = json.dumps({"total": 1, "players": [{"player": {"code": "P012774"}}]}).encode()
+    teams_body = json.dumps({"total": 1, "teams": [{"team": {"code": "BER"}}]}).encode()
+    observations = []
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, players_body),
+            StubResponse(200, {}, teams_body),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport, successful_observation=observations.append)
+
+    players_observation = fetcher.fetch_season_totals("E2025", "players")
+    teams_observation = fetcher.fetch_season_totals("E2025", "teams")
+
+    assert (tmp_path / "E2025" / "season_totals_players.json").read_bytes() == players_body
+    assert (tmp_path / "E2025" / "season_totals_teams.json").read_bytes() == teams_body
+    assert transport.calls[0][0].endswith(
+        "/v3/competitions/E/statistics/players/traditional?SeasonMode=Single&SeasonCode=E2025"
+    )
+    assert transport.calls[1][0].endswith(
+        "/v3/competitions/E/statistics/teams/traditional?SeasonMode=Single&SeasonCode=E2025"
+    )
+    assert players_observation.endpoint == "SeasonTotalsPlayers"
+    assert teams_observation.endpoint == "SeasonTotalsTeams"
+    assert players_observation.gamecode is None
+    assert teams_observation.gamecode is None
+    assert observations == [players_observation, teams_observation]
+
+
+def test_season_totals_fetch_rejects_an_unknown_kind(tmp_path) -> None:
+    fetcher = make_fetcher(tmp_path, RecordingTransport([]))
+
+    with pytest.raises(ValueError):
+        fetcher.fetch_season_totals("E2025", "referees")
+
+
+def test_include_season_totals_fetches_both_kinds_once_per_season(tmp_path) -> None:
+    write_schedule(tmp_path, [])
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, json.dumps({"total": 0, "players": []}).encode()),
+            StubResponse(200, {}, json.dumps({"total": 0, "teams": []}).encode()),
+            StubResponse(200, {}, schedule_bytes([])),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport, include_season_totals=True)
+
+    fetcher.fetch_season("E2025")
+
+    assert (tmp_path / "E2025" / "season_totals_players.json").exists()
+    assert (tmp_path / "E2025" / "season_totals_teams.json").exists()
+
+
+def test_club_season_totals_fetch_writes_the_exact_body_per_club(tmp_path) -> None:
+    ber_body = json.dumps([{"accumulated": {"pointsScored": 100}}]).encode()
+    asv_body = json.dumps([{"accumulated": {"pointsScored": 200}}]).encode()
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, ber_body),
+            StubResponse(200, {}, asv_body),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport)
+
+    ber_observation = fetcher.fetch_club_season_totals("E2025", "BER")
+    asv_observation = fetcher.fetch_club_season_totals("E2025", "ASV")
+
+    assert ber_observation.body == ber_body
+    assert asv_observation.body == asv_body
+    assert transport.calls[0][0].endswith("/seasons/E2025/clubs/BER/stats")
+    assert transport.calls[1][0].endswith("/seasons/E2025/clubs/ASV/stats")
+    assert (tmp_path / "E2025" / "season_totals_clubs" / "BER.json").read_bytes() == ber_body
+    assert (tmp_path / "E2025" / "season_totals_clubs" / "ASV.json").read_bytes() == asv_body
+    assert ber_observation.endpoint == "ClubSeasonTotals"
+    assert ber_observation.gamecode is None
+
+
+def test_club_season_totals_fetch_never_calls_the_archive_callback(tmp_path) -> None:
+    """Break caught: Decision 78 fix round 3 - club totals are never archived.
+
+    An earlier version of this method archived a synthetic merged-file
+    observation whose URL did not produce the archived bytes, which Decision
+    7 forbids. The fix is not "archive something else instead" - it is
+    "never call the archive callback for this endpoint at all".
+    """
+    body = json.dumps([{"accumulated": {"pointsScored": 100}}]).encode()
+    observations = []
+    transport = RecordingTransport([StubResponse(200, {}, body)])
+    fetcher = make_fetcher(tmp_path, transport, successful_observation=observations.append)
+
+    fetcher.fetch_club_season_totals("E2025", "BER")
+
+    assert observations == []
+
+
+def test_club_season_totals_refetch_of_the_same_body_preserves_nothing_extra(tmp_path) -> None:
+    body = json.dumps([{"accumulated": {"pointsScored": 100}}]).encode()
+    transport = RecordingTransport([StubResponse(200, {}, body), StubResponse(200, {}, body)])
+    fetcher = make_fetcher(tmp_path, transport)
+
+    fetcher.fetch_club_season_totals("E2025", "BER")
+    path = tmp_path / "E2025" / "season_totals_clubs" / "BER.json"
+    first_write = path.read_bytes()
+    fetcher.fetch_club_season_totals("E2025", "BER")
+
+    assert path.read_bytes() == first_write
+    assert not any(
+        p.name != "BER.json" for p in (tmp_path / "E2025" / "season_totals_clubs").glob("BER.*")
+    )
+
+
+def test_club_season_totals_refetch_of_a_changed_body_preserves_the_previous_one(
+    tmp_path,
+) -> None:
+    """A changed club body is a real audit signal and must not be silently overwritten."""
+    old_body = json.dumps([{"accumulated": {"pointsScored": 100}}]).encode()
+    new_body = json.dumps([{"accumulated": {"pointsScored": 150}}]).encode()
+    transport = RecordingTransport(
+        [StubResponse(200, {}, old_body), StubResponse(200, {}, new_body)]
+    )
+    fetcher = make_fetcher(tmp_path, transport)
+
+    fetcher.fetch_club_season_totals("E2025", "BER")
+    fetcher.fetch_club_season_totals("E2025", "BER")
+
+    directory = tmp_path / "E2025" / "season_totals_clubs"
+    assert (directory / "BER.json").read_bytes() == new_body
+    superseded = [p for p in directory.glob("BER.*") if p.name != "BER.json"]
+    assert len(superseded) == 1
+    assert superseded[0].read_bytes() == old_body
+
+
+def test_fetch_club_totals_for_season_reads_club_codes_from_the_played_schedule(tmp_path) -> None:
+    schedule_path = tmp_path / "E2025" / "schedule.json"
+    schedule_path.parent.mkdir(parents=True, exist_ok=True)
+    schedule_path.write_bytes(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "gameCode": 1,
+                        "played": True,
+                        "local": {"club": {"code": "BER"}},
+                        "road": {"club": {"code": "ASV"}},
+                    },
+                    {
+                        "gameCode": 2,
+                        "played": False,
+                        "local": {"club": {"code": "ULK"}},
+                        "road": {"club": {"code": "OLY"}},
+                    },
+                ],
+                "total": 2,
+            }
+        ).encode()
+    )
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, json.dumps([{"accumulated": {}}]).encode()),
+            StubResponse(200, {}, json.dumps([{"accumulated": {}}]).encode()),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport)
+
+    observations = fetcher.fetch_club_totals_for_season("E2025")
+
+    assert set(observations) == {"ASV", "BER"}
+    assert transport.calls[0][0].endswith("/clubs/ASV/stats")
+    assert transport.calls[1][0].endswith("/clubs/BER/stats")
+
+
+def test_include_club_totals_fetches_every_played_club_once_per_season(tmp_path) -> None:
+    write_schedule(
+        tmp_path,
+        [
+            {
+                "gameCode": 1,
+                "played": True,
+                "local": {"club": {"code": "BER"}},
+                "road": {"club": {"code": "ASV"}},
+            }
+        ],
+    )
+    for endpoint in ENDPOINTS:
+        path = tmp_path / "E2025" / endpoint / "1.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"already cached")
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, json.dumps([{"accumulated": {}}]).encode()),
+            StubResponse(200, {}, json.dumps([{"accumulated": {}}]).encode()),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport, include_club_totals=True)
+
+    summary = fetcher.fetch_season("E2025")
+
+    assert (tmp_path / "E2025" / "season_totals_clubs" / "ASV.json").exists()
+    assert (tmp_path / "E2025" / "season_totals_clubs" / "BER.json").exists()
+    # Each club fetched is one target, exactly like the roster and the two v3
+    # season-totals files. Before fix round 4 the club fetches raised
+    # `fetched_files` without raising `total_targets`, so the progress line
+    # reported more files fetched than there were targets to fetch.
+    assert summary.total_targets == len(ENDPOINTS) + 2
+    assert summary.fetched_files == 2
+
+
 def test_game_stats_fetch_is_cached_before_its_archive_callback(tmp_path) -> None:
     body = b'{"local":{"players":[]},"road":{"players":[]}}'
     observations = []
@@ -832,6 +1040,49 @@ def test_fetch_archive_can_only_restore_in_resume_mode() -> None:
     assert "restore_current_season_cache" not in vars(module)
 
 
+def test_include_club_totals_flag_calls_fetch_club_totals_for_season(tmp_path, monkeypatch) -> None:
+    """Break caught: `--include-club-totals` must actually reach the fetch method.
+
+    Everything else is pre-cached so the plain (non-`--live`/`--archive`) CLI
+    path makes zero real HTTP calls; `ArchiveFetcher.fetch_club_totals_for_season`
+    is monkeypatched to a recorder, so this proves the flag is wired through to
+    the method, not that the method's own network behaviour works (that is
+    `test_include_club_totals_fetches_every_played_club_once_per_season`).
+    """
+    from euroleague.fetch import ArchiveFetcher
+
+    write_schedule(tmp_path, [{"gameCode": 1, "played": True}])
+    for endpoint in ("Boxscore", "PlaybyPlay", "Points"):
+        path = tmp_path / "E2025" / endpoint / "1.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"already cached")
+
+    calls: list[str] = []
+
+    def record(self, season_code: str) -> dict[str, object]:
+        # Returns a mapping, like the real method: the caller counts its
+        # clubs as fetch targets, so a recorder returning None would fail
+        # for a reason that has nothing to do with the CLI wiring.
+        calls.append(season_code)
+        return {"BER": object(), "ASV": object()}
+
+    monkeypatch.setattr(ArchiveFetcher, "fetch_club_totals_for_season", record)
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "fetch_archive.py"
+    spec = importlib.util.spec_from_file_location("fetch_archive_include_club_totals", script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+        exit_code = module.main(["E2025", "--cache-root", str(tmp_path), "--include-club-totals"])
+    finally:
+        del sys.modules[spec.name]
+
+    assert exit_code == 0
+    assert calls == ["E2025"]
+
+
 def test_url_builders_derive_competition_code_for_all_supported_competitions() -> None:
     """Break caught: a supported season is sent through the EuroLeague v2 path.
 
@@ -840,10 +1091,12 @@ def test_url_builders_derive_competition_code_for_all_supported_competitions() -
     about live workflow, warehouse, or lineup support for another competition.
     """
     from euroleague.fetch import (
+        _club_totals_url,
         _game_stats_url,
         _game_url,
         _roster_url,
         _schedule_url,
+        _season_totals_url,
     )
 
     # Schedule URLs
@@ -866,6 +1119,28 @@ def test_url_builders_derive_competition_code_for_all_supported_competitions() -
     )
     assert _roster_url("SC2026") == (
         "https://api-live.euroleague.net/v2/competitions/SC/seasons/SC2026/people?limit=2000"
+    )
+
+    # Season totals URLs
+    assert _season_totals_url("E2024", "players") == (
+        "https://api-live.euroleague.net/v3/competitions/E/statistics/players/traditional"
+        "?SeasonMode=Single&SeasonCode=E2024"
+    )
+    assert _season_totals_url("E2024", "teams") == (
+        "https://api-live.euroleague.net/v3/competitions/E/statistics/teams/traditional"
+        "?SeasonMode=Single&SeasonCode=E2024"
+    )
+    assert _season_totals_url("U2025", "teams") == (
+        "https://api-live.euroleague.net/v3/competitions/U/statistics/teams/traditional"
+        "?SeasonMode=Single&SeasonCode=U2025"
+    )
+
+    # Club season-totals URLs
+    assert _club_totals_url("E2025", "BER") == (
+        "https://api-live.euroleague.net/v2/competitions/E/seasons/E2025/clubs/BER/stats"
+    )
+    assert _club_totals_url("U2025", "ASV") == (
+        "https://api-live.euroleague.net/v2/competitions/U/seasons/U2025/clubs/ASV/stats"
     )
 
     # Game stats URLs
@@ -898,9 +1173,11 @@ def test_url_builders_derive_competition_code_for_all_supported_competitions() -
 def test_v2_url_builders_reject_invalid_season_codes(invalid_code: str) -> None:
     """Break caught: an unsupported prefix reaches an interpolated v2 path."""
     from euroleague.fetch import (
+        _club_totals_url,
         _game_stats_url,
         _roster_url,
         _schedule_url,
+        _season_totals_url,
     )
 
     with pytest.raises(ValueError):
@@ -909,6 +1186,10 @@ def test_v2_url_builders_reject_invalid_season_codes(invalid_code: str) -> None:
         _roster_url(invalid_code)
     with pytest.raises(ValueError):
         _game_stats_url(invalid_code, 1)
+    with pytest.raises(ValueError):
+        _season_totals_url(invalid_code, "teams")
+    with pytest.raises(ValueError):
+        _club_totals_url(invalid_code, "BER")
 
 
 def test_fetch_season_supercup_routes_to_sc_v2_and_v1_endpoints(tmp_path) -> None:

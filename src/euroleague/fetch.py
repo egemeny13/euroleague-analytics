@@ -180,6 +180,38 @@ def _roster_url(season_code: str) -> str:
     )
 
 
+def _season_totals_url(season_code: str, kind: str) -> str:
+    """Build the v3 traditional-statistics URL for one season and kind.
+
+    `kind` is `"players"` or `"teams"`. This surface is fetched only as a
+    validation oracle for the derived team sums - Decision 78 - never as a
+    source the warehouse loads.
+    """
+    if kind not in ("players", "teams"):
+        raise ValueError(f"Unknown season totals kind {kind!r}. Expected 'players' or 'teams'.")
+    competition = competition_for_season_code(season_code)
+    query = urlencode({"SeasonMode": "Single", "SeasonCode": season_code})
+    return (
+        f"https://api-live.euroleague.net/v3/competitions/{competition}/"
+        f"statistics/{kind}/traditional?{query}"
+    )
+
+
+def _club_totals_url(season_code: str, club_code: str) -> str:
+    """Build the v2 club season-totals URL for one season and club.
+
+    This is the exact-total oracle counterpart to `_season_totals_url`'s v3
+    per-game averages: `[{accumulated, averagePerGame}]`, recorded in
+    `exploration/SEASON_ENDPOINT_PROBE.md`. Fetched only as a validation
+    oracle - Decision 78 - never as a source the warehouse loads.
+    """
+    competition = competition_for_season_code(season_code)
+    return (
+        f"https://api-live.euroleague.net/v2/competitions/{competition}/"
+        f"seasons/{season_code}/clubs/{club_code}/stats"
+    )
+
+
 def _game_stats_url(season_code: str, gamecode: int) -> str:
     competition = competition_for_season_code(season_code)
     return (
@@ -245,6 +277,8 @@ class ArchiveFetcher:
         successful_observation: Callable[[FetchObservation], None] | None = None,
         require_fresh_schedule: bool = False,
         include_roster: bool = False,
+        include_season_totals: bool = False,
+        include_club_totals: bool = False,
     ) -> None:
         self.transport = transport
         self.cache = ResponseCache(cache_root)
@@ -259,6 +293,8 @@ class ArchiveFetcher:
         self.successful_observation = successful_observation
         self.require_fresh_schedule = require_fresh_schedule
         self.include_roster = include_roster
+        self.include_season_totals = include_season_totals
+        self.include_club_totals = include_club_totals
         self._counters = _Counters()
         self._next_request_at: float | None = None
         self._started_at = 0.0
@@ -430,6 +466,110 @@ class ArchiveFetcher:
         parse_roster_bytes(path.read_bytes(), season_code)
         return observation
 
+    def fetch_season_totals(self, season_code: str, kind: str) -> FetchObservation:
+        """Refresh, cache, then archive one v3 season-totals response.
+
+        `kind` is `"players"` or `"teams"`. Like the roster, this surface can
+        change while a season is live, so a requested season-totals response is
+        always re-fetched. Exact superseded bytes remain beside the canonical
+        cache file. This response is never parsed into the warehouse - it is
+        fetched only to serve `tests/test_season_totals_oracle.py` - Decision 78.
+        """
+        if kind not in ("players", "teams"):
+            raise ValueError(f"Unknown season totals kind {kind!r}. Expected 'players' or 'teams'.")
+        observation = self._request_with_retry(
+            season_code=season_code,
+            gamecode=None,
+            endpoint="SeasonTotalsPlayers" if kind == "players" else "SeasonTotalsTeams",
+            url=_season_totals_url(season_code, kind),
+        )
+        if observation is None or observation.http_status != 200:
+            status = "no response" if observation is None else f"HTTP {observation.http_status}"
+            raise FetchError(
+                f"Could not fetch the season totals ({kind}) for {season_code}: {status}. "
+                "Keep the existing cache and retry later."
+            )
+        path = self.cache.season_totals_path(season_code, kind)
+        previous = path.read_bytes() if path.is_file() else None
+        if previous is not None and previous != observation.body:
+            _preserve_superseded(path, previous)
+        if previous == observation.body:
+            self._counters.fetched_files += 1
+            self._counters.fetched_bytes += observation.byte_length
+            if self.successful_observation is not None:
+                self.successful_observation(observation)
+        else:
+            self._cache_successful_observation(observation, path, game_response=False)
+        return observation
+
+    def fetch_club_season_totals(self, season_code: str, club_code: str) -> FetchObservation:
+        """Fetch and cache one club's exact v2 season-totals response.
+
+        Written to disk before any parsing, and re-fetched (with the
+        previous body preserved beside it via `_preserve_superseded` if it
+        changed) exactly like every other cached endpoint - see
+        `ResponseCache.club_total_path`.
+
+        **This response is never archived into `raw_api_response`, and never
+        will be through this method.** `raw_api_response`'s archive identity
+        is `(season_code, endpoint, gamecode)`; `gamecode` is a
+        positive-integer column with no room for a club code, so there is no
+        identity this response can honestly be filed under. An earlier
+        version of this method worked around that by archiving a merged
+        multi-club file under a synthetic identity whose URL did not produce
+        those exact bytes - precisely what Decision 7's "immutable,
+        checksum-addressed versions" rule forbids, since the archived body
+        would not be reproducible from the identity's own URL. That workaround
+        was removed - Decision 78 fix round 3. Club totals are validation-
+        oracle input only, live in the disk cache, and archiving them would
+        need a schema change to `raw_api_response` (a club-code column),
+        decided separately.
+        """
+        observation = self._request_with_retry(
+            season_code=season_code,
+            gamecode=None,
+            endpoint="ClubSeasonTotals",
+            url=_club_totals_url(season_code, club_code),
+        )
+        if observation is None or observation.http_status != 200:
+            status = "no response" if observation is None else f"HTTP {observation.http_status}"
+            raise FetchError(
+                f"Could not fetch season totals for club {club_code} in {season_code}: "
+                f"{status}. Keep the existing cache and retry later."
+            )
+        path = self.cache.club_total_path(season_code, club_code)
+        previous = path.read_bytes() if path.is_file() else None
+        if previous is not None and previous != observation.body:
+            _preserve_superseded(path, previous)
+        if previous != observation.body:
+            _write_exact(path, observation.body)
+        self._counters.fetched_files += 1
+        self._counters.fetched_bytes += observation.byte_length
+        return observation
+
+    def fetch_club_totals_for_season(self, season_code: str) -> dict[str, FetchObservation]:
+        """Fetch every played club's season totals for one season.
+
+        Club codes are read from the season's own cached schedule - played
+        games only - never guessed or hard-coded, per the controller ruling
+        for Decision 78. Requires the schedule to already be cached; this
+        method does not fetch it.
+        """
+        schedule = self.cache.read_schedule_json(season_code).get("data") or []
+        club_codes: set[str] = set()
+        for game in schedule:
+            if game.get("played") is not True:
+                continue
+            for side in ("local", "road"):
+                club = (game.get(side) or {}).get("club") or {}
+                code = club.get("code")
+                if code:
+                    club_codes.add(str(code))
+        return {
+            club_code: self.fetch_club_season_totals(season_code, club_code)
+            for club_code in sorted(club_codes)
+        }
+
     def fetch_game_stats(self, season_code: str, gamecode: int) -> FetchObservation:
         """Fetch, cache, then archive one v2 game stats response before parsing it."""
         observation = self._request_with_retry(
@@ -575,16 +715,36 @@ class ArchiveFetcher:
         started_at = self._started_at
         if self.include_roster:
             self.fetch_roster(season_code)
+        if self.include_season_totals:
+            self.fetch_season_totals(season_code, "players")
+            self.fetch_season_totals(season_code, "teams")
         schedule = self._read_or_fetch_schedule(season_code)
         games = list(schedule["data"])
         played_games = [game for game in games if game.get("played") is True]
-        total_targets = len(played_games) * len(ENDPOINTS) + int(self.include_roster)
+        club_totals_targets = 0
+        if self.include_club_totals:
+            # Needs the schedule, which is why this runs here rather than
+            # alongside the roster/season-totals calls above. Never archived
+            # - see `fetch_club_season_totals`. Each club fetched is one
+            # target, counted the same way the roster and the two v3
+            # season-totals files are, so `fetched=` in the progress line
+            # cannot exceed `[completed/total]`. The count comes from the
+            # returned mapping rather than from the schedule again, so it is
+            # the number of clubs actually fetched.
+            club_totals_targets = len(self.fetch_club_totals_for_season(season_code))
+        season_totals_targets = 2 if self.include_season_totals else 0
+        total_targets = (
+            len(played_games) * len(ENDPOINTS)
+            + int(self.include_roster)
+            + season_totals_targets
+            + club_totals_targets
+        )
         self._scheduled_games = len(games)
         self._played_games = len(played_games)
         self._unplayed_games = len(games) - len(played_games)
         self._total_targets = total_targets
         permanent_404s = self._permanent_404s()
-        completed_targets = int(self.include_roster)
+        completed_targets = int(self.include_roster) + season_totals_targets + club_totals_targets
 
         for game in played_games:
             gamecode = int(game["gameCode"])

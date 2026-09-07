@@ -4362,6 +4362,294 @@ approves the multiple-award split, it lands as a new decision and, per
 Decision 22, as a further insert-time attachment through the same rebuild
 path - never an `UPDATE game_event` on the id this task stores.
 
+---
+
+## 78. The league's own season totals validate our team sums, and are archived only as an oracle - amends Decision 65
+
+Decision 65 left season statistics out of the tool surface, on the grounds
+that the warehouse derives its own season lines and a second published number
+would answer the same question with no way to say which is right. This task
+does not reopen that: two league season-statistics surfaces are now fetched
+and archived, but **only as validation oracles** for
+`tests/test_season_totals_oracle.py`, and neither is ever parsed into a
+warehouse table or served by any MCP tool. `docs/SCOPE.md`'s "left out" row
+for season statistics is amended to say so.
+
+**This decision was revised three times (2026-09-07) before it shipped.** The
+first pass built a v3-only oracle that, once the endpoint turned out to
+publish per-game averages rather than totals, ended up asserting only
+`gamesPlayed` and excluding every other counting column as a "definition
+difference." Fix round 1 ruled that too weak and required a rounded-average
+comparison plus a second, exact-total source (the v2 club endpoint). Fix
+round 2 found the two resulting v2 mismatches were the league's own two
+systems disagreeing, not our defect, and named them exactly rather than
+excluding them. Fix round 3, a task review, found the *oracle's comparison
+logic* sound but the *fetch side* wrong: club bodies were parsed before any
+write and archived under a synthetic identity whose URL did not produce the
+archived bytes - exactly what Decision 7 forbids. Fix round 3's corrections
+are folded into the sections below rather than kept as a separate appendix,
+since they replace the earlier design outright rather than adding to it.
+
+### Source 1: the v3 `statistics/{players,teams}/traditional` endpoints - a rounded-average oracle
+
+`ArchiveFetcher.fetch_season_totals(season_code, kind)` (`kind` is
+`"players"` or `"teams"`) is built onto the same model as `fetch_roster`:
+cached to `<root>/<season_code>/season_totals_{kind}.json`, archived under
+the optional identities `("SeasonTotalsPlayers", None)` and
+`("SeasonTotalsTeams", None)`, restorable like the roster snapshot. An
+`include_season_totals` constructor flag fetches both kinds once per season
+alongside an ordinary season fetch; it defaults to `False`. These files are
+not committed to git - the whole `exploration/cache/` tree is gitignored
+(Decision 9) - so their full SHA-256 checksums are recorded here and in
+`docs/evidence/season_totals_oracle.json`'s `cached_files` section instead of
+a diff:
+
+| File | Bytes | SHA-256 |
+|---|---|---|
+| E2024 `season_totals_players.json` | 85,820 | `98bd0677e77d7f0dce388c67733fb1412ba5cac62a03e948f5cc842daf9ed135` |
+| E2024 `season_totals_teams.json` | 12,552 | `217b6b0a4a6decdfe2e6dce535fdd99ccad371dc087f40477ea5d57a4f88f664` |
+| E2025 `season_totals_players.json` | 85,920 | `0fc2e6b7f66b21d85ee7733ce3155fc85d1dedb25ff766038b9fc1af12a3fed6` |
+| E2025 `season_totals_teams.json` | 13,946 | `b3edce68cf250391586872486257f3e423973472ac40005eacb51ce3bcc798a5` |
+
+All fetched 2026-09-07 through the production fetch path, one request per
+URL, no ad hoc HTTP calls.
+
+**The endpoint does not publish season totals.** Every counting field on the
+"traditional" team and player rows except `gamesPlayed` is a **per-game
+average**, rounded to roughly one decimal place - `pointsScored: 79.3`, not a
+season sum, confirmed by the endpoint's own `minutesPlayed` field carrying
+full floating-point precision (`40.263...`), which only makes sense as a
+division result.
+
+**The rounded-average comparison, per the fix-round-1 ruling, tightened in
+fix round 3.** For every counting column, `compare_team_average_columns`
+(`tests/test_season_totals_oracle.py`) computes `our exact sum /
+games_played`, rounds it to the precision the payload itself uses - detected
+per column from the published values via `_column_precision`, not assumed;
+measured at exactly one decimal place for every column in both seasons - and
+asserts equality with the published average within a **default tolerance of
+half a rounding increment** (`10^-precision / 2`, i.e. 0.05 at one-decimal
+precision). Fix round 1 had set this at a full increment; fix round 3
+measured that the full-increment tolerance was silently absorbing more than
+genuine `.x5` boundary noise, and tightened it.
+
+**Six named exceptions, `KNOWN_ROUNDING_CASES`, each with its own one-line
+reason - not a blanket widening.** A `(team, column)` pair exceeding half an
+increment fails unless it matches one of six recorded `(season, team,
+column)` keys exactly. Four are genuine rounding-boundary cases: the
+*unrounded* average ends in exactly `5` at the next decimal place (measured,
+not assumed - e.g. E2024 MAD `field_goals_made_2` is `838 / 40 = 20.95`
+exactly), where the two sides can legitimately land on different neighbours
+with neither side wrong. **Which neighbour is decided by the binary double,
+not by a half-to-even tie-break** (a correction made in fix round 4, where
+this paragraph previously credited round-half-to-even): a decimal ending in
+`5` has no exact double, so the division lands just below or just above the
+true midpoint and `round` picks the nearer value, never reaching its
+tie-break. Measured with `decimal.Decimal`: `838 / 40` stores as
+`20.9499999999999992894...` and rounds down to `20.9`, while `842 / 40`,
+`386 / 40` and `1034 / 40` all store just above their midpoints and round
+up - three of the four boundary cases round up, one rounds down. The other
+two are **not rounding artifacts at all**: E2024 RED `defensive_rebounds`
+and E2025 MIL `field_goals_attempted_2` are the same two entries in
+`KNOWN_LEAGUE_DISCREPANCIES` below, where the small exact-total gap (2
+rebounds over 35 games; 1 attempt over 38 games) is large enough relative to
+the game count to cross even the averaging tolerance. Naming them here
+rather than silently passing keeps the two designs honest with each other -
+a discrepancy between the league's two systems shows up on both oracles, and
+should.
+
+With this comparison, `TEAM_COLUMN_MAP` asserts every counting column
+(points, rebounds - offensive, defensive and total, assists, steals,
+turnovers, blocks - for and against, fouls committed and drawn, made/attempted
+2s, 3s and free throws) plus `games_played` as an exact count. **Result: zero
+unexplained mismatches, both seasons, every column - six named exceptions,
+all reproduced exactly** - see `docs/evidence/season_totals_oracle.json`.
+
+**What this oracle still cannot detect**, stated plainly per CLAUDE.md's rule
+that a check must be able to fail: a defect that shifted every team's total
+by the same fixed ratio would still divide out to the same average and pass.
+That gap is exactly what Source 2 closes.
+
+### Source 2: the v2 `clubs/{code}/stats` endpoint - an exact-total oracle
+
+Recorded in `exploration/SEASON_ENDPOINT_PROBE.md` (E2025 BER, 1,072 bytes),
+its `accumulated` object is a genuine season sum, confirmed against real
+data: club MAD's E2025 `accumulated.points` is `3876.0`, matching our exact
+summed total for MAD with no rounding involved anywhere.
+
+**Fix round 3, high severity: the first implementation of this source was
+wrong on the fetch side, not just untuned.** It parsed each club's body with
+`json.loads` before writing anything to disk (CLAUDE.md's cache-before-parse
+rule violated in spirit even though bytes eventually landed unmodified), then
+merged every club's *parsed* content into one file per season and archived
+that merged file's bytes into `raw_api_response` under a synthetic identity,
+`("ClubSeasonTotals", None)`, whose URL - there is no single URL for a
+multi-club merged file - could not have produced those exact bytes. That is
+precisely what Decision 7 (immutable, checksum-addressed versions,
+reproducible from their own URL) forbids. Fix round 3 removed both defects.
+
+**Club totals are cached one file per club per season, and are never
+archived into `raw_api_response` at all.** `ResponseCache.club_total_path`
+returns `<root>/<season_code>/season_totals_clubs/<club_code>.json` - the
+same per-response layout every other cached endpoint uses, not a merged file.
+`ArchiveFetcher.fetch_club_season_totals(season_code, club_code)` writes the
+exact response body through `_write_exact` before any parsing, and preserves
+a changed body with `_preserve_superseded` exactly like the game endpoints -
+a per-club audit signal, not a whole-season one. It never calls
+`successful_observation`, so nothing from this method reaches Supabase
+Storage or `raw_api_response`; `raw_api_response`'s identity has no column
+for a club code, and giving it one is a schema change this task does not
+make. `ArchiveFetcher.fetch_club_totals_for_season(season_code)` reads club
+codes from the season's own cached schedule (played games only, never
+guessed) and calls the per-club method once for each; an `include_club_totals`
+constructor flag wires this into an ordinary season fetch, mirroring
+`include_season_totals`, and `scripts/fetch_archive.py --include-club-totals`
+exposes it on the CLI. Every played club for E2024 (18) and E2025 (20) was
+re-fetched under this corrected design - re-fetching here is not a Decision 7
+violation, because these 38 bodies are being cached correctly for the first
+time. All 38 bodies are byte-identical to the earlier, incorrectly-cached
+fetch (same checksums), so nothing about the club data itself changed - only
+how it is stored. Their full SHA-256 checksums (38 files, not reproduced
+here) are recorded in `docs/evidence/season_totals_oracle.json`'s
+`cached_files.<season>.v2_clubs` section, one entry per club code, each with
+its byte count.
+
+**The comparison.** `compare_club_exact_totals`
+(`tests/test_season_totals_oracle.py`) asserts every counting column in
+`CLUB_COLUMN_MAP`, including `games_played`, as an exact integer count - zero
+tolerance, because `accumulated` is a sum, not an average. It also asserts
+`len(club_rows) == 1` for every club, naming the club in the failure message
+- the v2 payload's outer shape is a list, and nothing established it can
+never hold more than one row per club; an unexamined assumption there would
+silently compare against the wrong entry.
+
+**Result: two genuine mismatches, both small, neither excluded, both now
+explained - fix round 2.** Per the fix-round-1 ruling ("a mismatch is a
+finding to report, not to exclude"), these were first reported with the test
+left red. Fix round 2 supplied the missing piece: our raw per-game sums are
+*already* validated exactly against the league's own published box scores
+elsewhere in this project (`tests/test_shots.py`,
+`src/euroleague/validation.py`, across at least 50 games per CLAUDE.md's own
+gate). That means these two cases are not "our number versus the league's
+number" - they are **the league's own v2 season-aggregate page disagreeing
+with the league's own per-game box scores**, which this project has no way
+to adjudicate and does not attempt to. Decision 1's fidelity rule - the raw
+layer is trimmed but faithful to the archived source, and the archived
+per-game box score is that source - is why our figures follow the box score
+rather than the season page.
+
+| Season | Club | Column | Our sum (= box score) | Published (v2 season page) |
+|---|---|---|---|---|
+| E2024 | RED | `defensive_rebounds` | 791 | 789 |
+| E2024 | RED | `total_rebounds` | 1181 | 1179 |
+| E2025 | MIL | `field_goals_attempted_2` | 1366 | 1367 |
+
+**What was ruled out.** For both RED and MIL, `games_played` matches exactly
+(35 and 38 respectively), which rules out a missing or extra game in either
+source. Every other column for the same club matches exactly, which rules
+out a systemic parsing defect - a wrong field mapping or a double-counted
+event type would not spare every other column. RED's 35 games include one
+Play-In game (gamecode 308, phase `PI`) alongside 34 Regular Season games;
+excluding that single game from our sum would remove roughly 21 rebounds,
+far more than the 2-rebound gap, which rules out a phase-inclusion mismatch
+as the cause. No cached response for either club shows a
+superseded/replaced body (`_preserve_superseded` writes a sibling file when
+a re-fetch's bytes differ from what is on disk; none exists for either
+team's `Boxscore` files), so there is no local evidence that our own cached
+box scores were fetched before a later correction.
+
+**What is deliberately not claimed.** This does not prove the v2 season page
+is wrong and the box score is right - only that this project follows the
+box score by policy (Decision 1), and that the two feeds disagree by a
+small, named amount on these two club/column pairs. Settling which the
+league itself considers authoritative would need contact with the league or
+its live site, outside this task's network scope.
+
+**`KNOWN_LEAGUE_DISCREPANCIES` - an exact, named exception list, not a
+tolerance.** `tests/test_season_totals_oracle.py` keys this mapping by
+`(season_code, club_code, our_field)` to `(our_value, published_value)`,
+holding exactly the three rows in the table above. The test still asserts
+every `(season, club, column)` triple matches exactly *or* matches one of
+these three recorded pairs precisely - nothing else passes, and reproducing
+different numbers than what is recorded (say the box-score sum changes, or
+the league's page corrects itself) fails the test exactly as a brand-new
+mismatch would. **The test is fully green with this design**, `pytest -m
+full_season tests/test_season_totals_oracle.py` at 5 passed.
+
+**No player-level oracle, on either endpoint.** The v3 players payload keys
+each row by `player.code`, a bare digit string (`"010035"`) - no `P` prefix,
+no matching width against either the `P` + 6-digit shape or a legacy
+4-character veteran code (`PTGB`, `PJDR`). CLAUDE.md bans joining on an
+assumed ID shape, so no attempt was made to bridge the two identity spaces.
+Recorded as a fact in `tests/test_season_totals_oracle.py`
+(`test_the_players_endpoint_uses_a_person_code_not_our_player_id`), not
+worked around. `person_game_link` (`src/euroleague/person_game_link.py`,
+`migrations/0017_person_game_link.up.sql`) already bridges a box-score player
+to the league's own registration/person identity for Decision 75's roster
+work, and is the natural candidate bridge for a future player-level
+season-totals oracle - building it is out of this task's scope and is left
+as an explicit follow-up, not attempted here with a guess.
+
+**Condition.** The v3 rounded-average test fails on any column exceeding half
+a rounding increment of deviation not exactly matching an entry in
+`KNOWN_ROUNDING_CASES`, or on a team missing from either side. The v2
+exact-total test fails on any non-zero difference not exactly matching an
+entry in `KNOWN_LEAGUE_DISCREPANCIES`, on a club missing from either side,
+on a club with other than exactly one v2 season-totals row, or on a recorded
+entry (in either mapping) that stops reproducing its exact numbers. **Both
+mappings only grow or shrink through a decision** - adding a new pair,
+removing one because the league corrected a page, or widening a recorded
+pair's numbers all require a fresh Decision entry with the measurement
+behind it, never a silent edit to make a newly-red test pass. Neither test's
+default tolerance may be widened without a fresh measurement justifying the
+new bound. **Club totals stay disk-cache only and are never archived into
+`raw_api_response`; archiving them needs a schema change (a club-code column
+or an equivalent identity) decided separately, not a workaround inside the
+fetcher.**
+
+**Provenance.**
+- Basis: MEASURED
+- Evidence: `docs/evidence/season_totals_oracle.json` records, per season and
+  per oracle, every column's comparison mode, detected precision where
+  relevant, the full mismatch list, which `KNOWN_LEAGUE_DISCREPANCIES` and
+  `KNOWN_ROUNDING_CASES` entries reproduced exactly, and (fix round 3) the
+  full SHA-256 checksum and byte count of every cached oracle file - 4 v3
+  files plus 38 per-club v2 files. `exploration/SEASON_ENDPOINT_PROBE.md`
+  records the earlier one-time reconnaissance that first found both
+  surfaces. The box-score-versus-season-page fidelity argument rests on the
+  pre-existing box-score validation in `tests/test_shots.py` and
+  `src/euroleague/validation.py`, not on new measurement in this task.
+- Alternatives considered: keep the v3-only oracle with every rate column
+  excluded as a "definition difference" (the fix round 1 ruling explicitly
+  rejected this as too weak); treat the v3 endpoint's average-vs-total gap
+  with a wide float tolerance instead of a data-derived rounding increment
+  (rejected - it would validate nothing precise, contrary to CLAUDE.md's
+  stance against accounting identities that cannot fail); exclude the two
+  genuine v2 mismatches with a `compare=False` reason (explicitly ruled out
+  in fix round 1: "a mismatch is a finding to report, not to exclude"); leave
+  the club-oracle test permanently red rather than name the exact known
+  values (rejected in fix round 2 - the ruling required the test "stay exact
+  and stay green"); keep the merged-file cache and archive it under a
+  synthetic identity (rejected in fix round 3 as a Decision 7 violation - the
+  archived bytes would not be reproducible from the identity's own URL); a
+  wide float tolerance for the whole v3 comparison instead of a half-increment
+  default plus six named exceptions (rejected in fix round 3 - it would hide
+  the two RED/MIL cases that are not rounding artifacts inside a tolerance
+  band that looks like it is only about rounding); build a player-level
+  oracle by string-matching names (rejected outright by CLAUDE.md's "join on
+  ID, never on name" rule).
+- Approved: proceeding under the controller ruling for Task 8 of the
+  2026-09-07 derived-layer-expansion plan. Fix round 1 specified the
+  rounded-average design, the v2 club oracle, and the "report, don't exclude"
+  rule that surfaced the two RED/MIL discrepancies. Fix round 2 specified the
+  `KNOWN_LEAGUE_DISCREPANCIES` exact-exception design and the box-score-
+  fidelity reasoning, after establishing that our raw sums were already
+  validated against the league's own box scores elsewhere. Fix round 3 (a
+  task review) specified the per-club cache layout, the archiving removal,
+  the CLI flag, the full-digest evidence requirement, the half-increment
+  tolerance with `KNOWN_ROUNDING_CASES`, and the `len(club_rows) == 1` guard.
+  No separate owner sign-off is recorded for any round's findings.
+
 ## Rules to add to the project instruction file
 
 ```

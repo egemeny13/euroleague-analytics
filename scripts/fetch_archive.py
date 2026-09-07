@@ -86,6 +86,23 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="also refresh the complete season-level v2 roster response",
     )
+    parser.add_argument(
+        "--include-season-totals",
+        action="store_true",
+        help=(
+            "also refresh the v3 season-totals responses (players and teams) - a "
+            "validation oracle only, per Decision 78; never parsed into the warehouse"
+        ),
+    )
+    parser.add_argument(
+        "--include-club-totals",
+        action="store_true",
+        help=(
+            "also refresh the v2 club season-totals response for every played club - "
+            "a validation oracle only, per Decision 78; disk cache only, never "
+            "archived and never parsed into the warehouse"
+        ),
+    )
     return parser
 
 
@@ -252,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
                         ),
                         require_fresh_schedule=args.require_fresh_schedule,
                         include_roster=args.include_roster,
+                        include_season_totals=args.include_season_totals,
+                        include_club_totals=args.include_club_totals,
                     )
 
                 summaries = fetch_seasons(
@@ -269,6 +288,8 @@ def main(argv: list[str] | None = None) -> int:
                     timeout_seconds=args.timeout_seconds,
                     require_fresh_schedule=args.require_fresh_schedule,
                     include_roster=args.include_roster,
+                    include_season_totals=args.include_season_totals,
+                    include_club_totals=args.include_club_totals,
                 )
 
             summaries = fetch_seasons(

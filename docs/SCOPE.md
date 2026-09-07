@@ -52,7 +52,7 @@ that adds no derived value.
 
 | Available in the API | Why it is not here |
 |---|---|
-| Season statistics per player and per club (v2 `people/{id}/stats`, `clubs/{code}/stats`, v3 `statistics/*/traditional`) | The warehouse computes season lines from the event stream, with possession denominators the league does not publish. Loading the league's own totals would give a second answer to the same question with no way to say which is right. |
+| Season statistics per player and per club (v2 `people/{id}/stats`, `clubs/{code}/stats`, v3 `statistics/*/traditional`) | The warehouse computes season lines from the event stream, with possession denominators the league does not publish. Loading the league's own totals would give a second answer to the same question with no way to say which is right. Fetched and archived as a test oracle since Decision 78; never served. |
 | Standings per round (v2 `rounds/{n}/standings`) | Wins and losses are already in `raw_game`. A standings tool is a sort, not a metric. |
 | The season schedule (v2 `games`) | Fixtures are already read for the settlement chain; a schedule tool would answer "when does Efes play" and nothing about how they play. |
 | `Evolution`: score margin per minute | Derived exactly by `el_get_play_by_play` from the running score, at event resolution rather than minute resolution. |
