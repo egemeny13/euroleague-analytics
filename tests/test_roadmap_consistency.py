@@ -16,12 +16,14 @@ def test_roadmap_tool_count_matches_exported_tools() -> None:
 
     # Match patterns like "Ten read-only `el_` tools" or "10 read-only `el_` tools"
     match = re.search(
-        r"(Nine|Ten|Eleven|Twelve|Thirteen|\d+)\s+read-only\s+`el_`\s+tools", content, re.IGNORECASE
+        r"(Nine|Ten|Eleven|Twelve|Thirteen|Fourteen|\d+)\s+read-only\s+`el_`\s+tools",
+        content,
+        re.IGNORECASE,
     )
     assert match is not None, "Tool count description not found in ROADMAP.md"
 
     count_str = match.group(1).lower()
-    word_to_num = {"nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13}
+    word_to_num = {"nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14}
     stated_count = word_to_num.get(count_str, int(count_str) if count_str.isdigit() else 0)
 
     assert stated_count == len(TOOL_NAMES), (

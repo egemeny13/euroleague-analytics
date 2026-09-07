@@ -247,8 +247,8 @@ def test_exactly_12_tools_discovered_with_full_annotations(mock_registry):
     stdio_tools = published_tools(mock_registry)
     sdk_tools = sdk_tools_as_wire(mock_registry)
 
-    assert len(stdio_tools) == 13
-    assert len(sdk_tools) == 13
+    assert len(stdio_tools) == 14
+    assert len(sdk_tools) == 14
     assert [t["name"] for t in stdio_tools] == sorted(TOOL_NAMES)
 
     for tool in stdio_tools:

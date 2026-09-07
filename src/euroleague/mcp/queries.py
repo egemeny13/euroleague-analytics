@@ -1402,3 +1402,58 @@ def get_referee_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
             "counted; one such slot exists in E2025 (game 11).",
         ],
     )
+
+
+def get_roster(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
+    """A team's roster with biography, one row per player who reached a box score.
+
+    Biography (jersey number, position, height, weight, birth date, country) comes
+    from the league's registration feed, matched to the box-score player id through
+    the observed-stat-line link (person_game_link), never through name matching. A
+    player with no link, or no matching registration row, still appears here with a
+    null biography, because the row's existence is defined by the box score.
+    """
+    season_code = resolve_season(cursor, arguments["season"])
+    limit = clamp_limit(arguments.get("limit"))
+    offset = validate_offset(arguments.get("offset"))
+
+    conditions = ["season_code = %s"]
+    params: list[Any] = [season_code]
+    if arguments.get("team"):
+        conditions.append("team_code = %s")
+        params.append(resolve_team(cursor, season_code, arguments["team"]))
+    if arguments.get("player"):
+        conditions.append("player_id = %s")
+        params.append(resolve_player(cursor, season_code, arguments["player"]))
+    where = " and ".join(conditions)
+
+    cursor.execute(
+        f"select count(*) as total from v_roster where {where}",
+        tuple(params),
+    )
+    total = _rows(cursor)[0]["total"]
+
+    cursor.execute(
+        f"select season_code, team_code, player_id, display_name, source_person_code, "
+        f"jersey_number, position_name, height_cm, weight_kg, birth_date, "
+        f"age_on_season_start, country_code, registration_start_at, registration_end_at, "
+        f"games_played "
+        f"from v_roster where {where} "
+        f"order by team_code, games_played desc, player_id "
+        f"limit %s offset %s",
+        (*params, limit, offset),
+    )
+    rows = _rows(cursor)
+
+    return build_response(
+        rows=rows,
+        coverage=coverage_for(cursor, season_code, False),
+        excluded=exclusions_for(cursor, season_code, False),
+        limit=limit,
+        offset=offset,
+        total_available=total,
+        caveats=[
+            "Biography comes from the league's registration feed, linked to the "
+            "box-score player by observed stat lines, never by name (Decision 27).",
+        ],
+    )

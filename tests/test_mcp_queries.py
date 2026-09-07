@@ -23,6 +23,7 @@ from euroleague.mcp.queries import (
     get_player_stats,
     get_possessions,
     get_referee_stats,
+    get_roster,
     get_team_stats,
 )
 
@@ -1718,3 +1719,70 @@ def test_referee_stats_filters_by_code_or_name_and_groups_by_referee_code() -> N
     assert response["rows"][0]["referee_code"] == "OJCZ"
     assert cursor.parameters[1] == ("E2025", "OJCZ", "%OJCZ%")
     assert "group by referee_code" in cursor.statements[2]
+
+
+def test_roster_orders_by_team_then_games_played_and_binds_the_resolved_team_code() -> None:
+    cursor = RecordingCursor(
+        [
+            (["season_code"], [("E2025",)]),
+            (["team_code"], [("BER",)]),
+            (["total"], [(1,)]),
+            (
+                [
+                    "season_code",
+                    "team_code",
+                    "player_id",
+                    "display_name",
+                    "source_person_code",
+                    "jersey_number",
+                    "position_name",
+                    "height_cm",
+                    "weight_kg",
+                    "birth_date",
+                    "age_on_season_start",
+                    "country_code",
+                    "registration_start_at",
+                    "registration_end_at",
+                    "games_played",
+                ],
+                [
+                    (
+                        "E2025",
+                        "BER",
+                        "P012774",
+                        "LARKIN, SHANE",
+                        "PABCDE",
+                        "0",
+                        "Guard",
+                        183,
+                        79,
+                        "1993-11-02",
+                        31,
+                        "US",
+                        "2025-07-01T00:00:00",
+                        None,
+                        5,
+                    )
+                ],
+            ),
+            (
+                [
+                    "games_included",
+                    "total_games",
+                    "first_game",
+                    "last_game",
+                    "scheduled_games",
+                    "last_loaded_at",
+                ],
+                [(402, 402, None, None, 402, None)],
+            ),
+            (["reason", "games"], []),
+            (["games"], [(0,)]),
+        ]
+    )
+
+    response = get_roster(cursor, {"season": "E2025", "team": "BER"})
+
+    assert response["rows"][0]["player_id"] == "P012774"
+    assert cursor.parameters[2] == ("E2025", "BER")
+    assert "order by team_code, games_played desc, player_id" in cursor.statements[3]

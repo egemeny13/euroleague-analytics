@@ -1,0 +1,16 @@
+{
+  "E2024": {
+    "schema": "space_e2024",
+    "roster_rows": 312,
+    "box_players": 312,
+    "missing_birth": 0,
+    "missing_height": 0
+  },
+  "E2025": {
+    "schema": "space_e2025",
+    "roster_rows": 358,
+    "box_players": 358,
+    "missing_birth": 0,
+    "missing_height": 0
+  }
+}
