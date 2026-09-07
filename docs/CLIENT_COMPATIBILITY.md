@@ -7,7 +7,7 @@ This document defines the cross-client compatibility baseline, configuration rec
 ## 1. Core Architecture Principles
 
 1. **One Standards-First Server, Many AI Clients**: The core server is vendor-neutral and implements the official Model Context Protocol specifications (versions `2024-11-05`, `2025-03-26`, and `2025-06-18`).
-2. **Single Source of Truth**: All eleven `el_*` tools are defined in [`src/euroleague/mcp/tools.py`](../src/euroleague/mcp/tools.py). No client-specific tool forks or duplicate backends exist.
+2. **Single Source of Truth**: All fourteen `el_*` tools are defined in [`src/euroleague/mcp/tools.py`](../src/euroleague/mcp/tools.py). No client-specific tool forks or duplicate backends exist.
 3. **Dual Transport Support**:
    - **Streamable HTTP** (`/mcp`): The primary hosted transport, serving async requests via ASGI/Uvicorn with connection pooling and OAuth 2.1 / Bearer token security.
    - **stdio**: The local zero-network transport, serving synchronous line-delimited JSON-RPC via standard I/O.
@@ -327,7 +327,7 @@ goose configure add-extension --name euroleague --type stdio --cmd python --args
 ## 5. Protocol & Schema Standards Compliance
 
 ### JSON Schema Dialects
-- All eleven tool input schemas are validated against both **JSON Schema Draft-07** (the baseline for OpenAI and legacy tool engines) and **JSON Schema Draft 2020-12** (the modern standard).
+- All fourteen tool input schemas are validated against both **JSON Schema Draft-07** (the baseline for OpenAI and legacy tool engines) and **JSON Schema Draft 2020-12** (the modern standard).
 - No complex schema keywords (`$ref`, `anyOf`, `oneOf`, `patternProperties`, or dynamic definitions) are used.
 - All properties carry explicit scalar types (`string`, `integer`, `boolean`), detailed descriptions, and enumerated values where constrained.
 
@@ -358,7 +358,7 @@ When verifying a new client in a clean environment:
 1. **Step 1 — Discovery Verification**:
    - Launch the client with the configured MCP server.
    - Run prompt: *"List all available tools from the EuroLeague server."*
-   - Verify that all **11 tools** appear (`el_describe_warehouse`, `el_find_games`, `el_get_game`, `el_get_boxscore`, `el_get_team_stats`, `el_get_player_stats`, `el_get_lineup_stats`, `el_get_player_on_off`, `el_get_possessions`, `el_get_play_by_play`, `el_get_shot_data`).
+   - Verify that all **14 tools** appear (`el_describe_warehouse`, `el_find_games`, `el_get_game`, `el_get_boxscore`, `el_get_team_stats`, `el_get_player_stats`, `el_get_lineup_stats`, `el_get_player_on_off`, `el_get_possessions`, `el_get_play_by_play`, `el_get_shot_data`, `el_get_fouls`, `el_get_referee_stats`, `el_get_roster`).
 2. **Step 2 — Single Tool Call**:
    - Run prompt: *"What seasons are loaded in the EuroLeague warehouse?"*
    - Verify that `el_describe_warehouse` executes and returns coverage (`E2024`, `E2025`, `E2026`).
