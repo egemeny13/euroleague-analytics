@@ -496,9 +496,12 @@ def build_registry(
                         "enum": ["team", "end_reason", "team_and_end_reason"],
                         "default": "team",
                         "description": (
-                            "With aggregate=true: one row per team (default), per way the "
-                            "possession ended, or per team and end reason with each "
-                            "reason's share of that team's possessions."
+                            "Only valid with aggregate=true; passing it with aggregate=false "
+                            "is rejected. 'team' (default): one row per team. 'end_reason': "
+                            "one row per way possessions ended, with share_of_all_possessions "
+                            "out of every possession in the filtered set. "
+                            "'team_and_end_reason': one row per team and end reason, with "
+                            "share_of_team_possessions out of that team's possessions only."
                         ),
                     },
                     "limit": _LIMIT,

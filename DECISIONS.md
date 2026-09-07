@@ -4027,16 +4027,22 @@ database against both loaded seasons: E2024 (47,829 possessions) and E2025
 `docs/evidence/possession_end_reasons_rehearsal.json`.
 
 **The change.** `get_possessions` gained an `aggregate_by` argument
-(`team` | `end_reason` | `team_and_end_reason`), used only when
-`aggregate=true`; `aggregate=true` with no `aggregate_by` keeps today's
-per-team summary unchanged. `end_reason` and `team_and_end_reason` add
-`share_of_team_possessions`, computed as a window function so a caller can
-read, in one query, how a team's possessions split across the five ways they
-end. `el_get_possessions`'s `end_reason` filter description now names all
-five real values and states that `other` is a reserved value the measured
-data has never populated. `el_get_play_by_play`'s description now names the
-three timeout `playtype` codes and says to filter by `playtype` to list them
-with their clock.
+(`team` | `end_reason` | `team_and_end_reason`), valid only when
+`aggregate=true`; passing `aggregate_by` with `aggregate=false` is rejected
+before any query runs, and `aggregate=true` with no `aggregate_by` keeps
+today's per-team summary unchanged. `end_reason` and `team_and_end_reason`
+each add a share column computed as a window function, but the two windows
+have different denominators and therefore different names: `end_reason`
+alone produces `share_of_all_possessions`, an empty `over ()` window over
+every possession in the filtered set, while `team_and_end_reason` produces
+`share_of_team_possessions`, `over (partition by offense_team_code)`, so a
+caller can read, in one query, how one team's possessions split across the
+five ways they end. `el_get_possessions`'s `end_reason` filter description
+now names all five real values and states that `other` is a reserved value
+the measured data has never populated; the `aggregate_by` description states
+each grouping's denominator explicitly, one sentence per value.
+`el_get_play_by_play`'s description now names the three timeout `playtype`
+codes and says to filter by `playtype` to list them with their clock.
 
 **Condition.** A sixth `end_reason` value appearing in the data fails
 `tests/test_possession_end_reasons.py` and is a decision, not a silent
