@@ -4650,6 +4650,44 @@ fetcher.**
   tolerance with `KNOWN_ROUNDING_CASES`, and the `len(club_rows) == 1` guard.
   No separate owner sign-off is recorded for any round's findings.
 
+## 79. Version 1's tool count moves from eleven to fourteen under Decision 65's own condition
+
+**Decided 2026-09-07.** Decision 65 froze version 1 at eleven tools and said
+exactly how that freeze could move: "A tool moves from the second list to the
+first by a decision here with its reason, a validation test with ground truth
+or an invariant, and a row in `docs/SCOPE.md`." That condition was met three
+times after the freeze and never once formally lifted, leaving the registry,
+`docs/SCOPE.md`, and the freeze's own wording in disagreement with each other.
+
+**What actually happened, in order.** Decision 70 added `el_get_fouls`
+(the twelfth tool), with `tests/test_foul_reconciliation.py` reconciling
+against the box score and a `docs/SCOPE.md` row. Decision 74 added
+`el_get_referee_stats` (the thirteenth), with
+`tests/test_referee_invariants.py` and its own row. Decision 75 added
+`el_get_roster` (the fourteenth), with `tests/test_roster_view_invariants.py`
+and its own row. Each satisfied Decision 65's three-part condition in full at
+the time it shipped; none of the three decisions said in so many words that
+the frozen count was moving. `docs/SCOPE.md` was kept current as each tool
+landed, so the disagreement lived only in `DECISIONS.md` item 65's own
+sentence and in `ROADMAP.md`'s restatement of it - both still said "eleven"
+after the registry held fourteen.
+
+**The amendment.** Decision 65's freeze is amended: version 1 is scope-frozen
+at **fourteen** tools, not eleven. The freeze itself is not reopened or
+weakened by this - it still means what it meant on 2026-09-06: nothing is
+added without a decision, a validation test, and a `docs/SCOPE.md` row. Only
+the number in it moves, to match what already shipped under its own rule.
+
+**Condition.** The next tool follows the same three-part price Decision 65
+set: a decision here with its reason, a validation test with ground truth or
+an invariant, and a row in `docs/SCOPE.md`. `tests/test_scope_document.py`
+keeps enforcing that the registry and `docs/SCOPE.md` agree on the full list;
+`tests/test_launch_package.py::test_public_copy_states_the_current_tool_count`
+enforces that no public-facing surface quotes a stale count, deriving the
+expected number from `euroleague.mcp.tools.TOOL_NAMES` rather than a number
+hard-coded into the test, so this decision does not need a companion test
+edit the next time a tool is added correctly.
+
 ## Rules to add to the project instruction file
 
 ```
