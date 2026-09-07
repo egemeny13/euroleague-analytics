@@ -977,6 +977,15 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
         team_filter = " where team_code = %s"
         team_params.append(resolve_team(cursor, season_code, arguments["team"]))
 
+    clutch_clause = ""
+    clutch_params: list[Any] = []
+    if arguments.get("max_seconds_remaining") is not None:
+        clutch_clause += " and seconds_remaining_at_start <= %s"
+        clutch_params.append(int(arguments["max_seconds_remaining"]))
+    if arguments.get("max_margin") is not None:
+        clutch_clause += " and abs(margin_at_start) <= %s"
+        clutch_params.append(int(arguments["max_margin"]))
+
     cursor.execute(
         f"""
         with player_lineups as (
@@ -1000,7 +1009,7 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
                    sum(p.points_scored) as points_for
             from v_possession p
             join his_teams h on h.team_code = p.offense_team_code
-            where p.season_code = %s{quarantine}
+            where p.season_code = %s{quarantine}{clutch_clause}
             group by 1, 2
         ),
         defense as (
@@ -1011,7 +1020,7 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
                    sum(p.points_scored) as points_against
             from v_possession p
             join his_teams h on h.team_code = p.defense_team_code
-            where p.season_code = %s{quarantine}
+            where p.season_code = %s{quarantine}{clutch_clause}
             group by 1, 2
         )
         select case when o.is_on_court then 'on' else 'off' end as split,
@@ -1028,22 +1037,37 @@ def get_player_on_off(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, An
         join defense d on d.team_code = o.team_code and d.is_on_court = o.is_on_court
         order by o.is_on_court desc
         """,
-        (player_id, season_code, *team_params, season_code, season_code),
+        (
+            player_id,
+            season_code,
+            *team_params,
+            season_code,
+            *clutch_params,
+            season_code,
+            *clutch_params,
+        ),
     )
     rows = _rows(cursor)
+
+    caveats = [
+        STRADDLE_CAVEAT,
+        "On/off is not a measure of a player's value. It measures his team's "
+        "performance while he was on the floor, which depends on his teammates and "
+        "on who the opponent had on the floor at the same time.",
+        "The 'off' split includes every possession the team played without him, "
+        "including games he did not play at all.",
+    ]
+    if clutch_params:
+        caveats.append(
+            "Clutch thresholds are the caller's; the warehouse bakes in none. Small "
+            "samples are noisy: state the possession count beside any rating."
+        )
 
     return build_response(
         rows=rows,
         coverage=coverage_for(cursor, season_code, include_quarantined),
         excluded=exclusions_for(cursor, season_code, include_quarantined),
-        caveats=[
-            STRADDLE_CAVEAT,
-            "On/off is not a measure of a player's value. It measures his team's "
-            "performance while he was on the floor, which depends on his teammates and "
-            "on who the opponent had on the floor at the same time.",
-            "The 'off' split includes every possession the team played without him, "
-            "including games he did not play at all.",
-        ],
+        caveats=caveats,
     )
 
 

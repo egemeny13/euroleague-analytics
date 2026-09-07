@@ -1,0 +1,42 @@
+{
+  "thresholds": {
+    "max_seconds_remaining": 300,
+    "max_margin": 5
+  },
+  "E2024": {
+    "schema": "space_e2024",
+    "player_id": "P005985",
+    "team_code": "MCO",
+    "selection": "player with the most on-court offensive possessions in the season, by query",
+    "unfiltered": {
+      "on_court_possessions": 2125,
+      "off_court_possessions": 771,
+      "team_total_possessions": 2896
+    },
+    "clutch": {
+      "on_court_possessions": 133,
+      "off_court_possessions": 8,
+      "team_total_possessions": 141
+    },
+    "sum_equals_team_total": true,
+    "clutch_at_most_unfiltered": true
+  },
+  "E2025": {
+    "schema": "space_e2025",
+    "player_id": "P007975",
+    "team_code": "ZAL",
+    "selection": "player with the most on-court offensive possessions in the season, by query",
+    "unfiltered": {
+      "on_court_possessions": 2130,
+      "off_court_possessions": 914,
+      "team_total_possessions": 3044
+    },
+    "clutch": {
+      "on_court_possessions": 131,
+      "off_court_possessions": 19,
+      "team_total_possessions": 150
+    },
+    "sum_equals_team_total": true,
+    "clutch_at_most_unfiltered": true
+  }
+}
