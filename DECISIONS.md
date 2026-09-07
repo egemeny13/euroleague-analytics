@@ -4362,6 +4362,103 @@ approves the multiple-award split, it lands as a new decision and, per
 Decision 22, as a further insert-time attachment through the same rebuild
 path - never an `UPDATE game_event` on the id this task stores.
 
+---
+
+## 78. The league's own season totals validate our team sums, and are archived only as an oracle - amends Decision 65
+
+Decision 65 left season statistics out of the tool surface, on the grounds
+that the warehouse derives its own season lines and a second published number
+would answer the same question with no way to say which is right. This task
+does not reopen that: the v3 season-statistics endpoints
+(`.../statistics/players/traditional`, `.../statistics/teams/traditional`)
+are now fetched and archived, but **only as a validation oracle** for
+`tests/test_our_team_season_totals_equal_the_leagues_published_totals`
+(`tests/test_season_totals_oracle.py`), and are never parsed into a warehouse
+table or served by any MCP tool. `docs/SCOPE.md`'s "left out" row for season
+statistics is amended to say so.
+
+**What was actually fetched.** `ArchiveFetcher.fetch_season_totals(season_code,
+kind)` (`kind` is `"players"` or `"teams"`) was extended onto the same model as
+`fetch_roster`: cached to `<root>/<season_code>/season_totals_{kind}.json`,
+archived under the optional identities `("SeasonTotalsPlayers", None)` and
+`("SeasonTotalsTeams", None)`, restorable like the roster snapshot. An
+`include_season_totals` constructor flag fetches both kinds once per season
+alongside an ordinary season fetch; it defaults to `False`, so no existing
+fetch behaviour changes. These files are not committed to git - the whole
+`exploration/cache/` tree is gitignored (Decision 9) - so their SHA-256
+checksums are recorded here and in `docs/evidence/season_totals_oracle.json`
+instead of a diff: E2024 players `98bd0677e77d7f0d…` (85,820 bytes), E2024
+teams `217b6b0a4a6decdf…` (12,552 bytes), E2025 players `0fc2e6b7f66b21d8…`
+(85,920 bytes), E2025 teams `b3edce68cf250391…` (13,946 bytes) - all fetched
+2026-09-07 through the production fetch path, one request per URL, no ad hoc
+HTTP calls.
+
+**First-run finding: the endpoint does not publish season totals.** Every
+counting field on the "traditional" team and player rows except `gamesPlayed`
+is a **per-game average**, rounded to roughly one decimal place -
+`pointsScored: 79.3`, not a season sum, confirmed by the endpoint's own
+`minutesPlayed` field carrying full floating-point precision (`40.263...`),
+which only makes sense as a division result. Measured against every team in
+both E2024 and E2025 (`docs/evidence/season_totals_oracle.json`): comparing
+our exact summed total to the published value mismatches for **100% of
+teams on every counting column except `gamesPlayed`**, which matches exactly
+for all 18 E2024 teams and all 20 E2025 teams. This is Task 8's own
+"mismatch for every team is a definition difference" rule, not a bug -
+recomputing our own per-game average (`our total / games_played`, rounded to
+one decimal) against the published average confirms it: the worst deviation
+across every team and column in both seasons is 0.1, a single rounding
+increment.
+
+**What the oracle actually asserts.** `COLUMN_MAP` in
+`tests/test_season_totals_oracle.py` keeps `games_played` as the only
+`compare=True` column; every other counting column (points, rebounds -
+offensive, defensive and total, assists, steals, turnovers, blocks - for and
+against, fouls committed and drawn, made/attempted 2s, 3s and free throws) is
+`compare=False` with the average-not-total reason attached, per-column, so
+the exclusion cannot be papered over silently. The test fails on any
+`games_played` disagreement or on a team present on only one side; it cannot
+detect a defect that shifts every team's total by a fixed ratio, because the
+columns that could catch that are the ones excluded. Stated plainly per
+CLAUDE.md's own rule: **this oracle validates the played-game count our
+warehouse and the league agree on. It does not validate any point, rebound,
+assist, steal, turnover, block, foul, or shot count.**
+
+**No player-level oracle.** The v3 players payload keys each row by
+`player.code`, a bare digit string (`"010035"`) - no `P` prefix, no matching
+width against either the `P` + 6-digit shape or a legacy 4-character veteran
+code (`PTGB`, `PJDR`). CLAUDE.md bans joining on an assumed ID shape, so no
+attempt was made to bridge the two identity spaces. Recorded as a fact in
+`tests/test_season_totals_oracle.py`
+(`test_the_players_endpoint_uses_a_person_code_not_our_player_id`), not
+worked around.
+
+**Condition.** The test fails on any `games_played` mismatch or a team
+missing from either side. A future column moving from `compare=False` to
+`compare=True` needs its own measurement showing the league now publishes an
+exact total for it, not an assumption that the endpoint shape has changed.
+
+**Provenance.**
+- Basis: MEASURED
+- Evidence: `docs/evidence/season_totals_oracle.json` records, per season and
+  per column, the published field name, the compare verdict, and - for every
+  excluded column - the team count checked, the mismatch count, and the worst
+  recomputed-average deviation. `exploration/SEASON_ENDPOINT_PROBE.md` records
+  the earlier one-time reconnaissance that first found the v3 surface.
+- Alternatives considered: treat the v3 endpoint as season totals and compare
+  with a wide float tolerance (rejected - it would validate nothing precise,
+  contrary to CLAUDE.md's stance against accounting identities that cannot
+  fail); fetch the v2 `clubs/{code}/stats` and `people/{id}/stats` endpoints
+  instead, which `exploration/SEASON_ENDPOINT_PROBE.md` shows returning an
+  `{accumulated, averagePerGame}` shape that may hold real totals (not
+  pursued - out of this task's network scope, and a genuine candidate for a
+  follow-up decision if a stronger oracle is wanted later); build a
+  player-level oracle by string-matching names (rejected outright by
+  CLAUDE.md's "join on ID, never on name" rule).
+- Approved: proceeding under the controller ruling for Task 8 of the
+  2026-09-07 derived-layer-expansion plan, which designated this fetch and
+  this decision number in advance of finding the average-not-total shape; no
+  separate owner sign-off is recorded for the finding itself.
+
 ## Rules to add to the project instruction file
 
 ```

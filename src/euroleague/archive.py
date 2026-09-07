@@ -403,6 +403,10 @@ def _cache_path(cache: ResponseCache, entry: ArchiveIndexEntry) -> Path:
         return cache.schedule_path(entry.season_code)
     if entry.endpoint == "Roster" and entry.gamecode is None:
         return cache.roster_path(entry.season_code)
+    if entry.endpoint == "SeasonTotalsPlayers" and entry.gamecode is None:
+        return cache.season_totals_path(entry.season_code, "players")
+    if entry.endpoint == "SeasonTotalsTeams" and entry.gamecode is None:
+        return cache.season_totals_path(entry.season_code, "teams")
     return cache.path_for(entry.season_code, entry.endpoint, entry.gamecode)
 
 
@@ -459,7 +463,11 @@ def _required_archive_entries(
 
     actual_identities = set(entries_by_identity)
     missing = expected_identities - actual_identities
-    optional_identities = {("Roster", None)}
+    optional_identities = {
+        ("Roster", None),
+        ("SeasonTotalsPlayers", None),
+        ("SeasonTotalsTeams", None),
+    }
     extra = actual_identities - expected_identities - optional_identities
     duplicates = {
         identity
@@ -488,6 +496,10 @@ def _required_archive_entries(
     ordered_identities = [("Schedule", None)]
     if ("Roster", None) in entries_by_identity:
         ordered_identities.append(("Roster", None))
+    if ("SeasonTotalsPlayers", None) in entries_by_identity:
+        ordered_identities.append(("SeasonTotalsPlayers", None))
+    if ("SeasonTotalsTeams", None) in entries_by_identity:
+        ordered_identities.append(("SeasonTotalsTeams", None))
     ordered_identities += [
         (endpoint, gamecode) for gamecode in played_gamecodes for endpoint in ENDPOINTS
     ]

@@ -1,0 +1,378 @@
+{
+  "generated": "2026-09-07",
+  "generated_by": "tests/test_season_totals_oracle.py, Decision 78",
+  "source_endpoint": "api-live.euroleague.net/v3/competitions/E/statistics/teams/traditional",
+  "note": "The v3 traditional endpoint publishes per-game averages, not season totals. games_played is the only field compared for exact equality; every other counting field is a documented definition difference. See tests/test_season_totals_oracle.py's module docstring.",
+  "seasons": {
+    "E2024": {
+      "teams_compared": [
+        "ASV",
+        "BAR",
+        "BAS",
+        "BER",
+        "IST",
+        "MAD",
+        "MCO",
+        "MIL",
+        "MUN",
+        "OLY",
+        "PAN",
+        "PAR",
+        "PRS",
+        "RED",
+        "TEL",
+        "ULK",
+        "VIR",
+        "ZAL"
+      ],
+      "columns": {
+        "games_played": {
+          "published_field": "gamesPlayed",
+          "compared": true,
+          "verdict": "PASS"
+        },
+        "points": {
+          "published_field": "pointsScored",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "field_goals_made_2": {
+          "published_field": "twoPointersMade",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.1
+        },
+        "field_goals_attempted_2": {
+          "published_field": "twoPointersAttempted",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "field_goals_made_3": {
+          "published_field": "threePointersMade",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "field_goals_attempted_3": {
+          "published_field": "threePointersAttempted",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "free_throws_made": {
+          "published_field": "freeThrowsMade",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "free_throws_attempted": {
+          "published_field": "freeThrowsAttempted",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "offensive_rebounds": {
+          "published_field": "offensiveRebounds",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "defensive_rebounds": {
+          "published_field": "defensiveRebounds",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.1
+        },
+        "total_rebounds": {
+          "published_field": "totalRebounds",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "assists": {
+          "published_field": "assists",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "steals": {
+          "published_field": "steals",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "turnovers": {
+          "published_field": "turnovers",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "blocks_favour": {
+          "published_field": "blocks",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "blocks_against": {
+          "published_field": "blocksAgainst",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "fouls_commited": {
+          "published_field": "foulsCommited",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "fouls_received": {
+          "published_field": "foulsDrawn",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 18,
+          "teams_mismatched_on_exact_total": 18,
+          "worst_recomputed_average_deviation": 0.0
+        }
+      },
+      "mismatches": [],
+      "test_status": "PASS"
+    },
+    "E2025": {
+      "teams_compared": [
+        "ASV",
+        "BAR",
+        "BAS",
+        "DUB",
+        "HTA",
+        "IST",
+        "MAD",
+        "MCO",
+        "MIL",
+        "MUN",
+        "OLY",
+        "PAM",
+        "PAN",
+        "PAR",
+        "PRS",
+        "RED",
+        "TEL",
+        "ULK",
+        "VIR",
+        "ZAL"
+      ],
+      "columns": {
+        "games_played": {
+          "published_field": "gamesPlayed",
+          "compared": true,
+          "verdict": "PASS"
+        },
+        "points": {
+          "published_field": "pointsScored",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "field_goals_made_2": {
+          "published_field": "twoPointersMade",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.1
+        },
+        "field_goals_attempted_2": {
+          "published_field": "twoPointersAttempted",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.1
+        },
+        "field_goals_made_3": {
+          "published_field": "threePointersMade",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.1
+        },
+        "field_goals_attempted_3": {
+          "published_field": "threePointersAttempted",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.1
+        },
+        "free_throws_made": {
+          "published_field": "freeThrowsMade",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "free_throws_attempted": {
+          "published_field": "freeThrowsAttempted",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "offensive_rebounds": {
+          "published_field": "offensiveRebounds",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "defensive_rebounds": {
+          "published_field": "defensiveRebounds",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "total_rebounds": {
+          "published_field": "totalRebounds",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "assists": {
+          "published_field": "assists",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "steals": {
+          "published_field": "steals",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "turnovers": {
+          "published_field": "turnovers",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "blocks_favour": {
+          "published_field": "blocks",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "blocks_against": {
+          "published_field": "blocksAgainst",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "fouls_commited": {
+          "published_field": "foulsCommited",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        },
+        "fouls_received": {
+          "published_field": "foulsDrawn",
+          "compared": false,
+          "reason": "the v3 traditional endpoint publishes a per-game average (rounded to about one decimal place), not a season total - verified 2026-09-07 against every E2024 and E2025 team: 100% mismatch on every such column, with a worst recomputed-average deviation of 0.1 after rounding; see Decision 78",
+          "verdict": "DEFINITION_DIFFERENCE",
+          "teams_checked": 20,
+          "teams_mismatched_on_exact_total": 20,
+          "worst_recomputed_average_deviation": 0.0
+        }
+      },
+      "mismatches": [],
+      "test_status": "PASS"
+    }
+  }
+}

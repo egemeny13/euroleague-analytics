@@ -202,6 +202,60 @@ def test_incomplete_roster_page_is_cached_before_validation_refuses_it(tmp_path)
     assert (tmp_path / "E2026" / "roster.json").read_bytes() == body
 
 
+def test_season_totals_fetch_is_cached_exactly_for_players_and_teams(tmp_path) -> None:
+    players_body = json.dumps({"total": 1, "players": [{"player": {"code": "P012774"}}]}).encode()
+    teams_body = json.dumps({"total": 1, "teams": [{"team": {"code": "BER"}}]}).encode()
+    observations = []
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, players_body),
+            StubResponse(200, {}, teams_body),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport, successful_observation=observations.append)
+
+    players_observation = fetcher.fetch_season_totals("E2025", "players")
+    teams_observation = fetcher.fetch_season_totals("E2025", "teams")
+
+    assert (tmp_path / "E2025" / "season_totals_players.json").read_bytes() == players_body
+    assert (tmp_path / "E2025" / "season_totals_teams.json").read_bytes() == teams_body
+    assert transport.calls[0][0].endswith(
+        "/v3/competitions/E/statistics/players/traditional?SeasonMode=Single&SeasonCode=E2025"
+    )
+    assert transport.calls[1][0].endswith(
+        "/v3/competitions/E/statistics/teams/traditional?SeasonMode=Single&SeasonCode=E2025"
+    )
+    assert players_observation.endpoint == "SeasonTotalsPlayers"
+    assert teams_observation.endpoint == "SeasonTotalsTeams"
+    assert players_observation.gamecode is None
+    assert teams_observation.gamecode is None
+    assert observations == [players_observation, teams_observation]
+
+
+def test_season_totals_fetch_rejects_an_unknown_kind(tmp_path) -> None:
+    fetcher = make_fetcher(tmp_path, RecordingTransport([]))
+
+    with pytest.raises(ValueError):
+        fetcher.fetch_season_totals("E2025", "referees")
+
+
+def test_include_season_totals_fetches_both_kinds_once_per_season(tmp_path) -> None:
+    write_schedule(tmp_path, [])
+    transport = RecordingTransport(
+        [
+            StubResponse(200, {}, json.dumps({"total": 0, "players": []}).encode()),
+            StubResponse(200, {}, json.dumps({"total": 0, "teams": []}).encode()),
+            StubResponse(200, {}, schedule_bytes([])),
+        ]
+    )
+    fetcher = make_fetcher(tmp_path, transport, include_season_totals=True)
+
+    fetcher.fetch_season("E2025")
+
+    assert (tmp_path / "E2025" / "season_totals_players.json").exists()
+    assert (tmp_path / "E2025" / "season_totals_teams.json").exists()
+
+
 def test_game_stats_fetch_is_cached_before_its_archive_callback(tmp_path) -> None:
     body = b'{"local":{"players":[]},"road":{"players":[]}}'
     observations = []
@@ -844,6 +898,7 @@ def test_url_builders_derive_competition_code_for_all_supported_competitions() -
         _game_url,
         _roster_url,
         _schedule_url,
+        _season_totals_url,
     )
 
     # Schedule URLs
@@ -866,6 +921,20 @@ def test_url_builders_derive_competition_code_for_all_supported_competitions() -
     )
     assert _roster_url("SC2026") == (
         "https://api-live.euroleague.net/v2/competitions/SC/seasons/SC2026/people?limit=2000"
+    )
+
+    # Season totals URLs
+    assert _season_totals_url("E2024", "players") == (
+        "https://api-live.euroleague.net/v3/competitions/E/statistics/players/traditional"
+        "?SeasonMode=Single&SeasonCode=E2024"
+    )
+    assert _season_totals_url("E2024", "teams") == (
+        "https://api-live.euroleague.net/v3/competitions/E/statistics/teams/traditional"
+        "?SeasonMode=Single&SeasonCode=E2024"
+    )
+    assert _season_totals_url("U2025", "teams") == (
+        "https://api-live.euroleague.net/v3/competitions/U/statistics/teams/traditional"
+        "?SeasonMode=Single&SeasonCode=U2025"
     )
 
     # Game stats URLs
@@ -901,6 +970,7 @@ def test_v2_url_builders_reject_invalid_season_codes(invalid_code: str) -> None:
         _game_stats_url,
         _roster_url,
         _schedule_url,
+        _season_totals_url,
     )
 
     with pytest.raises(ValueError):
@@ -909,6 +979,8 @@ def test_v2_url_builders_reject_invalid_season_codes(invalid_code: str) -> None:
         _roster_url(invalid_code)
     with pytest.raises(ValueError):
         _game_stats_url(invalid_code, 1)
+    with pytest.raises(ValueError):
+        _season_totals_url(invalid_code, "teams")
 
 
 def test_fetch_season_supercup_routes_to_sc_v2_and_v1_endpoints(tmp_path) -> None:

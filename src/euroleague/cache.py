@@ -13,6 +13,8 @@ Layout on disk, and the fixture tree mirrors it exactly:
     <root>/<season_code>/<endpoint>/<gamecode>.json
     <root>/<season_code>/schedule.json
     <root>/<season_code>/roster.json
+    <root>/<season_code>/season_totals_players.json
+    <root>/<season_code>/season_totals_teams.json
 
 `Points` is a COORDINATE SOURCE ONLY. It omits missed free throws entirely, so
 counting shots from it and from the event stream gives different answers with
@@ -82,6 +84,17 @@ class ResponseCache:
         """Where the season-level v2 roster response lives."""
         return self.root / season_code / "roster.json"
 
+    def season_totals_path(self, season_code: str, kind: str) -> Path:
+        """Where one season-level v3 traditional-statistics response lives.
+
+        `kind` is `"players"` or `"teams"`. These files are fetched and archived
+        purely as a validation oracle - Decision 78 - and are never parsed into
+        the warehouse.
+        """
+        if kind not in ("players", "teams"):
+            raise ValueError(f"Unknown season totals kind {kind!r}. Expected 'players' or 'teams'.")
+        return self.root / season_code / f"season_totals_{kind}.json"
+
     def game_stats_path(self, season_code: str, gamecode: int) -> Path:
         """Where one v2 game-stats response lives."""
         return self.root / season_code / "GameStats" / f"{gamecode}.json"
@@ -116,6 +129,22 @@ class ResponseCache:
     def read_roster_json(self, season_code: str) -> dict[str, Any]:
         """Return the cached roster response parsed without reshaping it."""
         return json.loads(self.read_roster_bytes(season_code))
+
+    def read_season_totals_bytes(self, season_code: str, kind: str) -> bytes:
+        """Read the exact cached season-totals bytes without any network fallback."""
+        path = self.season_totals_path(season_code, kind)
+        try:
+            return path.read_bytes()
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"No cached season totals ({kind}) response for season {season_code} at "
+                f"{path}. Fetch and archive it first; nothing in the pipeline reaches the "
+                "network on its own."
+            ) from None
+
+    def read_season_totals_json(self, season_code: str, kind: str) -> dict[str, Any]:
+        """Return the cached season-totals response parsed without reshaping it."""
+        return json.loads(self.read_season_totals_bytes(season_code, kind))
 
     def exists(self, season_code: str, endpoint: str, gamecode: int) -> bool:
         return self.path_for(season_code, endpoint, gamecode).exists()
@@ -208,6 +237,18 @@ class ResponseCache:
                 body=roster_path.read_bytes(),
                 modified_at=datetime.fromtimestamp(roster_path.stat().st_mtime, tz=UTC),
             )
+
+        for kind, endpoint in (("players", "SeasonTotalsPlayers"), ("teams", "SeasonTotalsTeams")):
+            season_totals_path = self.season_totals_path(season_code, kind)
+            if season_totals_path.is_file():
+                yield CachedResponse(
+                    season_code=season_code,
+                    endpoint=endpoint,
+                    gamecode=None,
+                    path=season_totals_path,
+                    body=season_totals_path.read_bytes(),
+                    modified_at=datetime.fromtimestamp(season_totals_path.stat().st_mtime, tz=UTC),
+                )
 
         gamecodes = sorted(
             {code for endpoint in ENDPOINTS for code in self.gamecodes(season_code, endpoint)}

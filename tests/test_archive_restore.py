@@ -298,6 +298,36 @@ def test_restore_includes_an_optional_current_roster_snapshot(tmp_path):
     assert archive_storage.downloaded_identities == [("Schedule", None), ("Roster", None)]
 
 
+def test_restore_includes_optional_season_totals_snapshots(tmp_path):
+    """Break caught: the archive has season-totals bytes but an unattended runner drops them.
+
+    Season totals are fetched and archived only as a validation oracle -
+    Decision 78 - never parsed into the warehouse. The restore path still has
+    to bring them back, or a rebuilt cache silently loses the oracle's inputs.
+    """
+    connection, archive_storage = archived_season(played=())
+    players_body = b'{"total":0,"players":[]}'
+    teams_body = b'{"total":0,"teams":[]}'
+    players_entry, players_compressed = _entry(2, "SeasonTotalsPlayers", None, players_body)
+    teams_entry, teams_compressed = _entry(3, "SeasonTotalsTeams", None, teams_body)
+    connection.rows.append(tuple(players_entry.__dict__.values()))
+    connection.rows.append(tuple(teams_entry.__dict__.values()))
+    archive_storage.objects[players_entry.storage_path] = players_compressed
+    archive_storage.objects[teams_entry.storage_path] = teams_compressed
+    cache = ResponseCache(tmp_path)
+
+    summary = restore_current_season_cache(connection, cache, archive_storage, SEASON)
+
+    assert summary.restored_responses == 3
+    assert cache.read_season_totals_bytes(SEASON, "players") == players_body
+    assert cache.read_season_totals_bytes(SEASON, "teams") == teams_body
+    assert archive_storage.downloaded_identities == [
+        ("Schedule", None),
+        ("SeasonTotalsPlayers", None),
+        ("SeasonTotalsTeams", None),
+    ]
+
+
 def test_restore_creates_a_missing_cache_root_after_staging_succeeds(tmp_path):
     """Break caught: a fresh ephemeral runner cannot install its verified staging tree."""
     connection, archive_storage = archived_season(played=(7,))
