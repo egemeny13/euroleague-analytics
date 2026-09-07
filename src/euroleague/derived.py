@@ -177,6 +177,10 @@ class GameEventRow(NamedTuple):
     possession_index: int | None
     is_team_event: bool
     is_coach_event: bool
+    # Unique within (season_code, gamecode) only: group_free_throw_trips
+    # numbers trips per game (trip_id = len(trips), restarting at 0 for
+    # every game), so the same integer recurs across different games and
+    # must never be compared or joined without the gamecode alongside it.
     free_throw_trip_id: int | None
     attribution_suspect: bool
 
@@ -219,7 +223,7 @@ class GameEventAttachmentRow(NamedTuple):
     away_lineup_id: str
     stint_index: int
     possession_index: int | None
-    free_throw_trip_id: int | None = None
+    free_throw_trip_id: int | None
 
 
 class PlayerGameMinutesRow(NamedTuple):

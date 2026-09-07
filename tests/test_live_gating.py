@@ -141,6 +141,18 @@ def test_scripted_invariant_violation_raises_and_names_gamecode() -> None:
     assert "oncourt" in message
 
 
+def test_free_throws_without_trip_raises_and_names_the_reason() -> None:
+    """An FTM/FTA row missing its trip id fails assert_phase5_reconciles on its own line."""
+    cursor = ScriptedPhase5Cursor(free_throws_without_trip=3)
+    conn = ScriptedPhase5Connection(cursor)
+
+    with pytest.raises(AssertionError) as exc_info:
+        assert_phase5_reconciles(conn, "E2026", gamecodes=[42])
+
+    message = str(exc_info.value)
+    assert "free_throws_without_trip" in message
+
+
 def test_unquarantined_invariant_defect_fails_quarantine_controls() -> None:
     """A game with an invariant defect not excluded_by_default fails quarantine controls."""
     # Defect: minute_mismatches_corrected = 1, but excluded_by_default = False

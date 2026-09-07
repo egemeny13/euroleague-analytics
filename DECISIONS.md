@@ -4295,6 +4295,14 @@ trip id and no other row does - measured zero exceptions on both rehearsal
 seasons (below) and on the full committed fixture set
 (`tests/test_free_throw_attachment.py`).
 
+**The id is unique within a game only.** `group_free_throw_trips` numbers
+trips per game (`trip_id = len(trips)`, restarting at 0 for every game), so
+the same integer recurs across different games; it is not a global surrogate
+key. Any comparison or join on `free_throw_trip_id` must carry `gamecode`
+(and `season_code`) alongside it. Recorded in the `GameEventRow.free_throw_trip_id`
+comment in `derived.py`; not repeated in `el_get_play_by_play`'s tool
+description because that tool already scopes every response to one gamecode.
+
 **What is stored, and what is not.** The stored id is the approved rule's
 *unsplit* grouping - the same grouping `ROADMAP.md`'s Phase 6 summary calls
 "done" for trip boundaries. Whether some trips silently hold two foul awards
