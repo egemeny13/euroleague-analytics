@@ -4,7 +4,24 @@ A chronological, actionable reference guide for the repository owner to prepare,
 
 ---
 
-## Current operating status (2026-09-02)
+## Current operating status (2026-09-05)
+
+### Website launch — complete
+
+- The launch website is live at `https://euroleague.egemenyucelen.me`.
+- PR #61 was merged as `406fb20`; both the GitHub Pages deployment and the
+  production MCP deployment completed successfully.
+- GitHub Pages uses `euroleague.egemenyucelen.me` as its custom domain. The
+  apex `egemenyucelen.me` remains available for the owner's separate personal
+  website.
+- The public home page, privacy policy, support page, and demo recording all
+  return HTTP 200 over Cloudflare HTTPS. GitHub's own certificate provisioning
+  is non-blocking platform maintenance and does not hold the website open.
+- OpenAI Platform shows plugin version `1.0.0` in Review, with its website,
+  customer support, privacy policy, terms, and demo recording URLs already
+  pointing to the product subdomain. No submission change is pending.
+- Website launch work is closed. Reopen it only for a new product requirement,
+  a failed production check, or a deliberate hosting/domain change.
 
 - The engineering goal queue is clear: all 33 recorded goals are complete.
   R-12 and R-13 are complete, and R-14's implementation is complete through
