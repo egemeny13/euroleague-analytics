@@ -4783,6 +4783,52 @@ disposable-only default and an explicit `--production` flag.
 migration applied any other way is reconciled by re-apply, never by editing
 the ledger (CLAUDE.md, boundaries around production).
 
+## 82. The HTTP connection pool discards a dead connection instead of recirculating it
+
+`ConnectionPool.run` (`src/euroleague/mcp/pool.py`) now distinguishes a
+connection-level failure (`psycopg.OperationalError`, `psycopg.InterfaceError`)
+from a query error. On the former it closes the connection, removes it from
+the pool's accounting, and retries once on a freshly opened one - the same
+recovery `ReadOnlyConnectionManager.run` (`db.py`) already gave the stdio
+transport. On any other exception the connection is still good and is returned
+to the pool unchanged, exactly as before.
+
+**Why this was needed.** Before this change, `run()` released a connection
+back to the idle queue in a `finally` block regardless of why the query
+failed. A connection Supabase's pooler had closed from its side - the ordinary
+result of sitting idle - kept being handed to the next caller, and the one
+after that, forever. Nothing short of a process restart cleared it, because
+the pool's own bookkeeping never learned the connection was gone.
+
+**Condition.** This covers a connection dying between calls. It does not
+cover a connection dying mid-transaction with partial state, which this
+server's autocommit, read-only sessions do not have. If a future change adds
+multi-statement transactions to a pooled connection, the retry-on-error
+boundary needs re-examining before this decision is assumed to still apply.
+
+**Provenance.**
+- Basis: MEASUREMENT, reproduced live against the production server.
+- Evidence: on 2026-09-16, `el_get_team_stats` failed twice in a row against
+  `euroleague-analytics-mcp.fly.dev` with `psycopg.OperationalError: the
+  connection is closed`, both the first call and the client's own retry - a
+  claude.ai session using the hosted connector, reproduced by opening the same
+  chat and expanding the tool-call detail. `/healthz` answered 200 throughout;
+  no deploy had shipped since 2026-09-07, so the server process (and its
+  connection pool) had been running, untouched, for nine days. A prior session
+  had already proven the defect offline on 2026-09-05
+  (`.tmp/review_pool_probe.py`, untracked) but it was never turned into a
+  regression test or a fix.
+- Blast radius: every tool call made through the HTTP transport once any one
+  of the pool's `DEFAULT_POOL_SIZE` (5) connections went stale - which, given
+  enough idle time, is all of them. The stdio transport (`db.py`) was never
+  affected; it already had this recovery.
+- What this does not establish: how long a connection can sit idle before
+  Supabase's pooler closes it. That interval is not measured here and the fix
+  does not depend on knowing it - it recovers from the closure whenever it
+  happens instead of trying to outlast it.
+- Approved: Egemen Yücelen, 2026-09-16, in the session that diagnosed the
+  incident the night before launch.
+
 ## Rules to add to the project instruction file
 
 ```

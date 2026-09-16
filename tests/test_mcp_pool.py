@@ -14,6 +14,9 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+import psycopg
+import pytest
+
 from euroleague.mcp.pool import ConnectionPool
 
 
@@ -166,4 +169,65 @@ def test_a_failing_query_still_returns_its_connection() -> None:
             pool.run(failing, {})
 
     assert len(pool._all) == 1, "a failed query opened a replacement connection"
+    pool.close()
+
+
+class BreakableConnection(FakeConnection):
+    """A connection that can be made to look dead mid-flight.
+
+    This is what Supabase's pooler closing an idle connection looks like from
+    here: the next `cursor()` call raises, exactly as psycopg does against a
+    connection whose socket is gone.
+    """
+
+    def __init__(self, index: int) -> None:
+        super().__init__(index)
+        self.broken = False
+
+    def cursor(self) -> FakeCursor:
+        if self.broken:
+            raise psycopg.OperationalError("the connection is closed")
+        return super().cursor()
+
+
+def test_a_dead_connection_is_discarded_not_recirculated() -> None:
+    """2026-09-16 incident: a connection the pooler had silently closed kept
+    being handed back out, so every call after the first failed identically.
+
+    A connection error must remove the connection from the pool instead of
+    releasing it, so the next caller draws a working one.
+    """
+    counter = {"n": 0}
+
+    def factory() -> BreakableConnection:
+        counter["n"] += 1
+        return BreakableConnection(counter["n"])
+
+    pool = ConnectionPool(factory, size=1)
+    pool.run(_ok, {})
+    dead = pool._all[0]
+    dead.broken = True  # the pooler closes it while it sits idle
+
+    result = pool.run(_ok, {})
+
+    assert result == {"ok": True}
+    assert dead.closed, "the dead connection must be closed, not left open"
+    assert dead not in pool._all, "the dead connection must not stay in circulation"
+    assert counter["n"] == 2, "a replacement connection should have been opened"
+    pool.close()
+
+
+def test_two_dead_connections_in_a_row_reraises_the_connection_error() -> None:
+    """A retry covers one bad connection, not an outage. The caller must see
+    the real error rather than retry forever or get a confusing one."""
+
+    def always_broken_factory() -> BreakableConnection:
+        connection = BreakableConnection(1)
+        connection.broken = True
+        return connection
+
+    pool = ConnectionPool(always_broken_factory, size=1)
+
+    with pytest.raises(psycopg.OperationalError):
+        pool.run(_ok, {})
     pool.close()
