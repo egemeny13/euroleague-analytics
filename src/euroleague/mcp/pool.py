@@ -28,6 +28,8 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
+import psycopg
+
 DEFAULT_POOL_SIZE = 5
 DEFAULT_STATEMENT_TIMEOUT_MS = 15000
 
@@ -92,6 +94,21 @@ class ConnectionPool:
             return
         self._idle.put(connection)
 
+    def _discard(self, connection: Any) -> None:
+        """Remove a broken connection from the pool instead of returning it.
+
+        A connection Supabase's pooler has closed underneath us fails the same
+        way on every future call. Releasing it back to `_idle` would hand it to
+        the next caller, and the one after that, forever - which is exactly what
+        happened on 2026-09-16 (see DECISIONS.md). The slot it held is freed so
+        `_acquire` can grow a replacement.
+        """
+        with contextlib.suppress(Exception):
+            connection.close()
+        with self._lock:
+            self._all = [existing for existing in self._all if existing is not connection]
+            self._created -= 1
+
     def run(
         self,
         query: Callable[[Any, dict[str, Any]], dict[str, Any]],
@@ -102,13 +119,31 @@ class ConnectionPool:
         The signature matches `ReadOnlyConnectionManager.run` deliberately, so
         `build_registry` can bind either one and the two transports share a
         single tool registry rather than two that can drift.
+
+        A connection-level failure (`psycopg.OperationalError` or
+        `InterfaceError` - the pooler closed it, or the network dropped it)
+        discards the connection and retries once on a fresh one, the same
+        recovery `ReadOnlyConnectionManager.run` already gives the stdio
+        transport. Any other exception is a query error, not a dead connection:
+        the connection is still good, so it is returned to the pool and the
+        error is raised immediately with no retry.
         """
-        connection = self._acquire()
-        try:
-            with connection.cursor() as cursor:
-                return query(cursor, arguments)
-        finally:
-            self._release(connection)
+        for attempt in range(2):
+            connection = self._acquire()
+            try:
+                with connection.cursor() as cursor:
+                    result = query(cursor, arguments)
+            except psycopg.OperationalError, psycopg.InterfaceError:
+                self._discard(connection)
+                if attempt == 1:
+                    raise
+                continue
+            except Exception:
+                self._release(connection)
+                raise
+            else:
+                self._release(connection)
+                return result
 
     def close(self) -> None:
         """Close every connection the pool ever opened. Safe to call twice."""
