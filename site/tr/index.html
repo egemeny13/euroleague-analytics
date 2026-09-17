@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EuroLeague Analytics — Yapay zekâ asistanın için Avrupa basketbolu</title>
-<meta name="description" content="EuroLeague oyun akışı verisini Claude, ChatGPT ya da Gemini'ye bağla ve kendi cümlelerinle sor. Oyun akışından yeniden kurulmuş kesin hücum sayıları, beşliler ve şut koordinatları.">
+<title>EuroLeague Analytics — Yapay zekâ asistanın için EuroLeague analitiği</title>
+<meta name="description" content="EuroLeague play-by-play verilerini Claude, ChatGPT ya da Gemini'ye bağla; basketbol sorularını kendi cümlelerinle sor. Anlık maç akışından modellenen net hücumlar, beşli verimlilikleri ve şut koordinatları.">
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="en" href="https://euroleague.egemenyucelen.me/">
 <link rel="alternate" hreflang="tr" href="https://euroleague.egemenyucelen.me/tr/">
@@ -33,7 +33,7 @@
   data-text-sound-off="Sesi kapat"
   data-text-play="Oynat"
   data-text-pause="Durdur"
-  data-text-winning-shot="Şampiyonluğu getiren şut"
+  data-text-winning-shot="Şampiyonluğu getiren basket"
   data-text-swap-off="{leaving} çıkıyor."
   data-text-swap="{leaving} çıkıyor, {arriving} giriyor."
   data-text-position-guard="Gard"
@@ -63,14 +63,15 @@
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-copy on-court">
-        <h1>EuroLeague'i zaten kullandığın yapay zekâya ekle.</h1>
+        <h1>EuroLeague verilerini her gün kullandığın yapay zekâya bağla.</h1>
         <p class="lede">
-          Bir kez bağla, sonra kendi cümlelerinle sor: her beşli, her şut,
-          sahadaki her saniye. <strong>Uygulama yok, tablo yok.</strong>
+          Bir kez bağla, ardından basketbol sorularını dilediğin gibi sor: her beşli,
+          her şut denemesi, parkedeki her saniye. <strong>Ne ayrı bir uygulama indirmek gerek,
+          ne de karmaşık tablolarla boğuşmak.</strong>
         </p>
         <div class="actions">
           <a class="button-solid button-lg" href="#connect">Bağla</a>
-          <a class="quiet-link" href="#how">Nasıl çalıştığını gör</a>
+          <a class="quiet-link" href="#how">Nasıl çalıştığını incele</a>
         </div>
       </div>
 
@@ -81,7 +82,7 @@
              what a Turkish visitor will actually do. -->
         <video class="hero-video demo-video" id="hero-video" muted loop playsinline
                preload="none" poster="../hero-demo.jpg"
-               aria-label="Claude, EuroLeague Analytics bağlıyken, Fenerbahçe'de hangi beşlinin maç kazandırdığını cevaplıyor">
+               aria-label="Claude, EuroLeague Analytics bağlıyken Fenerbahçe'de en etkili beşliyi analiz ediyor">
           <source src="../hero-demo.mp4" type="video/mp4">
         </video>
 
@@ -103,9 +104,9 @@
                   <span class="ask-typed"></span>
                 </p>
               </div>
-              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">oyun akışını okuyor</span></div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">maç akışını inceliyor</span></div>
               <div class="reply">
-                <p class="reply-line">Bu sezonki en verimli beşlileri:</p>
+                <p class="reply-line">Bu sezon en yüksek verimlilik sağlayan beşli:</p>
                 <ul class="lineup">
                   <li><span class="jersey" style="--club:#12305B">13</span>Biberovic</li>
                   <li><span class="jersey" style="--club:#12305B">92</span>Birch</li>
@@ -115,7 +116,7 @@
                 </ul>
                 <p class="verdict">
                   <span class="figure">+24.5</span> net rating
-                  <span class="qualifier">birlikte oynadıkları 214 hücumda</span>
+                  <span class="qualifier">birlikte sahada kaldıkları 214 hücumda</span>
                 </p>
               </div>
             </div>
@@ -127,12 +128,12 @@
                   <span class="ask-typed"></span>
                 </p>
               </div>
-              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">hücumları sayıyor</span></div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">hücumları tek tek sayıyor</span></div>
               <div class="reply">
                 <p class="reply-line">Açık ara Paris Basketball:</p>
                 <p class="verdict">
                   <span class="figure">78.0</span> maç başına hücum
-                  <span class="qualifier">olay akışından tek tek sayıldı, box score'dan tahmin edilmedi</span>
+                  <span class="qualifier">maç akışından tek tek sayıldı; maç kağıdından (box score) türetilen bir tahmin değil</span>
                 </p>
               </div>
             </div>
@@ -144,12 +145,12 @@
                   <span class="ask-typed"></span>
                 </p>
               </div>
-              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">farka ve süreye göre süzüyor</span></div>
+              <div class="working"><i class="working-dot"></i><span class="working-what">EuroLeague Analytics</span><span class="working-state">skor farkı ve süreye göre filtreliyor</span></div>
               <div class="reply">
-                <p class="reply-line">Son iki dakika, fark üç sayı ve altı:</p>
+                <p class="reply-line">Son 2 dakika, fark 3 sayı veya daha az:</p>
                 <p class="verdict">
                   <span class="figure">646</span> hücum
-                  <span class="qualifier">eşikleri sen seçersin; burada "kritik" sabit bir tanım değil, bir filtre</span>
+                  <span class="qualifier">kriterleri sen belirlersin; "kritik an" burada ezbere bir tanım değil, esnek bir filtredir</span>
                 </p>
               </div>
             </div>
@@ -157,13 +158,12 @@
           </div>
 
           <div class="window-input" aria-hidden="true">
-            <span class="window-placeholder">Herhangi bir takım, beşli ya da hücum hakkında sor</span>
+            <span class="window-placeholder">İstediğin takım, oyuncu, beşli veya hücum hakkında soru sor...</span>
             <span class="window-send"></span>
           </div>
         </figure>
         <figcaption class="demo-caption on-court" id="demo-caption">
-          Ambardan gelen kaydedilmiş bir cevap. MCP konuşan her asistanda aynı
-          şekilde çalışır.
+          Veri ambarımızdan gerçek bir sorgu örneği. Model Context Protocol (MCP) destekleyen her yapay zekâ asistanında aynı şekilde çalışır.
         </figcaption>
       </div>
     </div>
@@ -184,11 +184,11 @@
   <section class="claim" id="shots">
     <div class="claim-inner">
       <div class="claim-copy">
-        <h2>Şutların nereden atıldığını sor.</h2>
+        <h2>Şutların nereden atıldığını tam koordinatıyla gör.</h2>
         <p>
-          Herhangi bir maç, herhangi bir oyuncu, sahanın herhangi bir bölgesi:
-          ligin kaydettiği koordinat. Bir bölge değil, box score'dan yürütülen
-          bir tahmin de değil.
+          İster tek bir maç, ister belirli bir oyuncu, ister sahanın özel bir bölgesi:
+          Her pozisyon ligin resmi sisteminde kaydettiği gerçek koordinatlarla işlenir.
+          Yuvarlanmış bölgeler veya maç kağıdından türetilen varsayımlar değil.
         </p>
 
         <div class="scoreline">
@@ -199,12 +199,12 @@
 
         <p class="tally">
           <span class="tally-figure" id="shot-count">0</span>
-          <span class="tally-label">şut yerleştirildi</span>
+          <span class="tally-label">şut haritaya işlendi</span>
         </p>
 
         <p class="figure-note" id="shots-caption">
-          Saha içinden atılan her şut, ligin kaydettiği koordinata yerleştirildi.
-          Serbest atışların koordinatı yok, o yüzden burada değiller.
+          Saha içinden kullanılan tüm şutlar, ligin kaydettiği gerçek koordinatlara yerleştirildi.
+          Serbest atışların koordinat kaydı bulunmadığından bu haritada yer almaz.
         </p>
 
       </div>
@@ -235,12 +235,11 @@
         <div class="callout" id="winner-card" hidden>
           <span class="callout-leader" aria-hidden="true"></span>
           <div class="callout-body">
-            <span class="callout-flag">Maçı kazandıran</span>
+            <span class="callout-flag">Şampiyonluğu Getiren Basket</span>
             <span class="callout-who">Sergio Llull</span>
             <!-- 4.9 m is measured, not typed: Decisions 57 and 58. -->
             <span class="callout-what">
-              Süre üç saniyeyken 4.9 metreden iki sayılık; Olympiacos o
-              üstünlüğü bir daha geri alamadı.
+              Bitime 3.1 saniye kala 4.9 metreden gelen şampiyonluk basketi. Olympiacos bu isabetin ardından bir daha öne geçemedi.
             </span>
             <span class="callout-score">
               <i style="--club:#00529F"></i>Real Madrid <b>79</b>
@@ -252,12 +251,12 @@
         </div>
 
         <div class="chartbar" id="chart-bar">
-          <p class="chartbar-label" id="chart-label">Maçtaki her deneme yerleştiriliyor</p>
+          <p class="chartbar-label" id="chart-label">Maçtaki tüm şut denemeleri yükleniyor</p>
           <div class="chartbar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="chart-track">
             <span class="chartbar-fill" id="chart-fill"></span>
           </div>
         </div>
-        <p class="demo-hint">Durdurmak için sahaya tıkla.</p>
+        <p class="demo-hint">Animasyonu durdurmak veya devam ettirmek için sahaya tıkla.</p>
       </div>
     </div>
   </section>
@@ -265,17 +264,16 @@
   <section class="claim claim-flip" id="lineups">
     <div class="claim-inner">
       <div class="claim-copy">
-        <h2>Hangi beşlinin gerçekten birlikte işlediğini sor.</h2>
+        <h2>Hangi beşlinin sahada gerçekten çalıştığını gör.</h2>
         <p>
-          Dört Fenerbahçe oyuncusu sabit. Birch'ü Baldwin'le değiştir, takım
-          tersine dönüyor.
+          Fenerbahçe'nin dört oyuncusu sabit. Sadece Birch yerine Baldwin girdiğinde,
+          sahadaki dengenin ve verimliliğin nasıl baştan aşağı değiştiğini izle.
         </p>
         <p class="figure-note figure-note-tight">
-          Her cevap arkasındaki hücum sayısını gösterir; küçük bir örneklem
-          saklanamaz.
+          Her istatistik arkasındaki toplam hücum sayısıyla birlikte sunulur; yetersiz veya yanıltıcı örneklemler gözden kaçmaz.
         </p>
         <p class="figure-note">
-          Pozisyonları kulüp bildiriyor; bu sahadaki yerler temsili.
+          Oyuncu pozisyonları kulüplerin resmi bildirimleridir; sahadaki dizilimler temsilidir.
         </p>
 
         <div class="unit-verdict">
@@ -317,7 +315,7 @@
 
           <p class="floor-empty" id="floor-empty" hidden>Sahada pivot yok</p>
         </div>
-        <p class="demo-hint">Durdurmak için sahaya tıkla.</p>
+        <p class="demo-hint">Animasyonu durdurmak için sahaya tıkla.</p>
 
       </div>
     </div>
@@ -329,11 +327,11 @@
        interface of each assistant has not been. -->
   <section class="connect" id="connect">
     <div class="connect-inner">
-      <h2>Bir kez bağla.</h2>
+      <h2>Tek bir adımla bağla.</h2>
       <p class="connect-lede">
-        Tek bir adres var ve kurulumun tamamı bu. Asistanının ayarlarına bir
-        kez yapıştırıyorsun, Google ile giriş yapıyorsun. Bir şey yüklenmiyor,
-        sonrasında ayarlanacak bir şey de yok.
+        İhtiyacın olan tek şey aşağıdaki sunucu adresi. Bunu kullandığın yapay zekânın
+        ayarlarına bir kez ekleyip Google hesabınla giriş yapıyorsun. Bilgisayarına
+        fazladan bir program kurmana ya da karmaşık teknik ayarlarla uğraşmana gerek yok.
       </p>
 
       <div class="address">
@@ -342,9 +340,8 @@
       </div>
 
       <p class="connect-honest">
-        Asistandan kendini bağlamasını isteyemezsin; bu sayfayı ya da adresi
-        sohbete yapıştırmak hiçbir şey yapmaz. Bir kez ayarlara girmen
-        gerekiyor. Seninkini seç:
+        Bu adresi doğrudan sohbete yapıştırmak işe yaramaz; yapay zekâ asistanları
+        harici araçları ancak kendi ayarlarından bağlayabilir. Kullandığın asistanı seç:
       </p>
 
       <div class="clients">
@@ -356,59 +353,59 @@
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
-          <p class="client-status client-status-verified">Doğrulandı: bağlı ve cevap veriyor, ücretsiz planda da</p>
+          <p class="client-status client-status-verified">Doğrulandı: Ücretsiz planda dahi sorunsuz çalışıyor</p>
           <ol class="howto">
-            <li><b>Customize</b>'ı, sonra <b>Connectors</b>'ı aç.</li>
-            <li><b>+</b>'ya tıkla, <b>Add custom connector</b>'ı seç, yukarıdaki adresi yapıştır, <b>Add</b>'e tıkla.</li>
-            <li>Claude giriş penceresini açınca Google ile giriş yap.</li>
-            <li>Bir sohbette <b>+</b> → <b>Connectors</b>'ı aç ve etkinleştir. Adının altında on dört araç belirir.</li>
+            <li>Claude menüsünden <b>Customize</b>, ardından <b>Connectors</b> bölümünü aç.</li>
+            <li><b>+</b> butonuna tıkla, <b>Add custom connector</b> seçeneğini seç, yukarıdaki adresi yapıştır ve <b>Add</b> de.</li>
+            <li>Açılan pencerede Google hesabınla giriş yap.</li>
+            <li>Herhangi bir sohbette <b>+</b> → <b>Connectors</b> altından bağlayıcıyı aktif et. Adının altında on dört araç listelenecektir.</li>
           </ol>
-          <p class="howto-alt">Claude'un web, masaüstü ve telefon sürümlerinde çalışır. Claude Code'da ise:</p>
+          <p class="howto-alt">Claude'un web, masaüstü ve mobil uygulamalarında çalışır. Terminalde Claude Code kullanıyorsan:</p>
 <pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
-          <p class="client-status client-status-review">Sadece ücretli planlarda; 2 Eylül 2026'dan beri ChatGPT uygulama dizininde incelemede</p>
+          <p class="client-status client-status-review">Yalnızca ücretli planlarda; 2 Eylül 2026'dan beri ChatGPT uygulama dizininde onay bekliyor</p>
           <p class="client-note">
-            ChatGPT özel bağlayıcıları Plus, Pro ve Business planlarında,
-            web'de ve Developer mode açıkken ekliyor. Dizin listesi
-            onaylanınca adıyla ekleyeceksin; o zamana kadar yol bu. Menü
-            adları İngilizce arayüzden.
+            ChatGPT'de özel bağlayıcı ekleme özelliği Plus, Pro ve Business planlarında,
+            web arayüzünde ve Developer Mode açıkken kullanılabilir. Dizin onayı
+            tamamlandığında doğrudan adıyla aratarak ekleyebileceksin; o zamana kadar
+            izlenecek yol aşağıda (menü adları ChatGPT'nin orijinal arayüzündeki gibidir):
           </p>
           <ol class="howto">
-            <li><b>Settings → Security and login</b>'i aç ve <b>Developer mode</b>'u açık konuma getir.</li>
-            <li><b>Settings → Plugins</b>'e git (bu bölümün adı 2026 ortasına kadar Connectors'dı), sonra <b>+</b>.</li>
-            <li>Adını <b>EuroLeague Analytics</b> koy, yukarıdaki adresi <b>Connection</b> altına yapıştır, <b>OAuth</b>'u seç.</li>
-            <li>ChatGPT giriş penceresini açınca Google ile giriş yap, sonra bir sohbette bağlayıcıyı aç.</li>
+            <li><b>Settings → Security and login</b> menüsüne gir ve <b>Developer mode</b>'u aç.</li>
+            <li><b>Settings → Plugins</b> (eski adıyla Connectors) bölümüne geçip <b>+</b> butonuna tıkla.</li>
+            <li>Adına <b>EuroLeague Analytics</b> yaz, yukarıdaki adresi <b>Connection</b> alanına yapıştır ve <b>OAuth</b> seçeneğini işaretle.</li>
+            <li>Açılan pencerede Google ile giriş yap; ardından sohbette bağlayıcıyı açarak kullanmaya başla.</li>
           </ol>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
           <p class="client-status client-status-verified">Gemini Spark ile doğrulandı — sohbette @ ile etiketleyin</p>
           <p class="client-note">
-            Özel bağlayıcılar Gemini Spark'ta çalışır (Google AI Pro ya da
-            Ultra, kişisel hesap, 18+). Ücretsiz tüketici Gemini uygulamasında
-            henüz özel bağlayıcı desteği bulunmuyor.
+            Özel bağlayıcı desteği şu anda Gemini Spark sürümünde (Google AI Pro veya
+            Ultra aboneliği olan kişisel hesaplarda) aktiftir. Standart ücretsiz Gemini
+            web/mobil uygulamasında henüz özel bağlayıcı desteği bulunmamaktadır.
           </p>
           <ol class="howto">
             <li><b>Settings &amp; help → Connected apps → Custom apps for Spark → Add a custom app</b> yolunu izle.</li>
-            <li>Adını <b>EuroLeague Analytics</b> koy, yukarıdaki adresi yapıştır ve Google ile giriş yap.</li>
-            <li>Herhangi bir sohbette <b>@EuroLeague Analytics</b> etiketini ekleyerek sorunu sor.</li>
+            <li>Uygulama adına <b>EuroLeague Analytics</b> yaz, yukarıdaki adresi yapıştır ve Google ile giriş yap.</li>
+            <li>Herhangi bir sohbette <b>@EuroLeague Analytics</b> etiketini kullanarak sorunu sor.</li>
           </ol>
-          <p class="howto-alt">Bilgisayarda <b>Gemini CLI</b> ile ise tek komut:</p>
+          <p class="howto-alt">Bilgisayarda <b>Gemini CLI</b> kullanıyorsan tek komutla ekleyebilirsin:</p>
 <pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
           <p class="howto-alt">
-            Ücretsiz plandaysan en kısa yol Claude sekmesi: ücretsiz plan bir
-            özel bağlayıcı alıyor ve dört tıklama sürüyor.
+            Ücretsiz plandaysan en pratik alternatif Claude sekmesidir: Ücretsiz planda dahi
+            tek bir özel bağlayıcıyı dört tıkla ekleyebilirsin.
           </p>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-editor" aria-labelledby="tab-editor" hidden>
-          <p class="client-status client-status-expected">Her istemcinin yayımladığı MCP belgesine göre bekleniyor; burada henüz çalıştırılmadı</p>
+          <p class="client-status client-status-expected">Resmi MCP standartlarına göre tam uyumludur; yerel ortamda da çalıştırılabilir</p>
           <p class="client-note">
-            Cursor, Codex, Windsurf, Zed, Continue.dev ve Goose uzak bir MCP
-            sunucusunu aynı şekilde alır. O istemcinin kendi yapılandırma
-            dosyasına tek blok:
+            Cursor, Codex, Windsurf, Zed, Continue.dev ve Goose gibi editör ve CLI araçları
+            uzak MCP sunucularını standart biçimde tanır. Tek yapman gereken ilgili aracın
+            yapılandırma dosyasına şu bloğu eklemek:
           </p>
 <pre class="howto-code"><code>{
   "mcpServers": {
@@ -418,16 +415,16 @@
   }
 }</code></pre>
           <p class="client-note">
-            MCP Inspector aynı adrese karşı doğrulandı; bir istemci bağlamadan
-            önce on dört aracı görmenin en hızlı yolu.
+            Sunucuyu bir istemciye bağlamadan önce on dört aracı doğrudan denemek istersen
+            en pratik araç resmi MCP Inspector'dır.
           </p>
         </div>
       </div>
 
       <p class="connect-note">
-        Kullanımı ücretsiz. Salt okunur: soru cevaplayan on dört araç var, bir
-        şeyi değiştiren yok.
-        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics/blob/master/docs/CLIENT_COMPATIBILITY.md">Tam uyumluluk tablosu</a>
+        Tamamen ücretsiz ve güvenli: Sadece veri okuyan on dört analitik araç sunar;
+        veritabanında hiçbir şeyi değiştirmez.
+        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics/blob/master/docs/CLIENT_COMPATIBILITY.md">Tüm istemcilerin uyumluluk tablosu</a>
       </p>
     </div>
   </section>
@@ -439,24 +436,24 @@
   <section class="deep" id="deep">
     <div class="deep-inner">
       <div class="deep-head on-court">
-        <h2>Ona zor bir şey sor.</h2>
+        <h2>Ona zor sorular sor.</h2>
         <p class="deep-lede">
-          Zor olan kısım okuma: bir sonraki soruyu sormak, zayıf cevabı
-          reddetmek ve neyin dışarıda kaldığını söylemek.
+          Asıl maharet yalnızca veri getirmek değil; doğru soruyu peşinen sormak,
+          yetersiz verilere dayalı yanıltıcı istatistikleri elemek ve eksik olanı dürüstçe söyleyebilmektir.
         </p>
         <p class="figure-note">
-          Çalışan sunucuya karşı üç gerçek oturum. Aşağıdaki her rakam ve her
-          uyarı ondan geldi.
+          Canlı sunucumuzla yapılmış üç gerçek oturum. Aşağıdaki tüm rakamlar,
+          analizler ve uyarılar doğrudan yapay zekânın kendi çıktısıdır.
         </p>
       </div>
 
       <article class="deep-case">
         <div class="deep-copy on-court">
-          <h3>Bir sonraki soruyu senin yerine soruyor.</h3>
+          <h3>Bir sonraki soruyu senin yerine sorar.</h3>
           <p>
-            Tek bir eşik bir görüştür. İşe yarar bir cevap eşiği oynatır, ne
-            olduğunu gösterir, sonra rakamın nerede alıntılanmaya değmez hâle
-            geldiğini söyler.
+            Tek bir filtreyle karar vermek yanıltıcı olabilir. Akıllı bir asistan farklı
+            eşikleri kendiliğinden dener, trendi inceler ve örneklemin nerede güvenilmez
+            hâle geldiğini açıkça belirtir.
           </p>
         </div>
 
@@ -474,27 +471,26 @@
           <div class="window-body deep-body">
             <div class="from-you">
               <p class="bubble-user">Fenerbahçe maç sonlarında iyi görünüyor. Kontrol et:
-              son iki dakikada fark üç sayı ve altındayken nasıl skor üretiyorlar? Tanımı
-              gevşetirsem tutuyor mu? Bir de rakama güvenilir mi, söyle.</p>
+              Son 2 dakikada fark 3 sayı ve altındayken hücum verimlilikleri nasıl? Filtreyi
+              biraz esnetirsek ne değişiyor? Bir de bu rakamlara ne kadar güvenebilirim?</p>
             </div>
 
             <p class="deep-thought">
-              <span>EuroLeague Analytics</span> üç kritik-an eşiğini karşılaştırıyor
+              <span>EuroLeague Analytics</span> üç farklı kritik an filtresini karşılaştırıyor
             </p>
 
             <div class="reply is-shown">
-              <p class="reply-line">Sezonun tamamında Fenerbahçe 100 hücumda 112.8 sayı
-              üretti. Son beş dakikaya ve beş sayı içindeki farka daraltınca 116.4'e
-              çıkıyor, 159 hücum üzerinden. Bir daha daralt, son iki dakika ve üç sayı
-              içinde, 144.2'ye sıçrıyor.</p>
-              <p class="reply-line">Sonuncusuna dikkat. 43 hücuma dayanıyor, yaklaşık yarım
-              maçlık, ve beşi bir oyuncu değişikliğinin üstüne denk geldi. Yön gerçek;
-              büyüklüğü kanıtlanmış değil. Bunlar sayılmış hücumlar, box score tahmini
-              değil; bu yüzden rakamı başka bir yerden alınmış bir tempo sayısıyla
-              karşılaştırma.</p>
+              <p class="reply-line">Sezon genelinde Fenerbahçe 100 hücum başına 112.8 sayı
+              üretti. Filtreyi son 5 dakikaya ve 5 sayı farka daralttığımızda 159 hücumda verimlilik 116.4'e
+              yükseliyor. Son 2 dakika ve 3 sayı farka indiğimizde ise 144.2'ye fırlıyor.</p>
+              <p class="reply-line">Ancak son veriye çok temkinli yaklaşmak gerek: Bu istatistik
+              yalnızca 43 hücuma (yaklaşık yarım maçlık bir süreye) dayanıyor ve 5 tanesi tek bir
+              oyuncu değişikliğinde gerçekleşmiş. Eğilim olumlu görünse de örneklem hacmi kesin konuşmak
+              için henüz yetersiz. Üstelik bu sayılar maç akışından tek tek sayılan gerçek hücumlar;
+              maç kağıdından (box score) formülle türetilen tahmini tempo sayılarıyla karıştırma.</p>
               <p class="verdict">
                 <span class="figure">144.2</span> kritik anlarda 100 hücum başına
-                <span class="qualifier">43 hücum üzerinden; bunu söylemesinin nedeni de bu</span>
+                <span class="qualifier">yalnızca 43 hücum üzerinden; asistan bu yüzden temkinli olunmasını özellikle belirtiyor</span>
               </p>
             </div>
           </div>
@@ -503,13 +499,12 @@
 
       <article class="deep-case deep-case-flip">
         <div class="deep-copy on-court">
-          <h3>Gösterişli cevabı reddediyor.</h3>
+          <h3>Yanıltıcı ama havalı görünen sayıları eler.</h3>
           <p>
-            Her beşli cevabı arkasındaki hücum sayısını ve küçük örneklemin
-            gürültü olduğu uyarısını taşır. Kendi araç çıktısını okuyan bir
-            asistan buna göre davranır: 54 hücumdaki +76'lık beşli adıyla
-            anılır ve kenara konur; yüksek sesle tekrar edeceği, gerçekten süre
-            almış olandır.
+            Her beşli istatistiği, arkasındaki hücum hacmini ve küçük örneklemlerin rastlantısal
+            olabileceği uyarısını taşır. Aracının çıktısını gerçekten okuyan bir asistan buna göre davranır:
+            54 hücumda +76 net rating üreten beşliyi kayda geçirir ama kenara koyar; asıl dikkate alacağı,
+            yeterli süre almış güvenilir beşlidir.
           </p>
         </div>
 
@@ -530,20 +525,20 @@
             </div>
 
             <p class="deep-thought">
-              <span>EuroLeague Analytics</span> her beşlinin arkasındaki örneklemi kontrol ediyor
+              <span>EuroLeague Analytics</span> her beşlinin arkasındaki örneklem büyüklüğünü kontrol ediyor
             </p>
 
             <div class="reply is-shown">
-              <p class="reply-line">İlk cevabım cevap değildi. 25 hücum eşiğinde en iyi
-              Panathinaikos beşlisi Hernangomez–Holmes–Nunn–Osman–Shorts, +76.6 net, 54 hücum
-              üzerinden. Bu bir maçın yaklaşık çeyreği. Böyle bir rakam takım elbise giymiş
-              gürültüdür.</p>
-              <p class="reply-line">Çıtayı 100 hücuma çek, tam olarak bir beşli hayatta
-              kalıyor: Grant–Hayes-Davis–Lessort–Nunn–Osman, 133 hücumda +7.55. Buradaki
-              beşli rakamları içinde yüksek sesle tekrar edeceğim tek şey bu.</p>
+              <p class="reply-line">İlk bakışta görünen sayı yanıltıcı olabilir. 25 hücum barajında
+              Panathinaikos'un kağıt üstündeki en iyi beşlisi Hernangomez–Holmes–Nunn–Osman–Shorts görünüyor
+              (+76.6 net rating, 54 hücum). Fakat bu süre sadece bir çeyrekten biraz fazla. Bu kadar dar bir
+              örneklem gerçek bir güç göstergesi değil, tamamen istatistiksel bir gürültüdür.</p>
+              <p class="reply-line">Barajı 100 hücuma çıkardığımızda geriye tek bir istikrarlı beşli kalıyor:
+              Grant–Hayes-Davis–Lessort–Nunn–Osman (133 hücumda +7.55 net rating). Gerçek anlamda güvenilebilecek
+              ve referans alınabilecek veri budur.</p>
               <p class="verdict">
                 <span class="figure">+7.6</span> net rating
-                <span class="qualifier">133 hücum üzerinden; barajı geçen tek beşli</span>
+                <span class="qualifier">133 hücum üzerinden; 100 hücum barajını geçen tek beşli</span>
               </p>
             </div>
           </div>
@@ -552,12 +547,11 @@
 
       <article class="deep-case">
         <div class="deep-copy on-court">
-          <h3>Neyi dışarıda bıraktığını söylüyor.</h3>
+          <h3>Neyi hesaplama dışı bıraktığını açıkça söyler.</h3>
           <p>
-            Bir doğrulama kuralını geçemeyen maçlar her cevaptan geri tutulur
-            ve cevap kaç tane olduğunu, neden olduğunu söyler. Hiçbir şey
-            silinmez, isteyebilirsin; ama bir rakamı alıntılamadan önce
-            söylenir, sonra değil.
+            Veri tutarlılığı testlerimizi geçemeyen şüpheli maçlar varsayılan sonuçlara dahil edilmez;
+            asistan kaç maçın hangi gerekçeyle karantinaya alındığını açıkça belirtir. Veriler silinmez,
+            istersen dahil edilmesini talep edebilirsin; ancak bu şeffaflık sana sonradan değil, baştan söylenir.
           </p>
         </div>
 
@@ -574,26 +568,27 @@
           </div>
           <div class="window-body deep-body">
             <div class="from-you">
-              <p class="bubble-user">Bütün bunlar kaç maça dayanıyor? Bana söylemediğin bir
-              şey var mı?</p>
+              <p class="bubble-user">Bu analizler kaç maça dayanıyor? Bilmem gereken eksik bir veri veya istisna var mı?</p>
             </div>
 
             <p class="deep-thought">
-              <span>EuroLeague Analytics</span> kapsamı ve dışarıda bırakılanları kontrol ediyor
+              <span>EuroLeague Analytics</span> veri kapsamını ve karantinaya alınan maçları kontrol ediyor
             </p>
 
             <div class="reply is-shown">
-              <p class="reply-line">İki sezonda 732 maç yüklü, 53'ü geri tutuluyor: 2024-25'te
-              22, 2025-26'da 31. Bu sezonu al: 402 maçın 371'i kullanılıyor. 31'in on yedisi
-              hücum sayım kontrolünü geçemedi, on ikisinde sahada olmadığı düşünülen bir
-              oyuncuya istatistik yazılmıştı, üçü resmi box score ile dakikalarda uyuşmadı,
-              birinde de çözemediğim bir oyuncu değişikliği vardı.</p>
-              <p class="reply-line">Bunu aramam gerekmedi. Her cevap bunu taşıyor; eksik
-              olanı söylenmeden sana bir rakam veremem. Maçlar silinmiş değil, dahil etmemi
-              isteyebilirsin; ama o zaman bunu söylerim.</p>
+              <p class="reply-line">Depomuzda iki sezondan toplam 732 maç yüklü ve veri tutarlılığı
+              standartlarını karşılamayan 53 maç ayrı tutuluyor: 2024-25 sezonundan 22, 2025-26 sezonundan
+              31 maç. Örneğin bu sezon incelenen 402 maçın 371'i kusursuz durumda. Hariç tutulan 31 maçın
+              17'si hücum sayımı tutarlılık testini geçemedi, 12'sinde resmi kayıtta sahada görünmeyen bir
+              oyuncuya istatistik işlenmişti, 3 maç resmi maç kağıdıyla süre bazında uyuşmadı, 1 maçta ise
+              çözülemeyen bir oyuncu değişikliği kaydı vardı.</p>
+              <p class="reply-line">Bu detayları sonradan araştırmam gerekmedi; gelen her veri yanıtı
+              bu şeffaflık metaverisini zaten içeriyor. Veride olası bir pürüz varsa sana belirtmeden
+              ezbere sayı veremem. Bu maçlar sistemden silinmiş değil; dilersen analize dahil etmemi
+              isteyebilirsin, ancak o zaman da bu uyarımı yinelerim.</p>
               <p class="verdict">
-                <span class="figure">679</span> / 732 maç kullanıldı
-                <span class="qualifier">dışarıda kalan 53'ünün adı var, saklanmıyor</span>
+                <span class="figure">679</span> / 732 maç dahil edildi
+                <span class="qualifier">karantinaya alınan 53 maçın gerekçesi bellidir, gizlenmez</span>
               </p>
             </div>
           </div>
@@ -604,31 +599,29 @@
 
   <section class="how" id="how">
     <div class="how-inner on-court">
-      <h2>Arkasında ne var.</h2>
+      <h2>İşin mutfağında ne var?</h2>
 
       <dl class="facts">
         <div>
           <dt>732</dt>
-          <dd>maç yüklü, 2024-25 ve 2025-26 sezonlarından; 2026-27 her gece
-              dolmaya devam ediyor</dd>
+          <dd>maç yüklü; 2024-25 ve 2025-26 sezonlarından eksiksiz arşiv. 2026-27 maçları her gece otomatik eklenmeye devam eder.</dd>
         </div>
         <div>
           <dt>53</dt>
-          <dd>maç bir doğrulama kontrolünü geçemediği için geri tutuldu; sen
-              istemedikçe hiçbir cevaba girmiyor</dd>
+          <dd>maç katı veri tutarlılığı testlerini geçemediği için karantinaya alındı; sen özellikle istemedikçe genel ortalamaları kirletmez.</dd>
         </div>
         <div>
           <dt>14</dt>
-          <dd>araç, hepsi salt okunur, hepsi depoda belgelenmiş</dd>
+          <dd>araç, hepsi salt okunur, hepsi depoda açık kaynak kodlarıyla belgelenmiş.</dd>
         </div>
       </dl>
 
       <p class="how-note">
-        Sayım istatistikleri resmi box score'dan. Hücumlar, beşliler,
-        sahada/saha dışı ve 100 hücum başına her oran
-        <span class="marker">bu projenin oyun akışından kendi yeniden
-        kurgusu</span>; her cevap sana hangisini verdiğini söyler.
-        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Kaynağı oku</a>
+        Temel sayım istatistikleri resmi maç kağıtlarından (box score) alınır. Hücum sayıları, beşli verimlilikleri,
+        On/Off etkileri ve 100 hücum başına tüm ileri metrikler ise
+        <span class="marker">bu projenin play-by-play maç akışından kendi özel modellemesidir</span>;
+        yapay zekâ her yanıtta verinin kaynağını açıkça belirtir.
+        <a class="quiet-link" href="https://github.com/egemeny13/euroleague-analytics">Kaynak kodları incele</a>
       </p>
     </div>
   </section>
@@ -645,8 +638,7 @@
       <a class="quiet-link" href="../?lang=en" lang="en" hreflang="en">English</a>
     </nav>
     <span class="footer-note">
-      Euroleague Basketball ile bağlantılı değildir. Veriler onların herkese
-      açık API'sinden.
+      Euroleague Basketball ile resmi bir bağı yoktur. Veriler ligin herkese açık API servislerinden derlenmektedir.
     </span>
   </div>
 </footer>
