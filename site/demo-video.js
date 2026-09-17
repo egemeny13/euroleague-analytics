@@ -3,11 +3,19 @@
    Decisions 60 and 61.
 
    A recording is an upgrade, never a dependency. The drawn version of each
-   figure stays in the markup and is what the visitor sees until the browser
-   says it can play the file (canplay). Only then does the host get .has-video,
-   which hides the drawn version and shows the recording; a missing or
-   unplayable file changes nothing. A visitor who asked for less motion keeps
-   the drawn version in its finished state and no recording ever loads.
+   figure stays in the markup and is what the visitor sees until the file is
+   actually playing. Only then does the host get .has-video, which hides the
+   drawn version and shows the recording; a missing or unplayable file changes
+   nothing. A visitor who asked for less motion keeps the drawn version in its
+   finished state and no recording ever loads.
+
+   The swap waits for "playing", not the earlier "canplay": canplay only means
+   the file is decodable, and a <video> with nothing decoded yet paints its
+   poster - a real screenshot, not the drawn mockup's look. Swapping at
+   canplay put that poster on screen for the gap between "video is visible"
+   and "first frame is composited" - a flash of a picture that belonged to
+   neither the drawn mockup before it nor the recording after it. Fixed
+   2026-09-17, reported by the owner on the Turkish page's hero.
 
    Four rules the owner set on 2026-09-06, all kept here and nowhere else:
 
@@ -191,12 +199,25 @@
     video.addEventListener("canplay", function onCanPlay() {
       video.removeEventListener("canplay", onCanPlay);
       ready.push(video);
+      reconcile();
+    });
+
+    /* The swap from drawn window to <video> waits for "playing", not
+       "canplay". canplay only means the file is decodable; the element still
+       paints its poster - a real screenshot, not the drawn mockup's look -
+       until playback actually starts. Swapping at canplay put that poster on
+       screen for the gap between "video is visible" and "first frame is
+       composited": a visible flash of a picture that belongs to neither state
+       on either side of it. Swapping at "playing" means the mockup is still
+       showing during that gap, and the video only appears once it is already
+       moving, so the poster is never painted. */
+    video.addEventListener("playing", function onPlaying() {
+      video.removeEventListener("playing", onPlaying);
       host.classList.add("has-video");
       var figure = video.closest(".claim-figure");
       if (figure) figure.classList.add("has-video");
       addProgress(video);
       video.dispatchEvent(new CustomEvent("demo-video-ready", { bubbles: true }));
-      reconcile();
     });
 
     if (!("IntersectionObserver" in window)) {
