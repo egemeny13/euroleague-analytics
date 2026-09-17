@@ -58,25 +58,15 @@
   var exchanges = Array.prototype.slice.call(thread.querySelectorAll(".exchange"));
   if (!exchanges.length) return;
 
+  /* The screen recording is the primary presentation (Decision 60).
+     When #hero-video is present, demo-video.js handles loading and playback;
+     the drawn window remains hidden and hero.js does not need to cycle timers. */
+  var video = document.getElementById("hero-video");
+  if (video) return;
+
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   var index = 0;
   var timer = null;
-
-  /* The screen recording, when there is one (Decision 60). demo-video.js owns
-     loading, playing, the one-at-a-time rule and the progress bar; it fires
-     "demo-video-ready" on the video once the browser can play the file. This
-     script only stops cycling the drawn window at that point. A missing or
-     unplayable file fires nothing, and the page behaves as it did before the
-     recording existed. */
-  var video = document.getElementById("hero-video");
-  var hasVideo = false;
-
-  if (video) {
-    video.addEventListener("demo-video-ready", function () {
-      hasVideo = true;
-      window.clearTimeout(timer);
-    });
-  }
 
   function parts(exchange) {
     return {

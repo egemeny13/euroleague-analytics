@@ -31,7 +31,7 @@ Verification labels strictly follow protocol verification rules:
 | **Claude Desktop** | `stdio`, Streamable HTTP | Local env (stdio), OAuth DCR (remote) | 14 | **✅ Verified** | Native Anthropic reference client; standard MCP protocol compliant. |
 | **Gemini Spark (Google AI Pro / Ultra)** | Streamable HTTP | OAuth 2.1 (Google PKCE) | 14 | **✅ Verified** | Live verified on 2026-09-17. Connected via `Settings & help → Connected apps → Custom apps for Spark`. Invoked in chat using `@<app-name>`. Returned 732 games across E2024 and E2025 via `el_describe_warehouse`. |
 | **Gemini CLI** | `stdio`, Streamable HTTP | Local env (stdio), Bearer | 14 | **✅ Verified** | Live `gemini mcp add` and connection status `✓ Connected` confirmed. |
-| **Gemini / Google Antigravity** | `stdio`, Streamable HTTP | Local env (stdio), Remote MCP | 14 | **✅ Verified** | Native Antigravity MCP integration with full tool discovery and execution. |
+| **Google Antigravity CLI (`agy`) & IDE** | `stdio`, Streamable HTTP | Local env (stdio), Remote MCP | 14 | **✅ Verified** | Native Antigravity MCP integration with full tool discovery and execution via `agy mcp add`. |
 | **OpenAI / ChatGPT (Apps SDK)** | Streamable HTTP, SSE | OAuth 2.1, Bearer | 14 | **⚠️ Expected** | Complies with [OpenAI MCP Apps specification](https://developers.openai.com/plugins/build/mcp-server). Isolated challenge endpoint at `/.well-known/openai-apps-challenge`. Custom connectors need a paid plan and Developer mode (`Settings → Security and login`), then `Settings → Plugins → +`; checked against OpenAI's developer documentation on 2026-09-06. Directory listing submitted 2026-09-02, in review. |
 | **Gemini app (consumer, free)** | — | — | 0 | **❌ Unsupported** | The free Gemini web and mobile app has no way to add a custom MCP server (checked 2026-09-06). Custom connected apps exist in Gemini Spark (paid, personal account, 18+) under `Settings & help → Connected apps → Custom apps for Spark`, and in Gemini Enterprise/Business (admin-configured). Free users are pointed to Claude's free plan. |
 | **Cursor IDE** | `stdio`, Streamable HTTP / SSE | Local env, Bearer | 14 | **⚠️ Expected** | Powered by official `@modelcontextprotocol/sdk`. Configured via `~/.cursor/mcp.json`. |
@@ -218,7 +218,29 @@ gemini mcp add euroleague python /absolute/path/to/euroleague-analytics/scripts/
 
 ### E. Google Antigravity
 
-Add to Antigravity MCP settings (`mcp_config.json`):
+#### Add via Antigravity CLI (`agy`):
+```bash
+agy mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp
+```
+
+Or for local development:
+```bash
+agy mcp add euroleague python /absolute/path/to/euroleague-analytics/scripts/mcp_server.py
+```
+
+#### Antigravity MCP settings (`mcp_config.json`):
+Remote MCP:
+```json
+{
+  "mcpServers": {
+    "euroleague": {
+      "serverUrl": "https://euroleague-analytics-mcp.fly.dev/mcp"
+    }
+  }
+}
+```
+
+Local development:
 ```json
 {
   "mcpServers": {
