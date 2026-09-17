@@ -26,19 +26,19 @@ Verification labels strictly follow protocol verification rules:
 
 | Client / Platform | Supported Transports | Auth Methods | Discovered Tools | Status | Verification Details & Documentation Base |
 |---|---|---|:---:|:---:|---|
-| **MCP Inspector** (`@modelcontextprotocol/inspector`) | `stdio`, Streamable HTTP, SSE | Stdio (direct), OAuth 2.1, Bearer | 11 | **✅ Verified** | Tested with `--strict` schema validation (exit code 0) and live `el_describe_warehouse` execution. |
-| **Claude Code CLI** | `stdio`, Streamable HTTP | Local env, OAuth 2.1, Bearer | 11 | **✅ Verified** | Live `claude mcp add` and connection health check confirmed against `scripts/mcp_server.py`. |
-| **Claude Desktop** | `stdio`, Streamable HTTP | Local env (stdio), OAuth DCR (remote) | 11 | **✅ Verified** | Native Anthropic reference client; standard MCP protocol compliant. |
-| **Gemini CLI** | `stdio`, Streamable HTTP | Local env (stdio), Bearer | 11 | **✅ Verified** | Live `gemini mcp add` and connection status `✓ Connected` confirmed. |
-| **Gemini / Google Antigravity** | `stdio`, Streamable HTTP | Local env (stdio), Remote MCP | 11 | **✅ Verified** | Native Antigravity MCP integration with full tool discovery and execution. |
-| **OpenAI / ChatGPT (Apps SDK)** | Streamable HTTP, SSE | OAuth 2.1, Bearer | 11 | **⚠️ Expected** | Complies with [OpenAI MCP Apps specification](https://developers.openai.com/plugins/build/mcp-server). Isolated challenge endpoint at `/.well-known/openai-apps-challenge`. Custom connectors need a paid plan and Developer mode (`Settings → Security and login`), then `Settings → Plugins → +`; checked against OpenAI's developer documentation on 2026-09-06. Directory listing submitted 2026-09-02, in review. |
+| **MCP Inspector** (`@modelcontextprotocol/inspector`) | `stdio`, Streamable HTTP, SSE | Stdio (direct), OAuth 2.1, Bearer | 14 | **✅ Verified** | Tested with `--strict` schema validation (exit code 0) and live `el_describe_warehouse` execution. |
+| **Claude Code CLI** | `stdio`, Streamable HTTP | Local env, OAuth 2.1, Bearer | 14 | **✅ Verified** | Live `claude mcp add` and connection health check confirmed against `scripts/mcp_server.py`. |
+| **Claude Desktop** | `stdio`, Streamable HTTP | Local env (stdio), OAuth DCR (remote) | 14 | **✅ Verified** | Native Anthropic reference client; standard MCP protocol compliant. |
+| **Gemini CLI** | `stdio`, Streamable HTTP | Local env (stdio), Bearer | 14 | **✅ Verified** | Live `gemini mcp add` and connection status `✓ Connected` confirmed. |
+| **Gemini / Google Antigravity** | `stdio`, Streamable HTTP | Local env (stdio), Remote MCP | 14 | **✅ Verified** | Native Antigravity MCP integration with full tool discovery and execution. |
+| **OpenAI / ChatGPT (Apps SDK)** | Streamable HTTP, SSE | OAuth 2.1, Bearer | 14 | **⚠️ Expected** | Complies with [OpenAI MCP Apps specification](https://developers.openai.com/plugins/build/mcp-server). Isolated challenge endpoint at `/.well-known/openai-apps-challenge`. Custom connectors need a paid plan and Developer mode (`Settings → Security and login`), then `Settings → Plugins → +`; checked against OpenAI's developer documentation on 2026-09-06. Directory listing submitted 2026-09-02, in review. |
 | **Gemini app (consumer, free)** | — | — | 0 | **❌ Unsupported** | The free Gemini web and mobile app has no way to add a custom MCP server (checked 2026-09-06). Custom connected apps exist only in Gemini Spark (paid, personal account, 18+, US) under `Settings & help → Connected apps → Custom apps for Spark`, and in Gemini Enterprise/Business (admin-configured). The site says so and points free Gemini users to Claude's free plan. |
-| **Cursor IDE** | `stdio`, Streamable HTTP / SSE | Local env, Bearer | 11 | **⚠️ Expected** | Powered by official `@modelcontextprotocol/sdk`. Configured via `~/.cursor/mcp.json`. |
-| **Codex** | `stdio`, Streamable HTTP | Local env, Bearer | 11 | **⚠️ Expected** | Standard stdio and remote MCP integration via project configuration. |
-| **Windsurf (Codeium)** | `stdio`, SSE / Streamable HTTP | Local env, Bearer | 11 | **⚠️ Expected** | Cascade MCP engine. Configured via `~/.codeium/windsurf/mcp_config.json`. |
-| **Zed Editor** | `stdio`, Streamable HTTP | Local env, Bearer | 11 | **⚠️ Expected** | Native context servers via Zed `settings.json`. |
-| **Continue.dev** | `stdio`, SSE | Local env, Bearer | 11 | **⚠️ Expected** | Open-source AI assistant via `config.json` `mcpServers` block. |
-| **Goose (Block)** | `stdio`, Streamable HTTP | Local env, Bearer | 11 | **⚠️ Expected** | Autonomous developer agent via `goose configure`. |
+| **Cursor IDE** | `stdio`, Streamable HTTP / SSE | Local env, Bearer | 14 | **⚠️ Expected** | Powered by official `@modelcontextprotocol/sdk`. Configured via `~/.cursor/mcp.json`. |
+| **Codex** | `stdio`, Streamable HTTP | Local env, Bearer | 14 | **⚠️ Expected** | Standard stdio and remote MCP integration via project configuration. |
+| **Windsurf (Codeium)** | `stdio`, SSE / Streamable HTTP | Local env, Bearer | 14 | **⚠️ Expected** | Cascade MCP engine. Configured via `~/.codeium/windsurf/mcp_config.json`. |
+| **Zed Editor** | `stdio`, Streamable HTTP | Local env, Bearer | 14 | **⚠️ Expected** | Native context servers via Zed `settings.json`. |
+| **Continue.dev** | `stdio`, SSE | Local env, Bearer | 14 | **⚠️ Expected** | Open-source AI assistant via `config.json` `mcpServers` block. |
+| **Goose (Block)** | `stdio`, Streamable HTTP | Local env, Bearer | 14 | **⚠️ Expected** | Autonomous developer agent via `goose configure`. |
 
 ---
 

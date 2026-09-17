@@ -462,6 +462,30 @@ control on cost.
 outside the old allowlist has yet been seen connecting. The first outside
 tester before 2026-09-16 is the check.
 
+### 2026-09-17 — Gemini Spark custom app callback URL added
+
+**Symptom.** Adding the MCP server to Gemini Spark (Google AI Pro/Ultra)
+failed during the OAuth authorization redirect with:
+
+```text
+unauthorized_client: Callback URL mismatch.
+https://oauth-redirect.googleusercontent.com/r/user_bound_custom-mcp-103809722145154999969-euroleague-analytics-mcp_fly_dev
+is not in the list of allowed callback URLs
+```
+
+**Cause.** Similar to ChatGPT's onboarding on 2026-09-02, Gemini Spark
+fetches `xc7tUVTYYK77nIG2Dp5brRU976MwiSlI` through `/oauth/register` but
+redirects through Google's OAuth callback domain
+(`oauth-redirect.googleusercontent.com`), which was not yet listed in the
+application's Allowed Callback URLs.
+
+**Remedy.** Added the exact Google redirect URI and wildcard pattern:
+```text
+https://oauth-redirect.googleusercontent.com/r/user_bound_custom-mcp-103809722145154999969-euroleague-analytics-mcp_fly_dev,
+https://oauth-redirect.googleusercontent.com/r/*
+```
+to `EuroLeague MCP (Claude)`'s Allowed Callback URLs in the Auth0 dashboard.
+
 ## 6. What this file does not establish
 
 - **It is a record, not a verification.** Except where a line says "verified"
