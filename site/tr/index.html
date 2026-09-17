@@ -384,18 +384,21 @@
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
-          <p class="client-status client-status-expected">Ücretsiz Gemini uygulamasında henüz yok; sadece Gemini Spark ve Gemini CLI</p>
+          <p class="client-status client-status-verified">Gemini Spark ile doğrulandı — sohbette @ ile etiketleyin</p>
           <p class="client-note">
-            Ücretsiz kullandığın Gemini uygulamasında özel bağlayıcı eklenecek
-            bir yer yok. Bugün iki yol çalışıyor, ikisi de kontrol edildi:
+            Özel bağlayıcılar Gemini Spark'ta çalışır (Google AI Pro ya da
+            Ultra, kişisel hesap, 18+). Ücretsiz tüketici Gemini uygulamasında
+            henüz özel bağlayıcı desteği bulunmuyor.
           </p>
           <ol class="howto">
-            <li><b>Gemini Spark</b> ile (Google AI Pro ya da Ultra, kişisel hesap, 18+): <b>Settings &amp; help → Connected apps → Custom apps for Spark → Add a custom app</b>, adresi yapıştır, Google ile giriş yap.</li>
-            <li>Bilgisayarda <b>Gemini CLI</b> ile, tek komut:</li>
+            <li><b>Settings &amp; help → Connected apps → Custom apps for Spark → Add a custom app</b> yolunu izle.</li>
+            <li>Adını <b>EuroLeague Analytics</b> koy, yukarıdaki adresi yapıştır ve Google ile giriş yap.</li>
+            <li>Herhangi bir sohbette <b>@EuroLeague Analytics</b> etiketini ekleyerek sorunu sor.</li>
           </ol>
+          <p class="howto-alt">Bilgisayarda <b>Gemini CLI</b> ile ise tek komut:</p>
 <pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
           <p class="howto-alt">
-            İkisi de sende yoksa en kısa yol Claude sekmesi: ücretsiz plan bir
+            Ücretsiz plandaysan en kısa yol Claude sekmesi: ücretsiz plan bir
             özel bağlayıcı alıyor ve dört tıklama sürüyor.
           </p>
         </div>

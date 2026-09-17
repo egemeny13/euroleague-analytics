@@ -510,19 +510,22 @@
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
-          <p class="client-status client-status-expected">Not in the free Gemini app yet — Gemini Spark and the Gemini CLI only</p>
+          <p class="client-status client-status-verified">Verified with Gemini Spark — tag with @ in any chat</p>
           <p class="client-note">
-            The Gemini app you use for free has no place to add a custom
-            connector. Two routes work today, and both are checked:
+            Custom connectors work in Gemini Spark (Google AI Pro or Ultra,
+            personal account, 18+). The free consumer Gemini app does not
+            support custom connectors yet.
           </p>
           <ol class="howto">
-            <li>With <b>Gemini Spark</b> (Google AI Pro or Ultra, personal account, 18+): <b>Settings &amp; help → Connected apps → Custom apps for Spark → Add a custom app</b>, paste the address, sign in with Google.</li>
-            <li>With the <b>Gemini CLI</b> on a computer, one command:</li>
+            <li>Open <b>Settings &amp; help → Connected apps → Custom apps for Spark → Add a custom app</b>.</li>
+            <li>Name it <b>EuroLeague Analytics</b>, paste the address above, and sign in with Google.</li>
+            <li>In any chat, tag <b>@EuroLeague Analytics</b> and ask your question in plain language.</li>
           </ol>
+          <p class="howto-alt">With the <b>Gemini CLI</b> on a computer instead:</p>
 <pre class="howto-code"><code>gemini mcp add euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
           <p class="howto-alt">
-            If neither is yours, the shortest path is the Claude tab: the free
-            plan takes one custom connector, and it is four clicks.
+            If you are on the free plan, the shortest path is the Claude tab:
+            it takes one custom connector for free, and it is four clicks.
           </p>
         </div>
 
