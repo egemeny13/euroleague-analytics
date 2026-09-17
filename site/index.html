@@ -198,7 +198,7 @@
       <div class="film-stage" data-grow-in data-cursor>
         <video class="demo-video" id="launch-film" muted loop playsinline preload="none"
                poster="launch-film.jpg" data-sound
-               aria-label="EuroLeague Analytics launch film, 38 seconds">
+               aria-label="EuroLeague Analytics launch film, 40 seconds">
           <source src="launch-film.mp4" type="video/mp4">
         </video>
       </div>
@@ -471,19 +471,30 @@
         Pick yours:
       </p>
 
-      <!-- Order and default follow who actually visits: ChatGPT first, then
-           Gemini, then Claude. Claude is the shortest path (four clicks, free
-           plan included), and the Gemini panel says so, because the free
-           Gemini app cannot add a custom connector at all. -->
+      <!-- Order: Claude is the shortest path (four clicks, free plan included,
+           verified live), so it is selected first. ChatGPT (paid/review) and
+           Gemini (Spark/CLI) follow. -->
       <div class="clients">
         <div class="client-tabs" role="tablist" aria-label="Choose your assistant">
-          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="true">ChatGPT</button>
+          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true">Claude</button>
+          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="false">ChatGPT</button>
           <button class="client-tab" type="button" role="tab" id="tab-gemini" aria-controls="panel-gemini" aria-selected="false">Gemini</button>
-          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="false">Claude</button>
           <button class="client-tab" type="button" role="tab" id="tab-editor" aria-controls="panel-editor" aria-selected="false">Editors &amp; CLIs</button>
         </div>
 
-        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt">
+        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
+          <p class="client-status client-status-verified">Verified — connected and answering, on the free plan too</p>
+          <ol class="howto">
+            <li>Open <b>Customize</b>, then <b>Connectors</b>.</li>
+            <li>Click <b>+</b>, choose <b>Add custom connector</b>, paste the address above, click <b>Add</b>.</li>
+            <li>Sign in with Google when Claude opens the sign-in window.</li>
+            <li>In a chat, open <b>+</b> → <b>Connectors</b> and switch it on. Fourteen tools appear under its name.</li>
+          </ol>
+          <p class="howto-alt">Works in Claude on the web, on desktop and on the phone. In Claude Code instead:</p>
+<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
           <p class="client-status client-status-review">Paid plans only, and in review for the ChatGPT app directory since 2 September 2026</p>
           <p class="client-note">
             ChatGPT adds custom connectors on Plus, Pro and Business, on the
@@ -513,18 +524,6 @@
             If neither is yours, the shortest path is the Claude tab: the free
             plan takes one custom connector, and it is four clicks.
           </p>
-        </div>
-
-        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude" hidden>
-          <p class="client-status client-status-verified">Verified — connected and answering, on the free plan too</p>
-          <ol class="howto">
-            <li>Open <b>Customize</b>, then <b>Connectors</b>.</li>
-            <li>Click <b>+</b>, choose <b>Add custom connector</b>, paste the address above, click <b>Add</b>.</li>
-            <li>Sign in with Google when Claude opens the sign-in window.</li>
-            <li>In a chat, open <b>+</b> → <b>Connectors</b> and switch it on. Fourteen tools appear under its name.</li>
-          </ol>
-          <p class="howto-alt">Works in Claude on the web, on desktop and on the phone. In Claude Code instead:</p>
-<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-editor" aria-labelledby="tab-editor" hidden>
@@ -777,7 +776,7 @@
               out of every answer unless you ask for them</dd>
         </div>
         <div>
-          <dt>11</dt>
+          <dt>14</dt>
           <dd>tools, all read-only, all documented in the repository</dd>
         </div>
       </dl>

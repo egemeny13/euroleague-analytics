@@ -174,7 +174,7 @@
       <div class="film-stage" data-grow-in data-cursor>
         <video class="demo-video" id="launch-film" muted loop playsinline preload="none"
                poster="../launch-film.jpg" data-sound
-               aria-label="EuroLeague Analytics tanıtım filmi, 38 saniye">
+               aria-label="EuroLeague Analytics tanıtım filmi, 40 saniye">
           <source src="../launch-film.mp4" type="video/mp4">
         </video>
       </div>
@@ -349,13 +349,25 @@
 
       <div class="clients">
         <div class="client-tabs" role="tablist" aria-label="Asistanını seç">
-          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="true">ChatGPT</button>
+          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true">Claude</button>
+          <button class="client-tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="false">ChatGPT</button>
           <button class="client-tab" type="button" role="tab" id="tab-gemini" aria-controls="panel-gemini" aria-selected="false">Gemini</button>
-          <button class="client-tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="false">Claude</button>
           <button class="client-tab" type="button" role="tab" id="tab-editor" aria-controls="panel-editor" aria-selected="false">Editörler ve CLI'lar</button>
         </div>
 
-        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt">
+        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
+          <p class="client-status client-status-verified">Doğrulandı: bağlı ve cevap veriyor, ücretsiz planda da</p>
+          <ol class="howto">
+            <li><b>Customize</b>'ı, sonra <b>Connectors</b>'ı aç.</li>
+            <li><b>+</b>'ya tıkla, <b>Add custom connector</b>'ı seç, yukarıdaki adresi yapıştır, <b>Add</b>'e tıkla.</li>
+            <li>Claude giriş penceresini açınca Google ile giriş yap.</li>
+            <li>Bir sohbette <b>+</b> → <b>Connectors</b>'ı aç ve etkinleştir. Adının altında on dört araç belirir.</li>
+          </ol>
+          <p class="howto-alt">Claude'un web, masaüstü ve telefon sürümlerinde çalışır. Claude Code'da ise:</p>
+<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+        </div>
+
+        <div class="client-panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
           <p class="client-status client-status-review">Sadece ücretli planlarda; 2 Eylül 2026'dan beri ChatGPT uygulama dizininde incelemede</p>
           <p class="client-note">
             ChatGPT özel bağlayıcıları Plus, Pro ve Business planlarında,
@@ -386,18 +398,6 @@
             İkisi de sende yoksa en kısa yol Claude sekmesi: ücretsiz plan bir
             özel bağlayıcı alıyor ve dört tıklama sürüyor.
           </p>
-        </div>
-
-        <div class="client-panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude" hidden>
-          <p class="client-status client-status-verified">Doğrulandı: bağlı ve cevap veriyor, ücretsiz planda da</p>
-          <ol class="howto">
-            <li><b>Customize</b>'ı, sonra <b>Connectors</b>'ı aç.</li>
-            <li><b>+</b>'ya tıkla, <b>Add custom connector</b>'ı seç, yukarıdaki adresi yapıştır, <b>Add</b>'e tıkla.</li>
-            <li>Claude giriş penceresini açınca Google ile giriş yap.</li>
-            <li>Bir sohbette <b>+</b> → <b>Connectors</b>'ı aç ve etkinleştir. Adının altında on dört araç belirir.</li>
-          </ol>
-          <p class="howto-alt">Claude'un web, masaüstü ve telefon sürümlerinde çalışır. Claude Code'da ise:</p>
-<pre class="howto-code"><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
         </div>
 
         <div class="client-panel" role="tabpanel" id="panel-editor" aria-labelledby="tab-editor" hidden>
@@ -615,7 +615,7 @@
               istemedikçe hiçbir cevaba girmiyor</dd>
         </div>
         <div>
-          <dt>11</dt>
+          <dt>14</dt>
           <dd>araç, hepsi salt okunur, hepsi depoda belgelenmiş</dd>
         </div>
       </dl>
