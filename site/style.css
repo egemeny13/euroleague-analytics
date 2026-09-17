@@ -257,20 +257,19 @@ h1 {
 
 .hero-demo { min-width: 0; }
 
-/* The recording takes the window's place only once the browser says it can
-   play it (.has-video is set by hero.js on canplay). Until then, and whenever
-   the file is absent, the drawn window below is what the visitor sees. Same
-   frame as every other panel on the page: hairline, --r-lg, no shadow. */
+/* The recording is the primary presentation; its poster paints immediately.
+   The drawn mockup below stays in the markup for structure but remains hidden,
+   avoiding any visual flash or delayed swap. */
 .hero-video {
-  display: none;
+  display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 1360 / 980;
   border: 1px solid var(--hairline);
   border-radius: var(--r-lg);
   background: var(--surface);
 }
-.hero-demo.has-video .hero-video { display: block; }
-.hero-demo.has-video .window { display: none; }
+.hero-demo .window { display: none; }
 
 .window {
   margin: 0;
@@ -920,12 +919,11 @@ h1 {
    captures ran at a lower frame rate than the scripts they filmed and the owner
    saw it. They are scripts again. */
 .demo-video {
-  display: none;
+  display: block;
   width: 100%;
   height: auto;
   border-radius: var(--r-lg);
 }
-.has-video > .demo-video { display: block; }
 
 /* Under every recording, a hairline that fills as the clip plays (demo-video.js
    adds it on canplay). Ink, not orange: progress is not a measured value. The
@@ -1665,15 +1663,22 @@ main, .topbar { position: relative; z-index: 1; }
   color: var(--ink-soft);
 }
 
-.deep-window { margin: 0; }
-/* Once its recording can play, the window IS the recording (Decision 61):
-   the drawn bar and transcript hide, and the video carries its own frame. */
-.deep-window.has-video {
+.deep-window {
+  margin: 0;
   border: 0;
   background: transparent;
 }
-.deep-window.has-video > .window-bar,
-.deep-window.has-video > .deep-body { display: none; }
+/* The recording is the primary presentation; its poster paints immediately.
+   The drawn bar and transcript below stay in the markup for structure but
+   remain hidden, avoiding any visual flash or delayed swap. */
+.deep-window > .demo-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1360 / 980;
+}
+.deep-window > .window-bar,
+.deep-window > .deep-body { display: none; }
 .deep-body {
   display: flex;
   flex-direction: column;
