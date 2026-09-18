@@ -2,9 +2,9 @@
   "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
   "schema_version": 1,
   "app_info": {
-    "display_name": "EuroLeague Analytics",
-    "subtitle": "EuroLeague basketball stats",
-    "description": "Access validated EuroLeague and EuroCup basketball data including exact possession counts, four factors, five-man lineup on/off net ratings, and court shot charts.",
+    "display_name": "European Basketball Analytics",
+    "subtitle": "Advanced European basketball analytics",
+    "description": "Explore European professional basketball analytics, including EuroLeague and EuroCup coverage, with exact possession counts, four factors, five-man lineup on/off ratings, and court shot charts.",
     "category": "ENTERTAINMENT"
   },
   "tools": {
@@ -39,7 +39,7 @@
         "destructiveHint": false
       },
       "justifications": {
-        "read_only_justification": "Only reads official player and team box scores and minutes reconstructions for a specified game without changing database state.",
+        "read_only_justification": "Only reads player and team box scores and minutes reconstructions for a specified game without changing database state.",
         "open_world_justification": "Does not communicate with outside services or publish data externally.",
         "destructive_justification": "Does not delete, overwrite, or alter any player box score records."
       }

@@ -1,13 +1,13 @@
 # OpenAI ChatGPT App Submission — Record and Architecture
 
-**Status:** Submitted to the OpenAI ChatGPT App Directory review queue on 2026-09-02.  
+**Status:** Revision prepared following branding review feedback.
 **Scope:** MCP server adapter, manifest schema compliance, brand assets, OAuth registration proxy, domain challenge, reviewer test credentials, and review guarantees.
 
 ---
 
 ## 1. Executive Summary
 
-EuroLeague Analytics exposes an 11-tool Model Context Protocol (MCP) server over Streamable HTTP. On 2026-09-02, the official submission manifest (`chatgpt-app-submission.json`) and associated brand assets were submitted to OpenAI's ChatGPT App Directory.
+European Basketball Analytics is the ChatGPT distribution name for the existing EuroLeague Analytics MCP server, which exposes 11 tools over Streamable HTTP. The submission manifest (`chatgpt-app-submission.json`) and associated brand assets are used for the OpenAI ChatGPT App Directory listing.
 
 All 11 exposed MCP tools are strictly read-only, closed-world, and non-destructive. Authentication is handled via Auth0 OAuth 2.0 PKCE through a stateless registration proxy (`Decision 51`), preserving Auth0's application caps without exposing dynamic registration upstream.
 
@@ -21,27 +21,27 @@ portal fields and are recorded here because they are not represented in that
 manifest schema.
 
 ### 2.1 Metadata & Brand
-* **App Display Name:** `EuroLeague Analytics`
-* **Subtitle:** `EuroLeague basketball stats` (27 characters, within the 30-character limit)
+* **App Display Name:** `European Basketball Analytics`
+* **Subtitle:** `Advanced European basketball analytics`
 * **Category:** `ENTERTAINMENT`
-* **Description:** *"Access validated EuroLeague and EuroCup basketball data including exact possession counts, four factors, five-man lineup on/off net ratings, and court shot charts."*
-* **Website URL:** `https://euroleague.egemenyucelen.me`
+* **Description:** *"Explore European professional basketball analytics, including EuroLeague and EuroCup coverage, with exact possession counts, four factors, five-man lineup on/off ratings, and court shot charts."*
+* **Website URL:** `https://euroleague.egemenyucelen.me/chatgpt/`
 * **Support / Terms URL:** `https://euroleague.egemenyucelen.me/support.html`
 * **Privacy Policy URL:** `https://euroleague.egemenyucelen.me/privacy.html`
-* **Demo Recording:** `https://euroleague.egemenyucelen.me/preview.mp4`
+* **Demo Recording:** `https://euroleague.egemenyucelen.me/launch-film.mp4`
 
-### 2.2 Portal update required after the domain move
+### 2.2 Portal update required for the branding revision
 
-The submission entered review on 2026-09-02 with the apex-domain URLs. After
-the product site is live, update the four portal fields above. If the portal
-does not allow an in-review submission to be edited, withdraw or wait for the
-review outcome as appropriate, then submit the corrected listing as an update.
-For an already published plugin, submit and publish a new reviewed version;
-published MCP metadata is a reviewed snapshot rather than a live read from
-this repository.
+Update the app name, subtitle, description, website URL, and demo recording in
+the portal to match the fields above. The support and privacy URLs remain the
+same. If the portal does not allow an in-review submission to be edited,
+withdraw or wait for the review outcome as appropriate, then submit the
+corrected listing as an update. For an already published plugin, submit and
+publish a new reviewed version; published MCP metadata is a reviewed snapshot
+rather than a live read from this repository.
 
 ### 2.3 Brand Assets
-Vector and raster brand assets were generated to align with the EuroLeague Analytics design system (clean white background `#FFFFFF`, EuroLeague orange `#E2541A`, and clean seam geometry):
+Vector and raster brand assets use the existing project design system (clean white background `#FFFFFF`, orange `#E2541A`, and clean seam geometry):
 * **`directory_icon.png`:** 512×512 px PNG (Directory icon)
 * **`composer_icon.png`:** 128×128 px PNG (ChatGPT composer icon)
 * **`icon.svg` / `site/icon.svg`:** Scalable SVG source
