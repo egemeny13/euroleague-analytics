@@ -42,6 +42,7 @@ is binding — the decision is only approved with it.
 | 48 | Public opening boundaries and R-9 execution | Approved 2026-09-02 — baseline limits preserved; Auth0 invite-only action unlinked |
 | 49 | Flywheel skills | Removed and banned by owner request on 2026-09-02 |
 | 50 | ChatGPT/OpenAI directory compatibility | Standards-first MCP metadata plus an optional isolated submission route |
+| 83 | Turkish launch film cut | Dedicated Turkish cut with authentic basketball phrasing; demo recordings remain shared |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -4828,6 +4829,40 @@ boundary needs re-examining before this decision is assumed to still apply.
   happens instead of trying to outlast it.
 - Approved: Egemen Yücelen, 2026-09-16, in the session that diagnosed the
   incident the night before launch.
+
+## 83. The Turkish landing page serves a localized launch film cut (`launch-film-tr.mp4`)
+
+**Decided 2026-09-18 by the owner.** The launch film (`#film`) on the Turkish
+landing page (`site/tr/index.html`) now serves a dedicated Turkish cut
+(`launch-film-tr.mp4`, poster `launch-film-tr.jpg`) rather than reusing the
+English film (`launch-film.mp4`).
+
+**Why.** The owner requested a Turkish version of the launch film produced via
+Impractical AI Motion, specifically requiring natural, authentic basketball
+terminology rather than robotic literal translations (e.g., using natural
+Turkish phrasing for on/off metrics, possessions, four factors, and paint
+spacing instead of machine-translated loanwords).
+
+**What was built.**
+1. The motion composition (`App.tsx` and `direction.ts` in Impractical AI
+   project `36e6d90f-71a6-4bef-affe-425e54281a2f`, draft
+   `b0201f3c-4788-4707-aa4b-d35eeab26c19`, Revision 56) was localized with
+   authentic Turkish basketball terminology, correct Turkish typography, and
+   verified across key frame inspections.
+2. Cloud render produced the 1080p master (`launch-impractical-mcp-v8-tr.mp4`,
+   50 s).
+3. The custom electronic score and mechanical keyboard SFX stems were
+   regenerated to match the Turkish typing cadence and muxed with ffmpeg.
+4. The site version was cut to 40.5 s (`site/launch-film-tr.mp4`, ending before
+   the closing post-credit joke, matching the English site cut convention) with
+   poster `site/launch-film-tr.jpg`.
+5. `site/tr/index.html` points to `../launch-film-tr.mp4` and `../launch-film-tr.jpg`.
+6. The other four demo recordings (`hero-demo.mp4`, `hard-1.mp4`, `hard-2.mp4`,
+   `hard-3.mp4`) remain shared from the parent directory.
+
+**Condition.** `tests/test_launch_package.py::test_the_turkish_page_shares_the_english_page_s_assets_and_claims`
+asserts that `launch-film-tr.mp4` is present on the Turkish page and that the
+other four demo recordings continue to be shared without duplication.
 
 ## Rules to add to the project instruction file
 

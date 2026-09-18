@@ -316,10 +316,13 @@ def test_the_turkish_page_shares_the_english_page_s_assets_and_claims() -> None:
     assert "732" in turkish_text, "the Turkish page must state the same games-loaded figure"
     assert "https://euroleague-analytics-mcp.fly.dev/mcp" in turkish_text
 
-    # The recordings are the same files; the Turkish page must not carry
-    # copies of its own.
-    for media in ("hero-demo.mp4", "launch-film.mp4", "hard-1.mp4", "hard-2.mp4", "hard-3.mp4"):
+    # The recordings are the same files, except the launch film which has a
+    # dedicated Turkish cut (Decision 83).
+    for media in ("hero-demo.mp4", "hard-1.mp4", "hard-2.mp4", "hard-3.mp4"):
         assert f"../{media}" in turkish_text, f"Turkish page does not reuse {media}"
+    assert "../launch-film-tr.mp4" in turkish_text, (
+        "Turkish page does not use localized launch film"
+    )
 
 
 def test_the_turkish_page_carries_every_sentence_the_scripts_can_show() -> None:
