@@ -22,7 +22,7 @@ SITE_DIR = Path("site")
 # The Turkish page lives one directory down, so every relative reference in it
 # climbs with "../". The checks below resolve each reference against the page's
 # own directory and then require the result to stay inside site/.
-HTML_FILES = ("index.html", "privacy.html", "support.html", "tr/index.html")
+HTML_FILES = ("index.html", "privacy.html", "support.html", "chatgpt/index.html", "tr/index.html")
 TURKISH_PAGE = SITE_DIR / "tr" / "index.html"
 
 
@@ -146,13 +146,31 @@ def test_cname_file_contains_expected_domain() -> None:
 
 
 def test_chatgpt_submission_record_uses_product_subdomain() -> None:
-    """Portal-facing public URLs must all use the EuroLeague product subdomain."""
+    """Portal-facing public URLs must use the product subdomain and app landing page."""
     content = CHATGPT_SUBMISSION_RECORD.read_text(encoding="utf-8")
     base_url = "https://euroleague.egemenyucelen.me"
-    assert f"**Website URL:** `{base_url}`" in content
+    assert f"**Website URL:** `{base_url}/chatgpt/`" in content
     assert f"**Support / Terms URL:** `{base_url}/support.html`" in content
     assert f"**Privacy Policy URL:** `{base_url}/privacy.html`" in content
-    assert f"**Demo Recording:** `{base_url}/preview.mp4`" in content
+    assert f"**Demo Recording:** `{base_url}/launch-film.mp4`" in content
+
+
+def test_chatgpt_submission_brand_is_independent_and_competition_descriptive() -> None:
+    """Directory metadata and landing copy avoid presenting a competition as the app brand."""
+    import json
+
+    manifest = json.loads(Path("chatgpt-app-submission.json").read_text(encoding="utf-8"))
+    app_info = manifest["app_info"]
+    landing = (SITE_DIR / "chatgpt" / "index.html").read_text(encoding="utf-8")
+
+    assert app_info["display_name"] == "European Basketball Analytics"
+    assert app_info["subtitle"] == "Advanced European basketball analytics"
+    assert "EuroLeague" in app_info["description"]
+    assert "EuroCup" in app_info["description"]
+    assert "European Basketball Analytics" in landing
+    assert "Independent analytics project." in landing
+    disclaimer = "Not affiliated with or endorsed by Euroleague Basketball or its competitions."
+    assert disclaimer in landing
 
 
 def test_html_files_have_valid_html5_structure() -> None:
