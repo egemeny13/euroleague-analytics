@@ -164,13 +164,34 @@ def test_chatgpt_submission_brand_is_independent_and_competition_descriptive() -
     landing = (SITE_DIR / "chatgpt" / "index.html").read_text(encoding="utf-8")
 
     assert app_info["display_name"] == "European Basketball Analytics"
-    assert app_info["subtitle"] == "Advanced European basketball analytics"
+    assert app_info["subtitle"] == "European basketball analytics"
+    assert len(app_info["subtitle"]) <= 30
     assert "EuroLeague" in app_info["description"]
     assert "EuroCup" in app_info["description"]
     assert "European Basketball Analytics" in landing
     assert "Independent analytics project." in landing
     disclaimer = "Not affiliated with or endorsed by Euroleague Basketball or its competitions."
     assert disclaimer in landing
+
+    submitted_tools = manifest["tools"]
+    assert set(submitted_tools) == set(TOOL_NAMES), {
+        "in registry but missing from submission": sorted(set(TOOL_NAMES) - set(submitted_tools)),
+        "in submission but missing from registry": sorted(set(submitted_tools) - set(TOOL_NAMES)),
+    }
+    for tool_name in TOOL_NAMES:
+        tool = submitted_tools[tool_name]
+        assert tool["annotations"] == {
+            "readOnlyHint": True,
+            "openWorldHint": False,
+            "destructiveHint": False,
+        }
+        justifications = tool["justifications"]
+        assert set(justifications) == {
+            "read_only_justification",
+            "open_world_justification",
+            "destructive_justification",
+        }
+        assert all(justifications.values()), tool_name
 
 
 def test_html_files_have_valid_html5_structure() -> None:

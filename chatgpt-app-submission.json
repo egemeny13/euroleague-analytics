@@ -3,7 +3,7 @@
   "schema_version": 1,
   "app_info": {
     "display_name": "European Basketball Analytics",
-    "subtitle": "Advanced European basketball analytics",
+    "subtitle": "European basketball analytics",
     "description": "Explore European professional basketball analytics, including EuroLeague and EuroCup coverage, with exact possession counts, four factors, five-man lineup on/off ratings, and court shot charts.",
     "category": "ENTERTAINMENT"
   },
@@ -42,6 +42,18 @@
         "read_only_justification": "Only reads player and team box scores and minutes reconstructions for a specified game without changing database state.",
         "open_world_justification": "Does not communicate with outside services or publish data externally.",
         "destructive_justification": "Does not delete, overwrite, or alter any player box score records."
+      }
+    },
+    "el_get_fouls": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only retrieves committed and drawn foul totals, split by recorded foul type and grouped by player, team, or game, without modifying database state.",
+        "open_world_justification": "Does not make external network requests or publish data to the public internet.",
+        "destructive_justification": "Does not delete, overwrite, or alter any foul records or aggregates."
       }
     },
     "el_get_game": {
@@ -126,6 +138,30 @@
         "read_only_justification": "Only reads field goal and free throw attempt records with normalized court coordinates without modifying database tables.",
         "open_world_justification": "Does not send external network traffic or update public third-party services.",
         "destructive_justification": "Does not delete or overwrite any shot or coordinate data."
+      }
+    },
+    "el_get_referee_stats": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only retrieves descriptive referee season aggregates, including games worked, foul rates, home-win rate, and pace, without changing database state.",
+        "open_world_justification": "Does not interact with external services or publish data outside the application.",
+        "destructive_justification": "Does not delete, overwrite, or alter referee, game, or aggregate records."
+      }
+    },
+    "el_get_roster": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only retrieves season roster entries and available player biography fields for a team without modifying database state.",
+        "open_world_justification": "Does not make outbound network requests or publish roster data externally.",
+        "destructive_justification": "Does not delete, overwrite, or alter roster or player biography records."
       }
     },
     "el_get_team_stats": {
