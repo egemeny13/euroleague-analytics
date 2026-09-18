@@ -320,7 +320,9 @@ def test_the_turkish_page_shares_the_english_page_s_assets_and_claims() -> None:
     # dedicated Turkish cut (Decision 83).
     for media in ("hero-demo.mp4", "hard-1.mp4", "hard-2.mp4", "hard-3.mp4"):
         assert f"../{media}" in turkish_text, f"Turkish page does not reuse {media}"
-    assert "../launch-film-tr.mp4" in turkish_text, "Turkish page does not use localized launch film"
+    assert "../launch-film-tr.mp4" in turkish_text, (
+        "Turkish page does not use localized launch film"
+    )
 
 
 def test_the_turkish_page_carries_every_sentence_the_scripts_can_show() -> None:
