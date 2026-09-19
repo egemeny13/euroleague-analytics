@@ -51,6 +51,13 @@ EVENT_ROLES = {
     "EP": EventRole.NO_BALL,
     "EG": EventRole.NO_BALL,
     "JB": EventRole.NO_BALL,
+    # Older seasons only (DECISIONS.md item 85). `TPOFF` names each team's tip-off
+    # jumper; the jump itself is the separate `JB` row that follows. `F` and `BF`
+    # are fighting and bench-fighting fouls (all 15 in E2022 game 313). None of
+    # them moves the ball.
+    "TPOFF": EventRole.NO_BALL,
+    "F": EventRole.NO_BALL,
+    "BF": EventRole.NO_BALL,
 }
 
 BALL_TOUCHING_TYPES = frozenset({"2FGM", "3FGM", "TO", "D", "2FGA", "3FGA", "O", "FTM", "FTA"})

@@ -259,9 +259,15 @@ def load_cached_shots(
     *,
     progress: Callable[[str], None] = print,
 ) -> dict[str, int]:
-    """Replace raw_shot from every cached Points response in one season."""
+    """Replace raw_shot from the Points response of every played game in one season.
+
+    Played means `played_games`, the same rule as `load_cached_season`. Until
+    2026-09-19 this read every scheduled game, which only held while every
+    loaded season was complete; E2021 has 28 fixtures that were never played and
+    have no responses (DECISIONS.md item 85).
+    """
     schedule = cache.read_schedule_json(season_code)
-    games = sorted(schedule.get("data") or [], key=lambda game: int(game["gameCode"]))
+    games = played_games(schedule.get("data") or [])
     total = 0
     for index, schedule_game in enumerate(games, start=1):
         gamecode = int(schedule_game["gameCode"])

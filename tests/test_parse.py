@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from euroleague.parse import (
     RAW_BOXSCORE_PLAYER_COLUMNS,
     RAW_BOXSCORE_TEAM_COLUMNS,
     RAW_EVENT_COLUMNS,
     RAW_GAME_COLUMNS,
+    _referees,
     parse_boxscore_players,
     parse_boxscore_teams,
     parse_events,
@@ -224,3 +227,30 @@ def test_all_nine_fixtures_parse_without_losing_team_events_or_legacy_ids(
     assert "PJDR" in player_ids
     assert team_events
     assert any(row.playtype == "O" and row.codeteam == "PAN" for row in team_events)
+
+
+def test_not_designated_referee_placeholder_is_an_empty_slot_not_half_a_name() -> None:
+    """Break caught: E2020 game 11 cannot load, or loads `N/D` as a referee.
+
+    Verbatim strings from the E2020 cache. The Boxscore lists a third referee as a
+    lone `N/D`; the schedule calls the same slot `N, D` with code `ONDR`. It is 1
+    of 1,988 cached Boxscores across E2020-E2025 (DECISIONS.md item 85).
+    """
+    schedule_game = {
+        "referee1": {"code": "OJCZ", "name": "RADOVIC, SRETEN"},
+        "referee2": {"code": "QJLY", "name": "LAVRUKHIN, ARTEM"},
+        "referee3": {"code": "ONDR", "name": "N, D"},
+        "referee4": None,
+    }
+    boxscore = {"Referees": "RADOVIC, SRETEN, LAVRUKHIN, ARTEM, N/D"}
+
+    assert _referees(schedule_game, boxscore) == [
+        ("OJCZ", "RADOVIC, SRETEN"),
+        ("QJLY", "LAVRUKHIN, ARTEM"),
+        (None, None),
+        (None, None),
+    ]
+
+    # Anything else that breaks the surname/given-name pairing still refuses.
+    with pytest.raises(ValueError, match="pairs"):
+        _referees(schedule_game, {"Referees": "RADOVIC, SRETEN, LAVRUKHIN"})
