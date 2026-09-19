@@ -4864,6 +4864,96 @@ spacing instead of machine-translated loanwords).
 asserts that `launch-film-tr.mp4` is present on the Turkish page and that the
 other four demo recordings continue to be shared without duplication.
 
+## 84. A kept multi-season schema on the local test database serves other local projects
+
+**Decided 2026-09-19 by the owner.** The owner's fantasy project needs E2020 to
+E2025 to simulate seasons, and the hosted warehouse holds only the hot window.
+The rehearsal engine (R-12) already builds a season exactly the way production
+does, into an isolated schema on the disposable database, and then drops it.
+Two things change:
+
+1. `run_historical_rehearsal(..., keep_schema=True)` and the rehearsal CLI's
+   `--keep-schema` keep that schema after a **successful** run. A failed run is
+   still dropped, so a schema that exists is always a finished load.
+2. `scripts/load_local_warehouse.py` loads several seasons into one kept schema
+   (default `warehouse`). It applies every committed migration once, so the
+   schema has the hosted warehouse's tables and views (`v_player_game`,
+   `v_game`, `v_team_game`, `raw_boxscore_team.coach_name`, and the rest), then
+   verifies, parses, derives and writes each season from the local cache.
+
+**What stays the same.** The same target guard: only `euroleague_test` on port
+5433 is accepted, so this cannot write to the hosted warehouse. It reads only
+the local cache; no API call and no Storage download happen inside the load.
+The schema is never `public`, which the migration gate needs empty.
+
+**The trade-offs, and why these were chosen.**
+- *An existing schema is refused* unless `--replace` is passed, which drops and
+  reloads it. Adding a season to an existing schema in place was not built:
+  every season would then have to be re-checked against the others, and a full
+  six-season reload costs minutes.
+- *Reconciliation.* Tables with `season_code` are counted row-for-row per
+  season. `player`, `team` and `lineup` have no season column and are shared
+  across seasons; they are checked once, at the end, against the exact union of
+  keys the seasons produced. A missing or duplicated shared row fails the load.
+- *Reader access.* The migrations already create a per-schema reader role
+  (`rehearsal_reader_<hash>`) with SELECT on exactly what the hosted `el_reader`
+  can read. The load sets that role's `search_path` to the schema, so a client
+  needs no schema prefix, and sets its password from `EL_LOCAL_READER_PASSWORD`
+  (in `.env`, never committed).
+
+**Condition.** `tests/test_historical_rehearsal.py` asserts that keep mode keeps
+a finished schema and drops a failed one, that an existing schema is refused
+without `--replace` and that `--replace` drops only that schema, that a
+non-disposable target is refused before any `CREATE SCHEMA`, and that both
+count reconciliations fail on a mismatch. The local cluster is not a
+production system: nothing in CI depends on it and nothing here is deployed.
+
+## 85. Older seasons (E2020-E2022): three source formats accepted, five games skipped by name
+
+**Decided 2026-09-19 by the owner**, while loading E2020-E2025 under Decision 84.
+These seasons had never been derived before, and four things stopped the load.
+Each was measured across all 1,988 cached games of E2020-E2025 (every
+Boxscore, and every PlaybyPlay row) before anything changed.
+
+1. **`N/D` referee placeholder — accepted.** `Boxscore.Referees` for E2020 game 11
+   reads `RADOVIC, SRETEN, LAVRUKHIN, ARTEM, N/D`; the schedule calls the same
+   slot `N, D` with code `ONDR`. It is 1 of 1,988 Boxscores. The parser now drops
+   a lone `N/D` token, so the slot is empty; any other odd token still raises.
+2. **`TPOFF`, `F`, `BF` event types — classified as not touching the ball.**
+   `TPOFF` names each team's tip-off jumper, 2 rows in every E2020 and E2021 game
+   (656 and 598); the jump itself is the separate `JB` row that follows. `F` and
+   `BF` are fighting and bench-fighting fouls, 15 rows, all at 01:40 of Q4 in
+   E2022 game 313, the `BF` rows carrying coach codes `CO_A`/`CO_B`. None of the
+   three appears in E2023-E2025. Classified with `JB` and the other foul codes;
+   an unknown type still raises.
+3. **The shot loader reads only played games.** It read every scheduled game,
+   which held only while every loaded season was complete. E2021 lists 327 games
+   and 299 were played. It now uses `played_games`, the rule `load_cached_season`
+   and the fetcher already share.
+4. **Five games skipped by name, not repaired.** Lineup reconstruction refuses
+   them because a substitution batch has unequal IN and OUT rows: E2020 games 16,
+   127, 273, 279 and E2022 game 102 (5 of 1,988). In three the IN and OUT sit
+   next to each other in the array but 1-4 seconds apart on the clock; one has a
+   duplicated IN row; one has a player going OUT and straight back IN plus an
+   unmatched IN. Repairing them is a change to the lineup rules and was **not**
+   made. `scripts/load_local_warehouse.py --skip-game E2020:16,127,273,279
+   --skip-game E2022:102` leaves them out entirely, and the result lists them.
+   Games are skipped only when named: a new refusal still stops the load.
+
+**Effect on production.** None of the four changes the rows for E2024 or E2025:
+after the change, the local E2024 and E2025 rows match the recorded production
+fingerprints (`E2024_BASELINE`, `E2025_BASELINE`) in all ten baseline tables.
+
+**What this does not establish.** Whether the five skipped games have a correct
+repair, and whether seasons before E2020 have further formats. Each older season
+has to be measured the same way before it is loaded.
+
+**Condition.** `tests/test_parse.py` (the `N/D` slot), `tests/test_possessions.py`
+(the three types, and that they change no possession), `tests/test_shots.py`
+(unplayed games are skipped, a played game's missing file still raises) and
+`tests/test_historical_rehearsal.py` (a skipped game is invisible to every
+builder, and still reported).
+
 ## Rules to add to the project instruction file
 
 ```

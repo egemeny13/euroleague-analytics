@@ -1,0 +1,1316 @@
+{
+  "database_target": "local (euroleague_test:5433)",
+  "evidence_limits": [
+    "Loaded from the local response cache only; no archive object or API response was fetched by this run.",
+    "Season tables are reconciled row-for-row per season; player, team and lineup are reconciled against the union of keys across the loaded seasons.",
+    "The official-box-score and possession validations are not re-run here; game_quality carries each game's own gate verdicts.",
+    "Target is the disposable local database euroleague_test (port 5433), not the hosted warehouse."
+  ],
+  "postgres_version": "17.11",
+  "reader_role": "rehearsal_reader_ae1fd358c7612a02",
+  "relation_sizes": {
+    "game_event": {
+      "index_bytes": 50831360,
+      "relation_name": "game_event",
+      "row_count": 1062344,
+      "table_bytes": 217645056,
+      "toast_bytes": 0,
+      "total_bytes": 268476416
+    },
+    "game_quality": {
+      "index_bytes": 114688,
+      "relation_name": "game_quality",
+      "row_count": 2013,
+      "table_bytes": 237568,
+      "toast_bytes": 0,
+      "total_bytes": 352256
+    },
+    "game_source_state": {
+      "index_bytes": 8192,
+      "relation_name": "game_source_state",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "lineup": {
+      "index_bytes": 4800512,
+      "relation_name": "lineup",
+      "row_count": 35048,
+      "table_bytes": 3858432,
+      "toast_bytes": 0,
+      "total_bytes": 8658944
+    },
+    "lineup_stint": {
+      "index_bytes": 7839744,
+      "relation_name": "lineup_stint",
+      "row_count": 85464,
+      "table_bytes": 14336000,
+      "toast_bytes": 0,
+      "total_bytes": 22175744
+    },
+    "mcp_row_budget_policy": {
+      "index_bytes": 8192,
+      "relation_name": "mcp_row_budget_policy",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "mcp_row_daily_budget": {
+      "index_bytes": 8192,
+      "relation_name": "mcp_row_daily_budget",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "mcp_row_usage": {
+      "index_bytes": 16384,
+      "relation_name": "mcp_row_usage",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 24576
+    },
+    "person_game_link": {
+      "index_bytes": 24576,
+      "relation_name": "person_game_link",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 32768
+    },
+    "player": {
+      "index_bytes": 49152,
+      "relation_name": "player",
+      "row_count": 835,
+      "table_bytes": 106496,
+      "toast_bytes": 0,
+      "total_bytes": 155648
+    },
+    "player_game_minutes": {
+      "index_bytes": 2793472,
+      "relation_name": "player_game_minutes",
+      "row_count": 47804,
+      "table_bytes": 3358720,
+      "toast_bytes": 0,
+      "total_bytes": 6152192
+    },
+    "possession": {
+      "index_bytes": 29614080,
+      "relation_name": "possession",
+      "row_count": 288951,
+      "table_bytes": 51421184,
+      "toast_bytes": 0,
+      "total_bytes": 81035264
+    },
+    "raw_api_fetch": {
+      "index_bytes": 16384,
+      "relation_name": "raw_api_fetch",
+      "row_count": 0,
+      "table_bytes": 0,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "raw_api_response": {
+      "index_bytes": 24576,
+      "relation_name": "raw_api_response",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 32768
+    },
+    "raw_boxscore_player": {
+      "index_bytes": 2842624,
+      "relation_name": "raw_boxscore_player",
+      "row_count": 47804,
+      "table_bytes": 7741440,
+      "toast_bytes": 0,
+      "total_bytes": 10584064
+    },
+    "raw_boxscore_team": {
+      "index_bytes": 376832,
+      "relation_name": "raw_boxscore_team",
+      "row_count": 8052,
+      "table_bytes": 1220608,
+      "toast_bytes": 0,
+      "total_bytes": 1597440
+    },
+    "raw_game": {
+      "index_bytes": 163840,
+      "relation_name": "raw_game",
+      "row_count": 2013,
+      "table_bytes": 499712,
+      "toast_bytes": 0,
+      "total_bytes": 663552
+    },
+    "raw_shot": {
+      "index_bytes": 9674752,
+      "relation_name": "raw_shot",
+      "row_count": 306017,
+      "table_bytes": 39780352,
+      "toast_bytes": 0,
+      "total_bytes": 49455104
+    },
+    "roster_registration": {
+      "index_bytes": 32768,
+      "relation_name": "roster_registration",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 40960
+    },
+    "season_progress": {
+      "index_bytes": 8192,
+      "relation_name": "season_progress",
+      "row_count": 0,
+      "table_bytes": 8192,
+      "toast_bytes": 0,
+      "total_bytes": 16384
+    },
+    "team": {
+      "index_bytes": 16384,
+      "relation_name": "team",
+      "row_count": 25,
+      "table_bytes": 16384,
+      "toast_bytes": 0,
+      "total_bytes": 32768
+    },
+    "team_season": {
+      "index_bytes": 32768,
+      "relation_name": "team_season",
+      "row_count": 110,
+      "table_bytes": 16384,
+      "toast_bytes": 0,
+      "total_bytes": 49152
+    }
+  },
+  "schema_name": "warehouse",
+  "seasons": [
+    {
+      "derived_counts": {
+        "game_event": 167502,
+        "game_quality": 324,
+        "lineup": 5681,
+        "lineup_stint": 13542,
+        "player": 308,
+        "player_game_minutes": 7685,
+        "possession": 46065,
+        "team": 18,
+        "team_season": 18
+      },
+      "excluded_games": [
+        {
+          "gamecode": 10,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 14,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 19,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 26,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 33,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 34,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 42,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 62,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 78,
+          "reasons": [
+            "off_court_attribution",
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 96,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 110,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 142,
+          "reasons": [
+            "off_court_attribution",
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 169,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 171,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 197,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 210,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 240,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 264,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 305,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 307,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 321,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 322,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        }
+      ],
+      "exclusions": {
+        "covered_games": 302,
+        "excluded_games": 22,
+        "exclusion_rate_pct": 6.790123456790123,
+        "loaded_games": 324,
+        "played_games": 324,
+        "reasons": {
+          "minutes_mismatch": 3,
+          "off_court_attribution": 11,
+          "possession_gate": 10
+        },
+        "scheduled_games": 328
+      },
+      "raw_counts": {
+        "raw_boxscore_player": 7685,
+        "raw_boxscore_team": 1296,
+        "raw_game": 324,
+        "raw_shot": 47702
+      },
+      "season_code": "E2020",
+      "skipped_games": [
+        16,
+        127,
+        273,
+        279
+      ],
+      "timings": {
+        "cache_verify_seconds": 0.02454129999387078,
+        "derived_build_seconds": 4.633974000025773,
+        "derived_load_seconds": 13.599504399986472,
+        "gate_evaluation_seconds": 0.006561899994267151,
+        "raw_load_seconds": 4.838399399974151,
+        "raw_parse_seconds": 1.029071600001771,
+        "storage_measurement_seconds": 0.014528200001223013,
+        "total_seconds": 24.153638899995713
+      }
+    },
+    {
+      "derived_counts": {
+        "game_event": 151766,
+        "game_quality": 299,
+        "lineup": 5202,
+        "lineup_stint": 12573,
+        "player": 307,
+        "player_game_minutes": 7072,
+        "possession": 41735,
+        "team": 18,
+        "team_season": 18
+      },
+      "excluded_games": [
+        {
+          "gamecode": 1,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 4,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 7,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 20,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 51,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 73,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 87,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 101,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 106,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 120,
+          "reasons": [
+            "off_court_attribution",
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 130,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 176,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 213,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 216,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 232,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 241,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 279,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 302,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 303,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 312,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 329,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        }
+      ],
+      "exclusions": {
+        "covered_games": 278,
+        "excluded_games": 21,
+        "exclusion_rate_pct": 7.023411371237458,
+        "loaded_games": 299,
+        "played_games": 299,
+        "reasons": {
+          "minutes_mismatch": 2,
+          "off_court_attribution": 9,
+          "possession_gate": 11
+        },
+        "scheduled_games": 327
+      },
+      "raw_counts": {
+        "raw_boxscore_player": 7072,
+        "raw_boxscore_team": 1196,
+        "raw_game": 299,
+        "raw_shot": 43555
+      },
+      "season_code": "E2021",
+      "skipped_games": [],
+      "timings": {
+        "cache_verify_seconds": 0.023311099997954443,
+        "derived_build_seconds": 4.213488500012318,
+        "derived_load_seconds": 20.925743800005876,
+        "gate_evaluation_seconds": 0.007738300017081201,
+        "raw_load_seconds": 4.547015499992995,
+        "raw_parse_seconds": 1.009963099990273,
+        "storage_measurement_seconds": 0.015122200013138354,
+        "total_seconds": 30.79675860001589
+      }
+    },
+    {
+      "derived_counts": {
+        "game_event": 171352,
+        "game_quality": 327,
+        "lineup": 5795,
+        "lineup_stint": 13935,
+        "player": 306,
+        "player_game_minutes": 7761,
+        "possession": 46380,
+        "team": 18,
+        "team_season": 18
+      },
+      "excluded_games": [
+        {
+          "gamecode": 22,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 37,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 58,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 73,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 108,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 115,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 120,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 160,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 177,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 185,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 189,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 218,
+          "reasons": [
+            "off_court_attribution",
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 243,
+          "reasons": [
+            "off_court_attribution",
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 262,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 281,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 313,
+          "reasons": [
+            "minutes_mismatch",
+            "off_court_attribution"
+          ]
+        }
+      ],
+      "exclusions": {
+        "covered_games": 311,
+        "excluded_games": 16,
+        "exclusion_rate_pct": 4.892966360856269,
+        "loaded_games": 327,
+        "played_games": 327,
+        "reasons": {
+          "minutes_mismatch": 1,
+          "off_court_attribution": 10,
+          "possession_gate": 8
+        },
+        "scheduled_games": 328
+      },
+      "raw_counts": {
+        "raw_boxscore_player": 7761,
+        "raw_boxscore_team": 1308,
+        "raw_game": 327,
+        "raw_shot": 49271
+      },
+      "season_code": "E2022",
+      "skipped_games": [
+        102
+      ],
+      "timings": {
+        "cache_verify_seconds": 0.028516900027170777,
+        "derived_build_seconds": 4.824120400007814,
+        "derived_load_seconds": 20.31796860002214,
+        "gate_evaluation_seconds": 0.006716699979733676,
+        "raw_load_seconds": 5.039074400003301,
+        "raw_parse_seconds": 1.1186087999958545,
+        "storage_measurement_seconds": 0.01664289998007007,
+        "total_seconds": 31.406171799986623
+      }
+    },
+    {
+      "derived_counts": {
+        "game_event": 172265,
+        "game_quality": 331,
+        "lineup": 5817,
+        "lineup_stint": 13697,
+        "player": 296,
+        "player_game_minutes": 7883,
+        "possession": 47460,
+        "team": 18,
+        "team_season": 18
+      },
+      "excluded_games": [
+        {
+          "gamecode": 1,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 9,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 11,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 29,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 32,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 35,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 36,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 54,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 79,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 82,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 116,
+          "reasons": [
+            "off_court_attribution",
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 170,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 189,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 245,
+          "reasons": [
+            "minutes_mismatch",
+            "substitution_state"
+          ]
+        },
+        {
+          "gamecode": 246,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 254,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 264,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 276,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 303,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 304,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 311,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 316,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 319,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 328,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 332,
+          "reasons": [
+            "possession_gate"
+          ]
+        }
+      ],
+      "exclusions": {
+        "covered_games": 306,
+        "excluded_games": 25,
+        "exclusion_rate_pct": 7.552870090634441,
+        "loaded_games": 331,
+        "played_games": 331,
+        "reasons": {
+          "minutes_mismatch": 2,
+          "off_court_attribution": 8,
+          "possession_gate": 16,
+          "substitution_state": 1
+        },
+        "scheduled_games": 331
+      },
+      "raw_counts": {
+        "raw_boxscore_player": 7883,
+        "raw_boxscore_team": 1324,
+        "raw_game": 331,
+        "raw_shot": 50159
+      },
+      "season_code": "E2023",
+      "skipped_games": [],
+      "timings": {
+        "cache_verify_seconds": 0.026432599988766015,
+        "derived_build_seconds": 4.697622000006959,
+        "derived_load_seconds": 21.38948369998252,
+        "gate_evaluation_seconds": 0.008936900005210191,
+        "raw_load_seconds": 5.32070310000563,
+        "raw_parse_seconds": 1.130448100011563,
+        "storage_measurement_seconds": 0.01640739999129437,
+        "total_seconds": 32.650845299998764
+      }
+    },
+    {
+      "derived_counts": {
+        "game_event": 176483,
+        "game_quality": 330,
+        "lineup": 5985,
+        "lineup_stint": 13927,
+        "player": 306,
+        "player_game_minutes": 7863,
+        "possession": 47829,
+        "team": 18,
+        "team_season": 18
+      },
+      "excluded_games": [
+        {
+          "gamecode": 3,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 18,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 23,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 43,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 45,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 63,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 72,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 75,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 98,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 131,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 139,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 156,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 177,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 190,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 200,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 238,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 239,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 242,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 262,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 290,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 296,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 323,
+          "reasons": [
+            "off_court_attribution",
+            "possession_gate"
+          ]
+        }
+      ],
+      "exclusions": {
+        "covered_games": 308,
+        "excluded_games": 22,
+        "exclusion_rate_pct": 6.666666666666667,
+        "loaded_games": 330,
+        "played_games": 330,
+        "reasons": {
+          "minutes_mismatch": 2,
+          "off_court_attribution": 7,
+          "possession_gate": 14
+        },
+        "scheduled_games": 330
+      },
+      "raw_counts": {
+        "raw_boxscore_player": 7863,
+        "raw_boxscore_team": 1320,
+        "raw_game": 330,
+        "raw_shot": 51193
+      },
+      "season_code": "E2024",
+      "skipped_games": [],
+      "timings": {
+        "cache_verify_seconds": 0.03059390000998974,
+        "derived_build_seconds": 5.44112820000737,
+        "derived_load_seconds": 21.448712899989914,
+        "gate_evaluation_seconds": 0.00800799997523427,
+        "raw_load_seconds": 5.485924600012368,
+        "raw_parse_seconds": 1.3619942000077572,
+        "storage_measurement_seconds": 0.015339799982029945,
+        "total_seconds": 33.851890499994624
+      }
+    },
+    {
+      "derived_counts": {
+        "game_event": 222976,
+        "game_quality": 402,
+        "lineup": 7281,
+        "lineup_stint": 17790,
+        "player": 351,
+        "player_game_minutes": 9540,
+        "possession": 59482,
+        "team": 20,
+        "team_season": 20
+      },
+      "excluded_games": [
+        {
+          "gamecode": 16,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 21,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 49,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 67,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 103,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 106,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 116,
+          "reasons": [
+            "minutes_mismatch"
+          ]
+        },
+        {
+          "gamecode": 119,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 121,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 122,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 124,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 140,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 162,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 163,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 167,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 168,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 192,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 214,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 215,
+          "reasons": [
+            "minutes_mismatch",
+            "substitution_state"
+          ]
+        },
+        {
+          "gamecode": 221,
+          "reasons": [
+            "off_court_attribution",
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 230,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 240,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 256,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 257,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 263,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        },
+        {
+          "gamecode": 312,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 322,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 337,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 357,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 364,
+          "reasons": [
+            "possession_gate"
+          ]
+        },
+        {
+          "gamecode": 384,
+          "reasons": [
+            "off_court_attribution"
+          ]
+        }
+      ],
+      "exclusions": {
+        "covered_games": 371,
+        "excluded_games": 31,
+        "exclusion_rate_pct": 7.711442786069651,
+        "loaded_games": 402,
+        "played_games": 402,
+        "reasons": {
+          "minutes_mismatch": 3,
+          "off_court_attribution": 12,
+          "possession_gate": 17,
+          "substitution_state": 1
+        },
+        "scheduled_games": 402
+      },
+      "raw_counts": {
+        "raw_boxscore_player": 9540,
+        "raw_boxscore_team": 1608,
+        "raw_game": 402,
+        "raw_shot": 64137
+      },
+      "season_code": "E2025",
+      "skipped_games": [],
+      "timings": {
+        "cache_verify_seconds": 0.03730039999936707,
+        "derived_build_seconds": 6.937165900017135,
+        "derived_load_seconds": 32.884187799994834,
+        "gate_evaluation_seconds": 0.009010800014948472,
+        "raw_load_seconds": 6.667803299991647,
+        "raw_parse_seconds": 1.6367593000177294,
+        "storage_measurement_seconds": 0.04816579999169335,
+        "total_seconds": 48.29156499999226
+      }
+    }
+  ],
+  "shared_counts": {
+    "lineup": 35048,
+    "player": 835,
+    "team": 25
+  },
+  "total_seconds": 201.57636480001383
+}

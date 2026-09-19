@@ -161,6 +161,7 @@ def test_cached_shot_season_requires_every_points_response(tmp_path, loader_conn
                 "data": [
                     {
                         "gameCode": 1,
+                        "played": True,
                         "season": {"competitionCode": "E"},
                     }
                 ]
@@ -178,6 +179,37 @@ def test_cached_shot_season_requires_every_points_response(tmp_path, loader_conn
         )
 
 
+def test_cached_shot_season_skips_unplayed_games(tmp_path, loader_connection) -> None:
+    """Break caught: a never-played fixture is reported as a missing Points response.
+
+    E2021's schedule lists 327 games and marks 299 played; the other 28 were
+    never played and have no cached responses. The shot loader must use the same
+    played rule as `load_cached_season` and the fetcher (DECISIONS.md item 85).
+    """
+    season = tmp_path / "E2021"
+    season.mkdir()
+    (season / "schedule.json").write_text(
+        json.dumps(
+            {
+                "data": [
+                    {"gameCode": 1, "played": True, "season": {"competitionCode": "E"}},
+                    {"gameCode": 2, "played": False, "season": {"competitionCode": "E"}},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    path = tmp_path / "E2021" / "Points" / "1.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(_points_payload()), encoding="utf-8")
+
+    totals = raw_load.load_cached_shots(
+        loader_connection(), ResponseCache(tmp_path), "E2021", progress=lambda message: None
+    )
+
+    assert totals == {"raw_shot": 1}
+
+
 def test_cached_shot_season_loads_every_game_and_vacuums_only_raw_shot(
     tmp_path, loader_connection
 ) -> None:
@@ -188,8 +220,8 @@ def test_cached_shot_season_loads_every_game_and_vacuums_only_raw_shot(
         json.dumps(
             {
                 "data": [
-                    {"gameCode": 2, "season": {"competitionCode": " E "}},
-                    {"gameCode": 1, "season": {"competitionCode": " E "}},
+                    {"gameCode": 2, "played": True, "season": {"competitionCode": " E "}},
+                    {"gameCode": 1, "played": True, "season": {"competitionCode": " E "}},
                 ]
             }
         ),

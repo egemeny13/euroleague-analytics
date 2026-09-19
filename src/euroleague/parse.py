@@ -313,7 +313,11 @@ def _timestamp(value: Any) -> datetime | None:
 
 def _referee_names(boxscore: dict[str, Any]) -> list[str]:
     parts = [part.strip() for part in (_trim(boxscore.get("Referees")) or "").split(",")]
-    parts = [part for part in parts if part]
+    # `N/D` is the source's "not designated" placeholder for an empty referee slot,
+    # written as one token with no given name (E2020 game 11; the schedule calls the
+    # same slot `N, D`). It is not a person, so it is dropped, not paired. DECISIONS.md
+    # item 85.
+    parts = [part for part in parts if part and part != "N/D"]
     if len(parts) % 2:
         raise ValueError("Boxscore.Referees must contain surname/given-name pairs.")
     return [f"{parts[index]}, {parts[index + 1]}" for index in range(0, len(parts), 2)]

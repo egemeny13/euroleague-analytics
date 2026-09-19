@@ -44,6 +44,14 @@ def parse_arguments(args: list[str] | None = None) -> argparse.Namespace:
         help="Path to write the JSON result artifact.",
     )
     parser.add_argument(
+        "--keep-schema",
+        action="store_true",
+        help=(
+            "Keep the loaded schema after a successful run instead of dropping it. "
+            "A failed run is still dropped."
+        ),
+    )
+    parser.add_argument(
         "--quiet",
         "-q",
         action="store_true",
@@ -79,6 +87,7 @@ def main(args: list[str] | None = None) -> int:
             cache,
             connection=conn,
             season_code=season_code,
+            keep_schema=opts.keep_schema,
             progress=progress,
         )
     finally:

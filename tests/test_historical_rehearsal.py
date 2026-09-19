@@ -13,11 +13,15 @@ import pytest
 
 from euroleague.cache import ResponseCache
 from euroleague.historical_rehearsal import (
+    GameSkippingCache,
     RelationSizeMetric,
     assert_loaded_counts,
     assert_rehearsal_target_safe,
+    assert_season_loaded_counts,
+    assert_shared_union_counts,
     calculate_storage_projections,
     compute_exclusion_breakdown,
+    load_persistent_warehouse,
     managed_rehearsal_schema,
     measure_schema_relations,
     run_historical_rehearsal,
@@ -481,3 +485,284 @@ def test_cli_execution_with_dummy_db(
     data = json.loads(out_file.read_text())
     assert data["season_code"] == "E2023"
     assert data["exclusions"]["played_games"] == 331
+
+
+# ---------------------------------------------------------------------------
+# Persistent local warehouse (DECISIONS.md item 84)
+# ---------------------------------------------------------------------------
+
+E2023_RELATION_ROWS = {
+    "raw_game": 331,
+    "raw_boxscore_player": 7_883,
+    "raw_boxscore_team": 1_324,
+    "raw_shot": 50_159,
+    "player": 296,
+    "team": 18,
+    "team_season": 18,
+    "lineup": 5_817,
+    "lineup_stint": 13_697,
+    "game_event": 172_265,
+    "player_game_minutes": 7_883,
+    "game_quality": 331,
+    "possession": 47_460,
+    "season_progress": 0,
+}
+
+
+def _stub_database_writes(monkeypatch: pytest.MonkeyPatch) -> None:
+    import euroleague.historical_rehearsal as hr
+
+    monkeypatch.setattr(hr, "apply_current_migrations", lambda conn: None)
+    monkeypatch.setattr(hr, "load_confirmation_raw_rows", lambda conn, cache, sc: {})
+    monkeypatch.setattr(
+        hr,
+        "load_derived_rows",
+        lambda conn, dims, evts, rem, sc, gamecodes=None: {},
+    )
+
+
+def test_managed_schema_keeps_schema_and_roles_only_after_success() -> None:
+    """Break caught: keep mode drops a finished load, or keeps a half-loaded one."""
+    connection = DummyConnection()
+    kept_roles = set(rehearsal_role_names("warehouse_kept"))
+    with managed_rehearsal_schema(connection, "warehouse_kept", keep=True):
+        connection.roles.update(kept_roles)
+    assert "warehouse_kept" in connection.schemas
+    assert kept_roles <= connection.roles
+    assert not any(query.startswith("DROP") for query, _ in connection.executions)
+
+    with (
+        pytest.raises(RuntimeError, match="synthetic failure"),
+        managed_rehearsal_schema(connection, "warehouse_failed", keep=True),
+    ):
+        raise RuntimeError("synthetic failure")
+    assert "warehouse_failed" not in connection.schemas
+
+
+def test_season_count_reconciliation_is_exact_for_season_tables() -> None:
+    """Break caught: one season's rows hide behind another season's in a shared schema."""
+    assert_season_loaded_counts({"raw_game": 331, "player": 296}, {"raw_game": 331, "player": 500})
+
+    with pytest.raises(AssertionError, match="raw_game"):
+        assert_season_loaded_counts({"raw_game": 331}, {"raw_game": 662})
+
+    # Shared tables span seasons, so a season can only require its rows to be
+    # present; the exact check for them is the union check below.
+    with pytest.raises(AssertionError, match="player"):
+        assert_season_loaded_counts({"player": 296}, {"player": 295})
+
+
+def test_shared_count_reconciliation_requires_the_exact_union() -> None:
+    """Break caught: a shared dimension is double-counted or loses rows across seasons."""
+    assert_shared_union_counts({"player": {"P1", "P2", "P3"}}, {"player": 3})
+    with pytest.raises(AssertionError, match="player"):
+        assert_shared_union_counts({"player": {"P1", "P2", "P3"}}, {"player": 4})
+
+
+def test_persistent_load_refuses_public_and_existing_schemas() -> None:
+    """Break caught: the persistent load overwrites public or a previous load silently."""
+    connection = DummyConnection()
+    cache = ResponseCache("exploration/cache")
+
+    with pytest.raises(ValueError, match="public"):
+        load_persistent_warehouse(connection, cache, ["E2023"], schema_name="public")
+
+    connection.schemas.add("warehouse")
+    with pytest.raises(RuntimeError, match="--replace"):
+        load_persistent_warehouse(connection, cache, ["E2023"], schema_name="warehouse")
+    assert "warehouse" in connection.schemas
+    assert not any(query.startswith("DROP") for query, _ in connection.executions)
+
+
+def test_persistent_load_refuses_a_non_disposable_target() -> None:
+    """Break caught: the persistent load is pointed at the hosted warehouse."""
+    connection = DummyConnection(database_name="postgres", port=5432)
+    with pytest.raises(ConfirmationTargetError):
+        load_persistent_warehouse(
+            connection, ResponseCache("exploration/cache"), ["E2023"], schema_name="warehouse"
+        )
+    assert not any("CREATE SCHEMA" in query for query, _ in connection.executions)
+
+
+def test_persistent_load_keeps_schema_and_reports_each_season(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Break caught: the load drops its schema, or reports no per-season exclusions."""
+    if not Path("exploration/cache/E2023/schedule.json").exists():
+        pytest.skip("E2023 cache not present")
+    _stub_database_writes(monkeypatch)
+    connection = DummyConnection()
+    connection.relation_rows = dict(E2023_RELATION_ROWS)
+
+    result = load_persistent_warehouse(
+        connection,
+        ResponseCache("exploration/cache"),
+        ["E2023"],
+        schema_name="warehouse",
+        reader_password="not-a-real-password",
+        progress=lambda message: None,
+    )
+
+    assert "warehouse" in connection.schemas
+    assert not any(query.startswith("DROP") for query, _ in connection.executions)
+    [season] = result.seasons
+    assert season.season_code == "E2023"
+    assert season.exclusions.loaded_games == 331
+    assert season.exclusions.excluded_games == 25
+    assert len(season.excluded_games) == 25
+    assert all(game["reasons"] for game in season.excluded_games)
+    assert season.timings.total_seconds > 0
+    reader_role = rehearsal_role_names("warehouse")[0]
+    assert result.reader_role == reader_role
+    assert any(
+        query.startswith(f'ALTER ROLE "{reader_role}" SET search_path TO "warehouse"')
+        for query, _ in connection.executions
+    )
+    assert "not-a-real-password" not in result.to_json()
+
+
+def test_persistent_load_replace_drops_only_the_named_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Break caught: --replace leaves stale seasons behind or drops a neighbouring schema."""
+    if not Path("exploration/cache/E2023/schedule.json").exists():
+        pytest.skip("E2023 cache not present")
+    _stub_database_writes(monkeypatch)
+    connection = DummyConnection()
+    connection.relation_rows = dict(E2023_RELATION_ROWS)
+    connection.schemas.update({"warehouse", "space_e2025"})
+
+    load_persistent_warehouse(
+        connection,
+        ResponseCache("exploration/cache"),
+        ["E2023"],
+        schema_name="warehouse",
+        replace=True,
+        progress=lambda message: None,
+    )
+
+    drops = [query for query, _ in connection.executions if query.startswith("DROP SCHEMA")]
+    assert drops == ['DROP SCHEMA "warehouse" CASCADE']
+    assert {"warehouse", "space_e2025"} <= connection.schemas
+
+
+def test_rehearsal_cli_keep_schema_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Break caught: --keep-schema is accepted but the rehearsal still drops the schema."""
+    if not Path("exploration/cache/E2023/schedule.json").exists():
+        pytest.skip("E2023 cache not present")
+    script = _load_script()
+    assert script.parse_arguments(["--keep-schema"]).keep_schema
+    assert not script.parse_arguments([]).keep_schema
+
+    connection = DummyConnection()
+    connection.relation_rows = dict(E2023_RELATION_ROWS)
+    monkeypatch.setattr(script.psycopg, "connect", lambda *args, **kwargs: connection)
+    _stub_database_writes(monkeypatch)
+    assert script.main(["--keep-schema", "--quiet"]) == 0
+    assert any(name.startswith("rehearse_e2023_") for name in connection.schemas)
+    assert not any(query.startswith("DROP SCHEMA") for query, _ in connection.executions)
+
+
+def test_game_skipping_cache_hides_named_games_everywhere(tmp_path: Path) -> None:
+    """Break caught: a skipped game still reaches one builder while the others drop it."""
+    season_root = tmp_path / "E2020"
+    season_root.mkdir()
+    (season_root / "schedule.json").write_text(
+        json.dumps({"data": [{"gameCode": 1, "played": True}, {"gameCode": 2, "played": True}]})
+    )
+    for endpoint in ("Boxscore", "PlaybyPlay", "Points"):
+        (season_root / endpoint).mkdir()
+        for gamecode in (1, 2):
+            (season_root / endpoint / f"{gamecode}.json").write_text("{}")
+
+    cache = GameSkippingCache(tmp_path, {"E2020": {2}})
+
+    assert [g["gameCode"] for g in cache.read_schedule_json("E2020")["data"]] == [1]
+    assert cache.gamecodes("E2020", "Boxscore") == [1]
+    assert not cache.exists("E2020", "PlaybyPlay", 2)
+    with pytest.raises(LookupError, match="skipped"):
+        cache.read_json("E2020", "Boxscore", 2)
+    assert verify_cache_integrity(cache, "E2020").played_games == 1
+    # Another season is untouched, and the unfiltered schedule is still reachable.
+    assert cache.skipped("E2021") == set()
+    assert len(cache.full_schedule_data("E2020")) == 2
+
+
+def test_persistent_load_reports_skipped_games_and_the_true_schedule(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Break caught: a skipped game silently vanishes from the per-season report."""
+    if not Path("exploration/cache/E2023/schedule.json").exists():
+        pytest.skip("E2023 cache not present")
+    _stub_database_writes(monkeypatch)
+    rows = dict(E2023_RELATION_ROWS)
+    connection = DummyConnection()
+    # Built counts for E2023 without game 1 are not known here, so the row
+    # reconciliation is stubbed; the report is what this test is about.
+    import euroleague.historical_rehearsal as hr
+
+    monkeypatch.setattr(hr, "assert_season_loaded_counts", lambda expected, observed: None)
+    monkeypatch.setattr(hr, "assert_shared_union_counts", lambda expected, observed: None)
+    connection.relation_rows = rows
+
+    result = load_persistent_warehouse(
+        connection,
+        GameSkippingCache("exploration/cache", {"E2023": {1}}),
+        ["E2023"],
+        schema_name="warehouse",
+        progress=lambda message: None,
+    )
+
+    [season] = result.seasons
+    assert season.skipped_games == [1]
+    assert season.exclusions.scheduled_games == 331
+    assert season.exclusions.loaded_games == 330
+
+
+LOAD_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "scripts" / "load_local_warehouse.py"
+
+
+def test_local_warehouse_cli_parses_seasons_and_reports(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Break caught: the multi-season command ignores its seasons or writes no evidence."""
+    if not Path("exploration/cache/E2023/schedule.json").exists():
+        pytest.skip("E2023 cache not present")
+    spec = importlib.util.spec_from_file_location(
+        "load_local_warehouse_under_test", LOAD_SCRIPT_PATH
+    )
+    script = importlib.util.module_from_spec(spec)
+    sys.modules["load_local_warehouse_under_test"] = script
+    spec.loader.exec_module(script)
+
+    opts = script.parse_arguments(["E2020", "e2021", "--schema", "fantasy"])
+    assert opts.seasons == ["E2020", "E2021"]
+    assert opts.schema == "fantasy"
+    assert not opts.replace
+    assert opts.skip_games == {}
+
+    skipping = script.parse_arguments(
+        ["E2020", "E2022", "--skip-game", "E2020:16", "--skip-game", "E2020:127,273"]
+    )
+    assert skipping.skip_games == {"E2020": {16, 127, 273}}
+    with pytest.raises(SystemExit):
+        script.parse_arguments(["E2020", "--skip-game", "E2021:3"])  # season not loaded
+    with pytest.raises(SystemExit):
+        script.parse_arguments(["E2020", "--skip-game", "E2020"])  # no gamecode
+
+    connection = DummyConnection()
+    connection.relation_rows = dict(E2023_RELATION_ROWS)
+    monkeypatch.setattr(script.psycopg, "connect", lambda *args, **kwargs: connection)
+    monkeypatch.setattr(
+        script,
+        "load_test_database_settings",
+        lambda: SimpleNamespace(
+            host="localhost", port=5433, database="euroleague_test", url=lambda: "unused"
+        ),
+    )
+    _stub_database_writes(monkeypatch)
+    out_file = tmp_path / "local_warehouse.json"
+    assert script.main(["E2023", "--quiet", "--output", str(out_file)]) == 0
+    data = json.loads(out_file.read_text(encoding="utf-8"))
+    assert data["schema_name"] == "warehouse"
+    assert data["seasons"][0]["exclusions"]["excluded_games"] == 25
