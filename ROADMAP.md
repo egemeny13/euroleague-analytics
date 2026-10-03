@@ -914,10 +914,13 @@ pieces that do not have the same value.
   checks, before the live server restarts, that the container builds, boots,
   reads its environment, publishes the expected tool list and answers a real
   JSON-RPC call. Its cost is close to zero if it sets `auto_stop_machines = 'on'`
-  - production runs always-on at about $2.02 a month because
+  - at that roadmap decision's date, production ran always-on at about $2.02
+  a month because
   `docs/MCP_CONNECTION_LIFECYCLE_REPORT.md` measured 1,612 ms for a cold first
   call against 606 ms warm, and that measurement is about production latency,
-  not about staging.
+  not about staging. Decision 86 (2026-10-03) supersedes the always-on policy:
+  production is now configured to suspend when idle. The historical stdio
+  numbers do not measure Fly sleep/wake latency or current prices.
 - **A permanently hosted staging database is not worth it yet.** Supabase's free
   plan caps active projects, and the risk it would address - a migration
   behaving differently against real data - already has a rule in CLAUDE.md

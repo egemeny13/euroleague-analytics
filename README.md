@@ -94,6 +94,18 @@ For clients that use a JSON MCP configuration, the shape is:
 The hosted endpoint uses OAuth. The client should follow the authorization discovery
 advertised by the server.
 
+The Fly deployment is configured to suspend its single machine when idle and
+resume when a request arrives (Decision 86). The first request after idle time
+can take longer. Normal resume retains process memory, but a restart or
+cold-start fallback may require the MCP client to create a new session.
+Persistent HTTP streams and continued requests can keep the machine awake;
+suspended root filesystem storage and traffic may still be billed.
+
+The configuration remains in `fly.toml`. A direct live setting can be overwritten
+by the next default-branch CI deployment until the corresponding configuration
+change is merged. This policy reduces idle compute time; it does not guarantee
+a monthly spending cap.
+
 ### Local stdio
 
 Clone the repository, configure your PostgreSQL connection string in `.env`, and point Claude Desktop to the local script:
