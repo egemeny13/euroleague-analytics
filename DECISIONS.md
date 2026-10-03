@@ -43,6 +43,7 @@ is binding — the decision is only approved with it.
 | 49 | Flywheel skills | Removed and banned by owner request on 2026-09-02 |
 | 50 | ChatGPT/OpenAI directory compatibility | Standards-first MCP metadata plus an optional isolated submission route |
 | 83 | Turkish launch film cut | Dedicated Turkish cut with authentic basketball phrasing; demo recordings remain shared |
+| 86 | Hosted MCP suspends when idle | Approved 2026-10-03; request-driven resume, zero running floor, one existing machine |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -2677,7 +2678,7 @@ and ownership boundary must be decided again.
 The owner evaluated boundary tightening (proposals to lower limits to 20 calls/min, 5,000 rows/day, and 100 rows/response) prior to the public opening on 2026-09-02, and decided to maintain the established baseline limits: 120 calls/minute rolling cap per subject, 50,000 rows/day durable subject budget, and 200 rows maximum response clamp.
 
 **Why.**
-1. Fly.io compute is provisioned as a single always-on `shared-cpu-1x` 256 MB machine in `fra` at a flat ~$2.02/month cost (`fly.toml`, `fly scale show`), unchanged by call volume within capacity.
+1. At that decision's date, Fly.io compute was provisioned as a single always-on `shared-cpu-1x` 256 MB machine in `fra` at an estimated ~$2.02/month cost (`fly.toml`, `fly scale show`). Decision 86 supersedes the always-on policy and that historical estimate is not a current price.
 2. Supabase Postgres storage sits at 357.6 MB (71.5% of 500 MB quota) with 122.4 MB headroom to Decision 28's stop rule, and Storage archive sits at 63.6 MB (6.36% of 1 GB quota).
 3. Egress on Supabase Free tier provides 5 GB/month; normal MCP queries returning up to 200 rows generate ~20 KB payloads, remaining safely within monthly allowances.
 4. The 120-call/min rate limit and 50,000-row/day budget serve their intended function as runaway loop protection and cost backstops without requiring disruptive migration or client tuning.
@@ -4953,6 +4954,47 @@ has to be measured the same way before it is loaded.
 (unplayed games are skipped, a played game's missing file still raises) and
 `tests/test_historical_rehearsal.py` (a skipped game is invisible to every
 builder, and still reported).
+
+## 86. Hosted MCP suspends when idle and resumes on a request
+
+**Decided 2026-10-03 by the owner**, while lowering the combined cost of the
+MCP application and a separate agent-office hub. The owner explicitly requested
+that the MCP sleep too, accepting wake-up latency instead of the previous
+always-on policy recorded in `fly.toml` and Decision 48.
+
+**Decision.** Set `auto_stop_machines = 'suspend'`,
+`auto_start_machines = true` and `min_machines_running = 0`. Preserve the existing
+single `shared-cpu-1x` 256 MB machine in `fra`, concurrency limits, health check,
+image, secrets, OAuth configuration and query limits. This changes deployment
+configuration only; no database, MCP tool or metric changes are included.
+
+**Why suspend.** Normal resume retains process memory, so in-memory HTTP MCP
+session state can survive idle periods and resume avoids a full process start.
+A cold-start fallback, restart or release can still discard sessions; clients
+must be able to establish a new session. This is not a promise that every
+session survives sleep. Persistent HTTP streams or continued traffic may keep
+the machine awake, so zero running floor does not mean zero running time.
+
+**Evidence boundary.** `docs/MCP_CONNECTION_LIFECYCLE_REPORT.md` measured
+1,611.9 ms for a first stdio query and 605.8 ms for warm queries on 2026-08-24.
+Those measurements include database connection setup; they do not measure Fly
+suspend/resume or container cold starts. Live sleep and wake timing has not yet
+been measured as part of this configuration change. No model turn or
+authenticated warehouse query is needed to check health and OAuth metadata.
+
+**Conditions.** Keep the machine count at one: the running floor is not a
+machine-count ceiling. Suspended root filesystem storage and traffic can still
+cost money; no monthly dollar cap is guaranteed and no billing settings change.
+Apply the lifecycle setting to the existing image and verify idle suspension,
+request-driven wake, health and OAuth metadata before claiming live success.
+Until this branch is merged, the default branch still has the old setting:
+its next CI deployment can overwrite a direct live lifecycle update. A merge
+remains a production release and requires deliberate timing under `CLAUDE.md`.
+
+**Alternatives considered.** Remain always-on for predictable latency; stop
+when idle for a fresh process on every wake; suspend when idle to retain memory
+on normal resume. The owner approved idle operation; suspend is the chosen
+implementation, with the cold-start and cost limits above.
 
 ## Rules to add to the project instruction file
 

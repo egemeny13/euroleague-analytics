@@ -10,14 +10,10 @@ primary_region = 'fra'
 [http_service]
   internal_port = 8080
   force_https = true
-  # Always on. docs/MCP_CONNECTION_LIFECYCLE_REPORT.md measured 1,612 ms for a
-  # first call against 606 ms warm; scaling to zero makes every question a
-  # first call, and adds container start on top.
-  #
-  # This comment was deleted once already, by flyctl rewriting this file during
-  # a deploy on 2026-08-28. If it disappears again, restore it: the setting is a
-  # measured decision and costs about $2.02 a month.
-  auto_stop_machines = 'off'
+  # Decision 86: suspend when idle and resume on an incoming request. Normal
+  # resume retains process memory; cold-start fallback can lose MCP sessions.
+  # The historical stdio timing report does not measure Fly wake latency.
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
   # A FLOOR, not a ceiling. `fly launch` created TWO machines and this line did
   # not stop it; both ran always-on at $2.02 each until `fly scale count 1` on
@@ -25,7 +21,7 @@ primary_region = 'fra'
   # `fly scale show` after any launch or clone - and note that the per-subject
   # rate cap in ratelimit.py is per process, so a second machine silently
   # doubles every allowance as well as the bill.
-  min_machines_running = 1
+  min_machines_running = 0
 
   [http_service.concurrency]
     type = 'requests'
