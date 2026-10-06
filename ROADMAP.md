@@ -36,12 +36,14 @@ delete it and, if it changed what the system does, record it in `DECISIONS.md`.
 
 ### Needs verification now
 
-1. **Fly idle stop (Decisions 86, 89, 91).** Suspension never happened, with or
-   without the health check (89 reverted, check restored). After the deploy of 91,
-   the machine event log must show a `stop` event after idle (read it with
-   `python scripts/fly_read.py`). If it shows `cordon`/`uncordon` with no `stop`,
-   revert to the last working setting and try a machine on another host or the
-   Fly forum.
+1. **Fly idle sleep never happens (Decisions 86, 89, 91).**
+   - **What failed.** Neither `suspend` nor `stop` took effect. The
+     `cordon`/`uncordon` cycle came every ~6 min, with or without the health
+     check. 89 and 91 are both reverted, and `suspend` is back in `fly.toml`.
+   - **Owner's call.** Either approve a machine clone to another host, or post
+     on the Fly forum with the evidence in 89 and 91.
+   - **Cost meanwhile.** The machine runs always-on, about $2 a month.
+   - **How to check.** Read the event log with `python scripts/fly_read.py`.
 2. **E2026 foul codes (Decision 88).** Re-measure the three new codes as games
    arrive; `CMT1` rests on two clean cases. An unknown code stops the rebuild by
    design.

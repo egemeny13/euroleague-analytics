@@ -752,3 +752,15 @@ resume 86 hoped for). Everything else in 86 stands: one machine,
 after idle. If it shows `cordon` then `uncordon` with no `stop`, the cause is
 not the suspend mechanism: revert to the last setting that worked and take
 option (b) or (c). 86's "verify idle suspension" becomes "verify idle stop".
+**Result, 2026-10-06: reverted.** Deployed 20:39Z.
+- **Same failure as suspend.** With `stop`, the machine was cordoned and
+  uncordoned with no `stop` at 20:51-20:52Z, 20:58Z and 21:04Z. So the cause
+  is not the suspend mechanism.
+- **No setting has worked, so `suspend` is restored.** `stop` would cost every
+  open MCP session and gain nothing.
+- **What the agent cannot do.** Option (b), a machine on another host, needs a
+  `flyctl` write. Agents are denied that (Decision 87), and it needs the
+  owner's approval. Option (c), the Fly forum, needs the owner's account. Both
+  wait for the owner.
+- **Cost meanwhile.** The machine runs always-on, as it did before 86, at
+  about $2 a month.

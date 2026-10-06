@@ -10,11 +10,12 @@ primary_region = 'fra'
 [http_service]
   internal_port = 8080
   force_https = true
-  # Decision 91: stop when idle and start on an incoming request. Decision 86
-  # chose 'suspend', but the machine never suspended: the proxy cordoned it
-  # every ~6 min and flyd uncordoned it ~20 s later, with or without the health
-  # check. A start is a fresh process, so open MCP sessions do not survive idle.
-  auto_stop_machines = 'stop'
+  # Decision 86: suspend when idle and resume on an incoming request. It has
+  # never taken effect: the proxy cordons the machine every ~6 min and flyd
+  # uncordons it ~20 s later. 'stop' failed the same way (Decision 91), so the
+  # cause is not the suspend mechanism, and 'suspend' is kept because it loses
+  # no MCP sessions if the platform ever honours it.
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
   # A FLOOR, not a ceiling. `fly launch` created TWO machines and this line did
   # not stop it; both ran always-on at $2.02 each until `fly scale count 1` on
