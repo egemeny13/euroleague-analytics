@@ -44,6 +44,7 @@ is binding — the decision is only approved with it.
 | 50 | ChatGPT/OpenAI directory compatibility | Standards-first MCP metadata plus an optional isolated submission route |
 | 83 | Turkish launch film cut | Dedicated Turkish cut with authentic basketball phrasing; demo recordings remain shared |
 | 86 | Hosted MCP suspends when idle | Approved 2026-10-03; request-driven resume, zero running floor, one existing machine |
+| 90 | Instruction file scope; `AGENTS.md` as an exact copy | Approved 2026-10-06 - process rules relaxed, data facts and production boundaries kept |
 
 Items 7 and 8 were raised after the schema proposal. Phase 1 resolved them on
 2026-08-09. The measurements and explicit estimate boundaries are in
@@ -5184,30 +5185,49 @@ is not the cause and this decision is reverted. The next step is then a
 machine on another host, then Fly support. Decision 86 is not verified until
 the `suspension` event is seen.
 
-## Rules to add to the project instruction file
+## 90. The instruction file states facts and boundaries, not procedure; `AGENTS.md` becomes an exact copy
 
-```
-- Any correction rule tuned on one season must be re-measured on every
-  new season, never assumed. A correction that increases disagreement
-  with the official box score in any season must auto-disable for that
-  season and fail its test.
-- MCP responses involving minutes must state whether the value is raw or
-  corrected. A number without its provenance is a number that will be
-  misquoted.
-- Shot queries spanning free throws must be built from `game_event`.
-  `raw_shot` omits missed free throws entirely and is a coordinate
-  source only.
-- Possessions carry `margin_at_start` and `seconds_remaining_at_start`.
-  Clutch is a filter on those columns, never a hard-coded threshold and
-  never a separate pre-computed table.
-- Report the measured rate of possessions straddling a substitution.
-  A documented approximation without a measured magnitude is not
-  documented.
-- `game_event.free_throw_trip_id` stores the approved unsplit free-throw
-  trip grouping. Whether some trips hold two foul awards is a separate,
-  unresolved question; do not treat the stored id as proof of a single
-  award.
-```
+**Decided 2026-10-06 by the owner.** Current models no longer need the
+procedural scaffolding `CLAUDE.md` accumulated, and the owner does not want them
+constrained by it. The owner chose, from three options, to relax process rules
+while keeping data facts and production boundaries, and chose an exact copy
+over a symlink for `AGENTS.md`.
+
+**What changed in `CLAUDE.md`.**
+- Removed or softened: the line-by-line code explanation requirement (now a
+  plain-language explanation of behaviour and decisions), strict test-first
+  ordering (tests are still required and nothing merges red), one task per
+  session, re-verifying handoff numbers, most of the session-tooling tips, and
+  the incident narratives that justified rules (the incidents stay recorded in
+  this file: Decisions 46, 87 and the contradiction entries below).
+- Kept, compressed: every data fact (event ordering, trimming, ID opacity,
+  lineups, foul codes, shots, possessions, minutes corrections), every
+  validation standard, architecture constraints and MCP tool rules.
+- Kept unchanged in force: production writes need the owner's approval in the
+  conversation immediately before them; a merge to `master` is a release and
+  needs the owner's go-ahead; no direct pushes to `master`; decisions land here
+  in the same pull request.
+- The former "Rules to add to the project instruction file" block at the end of
+  this log was removed: every rule in it is now in `CLAUDE.md`.
+
+**Amends.** Decision 87's "Test before code" under *What still binds* now reads
+as "tests are required; nothing merges red". The 2026-09-01 contradiction entry
+below that says `AGENTS.md` is only a pointer is historical.
+
+**`AGENTS.md`.** It was a pointer so that a second copy could not drift. It is
+now a byte-identical copy of `CLAUDE.md` (line endings normalised), and
+`tests/test_documentation_integrity.py::test_agents_md_is_an_exact_copy_of_claude_md`
+fails CI when they differ. Edit `CLAUDE.md`, then `cp CLAUDE.md AGENTS.md`.
+
+**Trade-off.** Fewer written rules means more rests on model judgment. The
+2026-08-29 measurement showed written instructions get crossed, so the
+production boundaries were deliberately not relaxed, and remain sentences
+rather than mechanisms under bypass mode (Decision 87's open settings question
+is unchanged).
+
+**Condition.** If an agent repeats a mistake one of the removed rules
+described (a sorted event stream, a silent shell-edit failure, a misquoted test
+baseline), restore that rule with the incident.
 
 ## Contradictions found in the S16 sweep
 
