@@ -5136,25 +5136,36 @@ mode.** The file is unchanged by this decision. Options:
 **Choice: OPEN. The owner has not decided.** Until recorded here, agents treat
 option 1 as the state of the world and rely on the rules above.
 
-**Amendment, 2026-10-06: read-only `flyctl` is allowed.** Decided by the owner
-("you should be able to run it too"). The trigger: verifying Decision 89 took
-four round trips in which the owner ran read-only `flyctl` commands for the
-agent and waited on its timing.
-- **What was removed.** The blanket deny `Bash(flyctl:*)`.
-- **What is now allowed.** These commands only read state: `flyctl status`,
-  `logs`, `machine list`, `machine status`, `releases`, `scale show` and
-  `config show`.
-- **What stays denied.** Every subcommand that changes or enters the app:
-  `deploy`, `launch`, `scale count/vm/memory`, `secrets`, `ssh`, `console`,
-  `apps`, `volumes`, `certs`, `ips`, `postgres`, `proxy`, `auth`, `tokens`,
-  and every `machine` action. The `fly` alias stays fully denied, so the
-  allow-list cannot be routed around through it.
-- **The limit.** Permission rules match command prefixes. A global flag
-  placed before the subcommand (`flyctl -a app deploy`) does not match
-  `flyctl deploy:*`, which is why a leading flag (`flyctl -:*`) is denied
-  outright. A command shape this list did not foresee is still allowed in
-  bypass mode. The CLAUDE.md rule that a production write needs the owner's
-  approval immediately before it is unchanged and still binds.
+**Amendment, 2026-10-06: agents read Fly state through `scripts/fly_read.py`.**
+Decided by the owner ("you should be able to run it too"). The trigger was
+verifying Decision 89, which took four round trips: the owner ran read-only
+`flyctl` commands for the agent and waited on its timing.
+
+**The first form was wrong, and why.** PR #111 replaced the blanket
+`Bash(flyctl:*)` deny with a read-only allow list and a deny list of writing
+subcommands. Under bypass mode only the deny list binds. A deny list cannot be
+complete:
+- flyctl names the same command several ways (`machine`, `machines`, `m`);
+- flyctl has writing commands the list did not name (`mpg`, `redis`,
+  `storage`, `orgs`, `extensions`, `wireguard` and more).
+
+`flyctl machines stop` would have passed. An automated security review of the
+pushed commit flagged it the same day.
+
+**The form that holds.**
+- `Bash(flyctl:*)` and `Bash(fly:*)` are denied again.
+- The only allowed route is `python scripts/fly_read.py <name>`. It maps each
+  of seven names to one fixed read command against the fixed app, and refuses
+  anything else.
+- The only free argument is a machine id, which must be 8-20 lowercase hex
+  characters, and the command is never run through a shell.
+- `tests/test_fly_read.py` asserts both what is built and what is refused.
+
+**What it does not cover.** The script calls flyctl with the operator's own
+token, so the guarantee is only as good as the script's allow list. Changing
+the list is a change to this decision. The CLAUDE.md rule that a production
+write needs the owner's approval immediately before it is unchanged and still
+binds.
 
 **Condition.** Revisit if an agent crosses a merge or production-write
 boundary without approval, or if the owner leaves bypass mode; either makes
