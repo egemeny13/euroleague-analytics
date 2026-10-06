@@ -1,429 +1,247 @@
 # EuroLeague Analytics
 
+<!-- AGENTS.md is a byte-identical copy of this file, enforced by
+tests/test_documentation_integrity.py. Edit CLAUDE.md, then copy it over
+AGENTS.md (`cp CLAUDE.md AGENTS.md`). Decision 90. -->
+
 ## Project goal
 
 A validated data warehouse for EuroLeague and EuroCup basketball, built from
 the public play-by-play API, exposed to LLMs through an MCP server.
 
-This is **not** an API wrapper. Thin wrappers already exist and are worthless.
-The value of this project lives entirely in the derived layer: exact possession
-counts, four factors, and lineup-level on/off metrics reconstructed from
-play-by-play events. If a feature does not contribute to that layer, it is out
-of scope.
+This is not an API wrapper; thin wrappers already exist. The value lives in the
+derived layer: exact possession counts, four factors, and lineup-level on/off
+metrics reconstructed from play-by-play events. Work that does not serve that
+layer is out of scope.
 
 ## About the owner
 
-I direct this project, but I cannot read Python or SQL. I will not catch a
-logic error by reading your code. Therefore:
+The owner directs the project but does not read Python or SQL, so a logic error
+will not be caught in review. Correctness has to come from tests and invariants.
 
-- After writing any non-trivial function, explain it line by line in plain
-  language, assuming I do not know pandas or SQL.
-- Never rely on me to spot a bug. Rely on tests.
-- Prefer boring, obvious code over clever code. Readability beats elegance.
-- When you make a design decision with a real trade-off, stop and explain the
-  trade-off in plain language before proceeding.
+- When you change behaviour, explain in plain language what it does and why.
+  Skip the line-by-line tour; focus on what the owner needs to decide or trust.
+- When a choice has a real trade-off, state it plainly and let the owner pick.
+- Prefer readable code over clever code.
 
-## Language
+Code, comments, identifiers, commits, docs, MCP tool descriptions and test names
+are in English. Website pages may also carry Turkish (Decision 53).
 
-All code, comments, variable names, commit messages, documentation, MCP tool
-descriptions, and test names must be in English. No exceptions.
+## Project documents
 
----
-
-## The project documents, and which one wins
-
-This file holds the rules. It is not the whole context, and it is not the most
-recent word on every subject. Read these before starting work:
-
-| File | What it holds | Authority |
+| File | Holds | Authority |
 |---|---|---|
-| `CLAUDE.md` (this file) | The rules | Binding. Override only with a measurement and a decision. |
-| `CONTEXT.md` | Why the project exists, who it is for, the constraints | Binding on *goals*, not on technique. **Untracked by git and local to the owner's machine** — see `DECISIONS.md` item 13. If it is not present, you are working from a clone and should ask for the goals rather than infer them. |
-| `DECISIONS.md` | Settled technical decisions and their conditions | **Binding, and newer than this file.** A condition attached to a decision is part of the decision. |
-| `ROADMAP.md` | Phase sequence and the gate that opens each phase | Binding on sequence. |
-| `exploration/FINDINGS.md` | Single-game API reconnaissance | Evidence, not rules. |
-| `exploration/SEASON_SWEEP.md` | Full-season validation, 330 games | Evidence. The numbers here are the regression baseline. |
-| `exploration/SCHEMA_PROPOSAL.md` | The approved schema | Approved **as amended by `DECISIONS.md`**. Where the two disagree, `DECISIONS.md` wins — it is later. |
-| `exploration/OPEN_ITEMS.md` | Phase 1 measurements behind decisions 7 and 8 | Evidence, with its estimate boundaries stated explicitly. Do not quote its extrapolations as measurements. |
+| `CLAUDE.md` / `AGENTS.md` | This file | Binding; override only with a measurement and a decision |
+| `DECISIONS.md` | Settled decisions and their conditions | Binding, and newer than this file where they differ. A condition is part of its decision. |
+| `CONTEXT.md` | Goals, audience, constraints | Binding on goals. Untracked and local to the owner (Decision 13); in a clone, ask rather than infer. |
+| `ROADMAP.md` | Current state, open work and its gates | Binding on sequence |
+| `exploration/FINDINGS.md`, `exploration/SEASON_SWEEP.md`, `exploration/OPEN_ITEMS.md` | API reconnaissance and season measurements | Evidence; `SEASON_SWEEP.md` is the regression baseline. `OPEN_ITEMS.md` extrapolations are estimates, not measurements. |
+| `exploration/SCHEMA_PROPOSAL.md` | Approved schema | As amended by `DECISIONS.md` |
 
-`AGENTS.md` is a pointer to this file, deliberately containing no rules of its
-own. Do not copy rules into it.
+Read `FINDINGS.md` before touching data code.
 
-## Known data facts
+## Data facts
 
-`exploration/FINDINGS.md` contains verified reconnaissance of the public
-EuroLeague API. Read it before writing any code that touches the data. The
-rules in the next section are derived from it and are not negotiable.
+These are facts about the source, measured over full cached seasons. They are
+here because no amount of reasoning recovers them from first principles.
+If evidence contradicts one, measure it over a full season and bring it to the
+owner; one rule here was once generalised from a single game and was wrong.
 
-## Hard rules - event ordering
+### Event ordering — the highest-risk area
 
-**This is the highest-risk area in the entire project.**
+- **Never sort play-by-play events.** API array order is the only trustworthy
+  order. `NUMBEROFPLAY` is entry order (assists get late, high numbers).
+  `MARKERTIME` has one-second resolution, ties up to 13 deep, and sometimes runs
+  backwards around substitutions during free throws.
+- On ingest, assign a monotonic `ingest_index` in array order and use only that
+  downstream, preserving it through every transformation. A sort on the event
+  stream corrupts lineups silently and plausibly, with no error: treat any sort
+  call on it as a bug.
+- Quarter order: `FirstQuarter`, `SecondQuarter`, `ThirdQuarter`,
+  `ForthQuarter` (sic), `ExtraTime`.
 
-- **Never sort play-by-play events. Ever.** The order events appear in the API
-  arrays is the only trustworthy ordering.
-- `NUMBEROFPLAY` is an entry-order sequence number, not a game-order one.
-  Assists are entered after the fact and receive very high numbers. Do not sort
-  by it.
-- `MARKERTIME` has one-second resolution, multiple events share a timestamp
-  (up to 13 in one observed case), and it occasionally runs *backwards* by one
-  second around substitutions during free throws. Do not sort by it.
-- On ingest, assign our own monotonic `ingest_index` in array order and use
-  **only** that for ordering downstream. Preserve it through every
-  transformation.
-- Concatenate quarters in this order: `FirstQuarter`, `SecondQuarter`,
-  `ThirdQuarter`, `ForthQuarter`, `ExtraTime`. Note the API misspells the
-  fourth quarter as `Forth`.
+### Ingest and identity
 
-A pipeline that sorts events "to be safe" corrupts lineup data quietly and
-plausibly. There is no error message for this failure. Treat any sort call on
-the event stream as a bug.
+- **Trim every string on ingest.** IDs and team codes arrive space-padded,
+  inconsistently across endpoints and even across fields of one record. Byte
+  fidelity lives in the checksummed response cache, never in the tables; never
+  restore the padding to a table "for faithfulness" (it brings back the silent
+  join failure and gains nothing the cache lacks).
+- **Join on ID, never name** (`WILLIAMS, TREVION` vs `WILLIAMS , TREVION`).
+- **Player IDs are opaque variable-length strings** — usually `P` + 6 digits,
+  but veterans carry legacy codes (`PTGB`, `PJDR`). Never parse, pad or cast.
+- The event stream lives once, in `game_event`, without `player_name`, `dorsal`
+  or `playinfo` (Decisions 8, 68). For the source string, open the archived
+  payload by `ingest_index`. Adding those columns back is a decision.
 
-## Hard rules - data handling
+### Lineups
 
-- **Trim every string field on ingest.** IDs and team codes arrive
-  space-padded (`"P012774   "`, `"BER       "`), inconsistently across
-  endpoints - and inconsistently *between fields of the same record*.
-  Untrimmed values cause joins to fail silently.
-- **The raw tables are trimmed, and that does not make them unfaithful.**
-  Byte-level fidelity lives in the cached API responses, which are stored
-  untouched with a checksum. Never "restore" the padding to a table in the name
-  of faithfulness: it reintroduces the silent-join failure and gains nothing the
-  cache does not already hold.
-- **The event stream is stored once, in `game_event`, and it does not carry
-  `player_name`, `dorsal` or `playinfo`; there is no one-to-one side table
-  holding them.** (`raw_event`, the parsed mirror, was dropped by migration 0023
-  on 2026-09-07, Decision 68; the gate now proves `game_event` against the
-  parsed cache.) Measured across all 176,483 E2024
-  events they are 37.44 % of the row payload, and nothing uses them - not
-  identity, not ordering, not lineup reconstruction, not possession boundaries.
-  When an audit needs the exact source string, open the archived payload and
-  find the event by `ingest_index`. Adding these columns back is a decision,
-  not a convenience.
-- **Join on ID, never on name.** The same player appears as
-  `WILLIAMS, TREVION` in one endpoint and `WILLIAMS , TREVION` in another.
-- **Player IDs are opaque variable-length strings.** Most are `P` + 6 digits,
-  but long-serving veterans carry legacy 4-character codes (`PTGB` = Llull,
-  `PJDR` = Teodosic). Never parse an ID, never assume a fixed width, never cast
-  it to a number.
-- **Starting lineups come from `Boxscore.IsStarter`**, not from the event
-  stream. Starters have no `IN` event. Seeding the simulation from the event
-  stream alone is impossible.
-- **Substitutions are two separate rows, and pairing is implicit.** Group all
-  `IN`/`OUT` rows sharing the same team and clock reading, and swap the whole
-  set at once. Order within a batch is arbitrary - never pair positionally.
-- **Quarter boundaries do not reset lineups.** Lineups carry over. Absence of
-  substitutions at a period break means nobody changed, not that the lineup is
-  unknown.
-- **Forward-fill the running score.** `POINTS_A` / `POINTS_B` are populated
-  only on scoring events (80 of 458 in the reference game). Carry forward from
-  the last scoring event. Assert monotonicity.
-- **Free throw coordinates are a null sentinel, not a location.** All free
-  throws sit at `(-1, -1)`. Exclude them from plotting and from any distance
-  calculation.
-- **`COORD_X` sign is attack-relative, not arena-relative.** Data is already
-  normalised to a single half-court; the frame does not flip at halftime. Two
-  shots with the same positive X are on the same side of *their own* attack,
-  not necessarily the same physical corner.
-- **`ShootingGraphic` is not a shot chart** despite the name. It holds six
-  team-level totals. `Points` is the shot-chart source.
-- **Shot queries spanning free throws must be built from `game_event`.**
-  `raw_shot` (mirroring `Points`) omits missed free throws entirely and is a
-  **coordinate source only**. Counting shots from `raw_shot` and from the event
-  stream gives different answers and nothing errors - join the two to attach
-  coordinates, never to define the population.
-- `ShootingGraphic` and `Comparison` are derived summaries recomputable from
-  the event stream. Do not store them as source data.
+- **Starters come from `Boxscore.IsStarter`**; they have no `IN` event.
+- **Substitutions are separate `IN`/`OUT` rows.** Group by team and clock
+  reading and swap the whole set; order within a batch is arbitrary.
+- **Period breaks do not reset lineups.**
+- **A stint is matchup-bounded**: either team substituting starts a new one.
+  Store that grain; team stints aggregate from it, not the reverse.
+- A possession that straddles a substitution belongs to the lineup on court when
+  it started. Use the same convention everywhere, and publish the measured
+  per-season straddle rate alongside any lineup possession metric.
+- Lineup invariants (no external ground truth exists): 5 per team on court at
+  all times; 200 team minutes per regulation game (+25 per OT); every `IN` has
+  an `OUT`; lineup possessions sum to team possessions; no stat event by a
+  player believed off court.
 
-## Hard rules - data correctness
+### Score, shots, coordinates
 
-- **Never estimate possessions from box score formulas** (e.g.
-  `FGA - ORB + TO + 0.44*FTA`). We have play-by-play data. Count possessions
-  exactly from the event stream.
-- **A stint is matchup-bounded**: a new stint begins when *either* team
-  substitutes, not just the team being studied. Matchup stints aggregate up
-  into team stints for free; team stints cannot be split back into matchups
-  without a rebuild. Always store the finer grain.
-- **A possession that straddles a substitution is credited to the lineup on
-  court when the possession started.** This is a convention, not a
-  measurement. Lineup-level possession totals must use the same convention, or
-  the "lineup possessions sum to team possessions" invariant will fail for
-  reasons that look exactly like a bug.
-- **Possessions carry `margin_at_start` and `seconds_remaining_at_start`.**
-  Clutch is a **filter on those columns**, never a hard-coded threshold and
-  never a separate pre-computed table. Definitions of "clutch" differ between
-  analysts and change over time; baking one into a table forces a rebuild every
-  time it changes and silently privileges one definition over the rest.
-- **Report the measured rate of possessions straddling a substitution.**
-  A possession that spans a substitution is credited wholly to the lineup on
-  court when it started - a documented approximation. A documented
-  approximation without a measured magnitude is not documented. Publish the
-  rate, per season, alongside any lineup-level possession metric.
-- Free throw sequence position is **not** in the data. The `(2/2 - 5 pt)` text
-  is the player's cumulative game total, not the position within the trip. It
-  must be inferred, and the inference is fragile around and-ones, technical
-  fouls and substitutions injected mid-sequence. Any free-throw grouping logic
-  must be tested against those cases specifically, not just the common case.
-- **Foul type IS in the data. Read it from `PLAYTYPE`, never infer it.** There
-  are eight distinct foul codes in E2020-E2025: `CM` personal, `OF` offensive,
-  `CMU` unsportsmanlike, `CMT` technical, `C` coach, `B` bench, `CMD`
-  disqualifying, `CMTI` throw-in. **E2026 uses a different vocabulary, eleven
-  codes across both:** it has no `CMU`, `CMT`, `CMD` or `CMTI` and instead
-  `CMU_DI` disruptive, `CMU_FL` flagrant and `CMT1` technical foul 1. Measured
-  2026-10-06 over the 30 archived E2026 games (`DECISIONS.md` item 88): `CMU_DI`
-  is **not** `CMU` plus `CMD` (no `CMD` anywhere, and the fouler stays in the game
-  in 7 of 13), all three count as fouls committed (719 of 719 player-games match
-  the box score, 37 mismatch without them), and the free throws of `CMU_DI` and
-  `CMU_FL` leave the ball with the fouled team. An unknown code stops the rebuild
-  by design; measure it, do not map it by name. Offensive fouls are marked
-  explicitly - 1,185 events in E2024, across 320 of 330 games.
-- **Never infer an offensive foul from a foul and a turnover sharing a clock
-  reading.** Measured against the explicit `OF` code across all 330 E2024
-  games, that rule fires 1,525 times and is wrong 340 of them - 77.7 %
-  precision. It mislabels ordinary personal fouls that happen to share a
-  second with an unrelated turnover, and would invent 340 turnovers a season.
-- **Every `OF` event already carries its own separate turnover row** (1,185 of
-  1,185 in E2024). Possession logic must count the `TO` row and ignore the
-  `OF`. The risk here is double-counting, not under-counting.
-- The one foul distinction still absent is **shooting vs non-shooting**: a `CM`
-  does not say whether free throws follow. That remains an inference, and must
-  be documented explicitly in the code and in the docs wherever it is used.
-- Team rebounds and team turnovers have a blank player ID but a valid team
-  code. They are real events and must be handled separately in possession
-  logic.
-- Every derived metric ships with a validation test. No exceptions.
-- Box-score-derived metrics must be validated against euroleague.net's official
-  published box scores across at least 50 games. If a single number mismatches,
-  the test fails.
-- **Minutes are stored twice - raw and corrected - and `corrected` is the
-  default.** Raw is kept alongside and is what anything positional uses. This
-  is safe only because the correction is measured to move no lineup: it changes
-  durations, never who was on court. Any future correction that fails that test
-  is not a correction and must not be applied.
-- **Any correction rule tuned on one season must be re-measured on every new
-  season, never assumed.** A correction is a hypothesis about a defect, and the
-  defect may not recur in the same shape. **A correction that increases
-  disagreement with the official box score in any season must auto-disable for
-  that season and fail its test.** The test asserts the correction *helps*; it
-  does not assert the correction *ran*.
-- Lineup data has no external ground truth. Enforce these invariants instead:
-  - exactly 5 players on court per team at all times
-  - total player minutes per team = 200 per regulation game, +25 per overtime
-  - every substitution IN event has a matching OUT event
-  - lineup-level possessions sum to team total possessions
-  - no statistical event attributed to a player believed to be off court
-- **If a metric has neither external ground truth nor a mechanical invariant,
-  do not ship it.**
+- **Forward-fill `POINTS_A`/`POINTS_B`**; they appear only on scoring events.
+  Assert monotonicity.
+- Free throws sit at `(-1, -1)`: a null sentinel, excluded from plots and
+  distances. `COORD_X` sign is attack-relative and does not flip at halftime.
+- `Points` is the shot-chart source; `ShootingGraphic` is six team totals.
+  `raw_shot` omits missed free throws and is a **coordinate source only** — define
+  shot populations from `game_event` and join `raw_shot` for coordinates.
+- `ShootingGraphic` and `Comparison` are recomputable summaries; do not store
+  them as source data.
 
-## Dependencies
+### Possessions and fouls
 
-- Do not add `euroleague_api` (giasemidis) as a dependency. It is GPLv3 and
-  would bind this project's license. Write our own fetch layer against
-  `live.euroleague.net`. Reading that package as a reference is fine.
-- Keep the dependency list small. Every dependency is a future maintenance
-  cost.
+- **Count possessions exactly from events**; never use box-score estimates.
+- Possessions carry `margin_at_start` and `seconds_remaining_at_start`. Clutch
+  is a filter on those columns, never a baked threshold or separate table.
+- **Foul type is `PLAYTYPE`; read it, never infer it.** E2020–E2025 use `CM`,
+  `OF`, `CMU`, `CMT`, `C`, `B`, `CMD`, `CMTI`. E2026 drops `CMU`, `CMT`, `CMD`,
+  `CMTI` and adds `CMU_DI`, `CMU_FL`, `CMT1` (Decision 88: all count as fouls
+  committed; `CMU_DI` is not disqualifying; `CMU_DI`/`CMU_FL` free throws leave
+  the ball with the fouled team). An unknown code stops the rebuild by design —
+  measure it before mapping it.
+- Every `OF` already has its own `TO` row: count the `TO`, ignore the `OF`.
+  Never infer an offensive foul from a foul and turnover sharing a clock
+  reading (77.7 % precision; would invent 340 turnovers in E2024).
+- Shooting vs non-shooting is not in the data for `CM`; wherever it is
+  inferred, say so in code and docs.
+- Free-throw position within a trip is not in the data (`(2/2 - 5 pt)` is a
+  cumulative game total). Grouping must be tested against and-ones, technicals
+  and mid-sequence substitutions. `game_event.free_throw_trip_id` is the
+  approved unsplit grouping; it does not prove a single foul award (Decision 77).
+- Team rebounds and team turnovers have a blank player ID and a valid team code;
+  they are real events, handled separately in possession logic.
+
+### Minutes and corrections
+
+- Minutes are stored raw and corrected; corrected is the default, raw is what
+  positional logic uses. A correction may change durations, never who was on
+  court; one that moves a lineup is not a correction and must not be applied.
+- A correction tuned on one season is re-measured on every season. If it
+  increases disagreement with the official box score in a season, it
+  auto-disables there and its test fails. The test asserts it helps, not that it
+  ran.
+
+## Validation
+
+- Every derived metric ships with a validation test. If a metric has neither
+  external ground truth nor a mechanical invariant, it does not ship.
+- Box-score-derived metrics are checked against official box scores over at
+  least 50 games; one mismatch fails.
+- When you claim a fact about the data, show the measurement. Say what a check
+  cannot detect; an accounting identity is not a validation.
+- Generalise from full seasons, not single games. Try to disprove a hypothesis
+  before relying on it.
+- Write tests first where it helps; either way, never commit a metric that has
+  not passed its validation test, and do not start the next roadmap phase until
+  the current phase's tests are green.
+- If evidence contradicts a rule in this file, say so, prove it with a
+  full-season measurement and stop for a decision; neither comply silently nor
+  override silently.
 
 ## Architecture
 
-- ETL and metric computation run in Python, scheduled by GitHub Actions.
-- Computed results are stored in Supabase (Postgres).
-- The MCP server is a thin query layer over pre-computed tables. No heavy
-  computation at query time.
-- **Cache every raw API response to disk before parsing it.** The EuroLeague
-  API is undocumented and may break or disappear without notice. The warehouse
-  must survive that.
-- **Never re-fetch a response to save yourself a cache read.** Ingest, parsing,
-  backfill and debugging all read the cache. The network is not a convenience.
-- **A re-fetch is an audit, and audits are versioned, never overwrites.**
-  Responses are immutable and addressed by the checksum of their body. Record
-  every fetch observation; store a second body only when its checksum differs;
-  keep an explicit pointer to the current version; never overwrite response
-  history. When a checksum changes, rebuild that one game's parsed and derived
-  rows in a single transaction — not the season. See `DECISIONS.md` item 7 for
-  the scheduled settlement re-checks, which are the only sanctioned re-fetches.
-- All endpoints take `gamecode` (integer, unique within a season) and
-  `seasoncode` (`E2024`, `E2023`, ...).
-- **The Supabase free tier is 500 MB, and that is a design constraint rather
-  than a detail.** Before any production backfill, load one complete season
-  into a staging table with its real primary key, measure table plus indexes
-  with `pg_total_relation_size`, and project the *whole* warehouse - not
-  `game_event` alone. If the projection exceeds 500 MB, every season still goes
-  into the immutable archive and only the hot PostgreSQL window shrinks. Do not
-  pick that window size before the other tables have been measured.
+- Python ETL scheduled by GitHub Actions; results in Supabase Postgres.
+- The MCP server is a thin query layer; aggregation happens in views
+  (Decision 18), not at heavy cost per call.
+- **Cache every raw API response before parsing.** Parsing, backfill and
+  debugging read the cache, never the network. The scheduled settlement
+  re-checks (Decision 7) are the only sanctioned re-fetches. A re-fetch is a
+  versioned audit:
+  bodies are immutable and checksum-addressed, history is never overwritten,
+  and a changed checksum rebuilds that one game in one transaction (Decision 7).
+- Endpoints take `gamecode` (int, unique per season) and `seasoncode` (`E2024`…).
+- The Supabase free tier is 500 MB; storage is a design constraint. Before any
+  production backfill, load one complete season into a staging table with its
+  real primary key, measure table plus indexes with `pg_total_relation_size`, and
+  project the whole warehouse, not `game_event` alone. If it does not fit, every
+  season still goes into the immutable archive and only the hot window shrinks;
+  do not pick the window before the other tables are measured (Decisions 20, 21,
+  69).
+- Do not depend on `euroleague_api` (GPLv3, would bind this project's license);
+  write our own fetch layer against `live.euroleague.net`; reading it is fine.
+  Keep dependencies few.
 
-## MCP tool design
+## MCP tools
 
-- Consistent prefix on every tool: `el_` (e.g. `el_get_shot_data`,
-  `el_get_lineup_stats`).
-- Tool descriptions are read by the model at call time. Write them as prompts,
-  not as code comments.
-- Return focused data. Support filtering and pagination. Never return an
-  unbounded result set - tool output consumes the model's context window.
-- **Any response involving minutes must state whether the value is raw or
-  corrected.** A number without its provenance is a number that will be
-  misquoted. This applies to per-minute rates too, since the denominator
-  carries the same ambiguity.
-- Error messages must suggest a concrete next step.
-- Mark read-only tools with `readOnlyHint`.
-- Transport: `stdio` for local use, and StreamableHTTP for the hosted server.
-  Both serve the same tool registry, and the HTTP transport must publish a tool
-  list byte-identical to stdio's. See `DECISIONS.md` item 26.
+- Prefix `el_`; mark read-only tools `readOnlyHint`.
+- Descriptions are prompts read by the model at call time.
+- Bounded, filterable, paginated results; never unbounded output.
+- Anything involving minutes, including per-minute rates, states raw or
+  corrected.
+- Errors suggest a concrete next step.
+- stdio locally, StreamableHTTP hosted; both publish a byte-identical tool list
+  (Decision 26).
 
-## Workflow rules
+## Production and releases
 
-- **`define-goal` is opt-in.** Do not invoke or follow the `define-goal` skill
-  unless the owner explicitly asks to use it in the current request. An ordinary
-  request to fix, build, change, or investigate something is not an invocation,
-  and a mention made only to discuss the skill does not invoke it. See
-  `DECISIONS.md` item 38.
-- **Test before code.** Write the validation test first, then the
-  implementation that satisfies it.
-- One task per session. Do not scope-creep.
-- Never commit a metric that has not passed its validation test.
-- Do not move to the next phase until the current phase's tests are green.
-- Prove claims, do not assert them. When you state a fact about the data, show
-  the measurement that establishes it.
-- **State what a check would fail to detect, not only what it proves.** A check
-  that cannot fail is not evidence. An accounting identity is not a validation.
-- **Never grant yourself an exemption from a roadmap gate.** If a gate must be
-  relaxed, stop and ask, and record who decided and when.
-- **A change that alters what the system does, refuses, or costs lands its
-  decision in `DECISIONS.md` in the same pull request, with its condition.** Not
-  afterwards, and not only in a commit message: a reason recorded only in a
-  commit message is one that gets rediscovered by repeating the mistake. On
-  2026-08-30 three decisions sat in commit messages until the owner asked where
-  they were. `tests/test_documentation_integrity.py` catches the mechanical half
-  — an environment variable the code reads and `.env.example` omits, and a
-  citation to a decision number that does not exist. It cannot catch a missing
-  reason, which is why this rule is here rather than only in a test.
+These boundaries are the owner's call and stay in force regardless of model
+capability.
 
-## Working this repository from an agent session
+- **A production write needs the owner's approval in the conversation
+  immediately before it** — not from earlier, not implied by a plan, not carried
+  over from a previous write (Decision 87).
+- **`master` is a deploy trigger.** The `deploy` job in `.github/workflows/ci.yml`
+  runs `flyctl deploy` on every push to `master` behind `needs: test`;
+  `pages.yml` republishes `site/**`. A merge restarts the hosted server, so it
+  needs the owner's go-ahead too, timed away from live testing, settlement and
+  live-season windows; ask first if you cannot see who is connected. Never push
+  to `master` directly. `docs/goals/index.yaml`'s `base: master` is the merge
+  target, not a licence to commit to it.
+- Work on a branch named for the work (not the person or day); batch related
+  changes into one readable pull request that says what it changes and what it
+  leaves unproven. Do not open a pull request per tiny edit, but a branch past a
+  few dozen commits is a review failure: open the pull request while it can still
+  be read.
+- When production and the repository disagree, reconcile by re-applying the
+  migration (rehearsed on a disposable database first), never by editing the
+  ledger.
+- Prefer environments that cannot reach production (no `.env` in a worktree)
+  over instructions not to.
+- Never relax a roadmap gate yourself; ask, and record who decided.
 
-Measured on 2026-09-02, over one session. These are not style preferences; each
-one cost a wasted turn or produced a false green.
+## Recording decisions
 
-- **Never edit a tracked file by writing a shell script that edits it.** Use the
-  `Edit` tool. The route through Bash goes through two escaping layers before
-  Python sees the source, and a regex like `\s` or `\b` arrives mangled: Python
-  raises `SyntaxWarning` rather than an error, the script runs, the anchor never
-  matches, and the edit silently does nothing. It cost three turns in one
-  session. `Edit` requires reading the file first, which is one extra turn and
-  is cheaper than one silent failure.
-- **A throwaway analysis script goes in a file, not in a heredoc.** Same
-  escaping problem, same silence. Write it to the scratchpad directory, then run
-  it. Anything with a regex, a backslash, or a Windows path is in this category.
-- **Every `str.replace` on file content is preceded by `assert old in text`.**
-  `str.replace` returns the string unchanged when the anchor is missing. There
-  is no exception and no return code, so the file stays as it was, the tests
-  still pass, and the change is simply absent. `OVERCLAIM_SURFACES` sat as dead
-  code this way after `0ffe769` reflowed the lines its anchor was copied from.
-  The rule applies to `sed` too: check that the substitution changed something.
-- **Pipe test output through `grep -a`.** The suite prints non-ASCII, so plain
-  `grep` decides the stream is binary and answers `Binary file (standard input)
-  matches` instead of the matching lines. That reply is easy to read as "one
-  match", and once was: two tests fired and only one was counted.
-- **Run the tests as bare `pytest`.** `addopts` in `pyproject.toml` carries the
-  marker filter; it deliberately does not carry `-q`, and adding your own makes
-  `-qq`, which deletes the summary line. See the comment on `addopts` for why.
-- **Permission behaviour is `.claude/settings.json`, not a judgement call.**
-  That file is committed. If a command you need is refused, the fix is to
-  propose a rule there and let the owner decide, not to retry the command in a
-  different shape until something is allowed. See `DECISIONS.md` item 46.
-  Since 2026-10-06 the owner runs sessions in bypass-permissions mode, where
-  that file's `allow`/`ask` rules do not prompt; only `deny` still applies, and
-  the rules in this file still bind. See `DECISIONS.md` item 87.
+A change to what the system does, refuses or costs lands its reason in
+`DECISIONS.md` in the same pull request. A reason left only in a commit message
+gets rediscovered by repeating the mistake.
+`tests/test_documentation_integrity.py` checks the mechanical parts (env vars in
+`.env.example`, decision numbers that exist, this file matching `AGENTS.md`).
 
-## Boundaries around production work
+## Repository notes
 
-**An instruction not to touch production is not a control. It is a request, and
-requests get crossed.**
-
-Measured on 2026-08-29. A plan split explicitly into an offline Part 1 and an
-owner-gated Part 2, with "Do not start Part 2" written in the plan and repeated
-in the kickoff prompt, was handed to a fast model. Part 1 came back correct and
-verified. Part 2 was entered three times anyway: a migration was applied to
-production outside the migration ledger, an undecided CI workflow was committed,
-and `EXPLAIN ANALYZE` was run against the live database. Nothing was damaged and
-the migration was correct, but none of that was the instruction's doing.
-
-- **Separate the credentials, not just the instructions.** The pattern that
-  actually worked in this project is the Codex worktree with no `.env`: it could
-  not reach production because the secret was absent, not because it was told
-  not to. Prefer an environment that cannot do the thing over a sentence asking
-  it not to.
-- **A production write needs the owner's approval immediately before it.**
-  Not earlier in the session, not implied by a plan, and never carried over from
-  the previous write. The approval is given in conversation, in words, for that
-  write; the owner no longer has to run the command, but the agent still asks
-  first. A merge to `master` is a production release and needs the same
-  go-ahead. See `DECISIONS.md` item 87.
-- **Verify a handoff's numbers before building on them.** A handoff recorded 982
-  passing tests; the real figure was 1,036, four commits later. A plan that
-  states an expected test count is only as good as the baseline it was written
-  against, so re-measure the baseline rather than quoting it.
-- **When production and the repository disagree, reconcile by re-applying, never
-  by editing the ledger.** An object found in production with no migration record
-  cannot be recorded until it has survived a re-apply, because the re-apply is
-  what proves the object is what the migration describes. This has now happened
-  twice in two days; the remedy is `create or replace`, a rehearsal on a
-  disposable database, then the production re-apply, then the record.
-
-## Branches and pull requests
-
-**Work on a branch. Merge to `master` through a pull request. Never push to
-`master` directly.**
-
-**`master` is a deploy trigger, not just a default branch.**
-The `deploy` job in `.github/workflows/ci.yml` runs `flyctl deploy --remote-only`
-on every push to `main` or `master`. A merge is therefore a production release:
-it restarts the hosted MCP server and interrupts anyone connected to it. That
-single fact is what turns branch discipline here from tidiness into a safety
-rule. A second deploy rides on the same push: `pages.yml` republishes the public
-website whenever `site/**` changes.
-
-**Do not read the absence of `fly-deploy.yml` as the absence of a deploy.**
-`bc2a9cd` untracked that standalone workflow and `ef685a1` moved the deploy into
-`ci.yml` behind `needs: test`, so a red build no longer ships. The mechanism
-survived; only its address changed. On 2026-09-01 that missing filename was read
-here as proof the deploy was gone, and it nearly relaxed this rule — see the
-entry in `DECISIONS.md`.
-
-- **Name the branch for the work**, not for the person or the day:
-  `fix/possession-residual`, `docs/auth0-configuration`.
-- **Batch small, related changes into the active milestone branch and one
-  coherent pull request.** Do not open a pull request merely to transport each
-  tiny edit. This does not permit direct pushes to `master`, unrelated scope in
-  the same branch, or an unreviewably large branch; it moves the review and
-  deploy checkpoint to a meaningful unit of work.
-- **Merge deliberately, and pick the moment.** Never merge while somebody is
-  testing the live server, mid-settlement, or during a live-season window.
-  Ask before merging if you cannot see who is connected.
-- **A branch that has grown past a few dozen commits is a review failure, not an
-  achievement.** Open the pull request while it can still be read.
-- **A pull request states what it changes and what it leaves unproven.** The same
-  standard as everything else here: no claim without its measurement, and every
-  gap named rather than omitted.
-- The queue in `docs/goals/index.yaml` sets `base: master`; that is the merge
-  target, not a licence to commit straight to it.
-
-## Challenging these rules
-
-These rules were written from measurements, and some of those measurements were
-too narrow. One rule in this file was wrong from the day it was written: it was
-generalised from a single game and would have invented 340 turnovers a season.
-It was caught by measurement, not by obedience.
-
-- **If evidence contradicts a rule here, say so, prove it with a measurement
-  over the full cached season, and stop for a decision.** Do not silently
-  comply with a rule you have evidence against, and do not silently override
-  one either.
-- **Prefer disproving your hypothesis to supporting it.** The clock question
-  was settled by destroying every timestamp in the season and showing the
-  lineups did not move - not by checking a few games where they held.
-- **Never generalise from one game.** n=1 is how the wrong rule got written.
+- Run tests as bare `pytest`; `addopts` already carries the marker filter, and
+  adding `-q` hides the summary line.
+- Test output contains non-ASCII; use `grep -a` when filtering it.
+- Prefer the `Edit` tool over shell-scripted edits of tracked files; shell
+  escaping has silently mangled regex anchors here before. Put throwaway analysis
+  scripts in a file, not a heredoc, and `assert old in text` before any
+  `str.replace` (or check that `sed` changed something): a missing anchor fails
+  silently.
+- `.claude/settings.json` holds the committed permission rules (Decision 46);
+  sessions run in bypass mode, where only `deny` applies (Decision 87). If a
+  command is refused, propose a rule there for the owner to decide; do not retry
+  it in other shapes.
+- Read Fly state only through `python scripts/fly_read.py <name>`; `flyctl` and
+  `fly` are denied and the script is not agent-editable. Bash rules are not a
+  sandbox; the owner-approval rule for production writes is the control
+  (Decision 87).
+- `define-goal` is opt-in: use it only when the owner asks for it (Decision 38).
 
 ## Out of scope
 
-- Video, clips, or any broadcast footage (copyright).
-- Tracking data (player/ball coordinates at 25fps). Not publicly available.
-  Do not attempt to infer it.
-- Anything that requires scraping a site that forbids it.
+Video or broadcast footage; tracking data (not public, do not infer it);
+scraping sites that forbid it.

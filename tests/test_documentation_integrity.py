@@ -122,6 +122,23 @@ def test_every_decision_referenced_by_number_exists() -> None:
     )
 
 
+def test_agents_md_is_an_exact_copy_of_claude_md() -> None:
+    """Claude Code reads `CLAUDE.md`; Codex and other agents read `AGENTS.md`.
+
+    Decision 90 makes them one text in two files, because a symlink needs
+    Windows Developer Mode and a hard link is severed by editors that save via
+    rename. A copy can drift, so this test is what keeps it a copy. It compares
+    bytes, so it cannot say which file holds the intended edit - only that the
+    other one was not updated.
+    """
+    claude = Path("CLAUDE.md").read_bytes().replace(b"\r\n", b"\n")
+    agents = Path("AGENTS.md").read_bytes().replace(b"\r\n", b"\n")
+    assert claude == agents, (
+        "AGENTS.md has drifted from CLAUDE.md. Edit CLAUDE.md, then run "
+        "`cp CLAUDE.md AGENTS.md` and commit both."
+    )
+
+
 def test_launch_asset_repository_ownership_is_documented() -> None:
     """Media production must not silently drift back into this warehouse repo.
 

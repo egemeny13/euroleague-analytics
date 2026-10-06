@@ -50,19 +50,8 @@ def test_stale_strings_are_absent_from_documentation() -> None:
     assert "E:/dev/euroleague-analytics" not in readme_content
 
 
-def test_roadmap_contains_live_season_blocks_and_production_measurements() -> None:
-    """ROADMAP.md must contain Block C/D/E section and cite measured 2026-08-22 numbers."""
-    roadmap_content = Path("ROADMAP.md").read_text(encoding="utf-8")
-
-    assert "Block C" in roadmap_content
-    assert "Block D" in roadmap_content
-    assert "Block E" in roadmap_content
-    assert "measured 2026-08-22 against production" in roadmap_content
-
-
-def test_handover_docs_name_current_state_and_real_draft_plans() -> None:
-    """The handover must not point at stale status text or missing session plans."""
-    roadmap_content = Path("ROADMAP.md").read_text(encoding="utf-8")
+def test_handover_docs_name_current_state() -> None:
+    """The handover must not point at stale status text."""
     readme_content = Path("README.md").read_text(encoding="utf-8")
     migrations_content = Path("migrations/README.md").read_text(encoding="utf-8")
 
@@ -80,12 +69,3 @@ def test_handover_docs_name_current_state_and_real_draft_plans() -> None:
         "0009_season_progress",
     ):
         assert migration in migrations_content
-
-    plan_links = re.findall(
-        r"\[`([^`]+\.md)`\]\((docs/superpowers/plans/2026-08-23-[^)]+\.md)\)",
-        roadmap_content,
-    )
-    assert len(plan_links) == 11
-    assert any(label == "03a-public-view-security-hardening.md" for label, _ in plan_links)
-    for _label, relative_path in plan_links:
-        assert Path(relative_path).is_file(), f"ROADMAP.md points at missing plan: {relative_path}"

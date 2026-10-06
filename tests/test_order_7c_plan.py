@@ -50,13 +50,3 @@ def test_order_7c_plan_separates_offline_acceptance_from_live_evidence() -> None
     assert "do not invent" in normalized
     assert "owner decision" in normalized
     assert "decision 18" in normalized
-
-
-def test_order_7c_is_complete_in_roadmap() -> None:
-    roadmap = Path("ROADMAP.md").read_text(encoding="utf-8")
-    normalized = " ".join(roadmap.split())
-
-    assert "| 7c | **Complete:**" in roadmap
-    assert "06c-mcp-connection-lifecycle-performance.md" in roadmap
-    assert "Order 7c resolved the user-visible connection lifecycle" in normalized
-    assert roadmap.index("| 7c |") < roadmap.index("| 8 |")

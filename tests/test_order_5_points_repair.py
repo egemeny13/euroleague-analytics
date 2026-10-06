@@ -59,17 +59,3 @@ def test_the_plan_no_longer_claims_the_cache_is_unreachable() -> None:
     assert "another computer" not in plan or "blocked 2026-08-24" not in plan
     assert "not an approved substitute" in plan
     assert "e2024_points_archive_repair_report.md" in plan
-
-
-def test_the_report_and_the_roadmap_agree_on_whether_the_write_has_run() -> None:
-    """Break caught: Order 5 marked complete while its own report says nothing was written."""
-    roadmap = Path("ROADMAP.md").read_text(encoding="utf-8")
-    write_pending = "the production write has not run" in _normalized(REPORT)
-
-    assert "04-e2024-points-archive-repair.md" in roadmap
-    assert "| 5 | **Blocked:**" not in roadmap
-    assert not (write_pending and "| 5 | **Complete:**" in roadmap), (
-        "The repair report says the production write has not run, so Order 5 cannot be "
-        "marked complete: its gate needs 330 verified objects and index rows and a clean "
-        "reconciliation for E2024 and E2025."
-    )

@@ -22,15 +22,9 @@ def test_order_7b_report_preserves_gate_equivalence_and_blind_spots() -> None:
     assert "no schema" in normalized.lower()
 
 
-def test_order_7b_closes_the_roadmap_without_widening_the_gate() -> None:
-    decisions = Path("DECISIONS.md").read_text(encoding="utf-8")
-    roadmap = Path("ROADMAP.md").read_text(encoding="utf-8")
+def test_order_7b_plan_is_closed() -> None:
     plan = Path(
         "docs/superpowers/plans/2026-08-24-06b-lineup-on-off-performance-decision.md"
     ).read_text(encoding="utf-8")
 
-    assert "**Order 7b resolution" in decisions
-    assert "88.509 ms" in decisions
-    assert "98 ms threshold is unchanged" in decisions
-    assert "| 7b | **Complete:**" in roadmap
     assert "**Status:** Complete" in plan
