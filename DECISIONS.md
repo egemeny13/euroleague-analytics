@@ -5136,6 +5136,26 @@ mode.** The file is unchanged by this decision. Options:
 **Choice: OPEN. The owner has not decided.** Until recorded here, agents treat
 option 1 as the state of the world and rely on the rules above.
 
+**Amendment, 2026-10-06: read-only `flyctl` is allowed.** Decided by the owner
+("you should be able to run it too"). The trigger: verifying Decision 89 took
+four round trips in which the owner ran read-only `flyctl` commands for the
+agent and waited on its timing.
+- **What was removed.** The blanket deny `Bash(flyctl:*)`.
+- **What is now allowed.** These commands only read state: `flyctl status`,
+  `logs`, `machine list`, `machine status`, `releases`, `scale show` and
+  `config show`.
+- **What stays denied.** Every subcommand that changes or enters the app:
+  `deploy`, `launch`, `scale count/vm/memory`, `secrets`, `ssh`, `console`,
+  `apps`, `volumes`, `certs`, `ips`, `postgres`, `proxy`, `auth`, `tokens`,
+  and every `machine` action. The `fly` alias stays fully denied, so the
+  allow-list cannot be routed around through it.
+- **The limit.** Permission rules match command prefixes. A global flag
+  placed before the subcommand (`flyctl -a app deploy`) does not match
+  `flyctl deploy:*`, which is why a leading flag (`flyctl -:*`) is denied
+  outright. A command shape this list did not foresee is still allowed in
+  bypass mode. The CLAUDE.md rule that a production write needs the owner's
+  approval immediately before it is unchanged and still binds.
+
 **Condition.** Revisit if an agent crosses a merge or production-write
 boundary without approval, or if the owner leaves bypass mode; either makes
 option 2 or 3 the default.
@@ -5183,6 +5203,17 @@ the check would separate the two.
 is not the cause and this decision is reverted. The next step is then a
 machine on another host, then Fly support. Decision 86 is not verified until
 the `suspension` event is seen.
+
+**Result, 2026-10-06: reverted.** The deploy updated the same machine in
+place, so a fresh machine was never a second explanation. With no health
+check, the machine was still cordoned and uncordoned without suspending, twice:
+- `cordon` 19:55:27Z, `uncordon` 19:55:49Z;
+- `cordon` 20:02:02Z, `uncordon` 20:02:23Z.
+
+The app logs show nothing between deploy and those events, so the app neither
+received nor initiated anything visible. The health check was not the cause,
+and the check is restored. Decision 86 remains unverified; the cause now
+points below the application, at the platform.
 
 ## Rules to add to the project instruction file
 
