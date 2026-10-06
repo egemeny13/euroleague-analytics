@@ -12,6 +12,36 @@ entry cites. Cite decisions by number; numbers are permanent and never reused.
 New entries: keep them to the decision, the reason, the condition, and where the
 evidence is. If it needs more than a screen, the detail belongs in `docs/`.
 
+**Who decided, and when.** "Owner" is Egemen Yücelen. Dates are as recorded in
+the original log (`git show 45d3040:DECISIONS.md`); "not recorded" means that log
+preserved no approval.
+- 1–16: owner, 2026-08-09 (8's season-count amendment, a measurement, 2026-08-10).
+- 17: owner, 2026-08-10. 18: owner, 2026-08-12; re-measurement orders 7a and 7c
+  approved 2026-08-24, 7b executed at the owner's request the same day.
+- 19: no owner approval recorded (agent-implemented 2026-08-13).
+- 20: owner, 2026-08-13; amended 2026-08-18; its conditions A and B closed
+  2026-08-18 and 2026-08-19. 21, 22: owner, 2026-08-19.
+- 23, 24: owner, 2026-08-24 (24's later production steps approved separately the
+  same session). 25: owner, 2026-08-26. 26: owner, 2026-08-27.
+- 27, 28: owner, 2026-08-28. 29, 30, 31: owner, 2026-08-29 (31 after being shown
+  the stop condition it overrides).
+- 32: owner's stated direction (a 2026-08-30 split-product proposal rejected).
+  33, 35, 36, 37, 43, 44, 46, 51, 52, 54: approval not recorded.
+  34: 2026-08-30, approval not recorded.
+- 38, 39, 40: owner, 2026-08-31. 41, 42: owner, 2026-09-01.
+- 45, 47, 48, 49, 50: owner, 2026-09-02. 53: owner, 2026-09-04.
+- 54b: owner, 2026-09-05 (product subdomain). 55–58: 2026-09-04, owner-directed
+  findings. 59: owner, 2026-09-05. 60–62, 64, 65, 66: owner, 2026-09-06; 63:
+  2026-09-06, approval not recorded.
+- 67, 68: owner, 2026-09-07 (Tiers A, B and D approved together in one message,
+  which also satisfied "approval immediately before" the applies that followed).
+  69, 71, 81: owner, 2026-09-07. 70, 72–77, 79, 80: 2026-09-07, under the
+  derived-layer plan. 78: same plan; no separate owner sign-off recorded.
+- 82: owner, 2026-09-16. 83: owner, 2026-09-18. 84, 85: owner, 2026-09-19.
+- 86: owner, 2026-10-03. 87, 89, 90, 91: owner, 2026-10-06 (87's amendment the
+  same day). 88: Claude, from measurement, 2026-10-06, on the owner's instruction;
+  not yet reviewed by the owner.
+
 ---
 
 ## 1. Trim IDs and team codes in raw tables
@@ -55,7 +85,8 @@ metrics are given up.
 
 Record every fetch, store a body only when its checksum is new, keep a pointer to
 the current version, never overwrite. A changed checksum rebuilds that one game's
-raw and derived rows in one transaction.
+raw and derived rows in one transaction; a wholesale rebuild is reserved for a
+schema or transformation-rule change that can affect every game.
 **Condition:** for one live season, re-check completed games at +6 h, +24 h,
 +72 h and +7 d before reducing that cadence (`scripts/settlement_recheck.py`).
 Evidence: `exploration/OPEN_ITEMS.md` item 7.
@@ -78,6 +109,7 @@ The local disk cache stays as the working copy.
 
 Applied through the Supabase MCP, or the recorded script of Decision 81. Every
 migration has a `down`; the gate is up/down/up on an empty database (Decision 44).
+Revisit if local iteration becomes painful enough to justify a local Postgres.
 
 ## 11. EuroCup is schema-ready, not loaded
 
@@ -132,6 +164,10 @@ Evidence: `docs/DECISION_18_REMEASUREMENT.md`,
 
 The source schedule's winner field is wrong (it repeats the champion). A tie
 yields null. `raw_game.winner_team_code` stays null and is never back-filled.
+**Condition:** the derivation lives in `v_game` and nowhere else; the gate asserts
+E2024 has no ties, no winner who did not play, and no winner disagreeing with the
+score. The in-place up/down/up equivalent of the empty-database gate holds only
+for view-only migrations; a table change needs a fresh empty database.
 No owner approval is recorded.
 
 ## 20. The hot window is E2024, E2025 and E2026
@@ -143,7 +179,11 @@ projected to fit with 14.40 % headroom.
 fitting — never relaxed, deleted or xfailed; (C) do not pre-build a
 derived-only tier; (D) re-project against a complete E2026 before every
 backfill and when the real game count is known. If it no longer fits, dropping
-E2024 is a fresh owner decision, not an automatic fallback.
+E2024 is a fresh owner decision, not an automatic fallback; nothing shrinks the
+window silently at load time. The gate prices E2026 at its full 380 scheduled
+games from day one, and keeps the inverted assertion that all 23 seasons must
+*not* fit. Every tool that reports loaded seasons must say which are absent
+rather than return an empty result.
 
 ## 21. The physical-size gate measures bytes per game within a band
 
@@ -158,20 +198,26 @@ game is one transaction. Zero `UPDATE game_event` (it cost ~530k–670k dead row
 per season).
 **Conditions:** merge by full primary key; a derived load runs zero
 `UPDATE game_event`; incremental and single-pass loads produce identical rows.
-Applies to every already-loaded derived table (Decision 76).
+Applies to every already-loaded derived table (Decision 76). The latent composite
+`game_event_possession_fkey` defect stays separate; no migration repair is approved
+here.
 
 ## 23. The public Data API exposes no warehouse view
 
 All views are `security_invoker`; `anon` and `authenticated` have no grants.
 **Condition:** any future public Data API feature is a separate product and
-security decision with explicit grants, RLS policies and role tests.
+security decision with explicit grants, RLS policies, role tests and owner
+approval. A security migration that changes a view definition, column signature
+or served row is not this decision and stops for separate review.
 
 ## 24. Pre-season rosters keep source identity and registration grain
 
 `roster_registration` stores one row per source registration; `person.code` is
 kept as-is and never turned into a `player_id` by string surgery.
-**Conditions:** cache before parse; role `J` only; reject a page shorter than its
-reported total; never update dimension rows or insert `player`.
+**Conditions:** cache and archive before parse; role `J` only; keep source array
+position; reject a page shorter than its reported total; never update dimension
+rows or insert `player`; RLS with no public policy or grant; production migration,
+archive upload and load each need a separate attended approval.
 
 ## 25. Structural possession residuals do not weaken the possession gate
 
@@ -185,7 +231,9 @@ So testers never hold a database credential. The MCP SDK is scoped to
 `requirements-http.txt`.
 **Conditions:** HTTP publishes a tool list byte-identical to stdio (tested);
 the hosted server connects as a role that cannot write; HTTP uses its own
-connection pool; timeouts and a per-subject cap ship with it.
+connection pool; timeouts and a per-subject cap ship with it; `protocol.py`,
+`scripts/mcp_server.py` and `ReadOnlyConnectionManager` stay unmodified (the
+Order 7c latency evidence was measured through them).
 
 ## 27. Roster persons are linked to box-score players by within-game observation
 
@@ -194,7 +242,8 @@ score. The `P`-prefix convention is a published check, never the rule that
 creates a link.
 **Conditions:** a test fails if any link came from string construction; publish
 coverage and agreement rate wherever the link is used; a person who never played
-stays unlinked.
+stays unlinked; the storage projection is measured before the table is created
+(Decision 28); backfill obeys the v2 host's backoff.
 
 ## 28. Hot window E2024–E2026 and the admitted reference data
 
@@ -202,13 +251,17 @@ Admits `person_game_link`, roster biography, venue/referee/club directories and
 club season stats; excludes the global `/v2/people` directory. The compaction
 precondition was withdrawn by Decision 30.
 **Condition:** re-measure before EuroCup or any fourth season; the 480,000,000-byte
-stop rule stands.
+stop rule stands; measure after every step; a staging-table measurement with the
+real primary key precedes creating `person_game_link`.
 
 ## 29. Clients connect through one shared public (Native, PKCE) Auth0 client
 
 Dynamic registration hit the tenant's ten-application cap.
 **Conditions:** the client id identifies the client only; who may sign in is a
-separate control; replacement clients need explicit API authorisation.
+separate control; replacement clients need explicit API authorisation; turn
+Dynamic Client Registration off once the shared client is proven (done 2026-08-29,
+see 51); the Auth0 tenant is labelled DEVELOPMENT and must be settled before a
+public opening, not during one.
 
 ## 30. Compaction is not a precondition; the nightly storage watch governs the window
 
@@ -216,7 +269,8 @@ The compaction pilot failed its own gate. `src/euroleague/storage_watch.py`
 reports headroom in games every night.
 **Conditions:** at the warning level the response is an owner decision (paid tier
 or a smaller window), never automatic; the stop rule is unchanged; no further
-compaction write until the page-census discrepancy is understood.
+compaction write until the page-census discrepancy is understood. Compaction
+stays available as a tool, only no longer a precondition.
 
 ## 31. The historical archive chain ran unattended
 
@@ -227,24 +281,38 @@ season chooser remain the pattern for unattended archive work.
 
 No billing, tiers or per-season entitlements. The row budget and sweep refusal
 are cost controls.
-**Condition:** commercial use of league-derived data is unsettled; nothing that
-sells proceeds before it is.
+No second repository (33). The row budget and sweep refusal must be measured
+before a public opening, not trusted.
+**Conditions:** commercial use of league-derived data is unsettled; nothing that
+sells proceeds before it is. If the collaborator arrangement does not happen, the
+paid project does not exist and everything below E2024 stays archive-only.
 
 ## 33. Free and full offerings are one code base in two deployments
 
 Two Supabase projects so the public one survives a sponsor leaving.
 Amended by 37 (the archive stays on the free project).
+**Condition:** if the free project cannot hold E2024–E2026 within 500 MB, the lever
+is the number of seasons in the public hot window, never the archive; measure with
+`pg_total_relation_size` first. The nightly E2026 job loading both hot windows is a
+new partial-failure mode that needs explicit handling.
 
 ## 34. Tokens must name this server; `/userinfo` is not a way in
 
 Audience and issuer are checked on every verification path; the userinfo
 fallback is deleted. `MCP_REQUIRED_SCOPE` defaults empty until a real token has
-been seen carrying it. Refusal reasons go to the log, never to the client.
+been seen carrying it; the audience check has no such switch. Issuer and audience
+compare by equality after trailing-slash normalisation, never by prefix. Refusal
+reasons go to the log (no claim values), never to the client.
+**Condition:** this removes one way in; it does not by itself make the server safe
+to open. Who obtains a token and the row budget (32) remain separate controls.
 
 ## 35. The archive restore gate has a manual workflow
 
 `.github/workflows/verify-archive-season.yml`, one named season, no schedule,
 sharing the `e2026-live-fetcher` concurrency group.
+**Condition:** if verification becomes part of archive completion state and the
+chooser refuses unverified seasons, re-evaluate whether this workflow still earns
+its keep.
 
 ## 36. An interrupted archive run is resumed, not refused
 
@@ -256,6 +324,8 @@ after the fetch.
 ## 37. The archive fits free Storage; a paid project waits for a sponsor
 
 Gzipped, all seasons are ~118 MB of the 1 GB quota.
+The paid project is created when a sponsor exists, not before; access is separated
+by which database a deployment points at, never by per-user entitlement (32).
 **Condition:** publish the stored total with each archive batch; past 500 MB,
 stop and re-take this decision.
 
@@ -275,7 +345,14 @@ re-checks stay E2026-only. Three games cost ~1.1 MB.
 
 ## 41. Small related changes share one milestone pull request
 
-No direct pushes to `master`; a merge is a production release.
+No direct pushes to `master`, no unrelated work in the branch, no unreviewably
+large branch; tests stay green throughout; a merge is a production release.
+**Lesson (2026-09-01):** a missing `fly-deploy.yml` was read as "the deploy is
+gone" and nearly relaxed merge timing (the owner had approved PR #45 on that false
+claim). The deploy is the `deploy` job in `ci.yml` (`flyctl deploy` on every push
+to `main`/`master`, behind `needs: test`), and `pages.yml` also publishes on
+`site/**`. When a named path is missing, search for the behaviour (`flyctl`), not
+the filename.
 
 ## 42. A dropped Supabase Storage connection is retried
 
@@ -342,7 +419,9 @@ registration endpoint returning the shared client id, and forwarding
 authorize/token endpoints (`src/euroleague/mcp/oauth_proxy.py`).
 **Condition:** the shim forwards and never decides; validating credentials,
 issuing tokens or storing clients would make it an authorization server and needs
-a new decision.
+a new decision. It rewrites only `client_id` and `audience`. Registration at the
+provider stays off (it was turned off 2026-08-29 after hitting the tenant's
+ten-application cap).
 
 ## 52. The historical archive stops at E2007
 
@@ -419,7 +498,9 @@ spelling.
 ## 64. The Turkish page is `/tr/`, reached by a first-language redirect
 
 Only `navigator.languages[0]` counts; `?lang=en` opts out permanently. Scripts
-read their sentences from `data-text-*` (tested).
+read their sentences from `data-text-*` (tested; a script sentence without its
+Turkish key fails the test). If the host can read `Accept-Language`, the redirect
+moves server-side; the storage key and `?lang=en` contract stay.
 
 ## 65. Version 1's tool surface is frozen
 
@@ -430,8 +511,11 @@ ground truth or an invariant, and a `docs/SCOPE.md` row.
 
 ## 66. Four unused raw-layer indexes dropped (migration 0021)
 
-**Condition:** if a tool's production plan changes unexpectedly, apply the down
-migration and reopen.
+**Condition:** the production apply follows the owner's approval immediately
+before it, through the ledger, with `pg_total_relation_size` per table recorded
+before and after in `docs/evidence/`; if a tool's production plan changes
+unexpectedly, apply the down migration and reopen; re-measure after E2026 loads
+(the rehearsal was one season).
 
 ## 67. Lineup-reference checks read `lineup_stint`; five indexes dropped (migration 0022)
 
@@ -441,10 +525,14 @@ possession gets its own index through a decision with a measured query.
 ## 68. The event stream is stored once: `raw_event` dropped (migration 0023)
 
 The gate proves `game_event` against the parsed cache; `game_event_source` hashes
-the eleven source columns.
+the eleven source columns. Amends 8 (the hot-window shape no longer includes
+`raw_event`) and 21 (bytes per game re-measured on production once E2026 has
+games; 20's window arithmetic redone from it). The down migration restores shape
+only, never rows.
 **Condition:** `game_event_source` checksums must match the recorded baselines
 (E2024 `ed8de487…`, E2025 `45d38508…`); a difference is investigated, never
-re-baselined.
+re-baselined. `events_parsed` must equal the `game_event` count for every game the
+gate checks.
 
 ## 69. Per-game storage cost is measured every night
 
@@ -512,7 +600,9 @@ where the league's season page disagrees with its own box scores; we follow the
 box score). Evidence: `docs/evidence/season_totals_oracle.json`.
 **Condition:** both exception lists change only by a decision with a
 measurement; tolerances are not widened without one; club totals stay disk-cache
-only.
+only (archiving them needs a schema decision of its own). A recorded entry that
+stops reproducing its numbers fails the test. No player-level oracle: the v3
+player code is not our player id and is not bridged by guesswork.
 
 ## 79. Version 1 is frozen at fourteen tools
 
@@ -557,9 +647,13 @@ E2022 game 102 are skipped by name, not repaired.
 
 ## 86. The hosted MCP suspends when idle
 
-`auto_stop_machines = 'suspend'`, `min_machines_running = 0`, one machine.
+Chosen by the owner to cut combined hosting cost, accepting wake-up latency:
+`auto_stop_machines = 'suspend'`, `min_machines_running = 0`, one machine (the
+running floor is not a machine-count ceiling). No monthly dollar cap is promised;
+a cold start or release can still discard MCP sessions.
 **Condition:** verify idle suspension, wake, health and OAuth metadata before
-claiming success. Not yet verified — see 89.
+claiming success. Never verified: the machine did not suspend (see 89, 91);
+superseded in setting by 91.
 
 ## 87. Sessions run in bypass-permissions mode
 
@@ -571,8 +665,25 @@ nothing merges red (amended by 90); decisions land here in the same pull request
 **Open owner choice:** what `.claude/settings.json` should deny under bypass mode
 — (1) leave as is, (2) deny `gh pr merge` and pushes to `master`, (3) also deny
 production SQL tools. Until decided, option 1 stands.
+**Amendment, 2026-10-06 (owner: "you should be able to run it too"): agents
+read Fly state only through `scripts/fly_read.py`.** `Bash(flyctl:*)` and
+`Bash(fly:*)` are denied outright; `Edit` and `Write` on the script are denied
+too (the owner or a reviewed pull request made outside an agent session changes
+it). The script maps seven names to fixed read commands against the fixed app;
+the only free argument is a machine id (8-20 lowercase hex characters), never
+run through a shell; `tests/test_fly_read.py` asserts what is built and what is
+refused. A first form (read-only allow list plus a deny list of writing
+subcommands, PR #111) was wrong: a deny list cannot be complete, and
+`flyctl machines stop` would have passed. The script uses the operator's own
+token, so the guarantee is only as good as its allow list; changing the list is
+a change to this decision.
+**The limit, stated plainly:** Bash permission rules match command prefixes and
+are not a sandbox. `python -c "import subprocess; ..."` or a `sed` edit is not
+stopped by these rules. They stop accidents and make the intended route the easy
+one. The actual control is unchanged: a production write needs the owner's
+approval immediately before it.
 **Condition:** if an agent crosses a merge or production-write boundary without
-approval, option 2 or 3 becomes the default.
+approval, or the owner leaves bypass mode, option 2 or 3 becomes the default.
 
 ## 88. E2026 uses three new foul codes, each classified from measurement
 
@@ -583,6 +694,9 @@ player-games), are possession-retaining, and are served as separate columns
 measurement; not yet reviewed by the owner.
 **Condition:** re-measure as E2026 games arrive (30 games so far); an unknown
 code stops the rebuild by design and is measured, never mapped by name.
+`CMT1` is classified with `CMT` on two clean cases; a "Technical Foul 2" code, if
+it appears, arrives as an unknown code and stops the rebuild. `CMU_FL` retention
+rests on 5 resolved cases.
 
 ## 89. The hosted MCP runs without a Fly service health check
 
@@ -590,6 +704,12 @@ The 30 s `/healthz` check was the only recurring traffic and the suspected cause
 of Decision 86's machine never suspending. `/healthz` is still served.
 **Condition:** after deploy, the machine log must show a `suspension` event
 within 15 minutes of idle; if not, revert this and try a machine on another host.
+**Result, 2026-10-06: reverted; the check is restored.** The deploy updated the
+same machine in place. Without the check it was still cordoned and uncordoned
+without suspending, twice (19:55:27Z/19:55:49Z and 20:02:02Z/20:02:23Z), and the
+app logged nothing in between. The health check was not the cause; the cause
+points below the application, at the platform. Decision 86 stays unverified;
+next step is 91.
 
 ## 90. The instruction file holds facts and boundaries; the project documents are kept short
 
@@ -612,3 +732,23 @@ lines, `ROADMAP.md` 1,349).
 
 **Condition:** if an agent repeats a mistake one of the removed rules described,
 restore that rule with the incident.
+
+## 91. The hosted MCP stops, not suspends, when idle
+
+Decided 2026-10-06 by the owner, choosing (a) of three put to them after 89 was
+reverted: (a) stop instead of suspend, (b) clone the machine to another host,
+(c) ask on the Fly community forum. `fly.toml` now has
+`auto_stop_machines = 'stop'`.
+**Why:** Decision 86's `suspend` never took effect; the proxy cordoned the
+machine every ~6 minutes and flyd uncordoned it ~20 s later, with and without
+the health check, with no open connections and nothing in the app log.
+Suspension depends on a platform VM snapshot; stopping does not.
+**What it gives up:** a start is a fresh process, so an MCP session open before
+idle does not survive it (clients must reconnect), and the first request after
+idle waits for a full start (3.9-7.8 s observed on 2026-10-06, against the 0.5 s
+resume 86 hoped for). Everything else in 86 stands: one machine,
+`min_machines_running = 0` as a floor, no promised dollar cap.
+**Condition:** after the deploy, the machine event log must show a `stop` event
+after idle. If it shows `cordon` then `uncordon` with no `stop`, the cause is
+not the suspend mechanism: revert to the last setting that worked and take
+option (b) or (c). 86's "verify idle suspension" becomes "verify idle stop".

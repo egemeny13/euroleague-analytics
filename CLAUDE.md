@@ -31,7 +31,7 @@ are in English. Website pages may also carry Turkish (Decision 53).
 
 | File | Holds | Authority |
 |---|---|---|
-| `CLAUDE.md` / `AGENTS.md` | This file | Binding |
+| `CLAUDE.md` / `AGENTS.md` | This file | Binding; override only with a measurement and a decision |
 | `DECISIONS.md` | Settled decisions and their conditions | Binding, and newer than this file where they differ. A condition is part of its decision. |
 | `CONTEXT.md` | Goals, audience, constraints | Binding on goals. Untracked and local to the owner (Decision 13); in a clone, ask rather than infer. |
 | `ROADMAP.md` | Current state, open work and its gates | Binding on sequence |
@@ -54,7 +54,9 @@ owner; one rule here was once generalised from a single game and was wrong.
   `MARKERTIME` has one-second resolution, ties up to 13 deep, and sometimes runs
   backwards around substitutions during free throws.
 - On ingest, assign a monotonic `ingest_index` in array order and use only that
-  downstream. A sort on the event stream corrupts lineups silently and plausibly.
+  downstream, preserving it through every transformation. A sort on the event
+  stream corrupts lineups silently and plausibly, with no error: treat any sort
+  call on it as a bug.
 - Quarter order: `FirstQuarter`, `SecondQuarter`, `ThirdQuarter`,
   `ForthQuarter` (sic), `ExtraTime`.
 
@@ -62,7 +64,9 @@ owner; one rule here was once generalised from a single game and was wrong.
 
 - **Trim every string on ingest.** IDs and team codes arrive space-padded,
   inconsistently across endpoints and even across fields of one record. Byte
-  fidelity lives in the checksummed response cache, never in the tables.
+  fidelity lives in the checksummed response cache, never in the tables; never
+  restore the padding to a table "for faithfulness" (it brings back the silent
+  join failure and gains nothing the cache lacks).
 - **Join on ID, never name** (`WILLIAMS, TREVION` vs `WILLIAMS , TREVION`).
 - **Player IDs are opaque variable-length strings** — usually `P` + 6 digits,
   but veterans carry legacy codes (`PTGB`, `PJDR`). Never parse, pad or cast.
@@ -119,13 +123,13 @@ owner; one rule here was once generalised from a single game and was wrong.
   and mid-sequence substitutions. `game_event.free_throw_trip_id` is the
   approved unsplit grouping; it does not prove a single foul award (Decision 77).
 - Team rebounds and team turnovers have a blank player ID and a valid team code;
-  they are real events.
+  they are real events, handled separately in possession logic.
 
 ### Minutes and corrections
 
 - Minutes are stored raw and corrected; corrected is the default, raw is what
   positional logic uses. A correction may change durations, never who was on
-  court.
+  court; one that moves a lineup is not a correction and must not be applied.
 - A correction tuned on one season is re-measured on every season. If it
   increases disagreement with the official box score in a season, it
   auto-disables there and its test fails. The test asserts it helps, not that it
@@ -141,7 +145,12 @@ owner; one rule here was once generalised from a single game and was wrong.
   cannot detect; an accounting identity is not a validation.
 - Generalise from full seasons, not single games. Try to disprove a hypothesis
   before relying on it.
-- Write tests first where it helps; either way, nothing merges red.
+- Write tests first where it helps; either way, never commit a metric that has
+  not passed its validation test, and do not start the next roadmap phase until
+  the current phase's tests are green.
+- If evidence contradicts a rule in this file, say so, prove it with a
+  full-season measurement and stop for a decision; neither comply silently nor
+  override silently.
 
 ## Architecture
 
@@ -149,14 +158,22 @@ owner; one rule here was once generalised from a single game and was wrong.
 - The MCP server is a thin query layer; aggregation happens in views
   (Decision 18), not at heavy cost per call.
 - **Cache every raw API response before parsing.** Parsing, backfill and
-  debugging read the cache, never the network. A re-fetch is a versioned audit:
+  debugging read the cache, never the network. The scheduled settlement
+  re-checks (Decision 7) are the only sanctioned re-fetches. A re-fetch is a
+  versioned audit:
   bodies are immutable and checksum-addressed, history is never overwritten,
   and a changed checksum rebuilds that one game in one transaction (Decision 7).
 - Endpoints take `gamecode` (int, unique per season) and `seasoncode` (`E2024`…).
-- The Supabase free tier is 500 MB; storage is a design constraint. Measure
-  before backfilling (Decisions 20, 21, 69).
-- Do not depend on `euroleague_api` (GPLv3); reading it is fine. Keep
-  dependencies few.
+- The Supabase free tier is 500 MB; storage is a design constraint. Before any
+  production backfill, load one complete season into a staging table with its
+  real primary key, measure table plus indexes with `pg_total_relation_size`, and
+  project the whole warehouse, not `game_event` alone. If it does not fit, every
+  season still goes into the immutable archive and only the hot window shrinks;
+  do not pick the window before the other tables are measured (Decisions 20, 21,
+  69).
+- Do not depend on `euroleague_api` (GPLv3, would bind this project's license);
+  write our own fetch layer against `live.euroleague.net`; reading it is fine.
+  Keep dependencies few.
 
 ## MCP tools
 
@@ -181,9 +198,14 @@ capability.
   runs `flyctl deploy` on every push to `master` behind `needs: test`;
   `pages.yml` republishes `site/**`. A merge restarts the hosted server, so it
   needs the owner's go-ahead too, timed away from live testing, settlement and
-  live-season windows. Never push to `master` directly.
-- Work on a branch named for the work; batch related changes into one readable
-  pull request that says what it changes and what it leaves unproven.
+  live-season windows; ask first if you cannot see who is connected. Never push
+  to `master` directly. `docs/goals/index.yaml`'s `base: master` is the merge
+  target, not a licence to commit to it.
+- Work on a branch named for the work (not the person or day); batch related
+  changes into one readable pull request that says what it changes and what it
+  leaves unproven. Do not open a pull request per tiny edit, but a branch past a
+  few dozen commits is a review failure: open the pull request while it can still
+  be read.
 - When production and the repository disagree, reconcile by re-applying the
   migration (rehearsed on a disposable database first), never by editing the
   ledger.
@@ -205,9 +227,18 @@ gets rediscovered by repeating the mistake.
   adding `-q` hides the summary line.
 - Test output contains non-ASCII; use `grep -a` when filtering it.
 - Prefer the `Edit` tool over shell-scripted edits of tracked files; shell
-  escaping has silently mangled regex anchors here before.
+  escaping has silently mangled regex anchors here before. Put throwaway analysis
+  scripts in a file, not a heredoc, and `assert old in text` before any
+  `str.replace` (or check that `sed` changed something): a missing anchor fails
+  silently.
 - `.claude/settings.json` holds the committed permission rules (Decision 46);
-  sessions run in bypass mode, where only `deny` applies (Decision 87).
+  sessions run in bypass mode, where only `deny` applies (Decision 87). If a
+  command is refused, propose a rule there for the owner to decide; do not retry
+  it in other shapes.
+- Read Fly state only through `python scripts/fly_read.py <name>`; `flyctl` and
+  `fly` are denied and the script is not agent-editable. Bash rules are not a
+  sandbox; the owner-approval rule for production writes is the control
+  (Decision 87).
 - `define-goal` is opt-in: use it only when the owner asks for it (Decision 38).
 
 ## Out of scope

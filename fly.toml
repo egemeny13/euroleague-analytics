@@ -10,10 +10,11 @@ primary_region = 'fra'
 [http_service]
   internal_port = 8080
   force_https = true
-  # Decision 86: suspend when idle and resume on an incoming request. Normal
-  # resume retains process memory; cold-start fallback can lose MCP sessions.
-  # The historical stdio timing report does not measure Fly wake latency.
-  auto_stop_machines = 'suspend'
+  # Decision 91: stop when idle and start on an incoming request. Decision 86
+  # chose 'suspend', but the machine never suspended: the proxy cordoned it
+  # every ~6 min and flyd uncordoned it ~20 s later, with or without the health
+  # check. A start is a fresh process, so open MCP sessions do not survive idle.
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   # A FLOOR, not a ceiling. `fly launch` created TWO machines and this line did
   # not stop it; both ran always-on at $2.02 each until `fly scale count 1` on
@@ -28,10 +29,15 @@ primary_region = 'fra'
     hard_limit = 40
     soft_limit = 20
 
-  # Decision 89: no [[http_service.checks]] block. With a 30 s /healthz check
-  # the proxy cordoned the machine every ~6 min and flyd uncordoned it ~25 s
-  # later, and it never suspended. Restore a check only after showing the
-  # machine still suspends with it in place.
+  # Decision 89 removed this check to test whether it blocked idle suspension.
+  # It did not: the machine failed to suspend the same way without it, so the
+  # check is restored.
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/healthz'
 
 [[vm]]
   size = 'shared-cpu-1x'

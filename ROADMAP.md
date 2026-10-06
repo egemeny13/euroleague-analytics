@@ -36,9 +36,12 @@ delete it and, if it changed what the system does, record it in `DECISIONS.md`.
 
 ### Needs verification now
 
-1. **Fly idle suspension (Decisions 86, 89).** After the latest deploy, the
-   machine event log must show a `suspension` event within 15 minutes of idle.
-   If it does not, revert Decision 89 and try a machine on another host.
+1. **Fly idle stop (Decisions 86, 89, 91).** Suspension never happened, with or
+   without the health check (89 reverted, check restored). After the deploy of 91,
+   the machine event log must show a `stop` event after idle (read it with
+   `python scripts/fly_read.py`). If it shows `cordon`/`uncordon` with no `stop`,
+   revert to the last working setting and try a machine on another host or the
+   Fly forum.
 2. **E2026 foul codes (Decision 88).** Re-measure the three new codes as games
    arrive; `CMT1` rests on two clean cases. An unknown code stops the rebuild by
    design.
