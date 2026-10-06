@@ -7,9 +7,9 @@
 
 ## 1. Executive Summary
 
-European Basketball Analytics is the ChatGPT distribution name for the existing EuroLeague Analytics MCP server, which exposes 11 tools over Streamable HTTP. The submission manifest (`chatgpt-app-submission.json`) and associated brand assets are used for the OpenAI ChatGPT App Directory listing.
+European Basketball Analytics is the ChatGPT distribution name for the existing EuroLeague Analytics MCP server, which exposes 14 tools over Streamable HTTP. The submission manifest (`chatgpt-app-submission.json`) and associated brand assets are used for the OpenAI ChatGPT App Directory listing.
 
-All 11 exposed MCP tools are strictly read-only, closed-world, and non-destructive. Authentication is handled via Auth0 OAuth 2.0 PKCE through a stateless registration proxy (`Decision 51`), preserving Auth0's application caps without exposing dynamic registration upstream.
+All 14 exposed MCP tools are strictly read-only, closed-world, and non-destructive. Authentication is handled via Auth0 OAuth 2.0 PKCE through a stateless registration proxy (`Decision 51`), preserving Auth0's application caps without exposing dynamic registration upstream.
 
 ---
 
@@ -22,7 +22,7 @@ manifest schema.
 
 ### 2.1 Metadata & Brand
 * **App Display Name:** `European Basketball Analytics`
-* **Subtitle:** `Advanced European basketball analytics`
+* **Subtitle:** `European basketball analytics` (29 characters, within the 30-character limit)
 * **Category:** `ENTERTAINMENT`
 * **Description:** *"Explore European professional basketball analytics, including EuroLeague and EuroCup coverage, with exact possession counts, four factors, five-man lineup on/off ratings, and court shot charts."*
 * **Website URL:** `https://euroleague.egemenyucelen.me/chatgpt/`
@@ -56,7 +56,8 @@ Every tool exposed by the MCP server declares complete annotations and conforms 
 |---|---|---|---|---|
 | `el_describe_warehouse` | `true` | `false` | `false` | Season coverage, game counts, date ranges, data exclusions |
 | `el_find_games` | `true` | `false` | `false` | Filter games by season, round, date, or team matchup |
-| `el_get_boxscore` | `true` | `false` | `false` | Official player & team box scores, minutes reconstructions |
+| `el_get_boxscore` | `true` | `false` | `false` | Player & team box scores, minutes reconstructions |
+| `el_get_fouls` | `true` | `false` | `false` | Fouls committed and drawn, split by recorded type |
 | `el_get_game` | `true` | `false` | `false` | Single-game Four Factors, exact possessions, ratings |
 | `el_get_lineup_stats` | `true` | `false` | `false` | 5-man lineup possession counts and net ratings |
 | `el_get_play_by_play` | `true` | `false` | `false` | Source-ordered play-by-play events with on-court lineups |
@@ -64,6 +65,8 @@ Every tool exposed by the MCP server declares complete annotations and conforms 
 | `el_get_player_stats` | `true` | `false` | `false` | Season-level player totals, per-game stats, minutes |
 | `el_get_possessions` | `true` | `false` | `false` | Reconstructed possession logs and clutch summaries |
 | `el_get_shot_data` | `true` | `false` | `false` | Shot attempts with normalized half-court coordinates |
+| `el_get_referee_stats` | `true` | `false` | `false` | Descriptive referee season aggregates |
+| `el_get_roster` | `true` | `false` | `false` | Team rosters and available player biography fields |
 | `el_get_team_stats` | `true` | `false` | `false` | Team season ratings, Four Factors, pace, clutch splits |
 
 ---
