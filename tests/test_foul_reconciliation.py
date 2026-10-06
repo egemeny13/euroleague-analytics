@@ -16,6 +16,29 @@ from euroleague.config import DatabaseSettings
 COMMITTED_CODES = ("CM", "OF", "CMU", "CMT", "CMD", "CMTI")
 
 
+def test_migration_0029_adds_the_three_e2026_codes_as_committed_and_keeps_the_rest() -> None:
+    """Mechanical: the 0029 view names the three E2026 codes in both lists and 0024's still stand.
+
+    Break caught: v_foul_event silently omits every E2026 foul, so el_get_fouls
+    under-counts a whole season and nothing errors. The measured basis is the
+    box-score reconciliation in DECISIONS.md item 88 (719 of 719 player-games).
+    """
+    from pathlib import Path
+
+    sql = Path("migrations/0029_foul_event_view_e2026_codes.up.sql").read_text(encoding="utf-8")
+    flattened = " ".join(sql.split())
+    assert (
+        "when e.playtype in ( 'CM', 'OF', 'CMU', 'CMT', 'CMD', 'CMTI', 'CMU_DI', 'CMU_FL', "
+        "'CMT1' ) then 'committed'"
+    ) in flattened
+    assert (
+        "where e.playtype in ( 'CM', 'OF', 'CMU', 'CMT', 'C', 'B', 'CMD', 'CMTI', 'CMU_DI', "
+        "'CMU_FL', 'CMT1', 'RV' )"
+    ) in flattened
+    down = Path("migrations/0029_foul_event_view_e2026_codes.down.sql").read_text(encoding="utf-8")
+    assert "CMU_DI" not in down.replace("-- ", "").split("create or replace")[1]
+
+
 @pytest.mark.warehouse
 @pytest.mark.parametrize("season_code", ["E2024", "E2025"])
 def test_every_player_game_foul_count_equals_the_box_score(season_code: str) -> None:

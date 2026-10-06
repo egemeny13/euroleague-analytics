@@ -58,10 +58,24 @@ EVENT_ROLES = {
     "TPOFF": EventRole.NO_BALL,
     "F": EventRole.NO_BALL,
     "BF": EventRole.NO_BALL,
+    # E2026 only (DECISIONS.md item 88). The live season renamed or replaced four
+    # of the older foul codes: it has none of CMU, CMT, CMD or CMTI, and instead
+    # `CMU_DI` (disruptive foul), `CMU_FL` (flagrant foul) and `CMT1` (technical
+    # foul 1). All are fouls, none moves the ball.
+    "CMU_DI": EventRole.NO_BALL,
+    "CMU_FL": EventRole.NO_BALL,
+    "CMT1": EventRole.NO_BALL,
 }
 
 BALL_TOUCHING_TYPES = frozenset({"2FGM", "3FGM", "TO", "D", "2FGA", "3FGA", "O", "FTM", "FTA"})
-POSSESSION_RETAINING_FOUL_TYPES = frozenset({"CMT", "C", "B", "CMU"})
+# The fouled team keeps the ball after the free throws, so those free throws end
+# no possession. The three E2026 codes were measured to behave this way (DECISIONS.md
+# item 88): after the free throws of a CMU_DI the next ball event belonged to the
+# fouled team in 12 of 12 resolvable cases, and for CMU_FL in 5 of 5. An ordinary
+# personal foul with two free throws hands the ball to the fouler's opponent
+# instead (409 of 431 resolvable E2026 cases). CMT1 is classified with CMT by the same
+# rule, supported by two clean cases only; see the decision for that limit.
+POSSESSION_RETAINING_FOUL_TYPES = frozenset({"CMT", "C", "B", "CMU", "CMU_DI", "CMU_FL", "CMT1"})
 
 
 class UnclassifiedEventTypeError(ValueError):

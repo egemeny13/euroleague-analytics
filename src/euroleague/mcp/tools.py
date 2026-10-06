@@ -661,7 +661,9 @@ def build_registry(
                 "or game. Types come straight from the event stream's foul codes: CM "
                 "personal, OF offensive, CMU unsportsmanlike, CMT technical, CMD "
                 "disqualifying, CMTI throw-in, C coach, B bench, and RV for a foul "
-                "drawn. The committed total reconciles exactly to the official box "
+                "drawn. The 2026 season uses three codes instead of CMU, CMT, CMD and "
+                "CMTI: CMU_DI disruptive, CMU_FL flagrant and CMT1 technical foul 1. "
+                "The committed total reconciles exactly to the official box "
                 "score. Use foul_type to isolate one code, for example offensive fouls "
                 "by player, or technicals by team. Shooting-versus-non-shooting is not "
                 "in the data and is never guessed."
@@ -677,7 +679,20 @@ def build_registry(
                     "gamecode": {"type": "integer", "description": "Restrict to one game."},
                     "foul_type": {
                         "type": "string",
-                        "enum": ["CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "RV"],
+                        "enum": [
+                            "CM",
+                            "OF",
+                            "CMU",
+                            "CMT",
+                            "C",
+                            "B",
+                            "CMD",
+                            "CMTI",
+                            "CMU_DI",
+                            "CMU_FL",
+                            "CMT1",
+                            "RV",
+                        ],
                         "description": "One foul code, or RV for fouls drawn.",
                     },
                     "group_by": {

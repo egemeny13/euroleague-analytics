@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter
+from pathlib import Path
 
 import pytest
 
@@ -205,7 +207,10 @@ def test_one_trip_can_span_two_clock_readings(fixture_cache: ResponseCache) -> N
     assert [shot.event.markertime for shot in matching[0].shots] == ["04:36", "04:31"]
 
 
-@pytest.mark.parametrize("foul_type", ["CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI"])
+@pytest.mark.parametrize(
+    "foul_type",
+    ["CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "CMU_DI", "CMU_FL", "CMT1"],
+)
 def test_each_explicit_foul_type_closes_an_open_trip(foul_type: str) -> None:
     events = [_event(0, "FTM"), _event(1, foul_type, "DEF"), _event(2, "FTM")]
 
@@ -214,6 +219,33 @@ def test_each_explicit_foul_type_closes_an_open_trip(foul_type: str) -> None:
     assert [_shot_indexes(trip) for trip in trips] == [(0,), (2,)]
     assert trips[0].preceding_fouls == ()
     assert tuple(foul.playtype for foul in trips[1].preceding_fouls) == (foul_type,)
+
+
+E2026_FIXTURE = Path(__file__).parent / "fixtures" / "e2026_new_foul_codes.json"
+
+
+@pytest.mark.parametrize(
+    ("name", "foul_type", "shot_positions"),
+    [
+        # Two awarded shots straight after the foul.
+        ("cmu_di_game_12", "CMU_DI", (6, 7)),
+        # Two shots with an IN/OUT pair injected after them, at the same clock.
+        ("cmu_di_game_10", "CMU_DI", (6, 7)),
+        # A flagrant foul awards three shots, kept as one unsplit trip (Decision 77).
+        ("cmu_fl_game_4", "CMU_FL", (5, 6, 7)),
+    ],
+)
+def test_real_e2026_foul_codes_open_one_trip_and_are_recorded_as_its_foul(
+    name: str, foul_type: str, shot_positions: tuple[int, ...]
+) -> None:
+    """Break caught: the E2026 codes are missing from FOUL_TYPES, so no trip names its foul."""
+    excerpt = json.loads(E2026_FIXTURE.read_text(encoding="utf-8"))["excerpts"][name]
+    events = flatten_play_by_play({"FirstQuarter": excerpt["FirstQuarter"]})
+
+    trips = group_free_throw_trips(events)
+
+    assert [_shot_indexes(trip) for trip in trips] == [shot_positions]
+    assert tuple(foul.playtype for foul in trips[0].preceding_fouls) == (foul_type,)
 
 
 def test_non_ball_touching_rows_do_not_close_an_open_trip() -> None:

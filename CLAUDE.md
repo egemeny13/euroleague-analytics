@@ -164,10 +164,18 @@ the event stream as a bug.
   fouls and substitutions injected mid-sequence. Any free-throw grouping logic
   must be tested against those cases specifically, not just the common case.
 - **Foul type IS in the data. Read it from `PLAYTYPE`, never infer it.** There
-  are eight distinct foul codes: `CM` personal, `OF` offensive, `CMU`
-  unsportsmanlike, `CMT` technical, `C` coach, `B` bench, `CMD` disqualifying,
-  `CMTI` throw-in. Offensive fouls are marked explicitly - 1,185 events in
-  E2024, across 320 of 330 games.
+  are eight distinct foul codes in E2020-E2025: `CM` personal, `OF` offensive,
+  `CMU` unsportsmanlike, `CMT` technical, `C` coach, `B` bench, `CMD`
+  disqualifying, `CMTI` throw-in. **E2026 uses a different vocabulary, eleven
+  codes across both:** it has no `CMU`, `CMT`, `CMD` or `CMTI` and instead
+  `CMU_DI` disruptive, `CMU_FL` flagrant and `CMT1` technical foul 1. Measured
+  2026-10-06 over the 30 archived E2026 games (`DECISIONS.md` item 88): `CMU_DI`
+  is **not** `CMU` plus `CMD` (no `CMD` anywhere, and the fouler stays in the game
+  in 7 of 13), all three count as fouls committed (719 of 719 player-games match
+  the box score, 37 mismatch without them), and the free throws of `CMU_DI` and
+  `CMU_FL` leave the ball with the fouled team. An unknown code stops the rebuild
+  by design; measure it, do not map it by name. Offensive fouls are marked
+  explicitly - 1,185 events in E2024, across 320 of 330 games.
 - **Never infer an offensive foul from a foul and a turnover sharing a clock
   reading.** Measured against the explicit `OF` code across all 330 E2024
   games, that rule fires 1,525 times and is wrong 340 of them - 77.7 %
@@ -320,6 +328,9 @@ one cost a wasted turn or produced a false green.
   That file is committed. If a command you need is refused, the fix is to
   propose a rule there and let the owner decide, not to retry the command in a
   different shape until something is allowed. See `DECISIONS.md` item 46.
+  Since 2026-10-06 the owner runs sessions in bypass-permissions mode, where
+  that file's `allow`/`ask` rules do not prompt; only `deny` still applies, and
+  the rules in this file still bind. See `DECISIONS.md` item 87.
 
 ## Boundaries around production work
 
@@ -341,7 +352,10 @@ the migration was correct, but none of that was the instruction's doing.
   it not to.
 - **A production write needs the owner's approval immediately before it.**
   Not earlier in the session, not implied by a plan, and never carried over from
-  the previous write.
+  the previous write. The approval is given in conversation, in words, for that
+  write; the owner no longer has to run the command, but the agent still asks
+  first. A merge to `master` is a production release and needs the same
+  go-ahead. See `DECISIONS.md` item 87.
 - **Verify a handoff's numbers before building on them.** A handoff recorded 982
   passing tests; the real figure was 1,036, four commits later. A plan that
   states an expected test count is only as good as the baseline it was written
