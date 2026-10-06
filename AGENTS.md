@@ -34,7 +34,7 @@ are in English. Website pages may also carry Turkish (Decision 53).
 | `CLAUDE.md` / `AGENTS.md` | This file | Binding |
 | `DECISIONS.md` | Settled decisions and their conditions | Binding, and newer than this file where they differ. A condition is part of its decision. |
 | `CONTEXT.md` | Goals, audience, constraints | Binding on goals. Untracked and local to the owner (Decision 13); in a clone, ask rather than infer. |
-| `ROADMAP.md` | Phase sequence and gates | Binding on sequence |
+| `ROADMAP.md` | Current state, open work and its gates | Binding on sequence |
 | `exploration/FINDINGS.md`, `exploration/SEASON_SWEEP.md`, `exploration/OPEN_ITEMS.md` | API reconnaissance and season measurements | Evidence; `SEASON_SWEEP.md` is the regression baseline. `OPEN_ITEMS.md` extrapolations are estimates, not measurements. |
 | `exploration/SCHEMA_PROPOSAL.md` | Approved schema | As amended by `DECISIONS.md` |
 
