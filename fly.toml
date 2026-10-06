@@ -28,12 +28,10 @@ primary_region = 'fra'
     hard_limit = 40
     soft_limit = 20
 
-  [[http_service.checks]]
-    interval = '30s'
-    timeout = '5s'
-    grace_period = '10s'
-    method = 'GET'
-    path = '/healthz'
+  # Decision 89: no [[http_service.checks]] block. With a 30 s /healthz check
+  # the proxy cordoned the machine every ~6 min and flyd uncordoned it ~25 s
+  # later, and it never suspended. Restore a check only after showing the
+  # machine still suspends with it in place.
 
 [[vm]]
   size = 'shared-cpu-1x'
