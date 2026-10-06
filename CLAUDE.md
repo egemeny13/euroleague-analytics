@@ -328,6 +328,9 @@ one cost a wasted turn or produced a false green.
   That file is committed. If a command you need is refused, the fix is to
   propose a rule there and let the owner decide, not to retry the command in a
   different shape until something is allowed. See `DECISIONS.md` item 46.
+  Since 2026-10-06 the owner runs sessions in bypass-permissions mode, where
+  that file's `allow`/`ask` rules do not prompt; only `deny` still applies, and
+  the rules in this file still bind. See `DECISIONS.md` item 87.
 
 ## Boundaries around production work
 
@@ -349,7 +352,10 @@ the migration was correct, but none of that was the instruction's doing.
   it not to.
 - **A production write needs the owner's approval immediately before it.**
   Not earlier in the session, not implied by a plan, and never carried over from
-  the previous write.
+  the previous write. The approval is given in conversation, in words, for that
+  write; the owner no longer has to run the command, but the agent still asks
+  first. A merge to `master` is a production release and needs the same
+  go-ahead. See `DECISIONS.md` item 87.
 - **Verify a handoff's numbers before building on them.** A handoff recorded 982
   passing tests; the real figure was 1,036, four commits later. A plan that
   states an expected test count is only as good as the baseline it was written

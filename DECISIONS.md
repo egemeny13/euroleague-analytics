@@ -5085,6 +5085,60 @@ instead of mapping it by name.
   (the view filters on the code list), and no error says so. Applying it is the
   owner's step under `CLAUDE.md`'s production-write rule.
 
+## 87. Sessions run in bypass-permissions mode; approval moves from the keyboard to the conversation
+
+**Decided 2026-10-06 by the owner.** The owner moved Claude Code sessions to
+bypass-permissions mode and asked agents to run commands themselves instead of
+handing the owner `!` commands to paste.
+
+**What changed.** In bypass mode the `allow` and `ask` lists in
+`.claude/settings.json` (Decision 46) no longer prompt. Agents run git, `gh`,
+test and file commands directly. The settings file is therefore no longer what
+stops a remote-effecting command; only its `deny` entries still apply.
+
+**What still binds.**
+- Work on a named branch; merge to `master` only through a pull request.
+- **A merge is a production release** (`ci.yml` deploys on every push to
+  `master`). An agent opens the pull request and does not merge it until the
+  owner says to, in the conversation, for that merge.
+- **A production write still needs the owner's approval immediately before
+  it**, as in `CLAUDE.md` *Boundaries around production work*. Nothing is
+  weakened. The only clarification: approval is a message from the owner in the
+  conversation, not the owner running the command. Earlier approval, a plan, or
+  the previous write's approval does not count.
+- Test before code, and decisions land in `DECISIONS.md` in the same pull
+  request as the change.
+
+**Why this is a real trade-off.** Under Decision 46 the settings file made the
+dangerous commands stop and ask, mechanically. Bypass mode removes that
+mechanism and leaves the sentence in `CLAUDE.md`, which the 2026-08-29
+measurement showed gets crossed. The owner accepted that for speed. The
+remaining mechanical control is `deny`, plus the absence of credentials in a
+worktree (Decision 46, "Separate the credentials").
+
+**Open for the owner: what `.claude/settings.json` should say under bypass
+mode.** The file is unchanged by this decision. Options:
+1. **Leave it as the documented baseline** for sessions not in bypass mode
+   (teammates, Codex, a session started without the flag). Cheapest; gives no
+   protection in the owner's own sessions beyond the existing `deny` list.
+2. **Add explicit `deny` rules for the release commands** - `flyctl deploy`
+   is already covered by `Bash(flyctl:*)`; add `Bash(gh pr merge:*)` and
+   `Bash(git push origin master:*)` (and `git push origin HEAD:master`). Deny
+   rules are the one part that survives bypass mode, so a merge or direct push
+   to `master` would be refused until the owner removes the rule for that
+   moment. Costs one edit per intended merge.
+3. **Option 2 plus the production-writing MCP tools** that are currently only
+   in `ask` (`mcp__claude_ai_Supabase__execute_sql`) moved to `deny`, so no
+   production SQL runs without the owner editing the file. Strongest, and the
+   most friction for read-only diagnostics.
+
+**Choice: OPEN. The owner has not decided.** Until recorded here, agents treat
+option 1 as the state of the world and rely on the rules above.
+
+**Condition.** Revisit if an agent crosses a merge or production-write
+boundary without approval, or if the owner leaves bypass mode; either makes
+option 2 or 3 the default.
+
 ## Rules to add to the project instruction file
 
 ```
