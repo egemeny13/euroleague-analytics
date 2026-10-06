@@ -5139,6 +5139,50 @@ option 1 as the state of the world and rely on the rules above.
 boundary without approval, or if the owner leaves bypass mode; either makes
 option 2 or 3 the default.
 
+## 89. The hosted MCP runs without a Fly service health check
+
+**Decided 2026-10-06 by the owner** ("if there is a problem, fix it"), after
+Decision 86's condition "verify idle suspension" was found unmet.
+
+**Measurement.** Machine `d8de710f95d958` was created on 2026-10-04 with the
+suspend configuration. It never suspended. Its event log on 2026-10-06 showed
+the proxy cordoning it and flyd uncordoning it about 25 s later, every ~6
+minutes: `cordon` 18:15:10Z, `uncordon` 18:15:33Z, `cordon` 18:21:46Z,
+`uncordon` 18:22:11Z. There was no `suspension` event. Manual
+`flyctl machine suspend` worked, so the machine can suspend.
+`/proc/net/tcp` and `/proc/net/tcp6` on the machine shortly after 18:23Z showed:
+- the listeners on 8080 and 22;
+- one inbound connection in `TIME_WAIT` from the proxy side;
+- the SSH session itself.
+
+There was no connection to Supabase (5432/6543) and no open MCP stream. So the
+pool idea in the 2026-10-06 notes is false at that moment. The code has no
+background task or periodic outbound call, and `/healthz` touches nothing
+external. The only recurring traffic left was the 30 s `/healthz` service
+check, which goes through the proxy.
+
+**Decision.** Remove `[[http_service.checks]]` from `fly.toml`. This is a test
+of one cause as well as a fix.
+
+**What this gives up.**
+- `flyctl deploy` no longer waits for `/healthz` to pass before it calls a
+  release good. The CI `test` job still gates the deploy.
+- The proxy no longer routes away from a machine that fails its check. That
+  routing is irrelevant with one machine.
+- `/healthz` stays served, for manual and external checks.
+
+**What the measurement cannot rule out.** The connection table was one
+snapshot, so short outbound connections between snapshots would not show.
+Removing the check also replaces the machine on deploy. If suspension starts
+working, a fresh machine is a second possible explanation, and only restoring
+the check would separate the two.
+
+**Condition.** After the deploy, the machine event log must show a
+`suspension` event within 15 minutes of idle. If it does not, the health check
+is not the cause and this decision is reverted. The next step is then a
+machine on another host, then Fly support. Decision 86 is not verified until
+the `suspension` event is seen.
+
 ## Rules to add to the project instruction file
 
 ```
