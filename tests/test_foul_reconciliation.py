@@ -3,7 +3,8 @@
 External ground truth: `raw_boxscore_player.fouls_commited` and
 `fouls_received`, which the loader takes from Boxscore.FoulsCommited and
 FoulsReceived. Measured 2026-09-07 on E2025: 9,540 of 9,540 player-games
-agree for both columns. This test keeps that at zero mismatches for every
+agree for both columns. E2026 (games 1-30, after migration 0029): 719 of 719,
+measured 2026-10-06. This test keeps that at zero mismatches for every
 loaded season; a single mismatch fails it (CLAUDE.md's box-score rule).
 """
 
@@ -40,7 +41,7 @@ def test_migration_0029_adds_the_three_e2026_codes_as_committed_and_keeps_the_re
 
 
 @pytest.mark.warehouse
-@pytest.mark.parametrize("season_code", ["E2024", "E2025"])
+@pytest.mark.parametrize("season_code", ["E2024", "E2025", "E2026"])
 def test_every_player_game_foul_count_equals_the_box_score(season_code: str) -> None:
     import psycopg
 
