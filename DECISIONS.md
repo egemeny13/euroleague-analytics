@@ -5163,9 +5163,21 @@ pushed commit flagged it the same day.
 
 **What it does not cover.** The script calls flyctl with the operator's own
 token, so the guarantee is only as good as the script's allow list. Changing
-the list is a change to this decision. The CLAUDE.md rule that a production
-write needs the owner's approval immediately before it is unchanged and still
-binds.
+the list is a change to this decision.
+
+A second security review the same day pointed out a further gap. Allowing a
+script that an agent can edit lets the agent rewrite it and then run anything.
+So `Edit` and `Write` on `scripts/fly_read.py` are denied too. The owner, or a
+reviewed pull request made outside an agent session, changes the file.
+
+**The limit, stated plainly.** Bash permission rules match command prefixes;
+they are not a sandbox. An agent that writes
+`python -c "import subprocess; subprocess.run(['flyctl', ...])"` is not stopped
+by `Bash(flyctl:*)`, and was not before this amendment either. Shell edits
+through `sed` are not stopped by an `Edit` deny either. These rules stop
+accidents and make the intended route the easy one. The actual control is
+unchanged: the CLAUDE.md rule that a production write needs the owner's
+approval immediately before it.
 
 **Condition.** Revisit if an agent crosses a merge or production-write
 boundary without approval, or if the owner leaves bypass mode; either makes

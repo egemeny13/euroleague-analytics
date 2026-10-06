@@ -53,6 +53,8 @@
     ],
     "deny": [
       "Read(./.env)",
+      "Edit(./scripts/fly_read.py)",
+      "Write(./scripts/fly_read.py)",
       "Bash(flyctl:*)",
       "Bash(fly:*)",
       "Bash(git push --force:*)",
