@@ -11,8 +11,9 @@ The source does not provide shot position. Text such as ``(2/2 - 5 pt)`` in
 current trip, so this module never reads it. Positions below are inferred only
 after grouping the ordered event stream.
 
-Foul type is never inferred: the eight foul boundaries are explicit PLAYTYPE
-codes. The remaining distinction between a shooting and non-shooting personal
+Foul type is never inferred: the eleven foul boundaries (eight through E2025,
+three more in E2026) are explicit PLAYTYPE codes. The remaining distinction
+between a shooting and non-shooting personal
 foul is genuinely absent because ``CM`` does not encode it. Any downstream use
 that treats a personal foul followed by free throws as a shooting foul is still
 an inference and must say so.
@@ -51,7 +52,13 @@ from euroleague.events import EventRecord
 
 FREE_THROW_TYPES = frozenset({"FTM", "FTA"})
 BALL_TOUCHING_BOUNDARY_TYPES = frozenset({"2FGM", "3FGM", "TO", "D", "2FGA", "3FGA", "O"})
-FOUL_TYPES = frozenset({"CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI"})
+# The first eight are the E2020-E2025 codes; `CMU_DI`, `CMU_FL` and `CMT1` are the
+# E2026 codes (DECISIONS.md item 88). Leaving one out is not harmless: a foul
+# missing from this set stops closing an open trip and drops out of
+# `preceding_fouls`, and no error says so.
+FOUL_TYPES = frozenset(
+    {"CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "CMU_DI", "CMU_FL", "CMT1"}
+)
 MAX_SHOTS_ONE_FOUL_CAN_AWARD = 3
 
 

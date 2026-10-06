@@ -1290,7 +1290,10 @@ def get_play_by_play(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any
     )
 
 
-FOUL_TYPES = ("CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "RV")
+# CMU_DI, CMU_FL and CMT1 are the E2026 codes (Decision 88). E2026 carries none of
+# CMU, CMT, CMD or CMTI, so those columns read zero there and the three new columns
+# read zero in E2025 and earlier.
+FOUL_TYPES = ("CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "CMU_DI", "CMU_FL", "CMT1", "RV")
 FOUL_GROUPINGS = {
     "player": "player_id, team_code",
     "team": "team_code",
@@ -1352,6 +1355,9 @@ def get_fouls(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
         f"count(*) filter (where playtype = 'CMU') as unsportsmanlike, "
         f"count(*) filter (where playtype = 'CMT') as technical, "
         f"count(*) filter (where playtype = 'CMD') as disqualifying, "
+        f"count(*) filter (where playtype = 'CMU_DI') as disruptive, "
+        f"count(*) filter (where playtype = 'CMU_FL') as flagrant, "
+        f"count(*) filter (where playtype = 'CMT1') as technical_1, "
         f"count(*) filter (where foul_kind = 'bench') as bench, "
         f"count(*) filter (where foul_kind = 'drawn') as drawn "
         f"from v_foul_event where {where} group by {grouping} "
@@ -1369,7 +1375,9 @@ def get_fouls(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
         caveats=[
             "committed counts CM, OF, CMU, CMT, CMD and CMTI, which is exactly what the "
             "official box score counts; it reconciles per player-game with zero mismatches "
-            "on E2024 and E2025.",
+            "on E2024 and E2025. From E2026 it also counts CMU_DI (disruptive), CMU_FL "
+            "(flagrant) and CMT1 (technical foul 1): zero mismatches on the first 719 "
+            "E2026 player-games, 37 without them.",
             "Shooting versus non-shooting fouls are not in the data and are not inferred here.",
         ],
     )
