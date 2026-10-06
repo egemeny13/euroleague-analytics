@@ -5078,12 +5078,13 @@ instead of mapping it by name.
 - The box-score reconciliation was measured from the archived bodies in a scratch
   script; it is not a committed test, because the E2026 bodies are not in the
   repository. `tests/test_foul_reconciliation.py` runs it against the warehouse
-  for E2024 and E2025 only. Add `E2026` to its season list after the first
-  successful E2026 rebuild.
-- Migration 0029 is not applied to production and has not been rehearsed on a
-  disposable database. Until it is applied, `el_get_fouls` omits every E2026 foul
-  (the view filters on the code list), and no error says so. Applying it is the
-  owner's step under `CLAUDE.md`'s production-write rule.
+  for E2024, E2025 and (added 2026-10-06, after the first E2026 rebuild) E2026.
+  Measured on production that day: 719 of 719 player-games match on committed and
+  on drawn, 30 games.
+- Migration 0029 was rehearsed on a disposable database and applied to production
+  on 2026-10-06 UTC as `20261006191853`
+  (`docs/evidence/space_0029_foul_event_view_e2026_codes_production_apply.json`).
+  Before it was applied, `el_get_fouls` omitted every E2026 foul without error.
 
 ## 87. Sessions run in bypass-permissions mode; approval moves from the keyboard to the conversation
 
