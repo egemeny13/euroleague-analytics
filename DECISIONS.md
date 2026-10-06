@@ -4996,6 +4996,95 @@ when idle for a fresh process on every wake; suspend when idle to retain memory
 on normal resume. The owner approved idle operation; suspend is the chosen
 implementation, with the cold-start and cost limits above.
 
+## 88. E2026 uses three foul codes the earlier seasons never carried; each is classified from a measurement, and `CMU_DI` is not a disqualifying foul
+
+**Decided 2026-10-06 by Claude from measurement, on the owner's instruction to
+fix the failing live pipeline. Not yet reviewed by the owner.** Number 87 is
+reserved for another change in flight.
+
+**What failed.** The E2026 live pipeline failed daily from 2026-09-25. A
+settlement re-check found source revisions in games 1-30 and the rebuild died on
+game 1 with `UnclassifiedEventTypeError: Event type 'CMU_DI'`. `CMU_DI` was only
+the first unknown code the rebuild reached. The cause was not one code but a
+vocabulary change.
+
+**Measured.** The 30 archived E2026 `PlaybyPlay` bodies (17,354 events) were
+restored read-only from the private archive into a scratch directory on
+2026-10-06 (no upload, no delete, no database write) and compared with the
+cached E2020-E2025 bodies, in array order, nothing sorted:
+
+- Three `PLAYTYPE` values absent from every earlier season: `CMU_DI` (13 rows, 13
+  games), `CMU_FL` (6 rows) and `CMT1` (21 rows). No other new value appears.
+- E2026 carries **none** of `CMU`, `CMT`, `CMD` or `CMTI` (E2020-E2025: 964, 893,
+  32 and 10). The seasons use disjoint foul vocabularies, which is why checking
+  `CMU_DI` against E2020-E2025 found nothing.
+- The source text names them: `CMU_DI` is `Disruptive Foul`, `CMU_FL` is
+  `Flagrant Foul`, `CMT1` is `Technical Foul 1` (earlier `CMU` was
+  `Unsportsmanlike Foul`, `CMT` was `Technical Foul`, `CMD` was `Disqualifying
+  Foul`).
+- **The hypothesis that `CMU_DI` is `CMU` plus `CMD` is false.** No `CMD` row
+  occurs anywhere in E2026, none shares a clock reading with a `CMU_DI`, and the
+  fouler's next row of his own is an `OUT` in only 6 of 13 cases: in the other
+  seven the player plays on (games 10, 12, 16, 21, 24, 29, 30).
+- **Box score (external ground truth).** For all 719 E2026 player-games,
+  `Boxscore.FoulsCommited` equals the count of `CM`, `OF` and the three new codes
+  with zero mismatches. The older six codes alone disagree for 37; with `CMU_DI`
+  added, 26; with `CMU_DI` and `CMU_FL`, 20; with `CMT1` only, 19. So the league
+  counts all three as fouls committed.
+- **Free throws and possession.** `CMU_DI`: all 13 awarded exactly two free
+  throws to the fouled team, and in the 12 cases where the fouled team could be
+  identified its team owns the next ball event (12 of 12). `CMU_FL`: 3 awarded
+  three, 2 awarded two, 1 could not be resolved, and the fouled team owns the next
+  ball event in all 5 resolved. For contrast, after an ordinary `CM` where the
+  fouled team shoots, the other team owns the next ball event in 409 of 431
+  resolved cases. The earlier `CMU` shows the same retention profile in E2025.
+  `CMT1`: single free throws to the opponent, with the shooting team's own
+  possession continuing past it in both clean cases (games 7 and 22).
+
+**Decision.**
+
+1. `CMU_DI`, `CMU_FL` and `CMT1` are foul events that do not touch the ball
+   (`EVENT_ROLES`), are foul boundaries for free-throw grouping
+   (`free_throws.FOUL_TYPES`) and are possession-retaining
+   (`POSSESSION_RETAINING_FOUL_TYPES`): the free throws they award end no
+   possession. This matches `CMU` and `CMT`.
+2. They are counted as `committed` in `v_foul_event` (migration 0029), exposed in
+   `el_get_fouls` as `foul_type` values and as three new columns (`disruptive`,
+   `flagrant`, `technical_1`). They are not folded into the existing
+   `unsportsmanlike` or `technical` columns, because that would assert an
+   equivalence the data does not prove.
+3. Seasons are not mixed silently: E2026 reads zero in the `CMU`, `CMT`, `CMD`,
+   `CMTI` columns and E2025 and earlier read zero in the new ones.
+4. The `CLAUDE.md` foul-code list now names the eight E2020-E2025 codes and the
+   three E2026 codes (eleven distinct codes in all, not nine: the two vocabularies
+   overlap only in `CM`, `OF`, `C` and `B`), with this measurement.
+
+**Condition.** Re-measure on every E2026 body added after 2026-10-06; the
+classification rests on 30 games. Any further unknown `PLAYTYPE` stops the rebuild
+by design (`UnclassifiedEventTypeError`), and that is the intended behaviour, not
+a defect to be silenced. If a new code occurs, repeat this measurement for it
+instead of mapping it by name.
+
+**What this does not prove.**
+
+- `CMT1` is classified with `CMT` by name and by two clean cases. Whether a
+  `Technical Foul 2` code exists (a second technical, which ejects) is not known:
+  none has occurred in 30 games. It would arrive as an unknown code and stop the
+  rebuild.
+- `CMU_FL` possession retention rests on 5 resolved cases; one more could not be
+  resolved.
+- Whether a disruptive foul is the 2026 successor of any older code is unknown;
+  nothing here claims it.
+- The box-score reconciliation was measured from the archived bodies in a scratch
+  script; it is not a committed test, because the E2026 bodies are not in the
+  repository. `tests/test_foul_reconciliation.py` runs it against the warehouse
+  for E2024 and E2025 only. Add `E2026` to its season list after the first
+  successful E2026 rebuild.
+- Migration 0029 is not applied to production and has not been rehearsed on a
+  disposable database. Until it is applied, `el_get_fouls` omits every E2026 foul
+  (the view filters on the code list), and no error says so. Applying it is the
+  owner's step under `CLAUDE.md`'s production-write rule.
+
 ## Rules to add to the project instruction file
 
 ```

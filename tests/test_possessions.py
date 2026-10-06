@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +13,7 @@ from euroleague.derived import build_game_events, build_remaining_rows
 from euroleague.events import EventRecord, flatten_play_by_play
 from euroleague.possessions import (
     EVENT_ROLES,
+    POSSESSION_RETAINING_FOUL_TYPES,
     EventRole,
     UnclassifiedEventTypeError,
     count_game_possessions,
@@ -87,12 +90,117 @@ def _event(
 OLDER_SEASON_EVENT_TYPES = {"TPOFF", "F", "BF"}
 
 
+# Types first seen in E2026 (DECISIONS.md item 88), measured over the 30 archived
+# games: `CMU_DI` disruptive foul (13), `CMU_FL` flagrant foul (6) and `CMT1`
+# technical foul 1 (21). E2026 carries none of the older CMU, CMT, CMD or CMTI.
+E2026_EVENT_TYPES = {"CMU_DI", "CMU_FL", "CMT1"}
+E2026_FIXTURE = Path(__file__).parent / "fixtures" / "e2026_new_foul_codes.json"
+
+
+def _e2026_excerpt(name: str) -> tuple[list[EventRecord], str, str]:
+    """Real E2026 rows, cut verbatim from the archive, flattened by production code."""
+    excerpt = json.loads(E2026_FIXTURE.read_text(encoding="utf-8"))["excerpts"][name]
+    events = flatten_play_by_play({"FirstQuarter": excerpt["FirstQuarter"]})
+    return events, excerpt["CodeTeamA"].strip(), excerpt["CodeTeamB"].strip()
+
+
 def test_vocabulary_explicitly_classifies_all_31_e2024_event_types() -> None:
     """Break caught: a newly observed type is silently ignored by the counter."""
-    assert set(EVENT_ROLES) == ALL_E2024_EVENT_TYPES | OLDER_SEASON_EVENT_TYPES
+    assert set(EVENT_ROLES) == ALL_E2024_EVENT_TYPES | OLDER_SEASON_EVENT_TYPES | E2026_EVENT_TYPES
     assert sum(role is EventRole.ENDING for role in EVENT_ROLES.values()) == 5
     assert sum(role is EventRole.CONTINUING for role in EVENT_ROLES.values()) == 4
-    assert sum(role is EventRole.NO_BALL for role in EVENT_ROLES.values()) == 25
+    assert sum(role is EventRole.NO_BALL for role in EVENT_ROLES.values()) == 28
+
+
+def test_e2026_foul_codes_are_accepted_and_do_not_touch_the_ball() -> None:
+    """Break caught: the E2026 live rebuild died on game 1 with UnclassifiedEventTypeError."""
+    for code in E2026_EVENT_TYPES:
+        assert EVENT_ROLES[code] is EventRole.NO_BALL, code
+        result = count_game_possessions([_event(0, code, "BBB", "DEF")], "AAA", "BBB")
+        assert result.team_counts == {"AAA": 0, "BBB": 0}
+
+
+def test_every_e2026_foul_code_keeps_possession_like_the_older_equivalents() -> None:
+    """Break caught: a new foul code is added to the vocabulary but not to the retaining set."""
+    assert E2026_EVENT_TYPES <= POSSESSION_RETAINING_FOUL_TYPES
+
+
+def test_real_e2026_disruptive_foul_free_throws_do_not_end_the_fouled_teams_possession() -> None:
+    """Break caught: game 12, RED rebounds, is fouled (CMU_DI), shoots two, and keeps the ball.
+
+    Excerpt positions: 3 `D` RED, 4 `CMU_DI` HTA, 6-7 `FTM` RED, 8 `2FGM` RED. RED's
+    one possession ends at the basket, 8. If the disruptive foul did not retain
+    possession, the second free throw (7) would close a possession of its own.
+    """
+    events, team_a, team_b = _e2026_excerpt("cmu_di_game_12")
+    assert [events[index].playtype for index in (3, 4, 6, 7, 8)] == [
+        "D",
+        "CMU_DI",
+        "FTM",
+        "FTM",
+        "2FGM",
+    ]
+
+    result = count_game_possessions(events, team_a, team_b)
+
+    red_endings = [p for p in result.possessions if p.offense_team_code == "RED"]
+    assert [p.end_ingest_index for p in red_endings[:1]] == [8]
+    assert red_endings[0].end_reason == "made_shot"
+    assert red_endings[0].points_scored == 2
+    assert result.off_possession_points == {"RED": 2, "HTA": 0}
+
+
+def test_real_e2026_disruptive_foul_after_a_steal_keeps_the_ball_with_the_fouled_team() -> None:
+    """Break caught: game 10, PAR steals, MIL fouls (CMU_DI), PAR shoots 0/1 then 1/2 and keeps it.
+
+    PAR's next ending is the missed shot at position 10 followed by MIL's
+    rebound; the made free throw (7) must not be an ending.
+    """
+    events, team_a, team_b = _e2026_excerpt("cmu_di_game_10")
+    assert [events[index].playtype for index in (4, 6, 7)] == ["CMU_DI", "FTA", "FTM"]
+
+    result = count_game_possessions(events, team_a, team_b)
+
+    assert 7 not in [p.end_ingest_index for p in result.possessions]
+    assert result.off_possession_points["PAR"] == 1
+
+
+def test_real_e2026_flagrant_foul_three_free_throws_do_not_end_the_possession() -> None:
+    """Break caught: game 4, IST is fouled flagrantly (CMU_FL), makes 3 of 3, then scores again."""
+    events, team_a, team_b = _e2026_excerpt("cmu_fl_game_4")
+    assert [events[index].playtype for index in (3, 5, 6, 7, 8)] == [
+        "CMU_FL",
+        "FTM",
+        "FTM",
+        "FTM",
+        "2FGM",
+    ]
+
+    result = count_game_possessions(events, team_a, team_b)
+
+    assert [p.end_ingest_index for p in result.possessions if p.offense_team_code == "IST"][:1] == [
+        8
+    ]
+    assert result.off_possession_points == {"BAR": 0, "IST": 3}
+
+
+@pytest.mark.parametrize(
+    ("name", "retaining_team", "basket_index"),
+    [("cmt1_game_22", "HTA", 4), ("cmt1_game_7", "PRS", 4)],
+)
+def test_real_e2026_technical_foul_1_keeps_the_ball_with_the_team_shooting_it(
+    name: str, retaining_team: str, basket_index: int
+) -> None:
+    """Break caught: a technical free throw (`CMT1`) opens or closes a possession of its own."""
+    events, team_a, team_b = _e2026_excerpt(name)
+    assert events[basket_index].playtype == "2FGM"
+    assert events[basket_index].team_code == retaining_team
+
+    result = count_game_possessions(events, team_a, team_b)
+
+    first = next(p for p in result.possessions if p.offense_team_code == retaining_team)
+    assert first.end_ingest_index == basket_index
+    assert first.end_reason == "made_shot"
 
 
 def test_older_season_marker_and_fight_rows_do_not_change_possessions() -> None:
@@ -211,7 +319,7 @@ def test_and_one_free_throw_does_not_end_the_possession_twice() -> None:
     assert [possession.end_reason for possession in result.possessions] == ["made_shot"]
 
 
-@pytest.mark.parametrize("foul_type", ["CMT", "C", "B", "CMU"])
+@pytest.mark.parametrize("foul_type", ["CMT", "C", "B", "CMU", "CMU_DI", "CMU_FL", "CMT1"])
 def test_technical_or_unsportsmanlike_free_throw_does_not_end_control(
     foul_type: str,
 ) -> None:

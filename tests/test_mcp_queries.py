@@ -1705,6 +1705,29 @@ def test_fouls_group_by_player_binds_the_season_and_the_foul_type() -> None:
     assert "group by" in cursor.statements[2]
 
 
+@pytest.mark.parametrize("foul_type", ["CMU_DI", "CMU_FL", "CMT1"])
+def test_fouls_accept_the_three_e2026_foul_codes(foul_type: str) -> None:
+    """Break caught: el_get_fouls refuses a code the E2026 event stream carries."""
+    cursor = RecordingCursor([(["season_code"], [("E2026",)]), (["total"], [(0,)])])
+    # The scripted cursor has no answer for the third statement, so the call stops
+    # there with IndexError. Getting that far means the foul code passed validation
+    # (a refused code raises ValueError before any query runs) and was bound as a
+    # parameter of the count query.
+    with pytest.raises(IndexError):
+        get_fouls(cursor, {"season": "E2026", "foul_type": foul_type})
+    assert cursor.parameters[1] == ("E2026", foul_type)
+
+
+def test_fouls_tool_enum_lists_exactly_the_codes_the_query_accepts() -> None:
+    """Break caught: the schema the model reads and the validation the server runs drift apart."""
+    from euroleague.mcp.queries import FOUL_TYPES
+    from euroleague.mcp.tools import build_registry
+
+    registry = build_registry(lambda query, arguments: {})
+    schema = registry["el_get_fouls"].input_schema
+    assert tuple(schema["properties"]["foul_type"]["enum"]) == FOUL_TYPES
+
+
 def test_fouls_reject_an_unknown_group_by() -> None:
     cursor = RecordingCursor([(["season_code"], [("E2025",)])])
     with pytest.raises(ValueError, match="group_by must be one of"):
