@@ -1,0 +1,610 @@
+{
+  "migration": "0029_foul_event_view_e2026_codes",
+  "rehearsed_on": "2026-10-06",
+  "server": {
+    "version": "PostgreSQL 17.11 on x86_64-windows, compiled by msvc-19.44.35228, 64-bit",
+    "database": "euroleague_test",
+    "port": 5433
+  },
+  "baseline_applied": "0001_raw_layer .. 0028_possession_view_seconds (29 migrations)",
+  "state_at_0028": {
+    "columns": [
+      [
+        "season_code",
+        "text",
+        1
+      ],
+      [
+        "gamecode",
+        "integer",
+        2
+      ],
+      [
+        "ingest_index",
+        "integer",
+        3
+      ],
+      [
+        "period",
+        "integer",
+        4
+      ],
+      [
+        "playtype",
+        "text",
+        5
+      ],
+      [
+        "foul_kind",
+        "text",
+        6
+      ],
+      [
+        "player_id",
+        "text",
+        7
+      ],
+      [
+        "team_code",
+        "text",
+        8
+      ],
+      [
+        "is_coach_event",
+        "boolean",
+        9
+      ],
+      [
+        "utc_date",
+        "timestamp with time zone",
+        10
+      ],
+      [
+        "excluded_by_default",
+        "boolean",
+        11
+      ],
+      [
+        "quarantine_reasons",
+        "ARRAY",
+        12
+      ]
+    ],
+    "viewdef": " SELECT e.season_code,\n    e.gamecode,\n    e.ingest_index,\n    e.period,\n    e.playtype,\n        CASE\n            WHEN e.playtype = ANY (ARRAY['CM'::text, 'OF'::text, 'CMU'::text, 'CMT'::text, 'CMD'::text, 'CMTI'::text]) THEN 'committed'::text\n            WHEN e.playtype = ANY (ARRAY['C'::text, 'B'::text]) THEN 'bench'::text\n            ELSE 'drawn'::text\n        END AS foul_kind,\n    e.player_id,\n    e.codeteam AS team_code,\n    e.is_coach_event,\n    g.utc_date,\n    g.excluded_by_default,\n    g.quarantine_reasons\n   FROM game_event e\n     JOIN v_game g ON g.season_code = e.season_code AND g.gamecode = e.gamecode\n  WHERE e.playtype = ANY (ARRAY['CM'::text, 'OF'::text, 'CMU'::text, 'CMT'::text, 'C'::text, 'B'::text, 'CMD'::text, 'CMTI'::text, 'RV'::text]);",
+    "reloptions": [
+      "security_invoker=true"
+    ],
+    "comment": "One row per foul event. foul_kind: committed (six box-score codes), bench (C, B: coach and bench, pseudo-ids), drawn (RV). Sums reconcile to the official box score per player-game.",
+    "grants": [
+      [
+        "el_reader",
+        "SELECT"
+      ],
+      [
+        "el_tester",
+        "SELECT"
+      ],
+      [
+        "gate",
+        "DELETE"
+      ],
+      [
+        "gate",
+        "INSERT"
+      ],
+      [
+        "gate",
+        "REFERENCES"
+      ],
+      [
+        "gate",
+        "SELECT"
+      ],
+      [
+        "gate",
+        "TRIGGER"
+      ],
+      [
+        "gate",
+        "TRUNCATE"
+      ],
+      [
+        "gate",
+        "UPDATE"
+      ]
+    ],
+    "relacl": "{gate=arwdDxtm/gate,el_reader=r/gate,el_tester=r/gate}",
+    "select_privilege": {
+      "el_reader": true,
+      "el_tester": true,
+      "anon": false,
+      "authenticated": false
+    }
+  },
+  "state_at_0028_viewdef_mentions_E2026_codes": false,
+  "view_migration_gate_py": {
+    "exit_code": 0,
+    "stdout": "up\n  applied 0029_foul_event_view_e2026_codes.up.sql\n  column signature: [('season_code', 'text', 1), ('gamecode', 'integer', 2), ('ingest_index', 'integer', 3), ('period', 'integer', 4), ('playtype', 'text', 5), ('foul_kind', 'text', 6), ('player_id', 'text', 7), ('team_code', 'text', 8), ('is_coach_event', 'boolean', 9), ('utc_date', 'timestamp with time zone', 10), ('excluded_by_default', 'boolean', 11), ('quarantine_reasons', 'ARRAY', 12)]\ndown\n  applied 0029_foul_event_view_e2026_codes.down.sql\n  column signature: [('season_code', 'text', 1), ('gamecode', 'integer', 2), ('ingest_index', 'integer', 3), ('period', 'integer', 4), ('playtype', 'text', 5), ('foul_kind', 'text', 6), ('player_id', 'text', 7), ('team_code', 'text', 8), ('is_coach_event', 'boolean', 9), ('utc_date', 'timestamp with time zone', 10), ('excluded_by_default', 'boolean', 11), ('quarantine_reasons', 'ARRAY', 12)]\nup again\n  applied 0029_foul_event_view_e2026_codes.up.sql\n  column signature: [('season_code', 'text', 1), ('gamecode', 'integer', 2), ('ingest_index', 'integer', 3), ('period', 'integer', 4), ('playtype', 'text', 5), ('foul_kind', 'text', 6), ('player_id', 'text', 7), ('team_code', 'text', 8), ('is_coach_event', 'boolean', 9), ('utc_date', 'timestamp with time zone', 10), ('excluded_by_default', 'boolean', 11), ('quarantine_reasons', 'ARRAY', 12)]\n\nPASS: 0029_foul_event_view_e2026_codes cycled up, down and up again; v_foul_event unchanged in shape.\nThe view is left in the UP state.\n\nThis proves the shape is safe. It does NOT prove the new definition is correct - assert that in the phase gate, against the served values.\n",
+    "stderr_tail": ""
+  },
+  "manual_cycle": {
+    "up1": {
+      "columns": [
+        [
+          "season_code",
+          "text",
+          1
+        ],
+        [
+          "gamecode",
+          "integer",
+          2
+        ],
+        [
+          "ingest_index",
+          "integer",
+          3
+        ],
+        [
+          "period",
+          "integer",
+          4
+        ],
+        [
+          "playtype",
+          "text",
+          5
+        ],
+        [
+          "foul_kind",
+          "text",
+          6
+        ],
+        [
+          "player_id",
+          "text",
+          7
+        ],
+        [
+          "team_code",
+          "text",
+          8
+        ],
+        [
+          "is_coach_event",
+          "boolean",
+          9
+        ],
+        [
+          "utc_date",
+          "timestamp with time zone",
+          10
+        ],
+        [
+          "excluded_by_default",
+          "boolean",
+          11
+        ],
+        [
+          "quarantine_reasons",
+          "ARRAY",
+          12
+        ]
+      ],
+      "viewdef": " SELECT e.season_code,\n    e.gamecode,\n    e.ingest_index,\n    e.period,\n    e.playtype,\n        CASE\n            WHEN e.playtype = ANY (ARRAY['CM'::text, 'OF'::text, 'CMU'::text, 'CMT'::text, 'CMD'::text, 'CMTI'::text, 'CMU_DI'::text, 'CMU_FL'::text, 'CMT1'::text]) THEN 'committed'::text\n            WHEN e.playtype = ANY (ARRAY['C'::text, 'B'::text]) THEN 'bench'::text\n            ELSE 'drawn'::text\n        END AS foul_kind,\n    e.player_id,\n    e.codeteam AS team_code,\n    e.is_coach_event,\n    g.utc_date,\n    g.excluded_by_default,\n    g.quarantine_reasons\n   FROM game_event e\n     JOIN v_game g ON g.season_code = e.season_code AND g.gamecode = e.gamecode\n  WHERE e.playtype = ANY (ARRAY['CM'::text, 'OF'::text, 'CMU'::text, 'CMT'::text, 'C'::text, 'B'::text, 'CMD'::text, 'CMTI'::text, 'CMU_DI'::text, 'CMU_FL'::text, 'CMT1'::text, 'RV'::text]);",
+      "reloptions": [
+        "security_invoker=true"
+      ],
+      "comment": "One row per foul event. foul_kind: committed (the six box-score codes, plus CMU_DI, CMU_FL and CMT1 from E2026), bench (C, B: coach and bench, pseudo-ids), drawn (RV). Sums reconcile to the official box score per player-game.",
+      "grants": [
+        [
+          "el_reader",
+          "SELECT"
+        ],
+        [
+          "el_tester",
+          "SELECT"
+        ],
+        [
+          "gate",
+          "DELETE"
+        ],
+        [
+          "gate",
+          "INSERT"
+        ],
+        [
+          "gate",
+          "REFERENCES"
+        ],
+        [
+          "gate",
+          "SELECT"
+        ],
+        [
+          "gate",
+          "TRIGGER"
+        ],
+        [
+          "gate",
+          "TRUNCATE"
+        ],
+        [
+          "gate",
+          "UPDATE"
+        ]
+      ],
+      "relacl": "{gate=arwdDxtm/gate,el_reader=r/gate,el_tester=r/gate}",
+      "select_privilege": {
+        "el_reader": true,
+        "el_tester": true,
+        "anon": false,
+        "authenticated": false
+      }
+    },
+    "down": {
+      "columns": [
+        [
+          "season_code",
+          "text",
+          1
+        ],
+        [
+          "gamecode",
+          "integer",
+          2
+        ],
+        [
+          "ingest_index",
+          "integer",
+          3
+        ],
+        [
+          "period",
+          "integer",
+          4
+        ],
+        [
+          "playtype",
+          "text",
+          5
+        ],
+        [
+          "foul_kind",
+          "text",
+          6
+        ],
+        [
+          "player_id",
+          "text",
+          7
+        ],
+        [
+          "team_code",
+          "text",
+          8
+        ],
+        [
+          "is_coach_event",
+          "boolean",
+          9
+        ],
+        [
+          "utc_date",
+          "timestamp with time zone",
+          10
+        ],
+        [
+          "excluded_by_default",
+          "boolean",
+          11
+        ],
+        [
+          "quarantine_reasons",
+          "ARRAY",
+          12
+        ]
+      ],
+      "viewdef": " SELECT e.season_code,\n    e.gamecode,\n    e.ingest_index,\n    e.period,\n    e.playtype,\n        CASE\n            WHEN e.playtype = ANY (ARRAY['CM'::text, 'OF'::text, 'CMU'::text, 'CMT'::text, 'CMD'::text, 'CMTI'::text]) THEN 'committed'::text\n            WHEN e.playtype = ANY (ARRAY['C'::text, 'B'::text]) THEN 'bench'::text\n            ELSE 'drawn'::text\n        END AS foul_kind,\n    e.player_id,\n    e.codeteam AS team_code,\n    e.is_coach_event,\n    g.utc_date,\n    g.excluded_by_default,\n    g.quarantine_reasons\n   FROM game_event e\n     JOIN v_game g ON g.season_code = e.season_code AND g.gamecode = e.gamecode\n  WHERE e.playtype = ANY (ARRAY['CM'::text, 'OF'::text, 'CMU'::text, 'CMT'::text, 'C'::text, 'B'::text, 'CMD'::text, 'CMTI'::text, 'RV'::text]);",
+      "reloptions": [
+        "security_invoker=true"
+      ],
+      "comment": "One row per foul event. foul_kind: committed (six box-score codes), bench (C, B: coach and bench, pseudo-ids), drawn (RV). Sums reconcile to the official box score per player-game.",
+      "grants": [
+        [
+          "el_reader",
+          "SELECT"
+        ],
+        [
+          "el_tester",
+          "SELECT"
+        ],
+        [
+          "gate",
+          "DELETE"
+        ],
+        [
+          "gate",
+          "INSERT"
+        ],
+        [
+          "gate",
+          "REFERENCES"
+        ],
+        [
+          "gate",
+          "SELECT"
+        ],
+        [
+          "gate",
+          "TRIGGER"
+        ],
+        [
+          "gate",
+          "TRUNCATE"
+        ],
+        [
+          "gate",
+          "UPDATE"
+        ]
+      ],
+      "relacl": "{gate=arwdDxtm/gate,el_reader=r/gate,el_tester=r/gate}",
+      "select_privilege": {
+        "el_reader": true,
+        "el_tester": true,
+        "anon": false,
+        "authenticated": false
+      }
+    },
+    "up2": {
+      "columns": [
+        [
+          "season_code",
+          "text",
+          1
+        ],
+        [
+          "gamecode",
+          "integer",
+          2
+        ],
+        [
+          "ingest_index",
+          "integer",
+          3
+        ],
+        [
+          "period",
+          "integer",
+          4
+        ],
+        [
+          "playtype",
+          "text",
+          5
+        ],
+        [
+          "foul_kind",
+          "text",
+          6
+        ],
+        [
+          "player_id",
+          "text",
+          7
+        ],
+        [
+          "team_code",
+          "text",
+          8
+        ],
+        [
+          "is_coach_event",
+          "boolean",
+          9
+        ],
+        [
+          "utc_date",
+          "timestamp with time zone",
+          10
+        ],
+        [
+          "excluded_by_default",
+          "boolean",
+          11
+        ],
+        [
+          "quarantine_reasons",
+          "ARRAY",
+          12
+        ]
+      ],
+      "viewdef": " SELECT e.season_code,\n    e.gamecode,\n    e.ingest_index,\n    e.period,\n    e.playtype,\n        CASE\n            WHEN e.playtype = ANY (ARRAY['CM'::text, 'OF'::text, 'CMU'::text, 'CMT'::text, 'CMD'::text, 'CMTI'::text, 'CMU_DI'::text, 'CMU_FL'::text, 'CMT1'::text]) THEN 'committed'::text\n            WHEN e.playtype = ANY (ARRAY['C'::text, 'B'::text]) THEN 'bench'::text\n            ELSE 'drawn'::text\n        END AS foul_kind,\n    e.player_id,\n    e.codeteam AS team_code,\n    e.is_coach_event,\n    g.utc_date,\n    g.excluded_by_default,\n    g.quarantine_reasons\n   FROM game_event e\n     JOIN v_game g ON g.season_code = e.season_code AND g.gamecode = e.gamecode\n  WHERE e.playtype = ANY (ARRAY['CM'::text, 'OF'::text, 'CMU'::text, 'CMT'::text, 'C'::text, 'B'::text, 'CMD'::text, 'CMTI'::text, 'CMU_DI'::text, 'CMU_FL'::text, 'CMT1'::text, 'RV'::text]);",
+      "reloptions": [
+        "security_invoker=true"
+      ],
+      "comment": "One row per foul event. foul_kind: committed (the six box-score codes, plus CMU_DI, CMU_FL and CMT1 from E2026), bench (C, B: coach and bench, pseudo-ids), drawn (RV). Sums reconcile to the official box score per player-game.",
+      "grants": [
+        [
+          "el_reader",
+          "SELECT"
+        ],
+        [
+          "el_tester",
+          "SELECT"
+        ],
+        [
+          "gate",
+          "DELETE"
+        ],
+        [
+          "gate",
+          "INSERT"
+        ],
+        [
+          "gate",
+          "REFERENCES"
+        ],
+        [
+          "gate",
+          "SELECT"
+        ],
+        [
+          "gate",
+          "TRIGGER"
+        ],
+        [
+          "gate",
+          "TRUNCATE"
+        ],
+        [
+          "gate",
+          "UPDATE"
+        ]
+      ],
+      "relacl": "{gate=arwdDxtm/gate,el_reader=r/gate,el_tester=r/gate}",
+      "select_privilege": {
+        "el_reader": true,
+        "el_tester": true,
+        "anon": false,
+        "authenticated": false
+      }
+    },
+    "down_equals_state_at_0028": true,
+    "down_differs_from_0028_in": [],
+    "up2_equals_up1": true,
+    "up2_differs_from_up1_in": [],
+    "up1_vs_0028_differs_in": [
+      "viewdef",
+      "comment"
+    ],
+    "column_list_unchanged_by_up": true
+  },
+  "teardown_public_relations_left": 0,
+  "teardown_el_roles_left": [],
+  "warehouse_reconciliation": {
+    "temp_view_schemas": [
+      "pg_temp_4"
+    ],
+    "per_season": {
+      "E2020": {
+        "old_0024": {
+          "player_games": 7685,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "new_0029": {
+          "player_games": 7685,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "rows_differing_between_old_and_new_view": 0,
+        "foul_event_rows": 26096,
+        "rows_with_e2026_codes_in_game_event": 0
+      },
+      "E2021": {
+        "old_0024": {
+          "player_games": 7072,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "new_0029": {
+          "player_games": 7072,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "rows_differing_between_old_and_new_view": 0,
+        "foul_event_rows": 23234,
+        "rows_with_e2026_codes_in_game_event": 0
+      },
+      "E2022": {
+        "old_0024": {
+          "player_games": 7761,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "new_0029": {
+          "player_games": 7761,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "rows_differing_between_old_and_new_view": 0,
+        "foul_event_rows": 27253,
+        "rows_with_e2026_codes_in_game_event": 0
+      },
+      "E2023": {
+        "old_0024": {
+          "player_games": 7883,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "new_0029": {
+          "player_games": 7883,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "rows_differing_between_old_and_new_view": 0,
+        "foul_event_rows": 26158,
+        "rows_with_e2026_codes_in_game_event": 0
+      },
+      "E2024": {
+        "old_0024": {
+          "player_games": 7863,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "new_0029": {
+          "player_games": 7863,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "rows_differing_between_old_and_new_view": 0,
+        "foul_event_rows": 26971,
+        "rows_with_e2026_codes_in_game_event": 0
+      },
+      "E2025": {
+        "old_0024": {
+          "player_games": 9540,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "new_0029": {
+          "player_games": 9540,
+          "committed_mismatches": 0,
+          "drawn_mismatches": 0
+        },
+        "rows_differing_between_old_and_new_view": 0,
+        "foul_event_rows": 33634,
+        "rows_with_e2026_codes_in_game_event": 0
+      }
+    },
+    "positive_control": {
+      "temp_game_event_rows": 1646,
+      "relabelled": {
+        "CMU_DI": 1,
+        "CMU_FL": 2,
+        "CMT1": 3
+      },
+      "tp_old": [],
+      "tp_old_total_rows": 233,
+      "tp_new": [
+        [
+          "CMT1",
+          "committed",
+          1
+        ],
+        [
+          "CMU_DI",
+          "committed",
+          1
+        ],
+        [
+          "CMU_FL",
+          "committed",
+          1
+        ]
+      ],
+      "tp_new_total_rows": 236
+    }
+  }
+}
