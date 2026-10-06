@@ -5238,6 +5238,40 @@ received nor initiated anything visible. The health check was not the cause,
 and the check is restored. Decision 86 remains unverified; the cause now
 points below the application, at the platform.
 
+## 91. The hosted MCP stops, not suspends, when idle
+
+**Decided 2026-10-06 by the owner**, choosing option (a) of three put to them
+after Decision 89 was reverted:
+- (a) stop instead of suspend;
+- (b) clone the machine to another host;
+- (c) ask on the Fly community forum.
+
+Number 90 is taken by the documentation compression in PR #110.
+
+**Why.** Decision 86's `suspend` never took effect. The proxy cordoned the
+machine every ~6 minutes and flyd uncordoned it ~20 s later, with no
+`suspension` event. This happened both with and without the health check
+(Decision 89). The machine held no open connections and the app logged
+nothing, so nothing on our side explains it. Suspension depends on a VM
+snapshot that the platform takes; stopping does not. `stop` is the setting
+most likely to deliver what the owner asked for in Decision 86: no running
+time when idle.
+
+**What this gives up.** A start is a fresh process.
+- An MCP session open before the idle period does not survive it, and clients
+  must reconnect.
+- The first request after idle waits for a full start. The logs showed starts
+  of 3.9-7.8 s on 2026-10-06, against the 0.5 s resume Decision 86 hoped for.
+
+Everything else in Decision 86 stands: one machine, `min_machines_running = 0`
+as a floor, and no promised dollar cap.
+
+**Condition.** After the deploy, the machine event log must show a `stop`
+event after idle. If `stop` fails the same way (`cordon` then `uncordon` with
+no `stop`), the cause is not the suspend mechanism. Revert to the last setting
+that worked and take option (b) or (c). Decision 86's condition "verify idle
+suspension" becomes "verify idle stop".
+
 ## Rules to add to the project instruction file
 
 ```
