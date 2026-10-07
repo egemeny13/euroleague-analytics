@@ -19,6 +19,13 @@ class Cursor(Protocol):
 
 _ADVANCED_CAVEATS = (
     (
+        "Assist and and-one annotations are linked to the related scoring possession in source "
+        "ingest order, even when they fall outside its stored event interval. Assists on shooting "
+        "fouls are included; their denominator remains teammate field goals, so small-sample "
+        "assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession "
+        "assist events and FT trips are reported separately and excluded from possession rates."
+    ),
+    (
         "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is "
         "the standard estimate, not an event-exact scoring denominator."
     ),
@@ -148,8 +155,13 @@ def get_player_stats_advanced(cursor: Cursor, arguments: dict[str, Any]) -> dict
                 / nullif(sum(offensive_oncourt_possessions), 0), 4) as usage_event_rate,
             sum(assist_events) as assist_event_numerator,
             sum(teammate_field_goals_made) as teammate_field_goals_made,
-            round(sum(assist_events)::numeric
-                / nullif(sum(teammate_field_goals_made), 0), 4) as assist_rate,
+            sum(unresolved_assist_events) as unresolved_assist_events,
+            sum(off_possession_assist_events) as off_possession_assist_events,
+            sum(off_possession_free_throw_trips) as off_possession_free_throw_trips,
+            case when sum(unresolved_assist_events) = 0 then
+                round(sum(assist_events)::numeric
+                    / nullif(sum(teammate_field_goals_made), 0), 4)
+            end as assist_rate,
             sum(turnover_events) as turnover_event_numerator,
             round(sum(turnover_events)::numeric
                 / nullif(sum(offensive_oncourt_possessions), 0), 4) as turnover_rate,

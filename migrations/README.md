@@ -149,4 +149,4 @@ role and `service_role` retain the complete, unchanged result sets. See
 |---|---|
 | `0030_results_views` | Official-score standings include quarantined results; team/player log sources. Prepared locally, not applied to production. |
 | `0031_shot_profile_views` | Event-based zone aggregates and matched league rates, preserving missing coordinates and free throws. Prepared locally, not applied to production. |
-| `0032_player_advanced_views` | Auditable player on-court possession/event denominators, with the explicit custom-rate definitions in Decision 93. Prepared locally, not applied to production. |
+| `0032_player_advanced_views` | Advanced-only annotation links plus auditable on-court denominators (Decision 93). Repairs post-score assists and and-one trips without changing stored events. Both new views grant only the MCP roles; down removes both. Rehearsed locally, not applied to production. |

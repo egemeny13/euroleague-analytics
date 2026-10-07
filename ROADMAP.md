@@ -39,10 +39,13 @@ delete it and, if it changed what the system does, record it in `DECISIONS.md`.
 
 Decision 93 and `docs/superpowers/plans/2026-10-08-mcp-analytics-expansion.md`.
 Local implementation verified: season prompt, standings, shot profile,
-opt-in advanced player rates and game logs; 1,775 offline tests and six guarded
-local PostgreSQL tests pass. Up/down/up, actual handler calls and reader grants
+opt-in advanced player rates and game logs; 1,778 offline tests and the guarded
+local PostgreSQL validations pass. Up/down/up, actual handler calls and reader grants
 passed; official-score/log and shot populations reconciled over complete seasons.
-Open: approve and apply migrations 0030-0032, then release the reviewed branch.
+Independent-review AS/and-one repairs pass real-game regressions and a full
+732-game source walk; ambiguous annotations are disclosed rather than dropped.
+The same independent reviewer confirmed both P1 repairs and found no new
+verified defect. Open: approve/apply migrations 0030-0032, then release the branch.
 Historical E2024/E2025 progress remains blocked on a truthful successful-load
 timestamp: preflight found no historical application records. The backfill was
 rehearsed with synthetic recorded loads; production dates were not fabricated.

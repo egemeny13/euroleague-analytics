@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-10-07T22:31:27.197819+00:00",
+  "started_at": "2026-10-07T23:03:59.336569+00:00",
   "production_write": false,
   "checks": [
     {
@@ -7,7 +7,7 @@
       "arguments": {
         "season": "E2024"
       },
-      "elapsed_seconds": 0.016,
+      "elapsed_seconds": 0.017,
       "row_count": 18,
       "coverage": {
         "seasons": [
@@ -109,7 +109,7 @@
         "season": "E2024",
         "phase": "RS"
       },
-      "elapsed_seconds": 0.015,
+      "elapsed_seconds": 0.014,
       "row_count": 18,
       "coverage": {
         "seasons": [
@@ -212,7 +212,7 @@
         "team": "IST",
         "shot_type": "2P"
       },
-      "elapsed_seconds": 0.169,
+      "elapsed_seconds": 0.175,
       "row_count": 8,
       "coverage": {
         "seasons": [
@@ -258,7 +258,7 @@
         "home_away": "home",
         "last_n": 5
       },
-      "elapsed_seconds": 0.175,
+      "elapsed_seconds": 0.172,
       "row_count": 5,
       "coverage": {
         "seasons": [
@@ -323,7 +323,7 @@
         "player": "P009846",
         "team": "IST"
       },
-      "elapsed_seconds": 0.119,
+      "elapsed_seconds": 0.108,
       "row_count": 11,
       "coverage": {
         "seasons": [
@@ -369,7 +369,7 @@
         "last_n": 5,
         "minutes_basis": "official"
       },
-      "elapsed_seconds": 0.184,
+      "elapsed_seconds": 0.186,
       "row_count": 5,
       "coverage": {
         "seasons": [
@@ -439,7 +439,7 @@
         "season": "E2024",
         "player": "P009846"
       },
-      "elapsed_seconds": 0.122,
+      "elapsed_seconds": 0.12,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -482,7 +482,7 @@
         "player": "P009846",
         "advanced": true
       },
-      "elapsed_seconds": 0.695,
+      "elapsed_seconds": 1.645,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -519,12 +519,15 @@
           "efg_field_goals_made": "185",
           "efg_three_pointers_made": "57",
           "efg_field_goal_attempts": "417",
-          "usage_event_numerator": "543",
+          "usage_event_numerator": "562",
           "offensive_oncourt_possessions": "1833",
-          "usage_event_rate": "0.2962",
-          "assist_event_numerator": "12",
+          "usage_event_rate": "0.3066",
+          "assist_event_numerator": "119",
           "teammate_field_goals_made": "599",
-          "assist_rate": "0.0200",
+          "unresolved_assist_events": "0",
+          "off_possession_assist_events": "0",
+          "off_possession_free_throw_trips": "4",
+          "assist_rate": "0.1987",
           "turnover_event_numerator": "85",
           "turnover_rate": "0.0464",
           "offensive_rebound_event_numerator": "24",
@@ -538,6 +541,7 @@
       "caveats": [
         "Counting statistics are the official euroleague.net box score, not recounted from events.",
         "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure.",
+        "Assist and and-one annotations are linked to the related scoring possession in source ingest order, even when they fall outside its stored event interval. Assists on shooting fouls are included; their denominator remains teammate field goals, so small-sample assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession assist events and FT trips are reported separately and excluded from possession rates.",
         "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is the standard estimate, not an event-exact scoring denominator.",
         "usage_event_rate = (FGA events + inferred free-throw trips + turnover events) / exact offensive possessions with the player in the possession-start lineup. It is a custom event rate, not standard USG%; and-one trips are included and the rate can exceed 100%.",
         "assist_rate = the player's assist events / teammate made-field-goal events in the same possession-start offensive lineup population. turnover_rate = turnover events / exact offensive possessions with the player in that starting lineup.",
@@ -557,7 +561,7 @@
         "advanced": true,
         "per_game": true
       },
-      "elapsed_seconds": 0.606,
+      "elapsed_seconds": 2.131,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -594,12 +598,15 @@
           "efg_field_goals_made": "185",
           "efg_three_pointers_made": "57",
           "efg_field_goal_attempts": "417",
-          "usage_event_numerator": "543",
+          "usage_event_numerator": "562",
           "offensive_oncourt_possessions": "1833",
-          "usage_event_rate": "0.2962",
-          "assist_event_numerator": "12",
+          "usage_event_rate": "0.3066",
+          "assist_event_numerator": "119",
           "teammate_field_goals_made": "599",
-          "assist_rate": "0.0200",
+          "unresolved_assist_events": "0",
+          "off_possession_assist_events": "0",
+          "off_possession_free_throw_trips": "4",
+          "assist_rate": "0.1987",
           "turnover_event_numerator": "85",
           "turnover_rate": "0.0464",
           "offensive_rebound_event_numerator": "24",
@@ -613,6 +620,7 @@
       "caveats": [
         "Counting statistics are the official euroleague.net box score, not recounted from events.",
         "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure.",
+        "Assist and and-one annotations are linked to the related scoring possession in source ingest order, even when they fall outside its stored event interval. Assists on shooting fouls are included; their denominator remains teammate field goals, so small-sample assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession assist events and FT trips are reported separately and excluded from possession rates.",
         "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is the standard estimate, not an event-exact scoring denominator.",
         "usage_event_rate = (FGA events + inferred free-throw trips + turnover events) / exact offensive possessions with the player in the possession-start lineup. It is a custom event rate, not standard USG%; and-one trips are included and the rate can exceed 100%.",
         "assist_rate = the player's assist events / teammate made-field-goal events in the same possession-start offensive lineup population. turnover_rate = turnover events / exact offensive possessions with the player in that starting lineup.",
@@ -629,7 +637,7 @@
       "arguments": {
         "season": "E2025"
       },
-      "elapsed_seconds": 0.021,
+      "elapsed_seconds": 0.035,
       "row_count": 20,
       "coverage": {
         "seasons": [
@@ -731,7 +739,7 @@
         "season": "E2025",
         "phase": "RS"
       },
-      "elapsed_seconds": 0.015,
+      "elapsed_seconds": 0.018,
       "row_count": 20,
       "coverage": {
         "seasons": [
@@ -834,7 +842,7 @@
         "team": "IST",
         "shot_type": "2P"
       },
-      "elapsed_seconds": 0.144,
+      "elapsed_seconds": 0.205,
       "row_count": 7,
       "coverage": {
         "seasons": [
@@ -880,7 +888,7 @@
         "home_away": "home",
         "last_n": 5
       },
-      "elapsed_seconds": 0.171,
+      "elapsed_seconds": 0.22,
       "row_count": 5,
       "coverage": {
         "seasons": [
@@ -945,7 +953,7 @@
         "player": "P012710",
         "team": "IST"
       },
-      "elapsed_seconds": 0.129,
+      "elapsed_seconds": 0.195,
       "row_count": 11,
       "coverage": {
         "seasons": [
@@ -991,7 +999,7 @@
         "last_n": 5,
         "minutes_basis": "official"
       },
-      "elapsed_seconds": 0.189,
+      "elapsed_seconds": 0.238,
       "row_count": 5,
       "coverage": {
         "seasons": [
@@ -1061,7 +1069,7 @@
         "season": "E2025",
         "player": "P012710"
       },
-      "elapsed_seconds": 0.129,
+      "elapsed_seconds": 0.165,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -1104,7 +1112,7 @@
         "player": "P012710",
         "advanced": true
       },
-      "elapsed_seconds": 0.785,
+      "elapsed_seconds": 2.648,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -1141,12 +1149,15 @@
           "efg_field_goals_made": "144",
           "efg_three_pointers_made": "36",
           "efg_field_goal_attempts": "276",
-          "usage_event_numerator": "378",
+          "usage_event_numerator": "386",
           "offensive_oncourt_possessions": "1488",
-          "usage_event_rate": "0.2540",
-          "assist_event_numerator": "3",
+          "usage_event_rate": "0.2594",
+          "assist_event_numerator": "46",
           "teammate_field_goals_made": "468",
-          "assist_rate": "0.0064",
+          "unresolved_assist_events": "0",
+          "off_possession_assist_events": "0",
+          "off_possession_free_throw_trips": "1",
+          "assist_rate": "0.0983",
           "turnover_event_numerator": "71",
           "turnover_rate": "0.0477",
           "offensive_rebound_event_numerator": "43",
@@ -1160,6 +1171,7 @@
       "caveats": [
         "Counting statistics are the official euroleague.net box score, not recounted from events.",
         "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure.",
+        "Assist and and-one annotations are linked to the related scoring possession in source ingest order, even when they fall outside its stored event interval. Assists on shooting fouls are included; their denominator remains teammate field goals, so small-sample assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession assist events and FT trips are reported separately and excluded from possession rates.",
         "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is the standard estimate, not an event-exact scoring denominator.",
         "usage_event_rate = (FGA events + inferred free-throw trips + turnover events) / exact offensive possessions with the player in the possession-start lineup. It is a custom event rate, not standard USG%; and-one trips are included and the rate can exceed 100%.",
         "assist_rate = the player's assist events / teammate made-field-goal events in the same possession-start offensive lineup population. turnover_rate = turnover events / exact offensive possessions with the player in that starting lineup.",
@@ -1179,7 +1191,7 @@
         "advanced": true,
         "per_game": true
       },
-      "elapsed_seconds": 0.8,
+      "elapsed_seconds": 2.755,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -1216,12 +1228,15 @@
           "efg_field_goals_made": "144",
           "efg_three_pointers_made": "36",
           "efg_field_goal_attempts": "276",
-          "usage_event_numerator": "378",
+          "usage_event_numerator": "386",
           "offensive_oncourt_possessions": "1488",
-          "usage_event_rate": "0.2540",
-          "assist_event_numerator": "3",
+          "usage_event_rate": "0.2594",
+          "assist_event_numerator": "46",
           "teammate_field_goals_made": "468",
-          "assist_rate": "0.0064",
+          "unresolved_assist_events": "0",
+          "off_possession_assist_events": "0",
+          "off_possession_free_throw_trips": "1",
+          "assist_rate": "0.0983",
           "turnover_event_numerator": "71",
           "turnover_rate": "0.0477",
           "offensive_rebound_event_numerator": "43",
@@ -1235,6 +1250,7 @@
       "caveats": [
         "Counting statistics are the official euroleague.net box score, not recounted from events.",
         "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure.",
+        "Assist and and-one annotations are linked to the related scoring possession in source ingest order, even when they fall outside its stored event interval. Assists on shooting fouls are included; their denominator remains teammate field goals, so small-sample assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession assist events and FT trips are reported separately and excluded from possession rates.",
         "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is the standard estimate, not an event-exact scoring denominator.",
         "usage_event_rate = (FGA events + inferred free-throw trips + turnover events) / exact offensive possessions with the player in the possession-start lineup. It is a custom event rate, not standard USG%; and-one trips are included and the rate can exceed 100%.",
         "assist_rate = the player's assist events / teammate made-field-goal events in the same possession-start offensive lineup population. turnover_rate = turnover events / exact offensive possessions with the player in that starting lineup.",
@@ -1252,5 +1268,5 @@
   "historical_progress_synthetic_fixture_passed": true,
   "passed": true,
   "rolled_back": true,
-  "finished_at": "2026-10-07T22:31:33.858100+00:00"
+  "finished_at": "2026-10-07T23:04:13.087783+00:00"
 }

@@ -241,6 +241,11 @@ def test_advanced_view_uses_independent_postgres_event_fixture() -> None:
                          false, '{}', 'B', 2, 0);
                     """
                 )
+                cursor.execute(
+                    "alter table v_play_by_play add column ingest_index bigint "
+                    "generated always as identity; "
+                    "alter table v_play_by_play add column period integer default 1"
+                )
                 cursor.execute(_view_sql_without_role_grants(migration_sql))
                 cursor.execute(
                     """
@@ -434,7 +439,6 @@ def test_shooting_rates_reconcile_to_50_cached_official_box_scores() -> None:
                         group by season_code, player_id
                     )
                     select
-                        count(*) filter (where assists > teammate_makes),
                         count(*) filter (where turnovers > offensive_possessions),
                         count(*) filter (where offensive_rebounds > offensive_opportunities),
                         count(*) filter (where defensive_rebounds > defensive_opportunities)
@@ -442,5 +446,5 @@ def test_shooting_rates_reconcile_to_50_cached_official_box_scores() -> None:
                     """
                 )
                 bound_violations = cursor.fetchone()
-                assert bound_violations == (0, 0, 0, 0)
-                cursor.execute("drop view v_player_advanced_game")
+                assert bound_violations == (0, 0, 0)
+                cursor.execute("drop view v_player_advanced_game; drop view v_player_rate_event")

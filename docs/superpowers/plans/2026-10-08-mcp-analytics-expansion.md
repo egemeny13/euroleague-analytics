@@ -54,3 +54,32 @@ opponent DREB), DREB / (team DREB + opponent OREB), each restricted to the
 player's side-specific possession-start lineup. Rebound denominators retain
 team-only outcomes. Suspect player attribution does not enter individual
 numerators. Publish support counts as season totals in both per_game modes.
+
+
+## Review repair: assist and and-one annotations
+
+The owner's 2026-10-08 repair request addresses the two P1 findings in PR119.
+Do not change the possession counter or existing event attachments. Add an
+advanced-rate annotation view inside the still-unreleased migration 0032.
+Compute previous ball actions using only ingest_index in original array order.
+Assist annotations belong to the preceding same-team scoring field goal or
+free-throw action, including assists recorded for a shooting foul. Free-throw
+trip mapping preserves valid stored links, propagates an unambiguous existing
+trip link, and attaches and-one groups to the preceding basket with the same
+scorer or the existing explicit scorer-RV rule. Reuse the approved inference;
+do not attach technical awards to arbitrary offensive possessions.
+
+Mapped events use the related possession's starting lineup. Source events,
+core possession rows, old tool responses and counts remain unchanged. Publish
+unresolved assist and off-possession annotation counts; an unresolved assist
+makes its player's assist rate unavailable rather than silently partial.
+Assists awarded on shooting fouls are retained and disclosed; teammate made
+field goals remain the stated denominator, not a source-count upper-bound oracle.
+
+Before changing SQL, prove red real-data tests for E2025 game1 Blatt's nine
+assists and Wright's three FT trips. Add adversarial fixtures for delayed
+annotations, same-clock opponent baskets, shooter substitution, period
+boundaries, technical FTs and unknown annotations. Independently walk complete
+E2024/E2025 source arrays and compare the mappings/populations to SQL; reconcile
+source assists with official box scores. Run all existing tests, migration
+rehearsal and handler timing, then request re-review from the same reviewer.

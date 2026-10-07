@@ -35,5 +35,40 @@
     "Local PostgreSQL latency is not hosted Supabase latency.",
     "The new migration grants were exercised with a local role reproducing the MCP grant set, not the production credential.",
     "No production migration, deploy or ChatGPT directory submission was performed."
-  ]
+  ],
+  "review_repair": {
+    "offline_suite": {
+      "command": ".venv/Scripts/python.exe -m pytest",
+      "passed": 1778,
+      "deselected": 156,
+      "seconds": 83.86
+    },
+    "advanced_local_tests": {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_player_rate_annotations.py tests/test_player_advanced.py -m warehouse",
+      "passed": 7,
+      "deselected": 1,
+      "seconds": 40.1
+    },
+    "full_source_oracle": "2026-10-08-rate-annotation-repair.json; 330 E2024 games, 402 E2025 games, 399459 events; zero mapping and metric-population differences, zero clean-game official-assist differences",
+    "real_regressions": {
+      "E2025_game1_Blatt_assists_before": 2,
+      "E2025_game1_Blatt_assists_after": 9,
+      "E2025_game1_Wright_FT_trips_before": 2,
+      "E2025_game1_Wright_FT_trips_after": 3,
+      "Blatt_scoped_season_assist_numerator_before": 29,
+      "Blatt_scoped_season_assist_numerator_after": 180
+    },
+    "independent_re_review": "The same review agent independently verified the real handler and SQL examples, confirmed both original P1 findings resolved, and found no new verified defect. Its local mutations rolled back; it did not validate production.",
+    "production_changed": false,
+    "quality_checks": [
+      "ruff check . passed",
+      "ruff format --check . passed",
+      "git diff --check passed"
+    ],
+    "limits": [
+      "Mapping uses approved source-order/FT inference, not a new ground truth for every annotation.",
+      "Unresolved assists invalidate the assist rate and are reported explicitly.",
+      "Historical load timestamps and production release remain pending."
+    ]
+  }
 }

@@ -76,3 +76,22 @@ trips. Rebound opportunities count recorded rebound outcomes; the feed has no
 tracking-based rebound chances or closest-player data. Every possession-based
 response includes the season-specific observed substitution-straddle count and
 rate for its quarantine population.
+
+
+## Independent-review correction
+
+The initial coverage invariants above passed despite dropping most AS events
+outside stored possession intervals and omitting and-one FT trips. They were
+not evidence of complete annotation coverage. The owner requested repairs.
+
+The advanced-only annotation view now follows source ingest order to connect
+AS rows with the preceding scoring FG/FT action and restore and-one trip links
+using the existing scorer/RV inference. Stored events and possession counts
+are unchanged. Same-clock opponent baskets, substitutions, missed bonuses,
+shooting-foul assists, period boundaries and technical awards have explicit
+fixtures. Unresolved AS rows are reported and make assist_rate null.
+
+Full source-walk validation and clean-game official-assist reconciliation are
+recorded in `2026-10-08-rate-annotation-repair.json`. The raw source records
+assists on shooting fouls too, so assists <= teammate-FGM is not a universal
+bound and is no longer used as the annotation correctness gate.

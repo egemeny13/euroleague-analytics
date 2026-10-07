@@ -797,3 +797,26 @@ production write or deployment is authorized by this decision.
 Conditions: independent metric validation and migration rehearsal must pass;
 existing offline tests and transport parity remain green. Production apply and
 deployment require the separate immediate approval under Decision 87.
+
+
+### Decision 93 review repair: annotation links
+
+The owner requested repairs after the independent reviewer found that stored
+possession intervals omit most post-score AS rows and and-one bonuses. The new
+advanced-only `v_player_rate_event` view restores those annotation links in
+source ingest order; it does not alter core event rows, possessions or old
+tools. Existing valid FT links are preserved, unambiguous trip links propagate,
+and and-one groups use the already-approved scorer/RV inference. Assist links
+follow the preceding same-team scoring FG/FT action, within the same period.
+Shooting-foul assists remain in the numerator; their stated teammate-FGM
+denominator can produce rates above one in small samples. Technical/off-
+possession annotations are counted separately. Unresolved assists invalidate
+assist_rate, rather than producing a silently partial percentage.
+
+The earlier assists <= teammate-FGM bound did not validate annotation coverage
+and is not a universal bound for the source's shooting-foul assists. Replaced
+with adversarial fixtures, real-game red regressions and an independent cached
+source walk over E2024/E2025. The approved FT classifier is the Python oracle;
+official box scores separately reconcile source assists over clean games.
+Both reviewed examples now pass. Evidence:
+`docs/evidence/2026-10-08-rate-annotation-repair.json`.
