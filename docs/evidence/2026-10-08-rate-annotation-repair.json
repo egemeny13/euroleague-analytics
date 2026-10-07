@@ -1,0 +1,80 @@
+{
+  "production_changed": false,
+  "seasons": {
+    "E2024": {
+      "games": 330,
+      "official_boxscore_games_checked": 308,
+      "mapping_scope": "All loaded games, including quarantined games",
+      "metric_and_official_scope": "Non-quarantined games, played player rows",
+      "events_checked": 176483,
+      "mapping_mismatches": 0,
+      "metric_population_mismatches": 0,
+      "annotation_statuses": {
+        "resolved": 163900,
+        "assist_score": 12141,
+        "off_possession_free_throw": 417,
+        "off_possession_assist": 20,
+        "unresolved_assist": 5
+      },
+      "official_assist_mismatches": []
+    },
+    "E2025": {
+      "games": 402,
+      "official_boxscore_games_checked": 371,
+      "mapping_scope": "All loaded games, including quarantined games",
+      "metric_and_official_scope": "Non-quarantined games, played player rows",
+      "events_checked": 222976,
+      "mapping_mismatches": 0,
+      "metric_population_mismatches": 0,
+      "annotation_statuses": {
+        "resolved": 207374,
+        "assist_score": 15122,
+        "off_possession_free_throw": 452,
+        "off_possession_assist": 22,
+        "unresolved_assist": 6
+      },
+      "official_assist_mismatches": []
+    }
+  },
+  "blatt_handler": {
+    "player_id": "P011193",
+    "player_name": "BLATT, TAMIR",
+    "team_code": "TEL",
+    "games": 34,
+    "minutes": "675.0",
+    "points": "256.00",
+    "rebounds": "64.00",
+    "assists": "182.00",
+    "steals": "10.00",
+    "turnovers": "78.00",
+    "valuation": "318.00",
+    "effective_fg_pct": "0.5556",
+    "points_per_100_team_possessions": "9.89",
+    "advanced_games": 34,
+    "true_shooting_pct": "0.5767",
+    "ts_points": "256",
+    "ts_field_goal_attempts": "207",
+    "ts_free_throw_attempts": "34",
+    "efg_field_goals_made": "82",
+    "efg_three_pointers_made": "66",
+    "efg_field_goal_attempts": "207",
+    "usage_event_numerator": "296",
+    "offensive_oncourt_possessions": "1280",
+    "usage_event_rate": "0.2313",
+    "assist_event_numerator": "180",
+    "teammate_field_goals_made": "434",
+    "unresolved_assist_events": "0",
+    "off_possession_assist_events": "1",
+    "off_possession_free_throw_trips": "5",
+    "assist_rate": "0.4147",
+    "turnover_event_numerator": "77",
+    "turnover_rate": "0.0602",
+    "offensive_rebound_event_numerator": "11",
+    "offensive_rebound_opportunities": "613",
+    "offensive_rebound_rate": "0.0179",
+    "defensive_rebound_event_numerator": "52",
+    "defensive_rebound_opportunities": "613",
+    "defensive_rebound_rate": "0.0848"
+  },
+  "checked_at": "2026-10-07T23:11:56.113899+00:00"
+}

@@ -175,6 +175,42 @@
         "open_world_justification": "Does not make outbound network requests or modify external systems.",
         "destructive_justification": "Does not delete or overwrite any team statistics or configuration."
       }
+    },
+    "el_get_standings": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only reads official-score standings summaries including quarantined results from the warehouse; no database state is modified.",
+        "open_world_justification": "Queries loaded warehouse data only, without external API calls or publication.",
+        "destructive_justification": "Does not insert, update, delete, overwrite or mutate any stored record."
+      }
+    },
+    "el_get_shot_profile": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only reads zone shot aggregates and matched league rates without raw coordinates from the warehouse; no database state is modified.",
+        "open_world_justification": "Queries loaded warehouse data only, without external API calls or publication.",
+        "destructive_justification": "Does not insert, update, delete, overwrite or mutate any stored record."
+      }
+    },
+    "el_get_game_log": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only reads bounded official player or team game logs with caller filters from the warehouse; no database state is modified.",
+        "open_world_justification": "Queries loaded warehouse data only, without external API calls or publication.",
+        "destructive_justification": "Does not insert, update, delete, overwrite or mutate any stored record."
+      }
     }
   },
   "test_cases": [

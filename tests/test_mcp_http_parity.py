@@ -21,9 +21,8 @@ from euroleague.mcp.http_app import (
 )
 from euroleague.mcp.tools import TOOL_NAMES, build_registry
 
-# Moved on 2026-10-06 by Decision 88: the el_get_fouls description and its foul_type
-# enum gained CMU_DI, CMU_FL and CMT1. Nothing else in the tool list changed.
-EXPECTED_TOOL_LIST_FINGERPRINT = "c3c69831ae8b8c857fe95d114607b33ecda878a80f90c90e0a179adf8aab7142"
+# Updated 2026-10-08: season meanings and owner-requested summary tools.
+EXPECTED_TOOL_LIST_FINGERPRINT = "c8afa7fa58dae33e631bc29eb8cee8695e593ae813e5b8c1c9713ee02b328a37"
 
 
 def _registry() -> dict:

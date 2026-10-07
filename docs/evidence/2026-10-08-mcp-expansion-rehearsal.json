@@ -1,0 +1,1272 @@
+{
+  "started_at": "2026-10-07T23:03:59.336569+00:00",
+  "production_write": false,
+  "checks": [
+    {
+      "tool": "get_standings",
+      "arguments": {
+        "season": "E2024"
+      },
+      "elapsed_seconds": 0.017,
+      "row_count": 18,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 330,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "include_quarantined": true,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "games_loaded": 330,
+        "games_with_official_scores": 330,
+        "quarantined_results": 22,
+        "phase": null
+      },
+      "sample": [
+        {
+          "season_code": "E2024",
+          "phase_code": null,
+          "is_all_phases": true,
+          "team_code": "OLY",
+          "team_name": "Olympiacos Piraeus",
+          "games_played": 40,
+          "wins": 28,
+          "losses": 12,
+          "home_games": 21,
+          "home_wins": 16,
+          "home_losses": 5,
+          "away_games": 19,
+          "away_wins": 12,
+          "away_losses": 7,
+          "points_for": 3438,
+          "points_against": 3260,
+          "point_differential": 178,
+          "last_five": [
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 314,
+              "game_date": "2025-04-25",
+              "points_for": 77,
+              "points_against": 71,
+              "opponent_team_code": "MAD",
+              "opponent_team_name": "Real Madrid"
+            },
+            {
+              "result": "L",
+              "is_home": false,
+              "gamecode": 318,
+              "game_date": "2025-04-29",
+              "points_for": 72,
+              "points_against": 80,
+              "opponent_team_code": "MAD",
+              "opponent_team_name": "Real Madrid"
+            },
+            {
+              "result": "W",
+              "is_home": false,
+              "gamecode": 322,
+              "game_date": "2025-05-01",
+              "points_for": 86,
+              "points_against": 84,
+              "opponent_team_code": "MAD",
+              "opponent_team_name": "Real Madrid"
+            },
+            {
+              "result": "L",
+              "is_home": true,
+              "gamecode": 327,
+              "game_date": "2025-05-23",
+              "points_for": 68,
+              "points_against": 78,
+              "opponent_team_code": "MCO",
+              "opponent_team_name": "AS Monaco"
+            },
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 329,
+              "game_date": "2025-05-25",
+              "points_for": 97,
+              "points_against": 93,
+              "opponent_team_code": "PAN",
+              "opponent_team_name": "Panathinaikos AKTOR Athens"
+            }
+          ]
+        }
+      ],
+      "caveats": [
+        "Standings include completed official results from quarantined games. The ordering is a results summary by wins, point differential and points scored; it does not apply or claim the EuroLeague's official head-to-head tiebreak rules.",
+        "last_five lists the team's five most recent played results in chronological order, oldest first. A shorter season or phase returns fewer results."
+      ]
+    },
+    {
+      "tool": "get_standings",
+      "arguments": {
+        "season": "E2024",
+        "phase": "RS"
+      },
+      "elapsed_seconds": 0.014,
+      "row_count": 18,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 306,
+        "first_game": "2024-10-03",
+        "last_game": "2025-04-11",
+        "include_quarantined": true,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "games_loaded": 306,
+        "games_with_official_scores": 306,
+        "quarantined_results": 21,
+        "phase": "RS"
+      },
+      "sample": [
+        {
+          "season_code": "E2024",
+          "phase_code": "RS",
+          "is_all_phases": false,
+          "team_code": "OLY",
+          "team_name": "Olympiacos Piraeus",
+          "games_played": 34,
+          "wins": 24,
+          "losses": 10,
+          "home_games": 17,
+          "home_wins": 13,
+          "home_losses": 4,
+          "away_games": 17,
+          "away_wins": 11,
+          "away_losses": 6,
+          "points_for": 2954,
+          "points_against": 2782,
+          "point_differential": 172,
+          "last_five": [
+            {
+              "result": "L",
+              "is_home": true,
+              "gamecode": 264,
+              "game_date": "2025-03-20",
+              "points_for": 73,
+              "points_against": 81,
+              "opponent_team_code": "RED",
+              "opponent_team_name": "Crvena Zvezda Meridianbet Belgrade"
+            },
+            {
+              "result": "L",
+              "is_home": false,
+              "gamecode": 274,
+              "game_date": "2025-03-25",
+              "points_for": 70,
+              "points_against": 81,
+              "opponent_team_code": "ASV",
+              "opponent_team_name": "LDLC ASVEL Villeurbanne"
+            },
+            {
+              "result": "L",
+              "is_home": true,
+              "gamecode": 281,
+              "game_date": "2025-03-27",
+              "points_for": 77,
+              "points_against": 80,
+              "opponent_team_code": "MCO",
+              "opponent_team_name": "AS Monaco"
+            },
+            {
+              "result": "W",
+              "is_home": false,
+              "gamecode": 294,
+              "game_date": "2025-04-04",
+              "points_for": 100,
+              "points_against": 92,
+              "opponent_team_code": "BER",
+              "opponent_team_name": "ALBA Berlin"
+            },
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 299,
+              "game_date": "2025-04-10",
+              "points_for": 99,
+              "points_against": 93,
+              "opponent_team_code": "TEL",
+              "opponent_team_name": "Maccabi Playtika Tel Aviv"
+            }
+          ]
+        }
+      ],
+      "caveats": [
+        "Standings include completed official results from quarantined games. The ordering is a results summary by wins, point differential and points scored; it does not apply or claim the EuroLeague's official head-to-head tiebreak rules.",
+        "last_five lists the team's five most recent played results in chronological order, oldest first. A shorter season or phase returns fewer results."
+      ]
+    },
+    {
+      "tool": "get_shot_profile",
+      "arguments": {
+        "season": "E2024",
+        "team": "IST",
+        "shot_type": "2P"
+      },
+      "elapsed_seconds": 0.175,
+      "row_count": 8,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 308,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "profile_scope": {
+          "kind": "team",
+          "id": "IST",
+          "team_code": "IST"
+        },
+        "shot_type": "2P",
+        "coordinate_availability": "attempts_with_real_coordinates is counted per returned source zone; no coordinates are included."
+      },
+      "sample": [
+        {
+          "shot_type": "2P",
+          "zone_code": "A",
+          "attempts": 176,
+          "makes": 167,
+          "attempts_with_real_coordinates": 176,
+          "fg_pct": "0.94886363636363636364",
+          "league_fg_pct": "0.93903133903133903134",
+          "fg_pct_difference_percentage_points": "0.98322973322973323000"
+        }
+      ],
+      "caveats": [
+        "fg_pct and league_fg_pct are rates from 0 to 1. fg_pct_difference_percentage_points is (fg_pct - league_fg_pct) times 100.",
+        "Zone labels use source shot-chart codes A-I. Unknown covers missing or unrecognized source zones; free throws remain in the separate FT zone. attempts_with_real_coordinates is a count only; coordinates are not returned."
+      ]
+    },
+    {
+      "tool": "get_game_log",
+      "arguments": {
+        "season": "E2024",
+        "team": "IST",
+        "home_away": "home",
+        "last_n": 5
+      },
+      "elapsed_seconds": 0.172,
+      "row_count": 5,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 308,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "games_loaded": 330,
+        "games_with_official_scores": 330,
+        "quarantined_results": 22,
+        "phase": null
+      },
+      "sample": [
+        {
+          "season_code": "E2024",
+          "gamecode": 324,
+          "game_datetime": "2025-05-02 17:30:00+00:00",
+          "game_date": "2025-05-02",
+          "phase_code": "PO",
+          "round_number": 40,
+          "team_code": "IST",
+          "team_name": "Anadolu Efes Istanbul",
+          "opponent_team_code": "PAN",
+          "opponent_team_name": "Panathinaikos AKTOR Athens",
+          "is_home": true,
+          "points": 85,
+          "opponent_points": 82,
+          "field_goals_made": 31,
+          "field_goals_attempted": 62,
+          "three_pointers_made": 13,
+          "three_pointers_attempted": 27,
+          "free_throws_made": 10,
+          "free_throws_attempted": 18,
+          "offensive_rebounds": 10,
+          "defensive_rebounds": 18,
+          "total_rebounds": 28,
+          "assists": 24,
+          "steals": 10,
+          "turnovers": 12,
+          "fouls_commited": 19,
+          "fouls_received": 19,
+          "excluded_by_default": false,
+          "quarantine_reasons": []
+        }
+      ],
+      "caveats": [
+        "Rows contain official box-score counting statistics for played games. Player DNP rows are omitted.",
+        "Quarantined games are excluded by default and identified in the exclusion block; this endpoint follows the default population.",
+        "Minutes do not apply to team game logs.",
+        "last_n is applied after home/away and opponent filters, so it means the most recent matching games."
+      ]
+    },
+    {
+      "tool": "get_shot_profile",
+      "arguments": {
+        "season": "E2024",
+        "player": "P009846",
+        "team": "IST"
+      },
+      "elapsed_seconds": 0.108,
+      "row_count": 11,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 308,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "profile_scope": {
+          "kind": "player",
+          "id": "P009846",
+          "team_code": "IST"
+        },
+        "shot_type": "all",
+        "coordinate_availability": "attempts_with_real_coordinates is counted per returned source zone; no coordinates are included."
+      },
+      "sample": [
+        {
+          "shot_type": "2P",
+          "zone_code": "A",
+          "attempts": 3,
+          "makes": 3,
+          "attempts_with_real_coordinates": 3,
+          "fg_pct": "1.00000000000000000000",
+          "league_fg_pct": "0.93903133903133903134",
+          "fg_pct_difference_percentage_points": "6.09686609686609686600"
+        }
+      ],
+      "caveats": [
+        "fg_pct and league_fg_pct are rates from 0 to 1. fg_pct_difference_percentage_points is (fg_pct - league_fg_pct) times 100.",
+        "Zone labels use source shot-chart codes A-I. Unknown covers missing or unrecognized source zones; free throws remain in the separate FT zone. attempts_with_real_coordinates is a count only; coordinates are not returned."
+      ]
+    },
+    {
+      "tool": "get_game_log",
+      "arguments": {
+        "season": "E2024",
+        "player": "P009846",
+        "last_n": 5,
+        "minutes_basis": "official"
+      },
+      "elapsed_seconds": 0.186,
+      "row_count": 5,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 308,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "games_loaded": 330,
+        "games_with_official_scores": 330,
+        "quarantined_results": 22,
+        "phase": null
+      },
+      "sample": [
+        {
+          "season_code": "E2024",
+          "gamecode": 326,
+          "game_datetime": "2025-05-06 18:45:00+00:00",
+          "game_date": "2025-05-06",
+          "phase_code": "PO",
+          "round_number": 41,
+          "team_code": "IST",
+          "team_name": "Anadolu Efes Istanbul",
+          "opponent_team_code": "PAN",
+          "opponent_team_name": "Panathinaikos AKTOR Athens",
+          "is_home": false,
+          "player_id": "P009846",
+          "player_name": "BRYANT, ELIJAH",
+          "minutes": "36.0",
+          "points": 16,
+          "field_goals_made": 4,
+          "field_goals_attempted": 13,
+          "three_pointers_made": 3,
+          "three_pointers_attempted": 8,
+          "free_throws_made": 5,
+          "free_throws_attempted": 6,
+          "offensive_rebounds": 1,
+          "defensive_rebounds": 3,
+          "total_rebounds": 4,
+          "assists": 4,
+          "steals": 1,
+          "turnovers": 2,
+          "blocks_favour": 1,
+          "blocks_against": 0,
+          "fouls_commited": 4,
+          "fouls_received": 3,
+          "valuation": 13,
+          "plus_minus": -8,
+          "excluded_by_default": false,
+          "quarantine_reasons": []
+        }
+      ],
+      "caveats": [
+        "Rows contain official box-score counting statistics for played games. Player DNP rows are omitted.",
+        "Quarantined games are excluded by default and identified in the exclusion block; this endpoint follows the default population.",
+        "Minutes are official seconds from the warehouse minute record.",
+        "last_n is applied after home/away and opponent filters, so it means the most recent matching games."
+      ]
+    },
+    {
+      "tool": "get_player_stats",
+      "arguments": {
+        "season": "E2024",
+        "player": "P009846"
+      },
+      "elapsed_seconds": 0.12,
+      "row_count": 1,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 308,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null
+      },
+      "sample": [
+        {
+          "player_id": "P009846",
+          "player_name": "BRYANT, ELIJAH",
+          "team_code": "IST",
+          "games": 38,
+          "minutes": "1027.2",
+          "points": "526.00",
+          "rebounds": "161.00",
+          "assists": "119.00",
+          "steals": "44.00",
+          "turnovers": "85.00",
+          "valuation": "549.00",
+          "effective_fg_pct": "0.5120",
+          "points_per_100_team_possessions": "19.37"
+        }
+      ],
+      "caveats": [
+        "Counting statistics are the official euroleague.net box score, not recounted from events.",
+        "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure."
+      ]
+    },
+    {
+      "tool": "get_player_stats",
+      "arguments": {
+        "season": "E2024",
+        "player": "P009846",
+        "advanced": true
+      },
+      "elapsed_seconds": 1.645,
+      "row_count": 1,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 308,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null
+      },
+      "sample": [
+        {
+          "player_id": "P009846",
+          "player_name": "BRYANT, ELIJAH",
+          "team_code": "IST",
+          "games": 38,
+          "minutes": "1027.2",
+          "points": "526.00",
+          "rebounds": "161.00",
+          "assists": "119.00",
+          "steals": "44.00",
+          "turnovers": "85.00",
+          "valuation": "549.00",
+          "effective_fg_pct": "0.5120",
+          "points_per_100_team_possessions": "19.37",
+          "advanced_games": 38,
+          "true_shooting_pct": "0.5651",
+          "ts_points": "526",
+          "ts_field_goal_attempts": "417",
+          "ts_free_throw_attempts": "110",
+          "efg_field_goals_made": "185",
+          "efg_three_pointers_made": "57",
+          "efg_field_goal_attempts": "417",
+          "usage_event_numerator": "562",
+          "offensive_oncourt_possessions": "1833",
+          "usage_event_rate": "0.3066",
+          "assist_event_numerator": "119",
+          "teammate_field_goals_made": "599",
+          "unresolved_assist_events": "0",
+          "off_possession_assist_events": "0",
+          "off_possession_free_throw_trips": "4",
+          "assist_rate": "0.1987",
+          "turnover_event_numerator": "85",
+          "turnover_rate": "0.0464",
+          "offensive_rebound_event_numerator": "24",
+          "offensive_rebound_opportunities": "830",
+          "offensive_rebound_rate": "0.0289",
+          "defensive_rebound_event_numerator": "137",
+          "defensive_rebound_opportunities": "850",
+          "defensive_rebound_rate": "0.1612"
+        }
+      ],
+      "caveats": [
+        "Counting statistics are the official euroleague.net box score, not recounted from events.",
+        "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure.",
+        "Assist and and-one annotations are linked to the related scoring possession in source ingest order, even when they fall outside its stored event interval. Assists on shooting fouls are included; their denominator remains teammate field goals, so small-sample assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession assist events and FT trips are reported separately and excluded from possession rates.",
+        "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is the standard estimate, not an event-exact scoring denominator.",
+        "usage_event_rate = (FGA events + inferred free-throw trips + turnover events) / exact offensive possessions with the player in the possession-start lineup. It is a custom event rate, not standard USG%; and-one trips are included and the rate can exceed 100%.",
+        "assist_rate = the player's assist events / teammate made-field-goal events in the same possession-start offensive lineup population. turnover_rate = turnover events / exact offensive possessions with the player in that starting lineup.",
+        "Offensive rebound rate = player offensive rebounds / (team offensive rebounds + opponent defensive rebounds); defensive rebound rate uses the reverse. Team-only rebound events remain in the denominators. These are observed rebound outcomes, not missed-shot estimates.",
+        "Rates use events only in possessions whose starting lineup includes the player. A possession spanning a substitution is credited to the starting lineup; suspect player-attribution rows are excluded.",
+        "Free-throw trips use the warehouse's inferred, unsplit groups. The event stream does not identify shot position within a multi-award group (Decision 77).",
+        "Advanced numerator and denominator fields are season totals for auditability; per_game changes legacy box-score counting columns only. Rates remain ratios of season totals.",
+        "Rate fields are fractions; multiply by 100 to display percentages. usage_event_rate may exceed 1 because it counts multiple events in one possession, and true_shooting_pct may exceed 1 under the standard 0.44 free-throw approximation.",
+        "In E2024, 2710 of 44577 possessions (6.08%) in the selected quarantine population spanned a substitution and were credited to the lineup that started them."
+      ]
+    },
+    {
+      "tool": "get_player_stats",
+      "arguments": {
+        "season": "E2024",
+        "player": "P009846",
+        "advanced": true,
+        "per_game": true
+      },
+      "elapsed_seconds": 2.131,
+      "row_count": 1,
+      "coverage": {
+        "seasons": [
+          "E2024"
+        ],
+        "games_included": 308,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null
+      },
+      "sample": [
+        {
+          "player_id": "P009846",
+          "player_name": "BRYANT, ELIJAH",
+          "team_code": "IST",
+          "games": 38,
+          "minutes": "27.0",
+          "points": "13.84",
+          "rebounds": "4.24",
+          "assists": "3.13",
+          "steals": "1.16",
+          "turnovers": "2.24",
+          "valuation": "14.45",
+          "effective_fg_pct": "0.5120",
+          "points_per_100_team_possessions": "19.37",
+          "advanced_games": 38,
+          "true_shooting_pct": "0.5651",
+          "ts_points": "526",
+          "ts_field_goal_attempts": "417",
+          "ts_free_throw_attempts": "110",
+          "efg_field_goals_made": "185",
+          "efg_three_pointers_made": "57",
+          "efg_field_goal_attempts": "417",
+          "usage_event_numerator": "562",
+          "offensive_oncourt_possessions": "1833",
+          "usage_event_rate": "0.3066",
+          "assist_event_numerator": "119",
+          "teammate_field_goals_made": "599",
+          "unresolved_assist_events": "0",
+          "off_possession_assist_events": "0",
+          "off_possession_free_throw_trips": "4",
+          "assist_rate": "0.1987",
+          "turnover_event_numerator": "85",
+          "turnover_rate": "0.0464",
+          "offensive_rebound_event_numerator": "24",
+          "offensive_rebound_opportunities": "830",
+          "offensive_rebound_rate": "0.0289",
+          "defensive_rebound_event_numerator": "137",
+          "defensive_rebound_opportunities": "850",
+          "defensive_rebound_rate": "0.1612"
+        }
+      ],
+      "caveats": [
+        "Counting statistics are the official euroleague.net box score, not recounted from events.",
+        "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure.",
+        "Assist and and-one annotations are linked to the related scoring possession in source ingest order, even when they fall outside its stored event interval. Assists on shooting fouls are included; their denominator remains teammate field goals, so small-sample assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession assist events and FT trips are reported separately and excluded from possession rates.",
+        "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is the standard estimate, not an event-exact scoring denominator.",
+        "usage_event_rate = (FGA events + inferred free-throw trips + turnover events) / exact offensive possessions with the player in the possession-start lineup. It is a custom event rate, not standard USG%; and-one trips are included and the rate can exceed 100%.",
+        "assist_rate = the player's assist events / teammate made-field-goal events in the same possession-start offensive lineup population. turnover_rate = turnover events / exact offensive possessions with the player in that starting lineup.",
+        "Offensive rebound rate = player offensive rebounds / (team offensive rebounds + opponent defensive rebounds); defensive rebound rate uses the reverse. Team-only rebound events remain in the denominators. These are observed rebound outcomes, not missed-shot estimates.",
+        "Rates use events only in possessions whose starting lineup includes the player. A possession spanning a substitution is credited to the starting lineup; suspect player-attribution rows are excluded.",
+        "Free-throw trips use the warehouse's inferred, unsplit groups. The event stream does not identify shot position within a multi-award group (Decision 77).",
+        "Advanced numerator and denominator fields are season totals for auditability; per_game changes legacy box-score counting columns only. Rates remain ratios of season totals.",
+        "Rate fields are fractions; multiply by 100 to display percentages. usage_event_rate may exceed 1 because it counts multiple events in one possession, and true_shooting_pct may exceed 1 under the standard 0.44 free-throw approximation.",
+        "In E2024, 2710 of 44577 possessions (6.08%) in the selected quarantine population spanned a substitution and were credited to the lineup that started them."
+      ]
+    },
+    {
+      "tool": "get_standings",
+      "arguments": {
+        "season": "E2025"
+      },
+      "elapsed_seconds": 0.035,
+      "row_count": 20,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 402,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "include_quarantined": true,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "games_loaded": 402,
+        "games_with_official_scores": 402,
+        "quarantined_results": 31,
+        "phase": null
+      },
+      "sample": [
+        {
+          "season_code": "E2025",
+          "phase_code": null,
+          "is_all_phases": true,
+          "team_code": "OLY",
+          "team_name": "Olympiacos Piraeus",
+          "games_played": 43,
+          "wins": 31,
+          "losses": 12,
+          "home_games": 23,
+          "home_wins": 20,
+          "home_losses": 3,
+          "away_games": 20,
+          "away_wins": 11,
+          "away_losses": 9,
+          "points_for": 3891,
+          "points_against": 3545,
+          "point_differential": 346,
+          "last_five": [
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 384,
+              "game_date": "2026-04-28",
+              "points_for": 91,
+              "points_against": 70,
+              "opponent_team_code": "MCO",
+              "opponent_team_name": "AS Monaco"
+            },
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 388,
+              "game_date": "2026-04-30",
+              "points_for": 94,
+              "points_against": 64,
+              "opponent_team_code": "MCO",
+              "opponent_team_name": "AS Monaco"
+            },
+            {
+              "result": "W",
+              "is_home": false,
+              "gamecode": 392,
+              "game_date": "2026-05-05",
+              "points_for": 105,
+              "points_against": 82,
+              "opponent_team_code": "MCO",
+              "opponent_team_name": "AS Monaco"
+            },
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 404,
+              "game_date": "2026-05-22",
+              "points_for": 79,
+              "points_against": 61,
+              "opponent_team_code": "ULK",
+              "opponent_team_name": "Fenerbahce Beko Istanbul"
+            },
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 406,
+              "game_date": "2026-05-24",
+              "points_for": 92,
+              "points_against": 85,
+              "opponent_team_code": "MAD",
+              "opponent_team_name": "Real Madrid"
+            }
+          ]
+        }
+      ],
+      "caveats": [
+        "Standings include completed official results from quarantined games. The ordering is a results summary by wins, point differential and points scored; it does not apply or claim the EuroLeague's official head-to-head tiebreak rules.",
+        "last_five lists the team's five most recent played results in chronological order, oldest first. A shorter season or phase returns fewer results."
+      ]
+    },
+    {
+      "tool": "get_standings",
+      "arguments": {
+        "season": "E2025",
+        "phase": "RS"
+      },
+      "elapsed_seconds": 0.018,
+      "row_count": 20,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 380,
+        "first_game": "2025-09-30",
+        "last_game": "2026-04-17",
+        "include_quarantined": true,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "games_loaded": 380,
+        "games_with_official_scores": 380,
+        "quarantined_results": 30,
+        "phase": "RS"
+      },
+      "sample": [
+        {
+          "season_code": "E2025",
+          "phase_code": "RS",
+          "is_all_phases": false,
+          "team_code": "OLY",
+          "team_name": "Olympiacos Piraeus",
+          "games_played": 38,
+          "wins": 26,
+          "losses": 12,
+          "home_games": 19,
+          "home_wins": 16,
+          "home_losses": 3,
+          "away_games": 19,
+          "away_wins": 10,
+          "away_losses": 9,
+          "points_for": 3430,
+          "points_against": 3183,
+          "point_differential": 247,
+          "last_five": [
+            {
+              "result": "L",
+              "is_home": false,
+              "gamecode": 327,
+              "game_date": "2026-03-24",
+              "points_for": 84,
+              "points_against": 85,
+              "opponent_team_code": "PAM",
+              "opponent_team_name": "Valencia Basket"
+            },
+            {
+              "result": "W",
+              "is_home": false,
+              "gamecode": 349,
+              "game_date": "2026-04-03",
+              "points_for": 82,
+              "points_against": 74,
+              "opponent_team_code": "ASV",
+              "opponent_team_name": "LDLC ASVEL Villeurbanne"
+            },
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 355,
+              "game_date": "2026-04-07",
+              "points_for": 102,
+              "points_against": 88,
+              "opponent_team_code": "MAD",
+              "opponent_team_name": "Real Madrid"
+            },
+            {
+              "result": "W",
+              "is_home": false,
+              "gamecode": 363,
+              "game_date": "2026-04-09",
+              "points_for": 89,
+              "points_against": 85,
+              "opponent_team_code": "HTA",
+              "opponent_team_name": "Hapoel IBI Tel Aviv"
+            },
+            {
+              "result": "W",
+              "is_home": true,
+              "gamecode": 375,
+              "game_date": "2026-04-16",
+              "points_for": 85,
+              "points_against": 76,
+              "opponent_team_code": "MIL",
+              "opponent_team_name": "EA7 Emporio Armani Milan"
+            }
+          ]
+        }
+      ],
+      "caveats": [
+        "Standings include completed official results from quarantined games. The ordering is a results summary by wins, point differential and points scored; it does not apply or claim the EuroLeague's official head-to-head tiebreak rules.",
+        "last_five lists the team's five most recent played results in chronological order, oldest first. A shorter season or phase returns fewer results."
+      ]
+    },
+    {
+      "tool": "get_shot_profile",
+      "arguments": {
+        "season": "E2025",
+        "team": "IST",
+        "shot_type": "2P"
+      },
+      "elapsed_seconds": 0.205,
+      "row_count": 7,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 371,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "profile_scope": {
+          "kind": "team",
+          "id": "IST",
+          "team_code": "IST"
+        },
+        "shot_type": "2P",
+        "coordinate_availability": "attempts_with_real_coordinates is counted per returned source zone; no coordinates are included."
+      },
+      "sample": [
+        {
+          "shot_type": "2P",
+          "zone_code": "A",
+          "attempts": 125,
+          "makes": 120,
+          "attempts_with_real_coordinates": 125,
+          "fg_pct": "0.96000000000000000000",
+          "league_fg_pct": "0.94002552105487026797",
+          "fg_pct_difference_percentage_points": "1.99744789451297320300"
+        }
+      ],
+      "caveats": [
+        "fg_pct and league_fg_pct are rates from 0 to 1. fg_pct_difference_percentage_points is (fg_pct - league_fg_pct) times 100.",
+        "Zone labels use source shot-chart codes A-I. Unknown covers missing or unrecognized source zones; free throws remain in the separate FT zone. attempts_with_real_coordinates is a count only; coordinates are not returned."
+      ]
+    },
+    {
+      "tool": "get_game_log",
+      "arguments": {
+        "season": "E2025",
+        "team": "IST",
+        "home_away": "home",
+        "last_n": 5
+      },
+      "elapsed_seconds": 0.22,
+      "row_count": 5,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 371,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "games_loaded": 402,
+        "games_with_official_scores": 402,
+        "quarantined_results": 31,
+        "phase": null
+      },
+      "sample": [
+        {
+          "season_code": "E2025",
+          "gamecode": 359,
+          "game_datetime": "2026-04-08 17:30:00+00:00",
+          "game_date": "2026-04-08",
+          "phase_code": "RS",
+          "round_number": 36,
+          "team_code": "IST",
+          "team_name": "Anadolu Efes Istanbul",
+          "opponent_team_code": "PAR",
+          "opponent_team_name": "Partizan Mozzart Bet Belgrade",
+          "is_home": true,
+          "points": 79,
+          "opponent_points": 72,
+          "field_goals_made": 23,
+          "field_goals_attempted": 58,
+          "three_pointers_made": 4,
+          "three_pointers_attempted": 16,
+          "free_throws_made": 29,
+          "free_throws_attempted": 34,
+          "offensive_rebounds": 9,
+          "defensive_rebounds": 30,
+          "total_rebounds": 39,
+          "assists": 20,
+          "steals": 5,
+          "turnovers": 12,
+          "fouls_commited": 18,
+          "fouls_received": 26,
+          "excluded_by_default": false,
+          "quarantine_reasons": []
+        }
+      ],
+      "caveats": [
+        "Rows contain official box-score counting statistics for played games. Player DNP rows are omitted.",
+        "Quarantined games are excluded by default and identified in the exclusion block; this endpoint follows the default population.",
+        "Minutes do not apply to team game logs.",
+        "last_n is applied after home/away and opponent filters, so it means the most recent matching games."
+      ]
+    },
+    {
+      "tool": "get_shot_profile",
+      "arguments": {
+        "season": "E2025",
+        "player": "P012710",
+        "team": "IST"
+      },
+      "elapsed_seconds": 0.195,
+      "row_count": 11,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 371,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "profile_scope": {
+          "kind": "player",
+          "id": "P012710",
+          "team_code": "IST"
+        },
+        "shot_type": "all",
+        "coordinate_availability": "attempts_with_real_coordinates is counted per returned source zone; no coordinates are included."
+      },
+      "sample": [
+        {
+          "shot_type": "2P",
+          "zone_code": "A",
+          "attempts": 8,
+          "makes": 8,
+          "attempts_with_real_coordinates": 8,
+          "fg_pct": "1.00000000000000000000",
+          "league_fg_pct": "0.94002552105487026797",
+          "fg_pct_difference_percentage_points": "5.99744789451297320300"
+        }
+      ],
+      "caveats": [
+        "fg_pct and league_fg_pct are rates from 0 to 1. fg_pct_difference_percentage_points is (fg_pct - league_fg_pct) times 100.",
+        "Zone labels use source shot-chart codes A-I. Unknown covers missing or unrecognized source zones; free throws remain in the separate FT zone. attempts_with_real_coordinates is a count only; coordinates are not returned."
+      ]
+    },
+    {
+      "tool": "get_game_log",
+      "arguments": {
+        "season": "E2025",
+        "player": "P012710",
+        "last_n": 5,
+        "minutes_basis": "official"
+      },
+      "elapsed_seconds": 0.238,
+      "row_count": 5,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 371,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null,
+        "games_loaded": 402,
+        "games_with_official_scores": 402,
+        "quarantined_results": 31,
+        "phase": null
+      },
+      "sample": [
+        {
+          "season_code": "E2025",
+          "gamecode": 367,
+          "game_datetime": "2026-04-10 18:00:00+00:00",
+          "game_date": "2026-04-10",
+          "phase_code": "RS",
+          "round_number": 37,
+          "team_code": "IST",
+          "team_name": "Anadolu Efes Istanbul",
+          "opponent_team_code": "DUB",
+          "opponent_team_name": "Dubai Basketball",
+          "is_home": false,
+          "player_id": "P012710",
+          "player_name": "OSMANI, ERCAN",
+          "minutes": "17.5",
+          "points": 14,
+          "field_goals_made": 6,
+          "field_goals_attempted": 8,
+          "three_pointers_made": 2,
+          "three_pointers_attempted": 3,
+          "free_throws_made": 0,
+          "free_throws_attempted": 0,
+          "offensive_rebounds": 1,
+          "defensive_rebounds": 1,
+          "total_rebounds": 2,
+          "assists": 2,
+          "steals": 0,
+          "turnovers": 1,
+          "blocks_favour": 0,
+          "blocks_against": 0,
+          "fouls_commited": 0,
+          "fouls_received": 0,
+          "valuation": 15,
+          "plus_minus": 0,
+          "excluded_by_default": false,
+          "quarantine_reasons": []
+        }
+      ],
+      "caveats": [
+        "Rows contain official box-score counting statistics for played games. Player DNP rows are omitted.",
+        "Quarantined games are excluded by default and identified in the exclusion block; this endpoint follows the default population.",
+        "Minutes are official seconds from the warehouse minute record.",
+        "last_n is applied after home/away and opponent filters, so it means the most recent matching games."
+      ]
+    },
+    {
+      "tool": "get_player_stats",
+      "arguments": {
+        "season": "E2025",
+        "player": "P012710"
+      },
+      "elapsed_seconds": 0.165,
+      "row_count": 1,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 371,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null
+      },
+      "sample": [
+        {
+          "player_id": "P012710",
+          "player_name": "OSMANI, ERCAN",
+          "team_code": "IST",
+          "games": 35,
+          "minutes": "847.6",
+          "points": "382.00",
+          "rebounds": "161.00",
+          "assists": "46.00",
+          "steals": "17.00",
+          "turnovers": "71.00",
+          "valuation": "397.00",
+          "effective_fg_pct": "0.5870",
+          "points_per_100_team_possessions": "15.10"
+        }
+      ],
+      "caveats": [
+        "Counting statistics are the official euroleague.net box score, not recounted from events.",
+        "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure."
+      ]
+    },
+    {
+      "tool": "get_player_stats",
+      "arguments": {
+        "season": "E2025",
+        "player": "P012710",
+        "advanced": true
+      },
+      "elapsed_seconds": 2.648,
+      "row_count": 1,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 371,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null
+      },
+      "sample": [
+        {
+          "player_id": "P012710",
+          "player_name": "OSMANI, ERCAN",
+          "team_code": "IST",
+          "games": 35,
+          "minutes": "847.6",
+          "points": "382.00",
+          "rebounds": "161.00",
+          "assists": "46.00",
+          "steals": "17.00",
+          "turnovers": "71.00",
+          "valuation": "397.00",
+          "effective_fg_pct": "0.5870",
+          "points_per_100_team_possessions": "15.10",
+          "advanced_games": 35,
+          "true_shooting_pct": "0.6190",
+          "ts_points": "382",
+          "ts_field_goal_attempts": "276",
+          "ts_free_throw_attempts": "74",
+          "efg_field_goals_made": "144",
+          "efg_three_pointers_made": "36",
+          "efg_field_goal_attempts": "276",
+          "usage_event_numerator": "386",
+          "offensive_oncourt_possessions": "1488",
+          "usage_event_rate": "0.2594",
+          "assist_event_numerator": "46",
+          "teammate_field_goals_made": "468",
+          "unresolved_assist_events": "0",
+          "off_possession_assist_events": "0",
+          "off_possession_free_throw_trips": "1",
+          "assist_rate": "0.0983",
+          "turnover_event_numerator": "71",
+          "turnover_rate": "0.0477",
+          "offensive_rebound_event_numerator": "43",
+          "offensive_rebound_opportunities": "663",
+          "offensive_rebound_rate": "0.0649",
+          "defensive_rebound_event_numerator": "116",
+          "defensive_rebound_opportunities": "667",
+          "defensive_rebound_rate": "0.1739"
+        }
+      ],
+      "caveats": [
+        "Counting statistics are the official euroleague.net box score, not recounted from events.",
+        "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure.",
+        "Assist and and-one annotations are linked to the related scoring possession in source ingest order, even when they fall outside its stored event interval. Assists on shooting fouls are included; their denominator remains teammate field goals, so small-sample assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession assist events and FT trips are reported separately and excluded from possession rates.",
+        "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is the standard estimate, not an event-exact scoring denominator.",
+        "usage_event_rate = (FGA events + inferred free-throw trips + turnover events) / exact offensive possessions with the player in the possession-start lineup. It is a custom event rate, not standard USG%; and-one trips are included and the rate can exceed 100%.",
+        "assist_rate = the player's assist events / teammate made-field-goal events in the same possession-start offensive lineup population. turnover_rate = turnover events / exact offensive possessions with the player in that starting lineup.",
+        "Offensive rebound rate = player offensive rebounds / (team offensive rebounds + opponent defensive rebounds); defensive rebound rate uses the reverse. Team-only rebound events remain in the denominators. These are observed rebound outcomes, not missed-shot estimates.",
+        "Rates use events only in possessions whose starting lineup includes the player. A possession spanning a substitution is credited to the starting lineup; suspect player-attribution rows are excluded.",
+        "Free-throw trips use the warehouse's inferred, unsplit groups. The event stream does not identify shot position within a multi-award group (Decision 77).",
+        "Advanced numerator and denominator fields are season totals for auditability; per_game changes legacy box-score counting columns only. Rates remain ratios of season totals.",
+        "Rate fields are fractions; multiply by 100 to display percentages. usage_event_rate may exceed 1 because it counts multiple events in one possession, and true_shooting_pct may exceed 1 under the standard 0.44 free-throw approximation.",
+        "In E2025, 3583 of 54724 possessions (6.55%) in the selected quarantine population spanned a substitution and were credited to the lineup that started them."
+      ]
+    },
+    {
+      "tool": "get_player_stats",
+      "arguments": {
+        "season": "E2025",
+        "player": "P012710",
+        "advanced": true,
+        "per_game": true
+      },
+      "elapsed_seconds": 2.755,
+      "row_count": 1,
+      "coverage": {
+        "seasons": [
+          "E2025"
+        ],
+        "games_included": 371,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "include_quarantined": false,
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null
+      },
+      "sample": [
+        {
+          "player_id": "P012710",
+          "player_name": "OSMANI, ERCAN",
+          "team_code": "IST",
+          "games": 35,
+          "minutes": "24.2",
+          "points": "10.91",
+          "rebounds": "4.60",
+          "assists": "1.31",
+          "steals": "0.49",
+          "turnovers": "2.03",
+          "valuation": "11.34",
+          "effective_fg_pct": "0.5870",
+          "points_per_100_team_possessions": "15.10",
+          "advanced_games": 35,
+          "true_shooting_pct": "0.6190",
+          "ts_points": "382",
+          "ts_field_goal_attempts": "276",
+          "ts_free_throw_attempts": "74",
+          "efg_field_goals_made": "144",
+          "efg_three_pointers_made": "36",
+          "efg_field_goal_attempts": "276",
+          "usage_event_numerator": "386",
+          "offensive_oncourt_possessions": "1488",
+          "usage_event_rate": "0.2594",
+          "assist_event_numerator": "46",
+          "teammate_field_goals_made": "468",
+          "unresolved_assist_events": "0",
+          "off_possession_assist_events": "0",
+          "off_possession_free_throw_trips": "1",
+          "assist_rate": "0.0983",
+          "turnover_event_numerator": "71",
+          "turnover_rate": "0.0477",
+          "offensive_rebound_event_numerator": "43",
+          "offensive_rebound_opportunities": "663",
+          "offensive_rebound_rate": "0.0649",
+          "defensive_rebound_event_numerator": "116",
+          "defensive_rebound_opportunities": "667",
+          "defensive_rebound_rate": "0.1739"
+        }
+      ],
+      "caveats": [
+        "Counting statistics are the official euroleague.net box score, not recounted from events.",
+        "points_per_100_team_possessions uses the TEAM's possessions while this player's team had the ball, not the player's own usage. It is a rate, not a usage measure.",
+        "Assist and and-one annotations are linked to the related scoring possession in source ingest order, even when they fall outside its stored event interval. Assists on shooting fouls are included; their denominator remains teammate field goals, so small-sample assist rates can exceed 1. Unresolved assists make assist_rate null. Off-possession assist events and FT trips are reported separately and excluded from possession rates.",
+        "true_shooting_pct = points / [2 x (FGA + 0.44 x FTA)]. The 0.44 free-throw factor is the standard estimate, not an event-exact scoring denominator.",
+        "usage_event_rate = (FGA events + inferred free-throw trips + turnover events) / exact offensive possessions with the player in the possession-start lineup. It is a custom event rate, not standard USG%; and-one trips are included and the rate can exceed 100%.",
+        "assist_rate = the player's assist events / teammate made-field-goal events in the same possession-start offensive lineup population. turnover_rate = turnover events / exact offensive possessions with the player in that starting lineup.",
+        "Offensive rebound rate = player offensive rebounds / (team offensive rebounds + opponent defensive rebounds); defensive rebound rate uses the reverse. Team-only rebound events remain in the denominators. These are observed rebound outcomes, not missed-shot estimates.",
+        "Rates use events only in possessions whose starting lineup includes the player. A possession spanning a substitution is credited to the starting lineup; suspect player-attribution rows are excluded.",
+        "Free-throw trips use the warehouse's inferred, unsplit groups. The event stream does not identify shot position within a multi-award group (Decision 77).",
+        "Advanced numerator and denominator fields are season totals for auditability; per_game changes legacy box-score counting columns only. Rates remain ratios of season totals.",
+        "Rate fields are fractions; multiply by 100 to display percentages. usage_event_rate may exceed 1 because it counts multiple events in one possession, and true_shooting_pct may exceed 1 under the standard 0.44 free-throw approximation.",
+        "In E2025, 3583 of 54724 possessions (6.55%) in the selected quarantine population spanned a substitution and were credited to the lineup that started them."
+      ]
+    }
+  ],
+  "migration_up_down_up_identical": true,
+  "reader_grants_exercised": true,
+  "historical_progress_synthetic_fixture_passed": true,
+  "passed": true,
+  "rolled_back": true,
+  "finished_at": "2026-10-07T23:04:13.087783+00:00"
+}

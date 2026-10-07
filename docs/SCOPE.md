@@ -15,7 +15,7 @@ league already publishes is not derived.
 
 ## What version 1 does
 
-Fourteen read-only tools, served identically over stdio and HTTP. Every response
+Seventeen read-only tools (Decision 93), served identically over stdio and HTTP. Every response
 states its data coverage, the games it excludes, and whether a minute figure is
 raw or corrected.
 
@@ -28,13 +28,16 @@ raw or corrected.
 | `el_get_play_by_play` | The event stream in source order, with the five players on court and the running margin. |
 | `el_get_shot_data` | Shot attempts with half-court coordinates. Free throws carry no coordinate. |
 | `el_get_team_stats` | A team's season: four factors, offensive and defensive rating, pace. |
-| `el_get_player_stats` | A player's season, per game and per 100 possessions. |
+| `el_get_player_stats` | A player's season, per game and per 100 possessions; optional advanced shooting and explicitly defined event rates. |
 | `el_get_lineup_stats` | Five-player lineups: possessions, offensive, defensive and net rating. |
 | `el_get_player_on_off` | The team's net rating with a player on court against off court; accepts the caller's clutch thresholds (max_seconds_remaining, max_margin), applied to both splits. |
 | `el_get_possessions` | Possession rows with start margin, clock and duration in seconds, so any clutch or transition definition is a filter (max_seconds_remaining, max_margin, max_duration_seconds); can aggregate by team, end reason, or both. |
 | `el_get_fouls` | Fouls committed and drawn by type, per player, team or game; reconciles to the box score. |
 | `el_get_referee_stats` | A referee's season: games worked, fouls per game, home-win rate, pace; unpivoted from the schedule's officiating crew. |
 | `el_get_roster` | A team's roster with biography (jersey, position, height, weight, birth date, country), linked to the box-score player by observed stat lines, never by name. |
+| `el_get_standings` | Official-score results, home/away W-L, points, differential and last five; quarantine is included, official tiebreak ranking is not claimed. |
+| `el_get_shot_profile` | Zone attempts, makes and rates versus a matched league baseline, without coordinates. |
+| `el_get_game_log` | Filtered, bounded official box-score rows for a player or team, with explicit minutes provenance. |
 
 Under the tools, the warehouse: three v1 game endpoints (`Boxscore`,
 `PlaybyPlay`, `Points`) and one v2 endpoint (the per-season people list, for
@@ -53,7 +56,7 @@ that adds no derived value.
 | Available in the API | Why it is not here |
 |---|---|
 | Season statistics per player and per club (v2 `people/{id}/stats`, `clubs/{code}/stats`, v3 `statistics/*/traditional`) | The warehouse computes season lines from the event stream, with possession denominators the league does not publish. Loading the league's own totals would give a second answer to the same question with no way to say which is right. Fetched and archived as a test oracle since Decision 78; never served. |
-| Standings per round (v2 `rounds/{n}/standings`) | Wins and losses are already in `raw_game`. A standings tool is a sort, not a metric. |
+| Official standings ranking/tiebreaks (v2 `rounds/{n}/standings`) | The owner-requested results summary is now served by `el_get_standings` (Decision 93); official head-to-head tiebreak rankings are not reproduced. |
 | The season schedule (v2 `games`) | Fixtures are already read for the settlement chain; a schedule tool would answer "when does Efes play" and nothing about how they play. |
 | `Evolution`: score margin per minute | Derived exactly by `el_get_play_by_play` from the running score, at event resolution rather than minute resolution. |
 | `Comparison` and `ShootingGraphic`: team-level summary totals | Recomputable from the event stream; `exploration/FINDINGS.md` records why storing them would be storing a second, unverifiable copy. |
@@ -78,8 +81,8 @@ pull request alone.
 
 ## What "done" means from here
 
-Version 1 is done in the sense the rules define: every phase gate passed, every
-derived metric tested, the tool surface frozen by this document. It is not done
+Version 1 is done in the sense the rules define: the original phase gates passed. Decision 93 adds the owner-requested
+summary tools, with their validation and production-release gates recorded separately. It is not done
 in the sense `CONTEXT.md` defines, "would a club's analytics staff respect
 this", because nobody outside the invite list has used it. That is Phase 9 in
 `ROADMAP.md`, and it is the only phase left.

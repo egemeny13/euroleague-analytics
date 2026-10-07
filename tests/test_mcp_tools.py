@@ -20,9 +20,9 @@ def registry():
     return build_registry(_null_runner)
 
 
-def test_fourteen_tools_are_declared():
-    assert len(TOOL_NAMES) == 14
-    assert len(set(TOOL_NAMES)) == 14
+def test_seventeen_tools_are_declared():
+    assert len(TOOL_NAMES) == 17
+    assert len(set(TOOL_NAMES)) == 17
 
 
 def test_every_declared_name_starts_with_the_project_prefix():
@@ -135,6 +135,8 @@ def test_registry_allows_literal_booleans_to_reach_runner():
             arguments["gamecode"] = 1
         if name == "el_get_shot_data":
             arguments["team"] = "PAN"
+        if name in ("el_get_shot_profile", "el_get_game_log"):
+            arguments["team"] = "PAN"
         tool.handler(arguments)
         assert calls[-1][1]["include_quarantined"] is True
         arguments["include_quarantined"] = False
@@ -142,17 +144,19 @@ def test_registry_allows_literal_booleans_to_reach_runner():
         assert calls[-1][1]["include_quarantined"] is False
 
 
-def test_season_parameter_and_describe_warehouse_clarify_ending_year_convention(registry):
-    """Break caught: a model misinterprets E2024 as 2024-25 instead of the season ending in
-    spring 2024.
-    """
-    for name, tool in registry.items():
-        if "season" in tool.input_schema["properties"]:
-            desc = tool.input_schema["properties"]["season"]["description"]
-            assert "spring" in desc.lower() or "ending in" in desc.lower(), f"{name}.season"
-
-    describe_desc = registry["el_describe_warehouse"].description
-    assert "spring" in describe_desc.lower() or "ending in" in describe_desc.lower()
+def test_season_parameter_and_describe_warehouse_clarify_starting_year_convention(registry):
+    """E2024 covers autumn 2024 through spring 2025, not the preceding season."""
+    descriptions = [registry["el_describe_warehouse"].description]
+    descriptions.extend(
+        tool.input_schema["properties"]["season"]["description"]
+        for tool in registry.values()
+        if "season" in tool.input_schema["properties"]
+    )
+    for description in descriptions:
+        assert "autumn <YYYY>" in description
+        assert "2024-25" in description
+        assert "ending in spring" not in description
+        assert "2023-24" not in description
 
 
 def test_paginated_tools_refuse_deep_offsets_before_the_database_runner():
@@ -218,3 +222,17 @@ def test_bulk_tool_descriptions_tell_models_to_narrow_before_paging(registry):
 def test_play_by_play_still_publishes_gamecode_as_required(registry):
     """Break caught: narrowing moves into the handler and the schema stops saying it."""
     assert registry["el_get_play_by_play"].input_schema["required"] == ["season", "gamecode"]
+
+
+@pytest.mark.parametrize("name", ["el_get_shot_profile", "el_get_game_log"])
+@pytest.mark.parametrize(
+    "arguments", [{"season": "E2024"}, {"season": "E2024", "player": "  ", "team": ""}]
+)
+def test_new_subject_tools_refuse_unscoped_calls_before_database(name, arguments, registry):
+    with pytest.raises(ValueError, match="at least one of team or player"):
+        registry[name].handler(arguments)
+
+
+def test_advanced_boolean_is_strict_before_database(registry):
+    with pytest.raises(ValueError, match="advanced must be true or false"):
+        registry["el_get_player_stats"].handler({"season": "E2024", "advanced": "true"})
