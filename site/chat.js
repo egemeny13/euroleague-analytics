@@ -1,4 +1,6 @@
 /* Plays the hero conversation once, when it scrolls into view.
+   The decimal separator comes from the page (data-sep on the window), so the
+   Turkish page counts up to 38,7 rather than 38.7.
 
    Nothing is added to or removed from the page: every message is already
    in the markup at its final size and is only revealed, so the page under
@@ -38,12 +40,13 @@
     var decimals = parseInt(el.dataset.decimals || "0", 10);
     var prefix = el.dataset.prefix || "";
     var suffix = el.dataset.suffix || "";
+    var sep = chat.dataset.sep || ".";
     var start = performance.now();
     var length = 900;
     (function frame(now) {
       var t = Math.min(1, (now - start) / length);
       var eased = 1 - Math.pow(1 - t, 4);
-      el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
+      el.textContent = prefix + (target * eased).toFixed(decimals).replace(".", sep) + suffix;
       if (t < 1) requestAnimationFrame(frame);
     })(start);
   }

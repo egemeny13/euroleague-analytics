@@ -684,8 +684,8 @@ one. The actual control is unchanged: a production write needs the owner's
 approval immediately before it.
 **Condition:** if an agent crosses a merge or production-write boundary without
 approval, or the owner leaves bypass mode, option 2 or 3 becomes the default.
-**Amendment, 2026-10-07 (owner: "her şeye izin veriyorum", after repeated
-Supabase prompts):** the `ask` list in `.claude/settings.json` is removed and its
+**Amendment, 2026-10-07 (owner, in Turkish: "I give permission for everything",
+after repeated Supabase prompts):** the `ask` list in `.claude/settings.json` is removed and its
 twelve rules (pushes, pull-request create/merge/close, workflow runs, merges,
 rebases, `pip install`, and the read-side Supabase tools `execute_sql`,
 `list_tables`, `query_logs`, `get_advisors`) move to `allow`. An `ask` rule
@@ -773,3 +773,37 @@ option (b) or (c). 86's "verify idle suspension" becomes "verify idle stop".
   wait for the owner.
 - **Cost meanwhile.** The machine runs always-on, as it did before 86, at
   about $2 a month.
+
+## 92. The website and its film are rebuilt from scratch around one message
+
+Owner, 2026-10-07: the site and the promo did not make a stranger understand
+the product or want it; rebuild both, reusing nothing of the old design. The
+message is "Your AI knows the score. Now it knows why." The page sells the
+visitor's gain first (questions a box score cannot answer), then shows the
+proof, then the two-minute setup.
+- **Design.** One self-hosted OFL typeface (Archivo, variable width), paper and
+  ink, one accent that marks only answers from the data and the connect
+  action. `test_the_accent_colour_is_spent_only_on_answers_and_actions` holds
+  the accent to that list.
+- **Figures.** Every number on the page and in the film was read from the
+  warehouse views on 2026-10-07 for E2025 with quarantined games excluded, using
+  the grouping of the matching MCP tool (lineups, on/off, possessions, team
+  games, referee games). The hero is E2025 game 406, the 2026 final. The shot
+  chart is that game's checksum-verified `Points` archive, built by
+  `scripts/build_site_shot_chart.py` (Decision 58 check: +3 cm). The two/three
+  tallies use the league's shot type, never coordinates.
+- **Supersedes** the site parts of Decisions 59, 60, 61 and 83: no screen
+  recordings, no hard-question clips, no launch film on the page. The film is
+  `site/film.mp4` (English) and `site/film-tr.mp4` (Turkish), one HyperFrames
+  composition rendered per language. Decisions 53 and 64 stand: the Turkish
+  page is `/tr/`, reached by the first-language redirect, and scripts hold no
+  copy (now tested by `test_site_scripts_hold_no_copy`).
+- **Kept for others:** `site/launch-film.mp4` stays published because the
+  ChatGPT directory submission names it as the demo recording.
+- **Connect steps** (Decision 62's condition): Claude re-checked against its
+  help centre on 2026-10-07; ChatGPT against current secondary guides the same
+  day (OpenAI's own page was not reachable); Gemini still carries its
+  2026-09-06 date.
+**Condition:** when the loaded seasons change, re-query every figure on both
+pages and in the film; never edit one by hand. The Turkish page's figures are
+tested equal to the English page's.

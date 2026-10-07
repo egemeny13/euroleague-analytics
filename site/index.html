@@ -5,79 +5,388 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EuroLeague Analytics — ask your AI why, not just who</title>
 <meta name="description" content="Connect ChatGPT, Claude or Gemini to every play of every EuroLeague game, then ask what you actually want to know. Free, read-only, two minutes to set up.">
+<meta property="og:title" content="Your AI knows the score. Now it knows why.">
+<meta property="og:description" content="Connect ChatGPT, Claude or Gemini to every play of every EuroLeague game. Free, two minutes.">
+<meta property="og:image" content="https://euroleague.egemenyucelen.me/film.jpg">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="en" href="https://euroleague.egemenyucelen.me/">
+<link rel="alternate" hreflang="tr" href="https://euroleague.egemenyucelen.me/tr/">
+<link rel="alternate" hreflang="x-default" href="https://euroleague.egemenyucelen.me/">
 <link rel="preload" href="fonts/Archivo-var-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="home.css">
-<!-- The Turkish page is rebuilt after the English design settles, so the
-     first-language redirect (Decision 53) is off on this branch. -->
+<link rel="stylesheet" href="style.css">
+<!-- A browser whose first language is Turkish is sent to the Turkish page
+     (Decisions 53, 64). ?lang=en on the address, or that choice remembered
+     from an earlier visit, stops it. Only the first preferred language counts.
+     Without storage or script the English page simply shows. -->
+<script>
+(function () {
+  document.documentElement.classList.add("js");
+  try {
+    var params = new URLSearchParams(location.search);
+    if (params.get("lang") === "en") {
+      localStorage.setItem("site-lang", "en");
+      return;
+    }
+    if (localStorage.getItem("site-lang") === "en") return;
+    var first = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+    if (/^tr(-|$)/i.test(first)) location.replace("tr/" + location.hash);
+  } catch (error) {
+    /* No storage or no URL API: stay on the English page. */
+  }
+})();
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="bar">
   <a class="wordmark" href="./">EuroLeague Analytics</a>
-  <a class="button button--small" href="#connect">Connect free</a>
+  <nav aria-label="Site">
+    <a class="hide-small" href="#ask">What to ask</a>
+    <a class="hide-small" href="#trust">Why trust it</a>
+    <a href="tr/" hreflang="tr" lang="tr">Türkçe</a>
+    <a class="button button--small" href="#connect">Connect free</a>
+  </nav>
 </header>
 
 <main id="main">
-  <section class="hero">
-    <h1>
-      <span class="known">Your AI knows the score.</span>
-      <span class="new">Now it knows <em>why.</em></span>
-    </h1>
 
-    <div class="hero-body">
-      <div>
-        <p class="lede">
-          Connect ChatGPT, Claude or Gemini to every play of every EuroLeague
-          game. Then ask what you actually want to know.
-        </p>
-        <a class="button" href="#connect">Connect it — free, two minutes</a>
-        <p class="fineprint">Sign in with Google. Nothing to install. Nothing to pay.</p>
+  <!-- 1. The promise, and a real answer that proves it. -->
+  <section class="hero">
+    <div class="wrap">
+      <h1>
+        <span class="known">Your AI knows the score.</span>
+        <span class="new">Now it knows <em>why.</em></span>
+      </h1>
+
+      <div class="hero-body">
+        <div>
+          <p class="lede">
+            Connect ChatGPT, Claude or Gemini to every play of every EuroLeague
+            game. Then ask what you actually want to know.
+          </p>
+          <a class="button" href="#connect">Connect it — free, two minutes</a>
+          <p class="fineprint">Sign in with Google. Nothing to install. Nothing to pay.</p>
+        </div>
+
+        <!-- Every number in this conversation was read from the warehouse:
+             E2025 game 406, the 2026 final. Team figures are the stored
+             v_team_game row (possessions counted from events, not estimated);
+             the five-man +9 is that lineup's own possessions in v_possession.
+             Queried 2026-10-07 (Decision 92). -->
+        <figure class="chat" id="chat" aria-label="An assistant with EuroLeague Analytics connected, explaining why Olympiacos won the 2026 final">
+          <div class="chat-head">
+            <span class="on">Your assistant, with EuroLeague Analytics</span>
+            <button class="replay" type="button" id="replay">Replay</button>
+          </div>
+
+          <div class="chat-body">
+            <div class="msg ask" data-step="ask"><span class="type"><span class="ghost">Who won the EuroLeague final?</span><span class="typed" aria-hidden="true"></span></span></div>
+
+            <div class="msg reply reply--plain" data-step="reply">
+              <p>Olympiacos, 92–85 over Real Madrid.</p>
+            </div>
+
+            <div class="msg ask" data-step="ask"><span class="type"><span class="ghost">Why? They gave the ball away 17 times.</span><span class="typed" aria-hidden="true"></span></span></div>
+
+            <div class="msg reply" data-step="working">
+              <p class="working">Reading all 149 possessions of the final…</p>
+            </div>
+
+            <div class="msg reply" data-step="reply">
+              <p>Because they won the extra chances back:</p>
+              <ul class="facts">
+                <li><span class="n" data-count="38.7" data-decimals="1" data-suffix="%">38.7%</span>
+                  <span>of their misses came back as offensive rebounds <span class="vs">— Madrid 18.9%</span></span></li>
+                <li><span class="n" data-count="46.6" data-decimals="1">46.6</span>
+                  <span>free throws per 100 shots <span class="vs">— Madrid 28.1</span></span></li>
+                <li><span class="n" data-count="9" data-decimals="0" data-prefix="+">+9</span>
+                  <span>Peters, Hall, Ward, Fournier and Joseph together, in 17 possessions</span></li>
+              </ul>
+            </div>
+          </div>
+          <figcaption class="source">A real answer, from the play-by-play of the 2026 final.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. The film: the whole idea in half a minute. -->
+  <section class="film" id="film" aria-labelledby="film-title">
+    <div class="wrap">
+      <div class="film-head">
+        <h2 id="film-title">The whole idea in 30 seconds.</h2>
+        <p>Turn the sound on. Everything in it is a real question with a real answer.</p>
+      </div>
+      <div class="player" id="player">
+        <video id="film-video" preload="none" playsinline poster="film.jpg"
+               aria-label="EuroLeague Analytics in 30 seconds">
+          <source src="film.mp4" type="video/mp4">
+        </video>
+        <button class="play" type="button" id="play">
+          <span><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1l11 6-11 6z" fill="currentColor"/></svg>Play with sound</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. What to ask. Each answer was queried from the warehouse views on
+       2026-10-07 for E2025 with quarantined games excluded, using the same
+       grouping as the corresponding MCP tool (Decision 92). Re-query when
+       the loaded seasons change; never edit a figure by hand. -->
+  <section class="section" id="ask" aria-labelledby="ask-title">
+    <div class="wrap">
+      <h2 id="ask-title" class="reveal">Ask what a box score <em>can't</em> tell you.</h2>
+      <p class="lede quiet reveal">Real questions, answered from last season's play-by-play.</p>
+
+      <ol class="qa">
+        <li class="reveal">
+          <p class="q">“Which Fenerbahçe five should close games?”</p>
+          <div class="a">
+            <span class="n">+24.5</span>
+            <p>Biberovic, Birch, Hall, Horton-Tucker and Melli: points per 100 possessions better than their opponents, over 214 possessions together.</p>
+            <small>The only Fenerbahçe five with at least 100 possessions together.</small>
+          </div>
+        </li>
+        <li class="reveal">
+          <p class="q">“Does Madrid really defend better with Tavares on the floor?”</p>
+          <div class="a">
+            <span class="n">110.7</span>
+            <p>points allowed per 100 possessions with him, 115.2 without. Madrid were +10.9 with him on, +2.3 with him off.</p>
+            <small>Over about 1,500 possessions each way.</small>
+          </div>
+        </li>
+        <li class="reveal">
+          <p class="q">“Who is best when it's close and late?”</p>
+          <div class="a">
+            <span class="n">+22.5</span>
+            <p>Hapoel Tel Aviv, per 100 possessions in the last five minutes with the score within five.</p>
+            <small>That is 216 possessions — a lean, not a law. It tells you so.</small>
+          </div>
+        </li>
+        <li class="reveal">
+          <p class="q">“Which team plays fastest?”</p>
+          <div class="a">
+            <span class="n">78.0</span>
+            <p>possessions a game for Paris, counted one by one. Barcelona were the slowest at 71.2.</p>
+          </div>
+        </li>
+        <li class="reveal">
+          <p class="q">“Which referee calls the most fouls?”</p>
+          <div class="a">
+            <span class="n">45.4</span>
+            <p>fouls a game with Milivoje Jovcic on the crew, over 20 games. Olegs Latisevs called the fewest: 39.5.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 4. The court. Shots from site/data/final-shots.json, built by
+       scripts/build_site_shot_chart.py from the checksum-verified archive;
+       the game passed the Decision 58 recording check (+3 cm). The
+       two-and-three tallies come from the league's own shot type, not from
+       coordinates. -->
+  <section class="section" id="court" aria-labelledby="court-title">
+    <div class="wrap court-grid">
+      <div class="reveal">
+        <h2 id="court-title">Ask where the shots came from.</h2>
+        <p class="lede">Every shot of the 2026 final, at the spot the league recorded it. Olympiacos went inside; Madrid lived and died at the three-point line.</p>
+        <ul class="teams" aria-label="Show or hide a team's shots">
+          <li><button class="team" type="button" aria-pressed="true" data-team="OLY" style="--team:#c8102e">
+            <span class="dot"></span><b>Olympiacos</b><span class="tally">38 twos · 20 threes</span></button></li>
+          <li><button class="team" type="button" aria-pressed="true" data-team="MAD" style="--team:#00529f">
+            <span class="dot"></span><b>Real Madrid</b><span class="tally">29 twos · 35 threes</span></button></li>
+        </ul>
+        <p class="key"><span class="made"><i></i>Made</span><span><i></i>Missed</span><span>Free throws have no location, so they are not drawn.</span></p>
       </div>
 
-      <!-- Every number in this conversation was read from the warehouse:
-           E2025 game 406, the 2026 final. Team figures are the stored
-           v_team_game row (possessions counted from events, not
-           estimated); the five-man +9 is that lineup's own possessions in
-           v_possession. Queried 2026-10-07. -->
-      <figure class="chat" id="chat" aria-label="An assistant with EuroLeague Analytics connected, explaining why Olympiacos won the 2026 final">
-        <div class="chat-head">
-          <span class="on">Your assistant, with EuroLeague Analytics</span>
-          <button class="replay" type="button" id="replay">Replay</button>
-        </div>
-
-        <div class="chat-body">
-          <div class="msg ask" data-step="ask"><span class="type"><span class="ghost">Who won the EuroLeague final?</span><span class="typed"></span></span></div>
-
-          <div class="msg reply reply--plain" data-step="reply">
-            <p>Olympiacos, 92–85 over Real Madrid.</p>
-          </div>
-
-          <div class="msg ask" data-step="ask"><span class="type"><span class="ghost">Why? They gave the ball away 17 times.</span><span class="typed"></span></span></div>
-
-          <div class="msg reply" data-step="working">
-            <p class="working">Reading all 149 possessions of the final…</p>
-          </div>
-
-          <div class="msg reply" data-step="reply">
-            <p>Because they won the extra chances back:</p>
-            <ul class="facts">
-              <li><span class="n" data-count="38.7" data-decimals="1" data-suffix="%">38.7%</span>
-                <span>of their misses came back as offensive rebounds <span class="vs">— Madrid 18.9%</span></span></li>
-              <li><span class="n" data-count="46.6" data-decimals="1">46.6</span>
-                <span>free throws per 100 shots <span class="vs">— Madrid 28.1</span></span></li>
-              <li><span class="n" data-count="9" data-decimals="0" data-prefix="+">+9</span>
-                <span>Peters, Hall, Ward, Fournier and Joseph together, in 17 possessions</span></li>
-            </ul>
-          </div>
-        </div>
-        <figcaption class="source">A real answer, from the play-by-play of the 2026 final.</figcaption>
+      <figure class="court reveal" id="court-chart" data-src="data/final-shots.json"
+              aria-label="Shot chart of the 2026 EuroLeague final, 122 field goal attempts">
+        <svg viewBox="-770 -180 1540 1150" role="img" aria-hidden="true">
+          <g class="lines">
+            <path d="M-750 960 V-157.5 H750 V960"/>
+            <rect x="-245" y="-157.5" width="490" height="580"/>
+            <circle cx="0" cy="422.5" r="180"/>
+            <path d="M-125 0 A125 125 0 0 0 125 0"/>
+            <path d="M-660 -157.5 V141.6 A675 675 0 0 0 660 141.6 V-157.5"/>
+            <line x1="-90" y1="-37.5" x2="90" y2="-37.5"/>
+            <circle cx="0" cy="0" r="22.5"/>
+          </g>
+          <g class="shots"></g>
+        </svg>
+        <figcaption>Olympiacos 92 – 85 Real Madrid · Final Four, 24 May 2026 · 122 shots</figcaption>
       </figure>
     </div>
   </section>
+
+  <!-- 5. Connect. Vendor steps carry the date each was checked (Decision 62's
+       condition); re-check them on every site pass. -->
+  <section class="section" id="connect" aria-labelledby="connect-title">
+    <div class="wrap">
+      <h2 id="connect-title" class="reveal">Two minutes, <em>once.</em></h2>
+      <p class="lede quiet reveal">You can't ask the assistant to connect itself — pasting this page into a chat does nothing. It takes one visit to its settings.</p>
+
+      <ol class="steps">
+        <li class="reveal">
+          <h3>Copy the address</h3>
+          <p>This is the whole setup.</p>
+          <div class="address">
+            <code id="address">https://euroleague-analytics-mcp.fly.dev/mcp</code>
+            <button class="copy" type="button" data-copy="address" data-done="Copied">Copy</button>
+          </div>
+        </li>
+        <li class="reveal">
+          <h3>Add it as a connector</h3>
+          <p>Paste it in your assistant's connector settings and sign in with Google. Steps for each one are below.</p>
+        </li>
+        <li class="reveal">
+          <h3>Ask in your own words</h3>
+          <p>About any team, player, lineup, game or referee. In any language your assistant speaks.</p>
+        </li>
+      </ol>
+
+      <div class="where">
+        <h3>Where to paste it</h3>
+        <p>Pick your assistant.</p>
+
+        <div class="tabs" role="tablist" aria-label="Assistant">
+          <button class="tab" type="button" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true">Claude</button>
+          <button class="tab" type="button" role="tab" id="tab-chatgpt" aria-controls="panel-chatgpt" aria-selected="false">ChatGPT</button>
+          <button class="tab" type="button" role="tab" id="tab-gemini" aria-controls="panel-gemini" aria-selected="false">Gemini</button>
+          <button class="tab" type="button" role="tab" id="tab-other" aria-controls="panel-other" aria-selected="false">Other apps</button>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-claude" aria-labelledby="tab-claude">
+          <h4>Claude — works on the free plan</h4>
+          <p class="checked">Free accounts can add one custom connector. Checked against Claude's help centre on 7 October 2026.</p>
+          <ol>
+            <li>Open <b>Customize</b>, then <b>Connectors</b>.</li>
+            <li>Click <b>+ Add</b>, then <b>Add custom connector</b>.</li>
+            <li>Name it <b>EuroLeague Analytics</b>, paste the address, click <b>Continue</b>, then <b>Add</b>.</li>
+            <li>Sign in with Google when Claude asks.</li>
+            <li>In a chat, open <b>+</b> → <b>Connectors</b> and switch it on.</li>
+          </ol>
+          <p>Works on the web, the desktop app and the phone. In Claude Code:</p>
+          <pre><code>claude mcp add --transport http euroleague https://euroleague-analytics-mcp.fly.dev/mcp</code></pre>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-chatgpt" aria-labelledby="tab-chatgpt" hidden>
+          <h4>ChatGPT — paid plans, on the web</h4>
+          <p class="checked">Custom connectors need Developer mode. Menu names have moved more than once; checked on 7 October 2026.</p>
+          <ol>
+            <li>Open <b>Settings → Security and login</b> and switch on <b>Developer mode</b>.</li>
+            <li>Go to <b>Settings → Plugins</b> (on some accounts <b>Apps &amp; Connectors</b>) and click <b>+</b> or <b>Create</b>.</li>
+            <li>Name it <b>European Basketball Analytics</b>, paste the address and choose <b>OAuth</b>.</li>
+            <li>Sign in with Google, then switch the connector on in a chat.</li>
+          </ol>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-gemini" aria-labelledby="tab-gemini" hidden>
+          <h4>Gemini — with Gemini Spark</h4>
+          <p class="checked">Needs Google AI Pro or Ultra on a personal account; the free Gemini app does not take custom connectors yet. Checked on 6 September 2026.</p>
+          <ol>
+            <li>Open <b>Settings &amp; help → Connected apps → Custom apps for Spark → Add a custom app</b>.</li>
+            <li>Name it <b>EuroLeague Analytics</b>, paste the address and sign in with Google.</li>
+            <li>In any chat, type <b>@EuroLeague Analytics</b> and ask.</li>
+          </ol>
+          <p>On a free plan, the shortest way in is Claude.</p>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-other" aria-labelledby="tab-other" hidden>
+          <h4>Cursor, Codex, Windsurf, Zed, Goose and others</h4>
+          <p class="checked">Any app that takes a remote MCP server takes this one. Expected from each app's own documentation; not every app has been tried here.</p>
+          <pre><code>{
+  "mcpServers": {
+    "euroleague-analytics": {
+      "url": "https://euroleague-analytics-mcp.fly.dev/mcp"
+    }
+  }
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Why the answers hold up. Figures are the verified ones in README
+       (test_verified_claims_consistency). -->
+  <section class="section" id="trust" aria-labelledby="trust-title">
+    <div class="wrap trust-grid">
+      <h2 id="trust-title" class="reveal">Why you can trust the answers.</h2>
+      <dl class="claims">
+        <div class="reveal">
+          <dt>Counted, not estimated</dt>
+          <dd>Most stats sites estimate possessions with a formula on the box score. Here every possession is counted from the play-by-play, one at a time, and pace, ratings and lineups rest on that count.</dd>
+        </div>
+        <div class="reveal">
+          <dt>Checked against the official box score</dt>
+          <dd>All <b>732 games</b> of the last two seasons match their official final score, and player minutes match to the second in <b>99.54%</b> of player games.</dd>
+        </div>
+        <div class="reveal">
+          <dt>Honest about thin samples</dt>
+          <dd>A five-man lineup that played 30 possessions is noise. Every lineup answer reaches your assistant with that warning attached, so it tells you too.</dd>
+        </div>
+        <div class="reveal">
+          <dt>Read-only, and open</dt>
+          <dd>It answers questions and can't change anything. The code and the tests behind every number are public.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- 7. Questions people ask first. -->
+  <section class="section" id="faq" aria-labelledby="faq-title">
+    <div class="wrap">
+      <h2 id="faq-title" class="reveal">Questions people ask first.</h2>
+      <div class="faq">
+        <details>
+          <summary>Is it really free?</summary>
+          <p>Yes. No plan, no card. Each account has a daily fair-use limit, which is what keeps the server affordable to run for everyone.</p>
+        </details>
+        <details>
+          <summary>Is this the official EuroLeague?</summary>
+          <p>No. It is an independent project built from the league's public play-by-play feed. It is not affiliated with or endorsed by Euroleague Basketball.</p>
+        </details>
+        <details>
+          <summary>Which seasons can I ask about?</summary>
+          <p>The 2024–25 and 2025–26 EuroLeague seasons in full, and 2026–27 as it is played. Older seasons are archived but not yet open to questions.</p>
+        </details>
+        <details>
+          <summary>Does it work in my language?</summary>
+          <p>Ask in whatever language your assistant speaks, Turkish, Spanish or Greek included. The numbers are the same.</p>
+        </details>
+        <details>
+          <summary>What do you learn about me?</summary>
+          <p>Signing in with Google gives the server an account identifier, used only to apply the daily limit. This site sets no cookies and runs no trackers. The <a href="privacy.html">privacy policy</a> has the detail.</p>
+        </details>
+        <details>
+          <summary>Who built it?</summary>
+          <p>Egemen Yücelen, as an open-source project. The source, the tests and every decision behind them are <a href="https://github.com/egemeny13/euroleague-analytics">on GitHub</a>.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="close" aria-labelledby="close-title">
+    <h2 id="close-title" class="reveal">Ask your first question <em>tonight.</em></h2>
+    <a class="button" href="#connect">Connect it — free</a>
+  </section>
 </main>
 
-<script src="home.js"></script>
+<footer class="site">
+  <div class="wrap">
+    <span>EuroLeague Analytics · an independent project by Egemen Yücelen. Not affiliated with Euroleague Basketball.</span>
+    <nav aria-label="Footer">
+      <a href="https://github.com/egemeny13/euroleague-analytics">Source</a>
+      <a href="support.html">Support</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="tr/" hreflang="tr" lang="tr">Türkçe</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="chat.js"></script>
+<script src="court.js"></script>
+<script src="page.js"></script>
 </body>
 </html>

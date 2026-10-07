@@ -1,1822 +1,638 @@
-/* EuroLeague Analytics — launch site
-   Design record: docs/superpowers/specs/2026-09-04-launch-website-design.md
+/* EuroLeague Analytics - the site's one stylesheet (rebuilt 2026-10-07).
 
-   Two rules this file exists to keep:
-     1. Colour means something. Orange is data and nothing else; blue is a club.
-        There is no decorative colour anywhere.
-     2. Motion is data. The only thing that moves on its own is the answer
-        arriving, because that is the product. */
+   One typeface, Archivo, self-hosted and used at two widths: expanded and
+   heavy for headlines, normal for everything else. One accent, the colour of
+   a basketball, and it means one thing: an answer that came out of the data.
+   It is spent on the word "why", on measured numbers and on the buttons that
+   connect. Club colours appear only where a club is meant (the shot chart).
+   Two easing curves: --ease for anything that arrives, --snap for controls. */
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url(fonts/Archivo-var-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url(fonts/Archivo-var-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
-  /* Warm neutrals: the same paper the ball is played on, not a screen white.
-     Every one of these is an orange desaturated almost to grey, which is what
-     lets the single saturated orange below stay loud. */
-  --paper:      #FDFAF6;
-  --paper-deep: #F7F1E9;
-  --ink:        #1A1512;
-  --ink-soft:   #6B5F55;
-  --ink-faint:  #A09284;
-  --hairline:   #EBE2D7;
-  --surface:    #FFFFFF;
-  /* The ground of the recorded Claude windows, sampled from the hero clip on
-     2026-09-06. The two courts sit on it too, so a recording and a drawing
-     read as the same kind of card. */
-  --stage:      #FBFBF8;
+  --paper: #eeece6;
+  --card: #fbfaf7;
+  --ink: #15130f;
+  --ink-2: #6f6a61;
+  --line: #d8d3c8;
+  --ball: #e9501c;
+  --ball-dark: #cf4211;
+  --night: #15130f;
+  --night-2: #2a2620;
 
-  /* The one saturated colour on the page. Reserved for measured values and
-     for the single action we want taken. Nothing decorative is ever this. */
-  --ball:       #EA580C;
-  --ball-deep:  #C2410C;
-
-  --court:      rgba(26, 21, 18, 0.06);
-
-  --display: "Gabarito", ui-sans-serif, system-ui, sans-serif;
-  --text:    "Figtree", ui-sans-serif, system-ui, sans-serif;
-  --figures: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  /* Pulled in a touch on 2026-09-06 at the owner's request: content columns
-     went from 1180 to 1100 px, the rails from 1280 to 1200, and the gutter
-     grew, so everything sits a little nearer the centre line. */
-  --gutter: clamp(1.5rem, 6vw, 6.5rem);
-  --measure: 62ch;
-
-  /* Motion, measured 2026-09-06: eight different curves and eleven durations
-     were in this file, so nothing on the page moved like anything else. Now two
-     curves and three tempos, and every transition below picks from them.
-       move   = something travels or a value changes (a player, the bar, a number)
-       reveal = something appears or steps back (a reply, a card, a dimmed layer)
-       hover  = colour and border feedback under the cursor
-     Scripts that time themselves against these hold the same numbers:
-     SETTLE_MS in shots.js is --dur-move, SWAP_OUT_MS in lineups.js is 30% of it. */
-  --ease-move:  cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-hover: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --dur-move:   640ms;
-  --dur-reveal: 380ms;
-  --dur-hover:  200ms;
-
-  /* Shape: fifteen radii were in use. Three now, and circles keep 50%. */
-  --r-sm:   4px;
-  --r-md:   8px;
-  --r-lg:   12px;
-  --r-pill: 999px;
+  --gutter: clamp(16px, 4vw, 56px);
+  --wide: 1360px;
+  --ease: cubic-bezier(.19, 1, .22, 1);
+  --snap: cubic-bezier(.3, 1.4, .5, 1);
 }
 
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after { box-sizing: border-box; }
 
-html {
-  -webkit-text-size-adjust: 100%;
-  /* The Connect and "see how it works" links point down the page. Without
-     this the page jumps; with it the page travels, at the browser's own
-     tempo, and the visitor keeps their bearings. */
-  scroll-behavior: smooth;
-}
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-}
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--text);
-  font-size: 17px;
-  line-height: 1.6;
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  font-stretch: 100%;
   -webkit-font-smoothing: antialiased;
 }
 
-:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-  border-radius: var(--r-sm);
-}
+a { color: inherit; }
+img, video, svg { display: block; max-width: 100%; }
 
-.skip {
-  position: absolute;
-  left: -9999px;
-}
-.skip:focus {
-  left: var(--gutter);
-  top: 0.75rem;
-  z-index: 10;
-  background: var(--ink);
-  color: var(--paper);
-  padding: 0.6rem 1rem;
-  border-radius: var(--r-pill);
-  text-decoration: none;
-}
+:focus-visible { outline: 2px solid var(--ball); outline-offset: 3px; }
+
+.skip { position: absolute; left: -999px; }
+.skip:focus { left: var(--gutter); top: 12px; z-index: 10; }
+
+.wrap { max-width: var(--wide); margin: 0 auto; }
 
 /* ---------- top bar ---------- */
 
-.topbar {
-  position: relative;
-  z-index: 2;
+.bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.4rem var(--gutter);
+  gap: 16px;
+  padding: 20px var(--gutter);
+  max-width: calc(var(--wide) + 2 * var(--gutter));
+  margin: 0 auto;
 }
 
 .wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(0.88rem, 3vw, 1rem);
-  letter-spacing: -0.02em;
-  color: var(--ink);
+  font-weight: 750;
+  font-stretch: 112%;
+  font-size: 17px;
+  letter-spacing: -0.01em;
   text-decoration: none;
   white-space: nowrap;
 }
 
-/* A ball seam, not a logo: two arcs in a circle. */
-.wordmark-mark {
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  border: 1.5px solid var(--ink);
-  position: relative;
-  overflow: hidden;
-}
-.wordmark-mark::before,
-.wordmark-mark::after {
-  content: "";
-  position: absolute;
-  inset: -30% -55%;
-  border: 1.5px solid var(--ink);
-  border-radius: 50%;
-}
-.wordmark-mark::after { inset: -30% -55%; transform: translateX(55%); }
-.wordmark-mark::before { transform: translateX(-55%); }
+.bar nav { display: flex; align-items: center; gap: 24px; font-size: 15px; }
+.bar nav a:not(.button) { text-decoration: none; color: var(--ink-2); }
+.bar nav a:not(.button):hover { color: var(--ink); }
 
-.topnav {
-  display: flex;
+.button {
+  display: inline-flex;
   align-items: center;
-  gap: clamp(0.75rem, 2vw, 1.75rem);
-}
-
-.lang {
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--ink-soft);
-  background: none;
+  gap: 10px;
   border: 0;
-  padding: 0.35rem 0;
-  cursor: pointer;
-}
-.lang:hover { color: var(--ink); }
-
-.quiet-link {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--ink-soft);
-  text-decoration: none;
-  text-underline-offset: 4px;
-}
-.quiet-link:hover { color: var(--ink); text-decoration: underline; }
-
-/* Orange is the measured value and the one action worth taking. Those are the
-   only two things it is ever used for. */
-.button-solid {
-  display: inline-block;
+  border-radius: 999px;
   background: var(--ball);
   color: #fff;
-  font-family: var(--text);
-  font-weight: 600;
-  font-size: 0.9rem;
-  line-height: 1;
-  padding: 0.7rem 1.15rem;
-  border-radius: var(--r-pill);
+  font: inherit;
+  font-weight: 650;
   text-decoration: none;
+  padding: 14px 24px;
+  font-size: 17px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform .3s var(--snap), background .2s;
 }
-.button-solid:hover { background: var(--ball-deep); }
+.button:hover { transform: translateY(-1px); background: var(--ball-dark); }
+.button:active { transform: translateY(1px); }
+.button--small { padding: 9px 18px; font-size: 15px; }
 
-.button-lg {
-  font-size: 1rem;
-  padding: 0.95rem 1.7rem;
+/* ---------- shared section grammar ---------- */
+
+.section {
+  padding: clamp(80px, 13vh, 168px) var(--gutter);
+  border-top: 1px solid var(--line);
 }
+
+.section h2 {
+  margin: 0;
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: clamp(34px, 4.8vw, 76px);
+  line-height: .98;
+  letter-spacing: -0.04em;
+  max-width: 15ch;
+}
+
+.section h2 em { font-style: normal; color: var(--ball); }
+
+.lede {
+  margin: 24px 0 0;
+  font-size: clamp(19px, 1.6vw, 23px);
+  line-height: 1.45;
+  max-width: 34ch;
+}
+
+.quiet { color: var(--ink-2); }
+
+/* Content arrives once as it scrolls in. Without script it is simply there. */
+.js .reveal { opacity: 0; transform: translateY(18px); transition: opacity 1.2s var(--ease), transform 1.2s var(--ease); }
+.js .reveal.is-in { opacity: 1; transform: none; }
 
 /* ---------- hero ---------- */
 
 .hero {
-  position: relative;
-  padding: clamp(2.25rem, 5vw, 4.5rem) var(--gutter) clamp(3rem, 5.5vw, 5.5rem);
-  overflow: hidden;
+  padding: clamp(24px, 6vh, 72px) var(--gutter) clamp(64px, 11vh, 128px);
 }
 
-/* Static. The court is structure, not an effect. */
-.courtlines {
-  position: absolute;
-  left: -24%;
-  bottom: -46%;
-  width: min(76%, 860px);
-  height: auto;
-  color: var(--court);
-  pointer-events: none;
-}
-
-.hero-inner {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
-  align-items: center;
-  gap: clamp(2rem, 5vw, 4.5rem);
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-h1 {
+.hero h1 {
   margin: 0;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(2.4rem, 5.1vw, 4rem);
-  line-height: 1.04;
-  letter-spacing: -0.037em;
-  text-wrap: balance;
+  font-weight: 820;
+  font-stretch: 116%;
+  font-size: min(6.9vw, 124px);
+  line-height: .9;
+  letter-spacing: -0.045em;
 }
 
-.lede {
-  margin: 1.15rem 0 0;
-  max-width: 34ch;
-  font-size: clamp(1rem, 1.2vw, 1.1rem);
-  color: var(--ink-soft);
-}
-.lede strong { color: var(--ink); font-weight: 600; }
+/* Each sentence holds one line on wide screens: the contrast between the
+   two is the whole headline, and a wrap breaks it into three. */
+.hero h1 .known { display: block; color: var(--ink-2); white-space: nowrap; }
+.hero h1 .new { display: block; white-space: nowrap; }
+.hero h1 em { font-style: normal; color: var(--ball); }
 
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  margin-top: 2rem;
-  flex-wrap: wrap;
-}
-
-/* ---------- the assistant window ---------- */
-
-.hero-demo { min-width: 0; }
-
-/* The recording is the primary presentation; its poster paints immediately.
-   The drawn mockup below stays in the markup for structure but remains hidden,
-   avoiding any visual flash or delayed swap. */
-.hero-video {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1360 / 980;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-}
-.hero-demo .window { display: none; }
-
-.window {
-  margin: 0;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-
-.window-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.7rem 0.95rem;
-  border-bottom: 1px solid var(--hairline);
-  background: #FDFCFB;
-}
-
-/* The assistant is named in text and drawn as a neutral initial. We do not
-   reproduce anyone's logo or copy anyone's interface: naming a product to say
-   we work with it is fair, dressing up as it is not. */
-.window-app {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--ink);
-}
-
-/* Each assistant carries its own brand colour, which is identification rather
-   than decoration — the same reasoning that puts a club's colour on a jersey
-   chip. No logo is reproduced and no interface is imitated. */
-.app-avatar {
-  width: 20px;
-  height: 20px;
-  border-radius: var(--r-md);
-  flex: none;
-  background: var(--tint, var(--ink));
-  color: #fff;
-  font-size: 0.64rem;
-  font-weight: 700;
+.hero-body {
+  margin-top: clamp(32px, 6vh, 64px);
   display: grid;
-  place-items: center;
-  transition: background var(--dur-hover) var(--ease-hover);
-}
-
-.window-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.78rem;
-  color: var(--ink-faint);
-}
-
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #16A34A;
-  flex: none;
-}
-
-.window-body {
-  padding: 1.35rem 1.35rem 1.5rem;
-}
-
-/* Your message sits on the right, the assistant answers on the left, because
-   that is where a person expects to find each of them. */
-.from-you {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.bubble-user {
-  margin: 0;
-  display: inline-grid;
-  max-width: 66%;
-  background: var(--ink);
-  color: #fff;
-  font-size: 0.98rem;
-  line-height: 1.45;
-  padding: 0.6rem 0.9rem;
-  border-radius: var(--r-lg) var(--r-lg) var(--r-sm) var(--r-lg);
-  text-align: left;
-}
-
-/* Both copies occupy the same cell: the hidden one holds the size open. */
-.bubble-user > span { grid-area: 1 / 1; }
-.ask-ghost { visibility: hidden; }
-
-.caret {
-  display: inline-block;
-  width: 2px;
-  height: 1em;
-  margin-left: 1px;
-  background: currentColor;
-  vertical-align: -0.15em;
-  animation: blink 1.05s steps(2, start) infinite;
-}
-@keyframes blink { 50% { opacity: 0; } }
-
-/* Present from the first paint and merely invisible, so the answer arriving
-   changes nothing about the page's height. */
-.reply {
-  margin-top: 1.1rem;
-  visibility: hidden;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity var(--dur-reveal) var(--ease-move),
-              transform var(--dur-reveal) var(--ease-move);
-}
-.reply.is-shown {
-  visibility: visible;
-  opacity: 1;
-  transform: none;
-}
-
-.reply-line {
-  margin: 0;
-  font-size: 0.98rem;
-}
-
-.lineup {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0.8rem 0 0;
-  padding: 0;
-}
-
-.lineup li {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-pill);
-  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
-  font-size: 0.87rem;
-}
-
-/* Club colour, jersey number: both from our own data. No crests. */
-.jersey {
-  width: 22px;
-  height: 22px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--club);
-  color: #fff;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.68rem;
-  display: grid;
-  place-items: center;
-}
-
-.verdict {
-  margin: 0.95rem 0 0;
-  font-size: 0.98rem;
-}
-
-.figure {
-  font-family: var(--figures);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--ball);
-}
-
-/* The number never travels without the population it was measured over. */
-.qualifier {
-  display: block;
-  margin-top: 0.2rem;
-  font-size: 0.85rem;
-  color: var(--ink-faint);
-}
-
-/* An input row, because a chat window without one does not look like a place
-   you could type. It is inert on purpose: the box that actually answers is
-   further down the page. */
-.window-input {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin: 0 0.9rem 0.9rem;
-  padding: 0.6rem 0.55rem 0.6rem 0.85rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  background: var(--paper);
-}
-
-.window-placeholder {
-  font-size: 0.85rem;
-  color: var(--ink-faint);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.window-send {
-  width: 24px;
-  height: 24px;
-  flex: none;
-  border-radius: var(--r-md);
-  background: var(--hairline);
-  position: relative;
-}
-.window-send::after {
-  content: "";
-  position: absolute;
-  left: 9px;
-  top: 8px;
-  width: 6px;
-  height: 6px;
-  border: solid var(--ink-faint);
-  border-width: 1.5px 1.5px 0 0;
-  transform: rotate(-45deg);
-}
-
-.demo-caption {
-  margin: 0.9rem 0 0;
-  max-width: 44ch;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  color: var(--ink-faint);
-}
-
-/* ---------- narrow screens ----------
-   Short headline, then the whole window, then the explanation, then the
-   action: on a phone the animation is worth more than the sentence. */
-
-@media (max-width: 860px) {
-  .hero-inner {
-    grid-template-columns: 1fr;
-    gap: 1.6rem;
-  }
-  .hero-copy { display: contents; }
-  h1 { order: 1; }
-  .hero-demo { order: 2; }
-  .lede { order: 3; margin-top: 0; max-width: none; }
-  .actions { order: 4; margin-top: 0.5rem; }
-  .window-body { min-height: 0; }
-}
-
-@media (max-width: 460px) {
-  .topnav .quiet-link { display: none; }
-  body { font-size: 16px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .caret { animation: none; opacity: 0; }
-}
-
-/* ---------- the launch film ----------
-   Between the hero and the first claim (owner, 2026-09-06). One wide card on
-   the same ground as the recordings; the section keeps the page's rhythm
-   rather than announcing itself with a heading. */
-.film {
-  position: relative;
-  padding: 0 var(--gutter) clamp(3rem, 5.5vw, 5.5rem);
-}
-/* Wider than the text columns, out to the rails: the film is the one thing on
-   the page allowed to be bigger than the words beside it. Measured from
-   antigravity.google on 2026-09-06 at the owner's request: their video wrapper
-   is a 36 px-rounded shape with no border, no shadow, no padding and no
-   controls, the picture edge to edge, autoplaying muted in a loop, set wider
-   than the copy column. The radius is this element's own; every other panel
-   keeps the three-step scale above. */
-.film-inner { max-width: 1200px; margin: 0 auto; }
-.film-stage {
-  border-radius: 36px;
-  overflow: hidden;
-  background: var(--stage);
-}
-.film-stage > .demo-video {
-  display: block;
-  aspect-ratio: 16 / 9;
-  border-radius: 36px;
-  object-fit: cover;
-}
-/* The film's own ground is the page's paper, so a borderless shape would have
-   no edge; one hairline, inside the radius, gives it one. */
-.film-stage { box-shadow: inset 0 0 0 1px var(--hairline); }
-
-/* It grows in as it arrives (demo-video.js sets the scale from the scroll
-   position, 0.5 below the fold to 1 two thirds of the way up), from its bottom
-   centre, as antigravity's does. Under reduced motion the script never runs
-   and the shape simply sits at its size. */
-.film-stage {
-  position: relative;
-  transform-origin: 50% 100%;
-  will-change: transform;
-}
-@media (prefers-reduced-motion: reduce) {
-  .film-stage { transform: none !important; }
-}
-
-/* Over the film the pointer is the control: the system cursor goes, and a
-   white pill that reads Play or Pause follows the hand. Only where there is a
-   fine pointer to follow. */
-@media (hover: hover) and (pointer: fine) {
-  .film-stage[data-cursor] { cursor: none; }
-}
-.demo-cursor {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.85rem 1.4rem 0.85rem 1.1rem;
-  background: #fff;
-  color: var(--ink);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-pill);
-  font-family: var(--text);
-  font-size: 0.95rem;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transform: scale(0);
-  transition: opacity var(--dur-hover) var(--ease-hover);
-  will-change: transform;
-  z-index: 2;
-}
-.demo-cursor.is-shown { opacity: 1; }
-.demo-cursor-glyph { font-size: 0.8em; }
-/* Progress line and hint sit under the shape, not inside it, in the film's
-   own column. */
-.film-inner > .demo-progress,
-.film-inner > .demo-hint { margin-left: 36px; margin-right: 36px; }
-
-.demo-sound {
-  font: inherit;
-  font-size: 0.74rem;
-  color: var(--ink-soft);
-  background: none;
-  border: 0;
-  padding: 0;
-  margin-left: 0.4rem;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.demo-sound:hover { color: var(--ink); }
-
-/* ---------- a claim and its evidence ----------
-   Left column states one thing. Right column shows only that thing. Nothing in
-   a section argues two points; the last attempt did and could not be read. */
-
-.claim {
-  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
-}
-
-/* The two columns start together. Centring the copy against a tall court left
-   the heading floating at the court's midpoint with nothing above it to explain
-   the gap; starting both at the same line reads as one row rather than two
-   things that happen to be side by side. */
-.claim-inner {
-  display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(32px, 5vw, 80px);
   align-items: start;
-  gap: clamp(2.5rem, 6vw, 5.5rem);
-  max-width: 1100px;
-  margin: 0 auto;
 }
 
-.claim h2 {
+.hero .lede { margin: 0 0 32px; max-width: 30ch; }
+
+.fineprint { margin: 18px 0 0; color: var(--ink-2); font-size: 15px; }
+
+/* ---------- the conversation ---------- */
+
+.chat {
   margin: 0;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(1.9rem, 3.4vw, 2.9rem);
-  line-height: 1.08;
-  letter-spacing: -0.033em;
-  max-width: 15ch;
-}
-
-.claim p {
-  margin: 1rem 0 0;
-  max-width: 38ch;
-  color: var(--ink-soft);
-}
-
-.tally {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  margin-top: 1.9rem;
-}
-
-.tally-figure {
-  font-family: var(--figures);
-  font-weight: 500;
-  font-size: clamp(2rem, 3.6vw, 2.9rem);
-  font-variant-numeric: tabular-nums;
-  color: var(--ball);
-  line-height: 1;
-}
-
-.tally-label {
-  font-size: 0.9rem;
-  color: var(--ink-faint);
-}
-
-.halfcourt {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Made shots are filled, misses are open. The only two states there are. */
-.shot-made { fill: var(--ball); fill-opacity: 0.88; }
-.shot-miss { fill: none; stroke: var(--ink-faint); stroke-width: 6; stroke-opacity: 0.5; }
-
-/* The progress bar under the shot chart. It is a hairline that fills, in the
-   one colour this page reserves for measured values, because what it is
-   filling with is measured values. It disappears once the chart is complete:
-   a finished bar sitting under a finished chart is furniture. */
-.chartbar {
-  margin: 0.9rem 0 0;
-  opacity: 0;
-  transition: opacity var(--dur-reveal) var(--ease-move);
-}
-.chartbar.is-running,
-.chartbar.is-settling { opacity: 1; }
-
-.chartbar-label {
-  margin: 0 0 0.55rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.02em;
-  color: var(--ink-soft);
-}
-
-.chartbar-track {
-  position: relative;
-  height: 2px;
-  background: var(--hairline);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
   overflow: hidden;
 }
 
-/* Ink, like the bar under every recording: one kind of progress line on the
-   page (owner, 2026-09-06). Progress is not a measured value. */
-.chartbar-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 0;
-  background: var(--ink-faint);
-}
-
-/* The two drawn figures pause on a click, like the recordings. The sidelines'
-   throw-in marks also mark the film. */
-.halfcourt, .floor { cursor: pointer; }
-.film { position: relative; }
-
-/* The one-line hint under every figure that can be paused. Set like a figure
-   note: small, faint, and gone from the eye once it has been read. */
-.demo-hint {
-  margin: 0.45rem 0 0;
-  font-size: 0.74rem;
-  line-height: 1.4;
-  color: var(--ink-faint);
-}
-.hero-demo > .demo-hint { margin-bottom: 0.35rem; }
-
-/* While shots are landing the width is set per shot and should follow with no
-   easing of its own. The final run to full is the one deliberate glide, and it
-   lasts exactly as long as the pause before the card opens. */
-.chartbar.is-settling .chartbar-fill {
-  transition: width var(--dur-move) var(--ease-move);
-}
-
-/* A caption is a footnote, not a paragraph. It was set at 60ch and ran the
-   width of the figure, which made two sentences of provenance look like the
-   point of the section. Narrow measure, smaller, closer to what it annotates. */
-/* A caption is a footnote, not a paragraph. It was three lines at 60ch under a
-   figure twice that wide, so it read as the point of the section and left a
-   band of dead space beside it. Two lines at most, set smaller, running the
-   width it is annotating rather than a column of its own. */
-.figure-note {
-  margin: 0.8rem 0 0;
-  /* Runs the width of the figure it annotates. A narrower measure would be
-     easier to read as prose, but this is one sentence of provenance and the
-     column of dead space beside it cost more than the line length saves. */
-  max-width: none;
-  font-size: 0.78rem;
-  line-height: 1.55;
-  color: var(--ink-faint);
-}
-
-@media (max-width: 860px) {
-  .claim-inner {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
-  .claim h2, .claim p { max-width: none; }
-}
-
-/* ---------- the game behind the chart ---------- */
-
-.scoreline {
+.chat-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem 1.4rem;
-  margin-top: 1.6rem;
-  padding-top: 1.3rem;
-  border-top: 1px solid var(--hairline);
-}
-
-.side {
-  display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 0.98rem;
-  color: var(--ink);
-}
-.side b {
-  font-family: var(--figures);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  margin-left: 0.15rem;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--ink-2);
 }
 
-/* A club is identified by its colour and its name. No crest is reproduced. */
-.crest {
-  width: 11px;
-  height: 11px;
-  border-radius: var(--r-sm);
-  background: var(--club);
+.chat-head .on { display: inline-flex; align-items: center; gap: 8px; }
+.chat-head .on::before {
+  content: "";
   flex: none;
-}
-
-.scoreline-meta {
-  flex-basis: 100%;
-  font-size: 0.82rem;
-  color: var(--ink-faint);
-}
-
-/* While one shot is being talked about, the rest step back. */
-#shot-marks { transition: opacity var(--dur-reveal) var(--ease-move); }
-#shot-marks.is-dimmed { opacity: 0.22; }
-
-.shot-halo {
-  fill: none;
-  stroke: var(--ball);
-  stroke-width: 5;
-  stroke-opacity: 0.55;
-}
-
-/* ---------- three exchanges, one window ----------
-   They share a single grid cell, so the window is as tall as the tallest of
-   them from the first paint and never resizes when one replaces another. */
-
-.window-body {
-  display: grid;
-}
-.window-body > .exchange {
-  grid-area: 1 / 1;
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity var(--dur-reveal) var(--ease-move);
-}
-.window-body > .exchange.is-current {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* The middle beat: the thing the visitor is being asked to connect, doing the
-   work. Named the way a person would name it - never by a function name. */
-.working {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  font-size: 0.82rem;
-  color: var(--ink-faint);
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity var(--dur-reveal) var(--ease-move);
-}
-.working.is-shown { visibility: visible; opacity: 1; }
-
-.working-what {
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-
-.working-dot {
   width: 7px;
   height: 7px;
-  flex: none;
   border-radius: 50%;
   background: var(--ball);
-  animation: pulse 1.15s ease-in-out infinite;
-}
-.working.is-done .working-dot { animation: none; background: #16A34A; }
-.working.is-done .working-state { opacity: 0.65; }
-
-@keyframes pulse {
-  0%, 100% { transform: scale(0.7); opacity: 0.45; }
-  50%      { transform: scale(1);   opacity: 1; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .working-dot { animation: none; }
-}
-
-/* ---------- the shot that decided it ----------
-   One card, once, over the dot it describes. It is placed from that shot's own
-   coordinates rather than from a hand-picked offset, so it cannot drift away
-   from the thing it points at when the chart is resized. */
-
-/* The same card as .floor two sections down. Until 2026-09-06 this court sat
-   bare on the paper while the substitution court sat in a white frame, and the
-   owner read the two as two designs. One court, one frame.
-
-   The frame's ground is --stage, not --surface: the owner asked for the two
-   courts to sit on the same ground as the recorded Claude windows, and that
-   ground was sampled from the recording itself (rgb 251 251 248). */
-.courtwrap {
-  position: relative;
-  background: var(--stage);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  padding: 0.75rem;
-}
-
-/* Inset by the card's padding, like .floor-players, so the callout's
-   percentages measure the court and not the frame. */
-.court-overlay {
-  position: absolute;
-  inset: 0.75rem;
-  pointer-events: none;
-}
-
-/* ---------- recorded demos (Decision 61) ----------
-   Used by the "Ask it something hard" windows. The recording was taken of the
-   whole chat column, frame included, so once it plays the drawn window's own
-   chrome is switched off and the video is the window. Until canplay
-   (demo-video.js) nothing here applies and the drawn transcript is what shows.
-   The shot chart and the floor were recorded this way too, for one day: the
-   captures ran at a lower frame rate than the scripts they filmed and the owner
-   saw it. They are scripts again. */
-.demo-video {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: var(--r-lg);
-}
-
-/* Under every recording, a hairline that fills as the clip plays (demo-video.js
-   adds it on canplay). Ink, not orange: progress is not a measured value. The
-   fill is scaled rather than resized, so it costs no layout per frame. */
-.demo-progress {
-  display: none;
-  position: relative;
-  height: 2px;
-  margin-top: 0.55rem;
-  background: var(--hairline);
+.replay {
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
   cursor: pointer;
-  touch-action: none;
-  transition: height var(--dur-hover) var(--ease-hover), margin-top var(--dur-hover) var(--ease-hover);
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-/* A 2 px line is a hard target; the hit area is taller than the line. */
-.demo-progress::before {
-  content: "";
-  position: absolute;
-  inset: -10px 0;
-}
-.demo-progress:hover,
-.demo-progress.is-scrubbing,
-.demo-progress:focus-visible { height: 4px; margin-top: calc(0.55rem - 1px); }
-.demo-progress:focus-visible { outline-offset: 6px; }
-.has-video > .demo-progress { display: block; }
-.has-video > .demo-video { cursor: pointer; }
-/* The hero keeps its caption; the bar and hint sit between recording and caption. */
-.hero-demo > .demo-progress { margin-bottom: 0; }
-.demo-progress > i {
-  display: block;
-  height: 100%;
-  background: var(--ink-faint);
-  transform: scaleX(0);
-  transform-origin: left center;
+.replay:hover { color: var(--ink); }
+
+.chat-body { padding: 24px 20px 28px; display: grid; gap: 18px; }
+
+.msg { transition: opacity .6s var(--ease), transform .6s var(--ease); }
+.msg.is-hidden { opacity: 0; transform: translateY(8px); }
+
+.ask {
+  justify-self: end;
+  max-width: 80%;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 10px 16px;
+  border-radius: 18px 18px 4px 18px;
+  font-size: 17px;
 }
 
-.callout {
-  position: absolute;
-  width: min(17rem, 74%);
-  transform: translate(-50%, 0);
-  opacity: 0;
-  transition: opacity var(--dur-reveal) var(--ease-move), transform var(--dur-reveal) var(--ease-move);
-  pointer-events: none;
-}
-.callout.is-open {
-  opacity: 1;
-  transform: translate(-50%, 0.4rem);
-}
+/* The typed text sits over an invisible copy of itself, so the bubble has
+   its final width before the first letter appears. */
+.ask .type { display: inline-grid; }
+.ask .type > * { grid-area: 1 / 1; }
+.ask .type .ghost { visibility: hidden; }
 
-/* The line from the card up to the shot, so the two are one object. */
-.callout-leader {
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  width: 1px;
-  height: 2.1rem;
-  background: linear-gradient(to bottom, transparent, var(--ball));
-  opacity: 0.55;
-}
+.reply { font-size: 17px; }
+.reply p { margin: 0; }
+.reply--plain { color: var(--ink-2); max-width: 92%; }
 
-.callout-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-left: 3px solid var(--ball);
-  border-radius: var(--r-md);
-  padding: 0.8rem 0.95rem 0.85rem;
-}
+.working { font-size: 14px; color: var(--ink-2); }
 
-.callout-flag {
-  align-self: flex-start;
-  background: var(--ball);
-  color: #fff;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.7rem;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  padding: 0.28rem 0.5rem;
-  border-radius: var(--r-sm);
-}
+.facts { list-style: none; margin: 14px 0 0; padding: 0; display: grid; }
 
-.callout-who {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 1.12rem;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
-}
-
-.callout-what {
-  font-size: 0.83rem;
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-
-.callout-score {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.15rem;
-  padding-top: 0.55rem;
-  border-top: 1px solid var(--hairline);
-  font-size: 0.8rem;
-  color: var(--ink-soft);
-}
-.callout-score i {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--r-sm);
-  background: var(--club);
-  flex: none;
-}
-.callout-score b {
-  font-family: var(--figures);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  margin-right: 0.35rem;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .callout { transition: none; }
-}
-
-/* ---------- one substitution ---------- */
-
-/* The claim sits on the right here and the evidence on the left, so two
-   full-width sections in a row do not read as the same section twice. */
-.claim-flip .claim-inner { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); }
-.claim-flip .claim-copy { order: 2; }
-.claim-flip .claim-figure { order: 1; }
-
-.figure-note-tight { margin-top: 1.1rem; max-width: 38ch; }
-
-/* ---------- the floor ----------
-   The substitution is drawn on a court because the substitution is a change of
-   shape, not a change of name. Birch is the only centre in the strong five and
-   Baldwin is a guard, so taking one off for the other empties the paint - and
-   an empty paint is a thing you can see, where "-34.1" is a thing you have to
-   be told.
-
-   Positions are measured; spots are a convention. The figure note under this
-   says so, and nothing in here may quietly imply otherwise. */
-
-.floor {
-  position: relative;
-  background: var(--stage);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  padding: 0.75rem;
-  /* A marker walking on or off travels past the sideline. Nothing it does may
-     end up drawn on the page outside this card. */
-  overflow: hidden;
-}
-
-.floor-court {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-/* Lit only when it empties. It is the one thing on this court that reacts, so
-   it is the one thing the eye is sent to. */
-.floor-paint {
-  fill: transparent;
-  transition: fill var(--dur-move) var(--ease-move);
-}
-.floor-paint.is-empty { fill: rgba(234, 88, 12, 0.10); }
-
-.floor-players {
-  position: absolute;
-  /* Matches the .floor padding, so a percentage here is a percentage of the
-     court rather than of the card around it. */
-  inset: 0.75rem;
-  pointer-events: none;
-}
-
-/* Each marker is positioned by its centre, and left/top are what move. The
-   transition is on the position itself, so a player walks rather than jumps -
-   which is the whole difference between this and the version it replaces. */
-.player {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.28rem;
-  transition:
-    left var(--dur-move) var(--ease-move),
-    top var(--dur-move) var(--ease-move),
-    opacity var(--dur-reveal) var(--ease-move);
-}
-
-.player-disc {
+.facts li {
   display: grid;
-  place-items: center;
-  width: clamp(28px, 3.4vw, 38px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--club);
-  color: #fff;
-  font-family: var(--figures);
-  font-size: 0.78rem;
-  font-variant-numeric: tabular-nums;
-  transition: background var(--dur-reveal) var(--ease-move), transform var(--dur-reveal) var(--ease-move);
+  grid-template-columns: 92px 1fr;
+  gap: 16px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
 }
 
-.player-name {
-  font-size: 0.76rem;
-  font-weight: 600;
-  line-height: 1.1;
-  white-space: nowrap;
-  color: var(--ink);
-}
-
-.player-role {
-  font-size: 0.66rem;
-  line-height: 1;
-  letter-spacing: 0.03em;
-  color: var(--ink-faint);
-}
-
-/* Off the floor: still drawn, at the side, faded. Removing the marker would
-   make the substitute appear from nowhere; leaving it there is what makes
-   arriving read as arriving. */
-.player.is-off {
-  opacity: 0;
-}
-
-/* The two players the substitution is about carry the measured-value colour
-   while they are moving, and only while they are moving. */
-.player.is-leaving .player-disc,
-.player.is-arriving .player-disc {
-  background: var(--ball);
-  transform: scale(1.12);
-}
-
-/* Scoped to .floor so it outranks `.claim p`, which sets the section's body
-   colour and was turning this white-on-orange badge into grey-on-orange. */
-.floor .floor-empty {
-  position: absolute;
-  left: 50%;
-  bottom: 1.1rem;
-  transform: translateX(-50%);
-  margin: 0;
-  padding: 0.35rem 0.8rem;
-  border-radius: var(--r-pill);
-  background: var(--ball);
-  color: #fff;
-  max-width: none;
-  font-size: 0.74rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-@media (max-width: 520px) {
-  /* The names stop fitting between five markers long before the court does. */
-  .player-name, .player-role { display: none; }
-}
-
-.unit-verdict {
-  display: grid;
-  grid-template-columns: auto auto minmax(8rem, 1fr);
-  align-items: end;
-  gap: 1rem;
-  margin-top: 1.35rem;
-  padding-top: 1.15rem;
-  border-top: 1px solid var(--hairline);
-}
-
-/* The number leaves upward and the new one drops in, and the metric behind it
-   pulses once. The text is swapped at the 30% mark, where the figure is
-   invisible, so the reader never sees the change itself - only the arrival.
-   SWAP_OUT_MS in lineups.js is that mark and the two have to agree. */
-@keyframes figure-swap {
-  0%   { transform: translateY(0);       opacity: 1; }
-  29%  { transform: translateY(-0.32em); opacity: 0; }
-  30%  { transform: translateY(0.38em);  opacity: 0; }
-  60%  { transform: translateY(0);       opacity: 1; }
-  74%  { transform: translateY(0) scale(1.06); }
-  100% { transform: translateY(0) scale(1); }
-}
-
-@keyframes figure-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.22); }
-  70%  { box-shadow: 0 0 0 14px rgba(234, 88, 12, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
-}
-
-.unit-metric { border-radius: var(--r-md); }
-.unit-metric.is-changing { animation: figure-pulse var(--dur-move) var(--ease-move); }
-.unit-figure.is-changing {
-  animation: figure-swap var(--dur-move) var(--ease-move);
-  transform-origin: left center;
-}
-
-.unit-figure {
-  display: block;
-  font-family: var(--figures);
-  font-weight: 500;
-  font-size: clamp(2.1rem, 4vw, 3rem);
-  line-height: 1;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
+.facts .n,
+.qa .n {
+  font-weight: 800;
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
   color: var(--ball);
-  transition: color var(--dur-reveal) var(--ease-move);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-/* Both numbers are measured, so both are the measured-value colour. Muting the
-   negative one would be the page taking a side about which unit is the real
-   Fenerbahce, which is exactly the judgement the reader is here to make. */
-.unit-figure-quiet { color: var(--ink); font-size: clamp(1.5rem, 2.6vw, 2rem); }
+.facts .n { font-size: 26px; }
 
-.unit-label {
-  display: block;
-  margin-top: 0.55rem;
-  font-size: 0.82rem;
-  color: var(--ink-faint);
-}
+.vs { color: var(--ink-2); }
 
-/* The third column shares the compact evidence row with the two figures. It
-   still reserves its height whether or not there is anything to say, because
-   an appearing caption would move the copy every few seconds. */
-.unit-swap {
+.source {
   margin: 0;
-  min-height: 1.3em;
-  font-size: 0.85rem;
-  line-height: 1.45;
-  color: var(--ink-soft);
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--ink-2);
 }
 
-@media (max-width: 860px) {
-  .claim-flip .claim-copy { order: 1; }
-  .claim-flip .claim-figure { order: 2; }
+/* ---------- the film ---------- */
+
+.film {
+  background: var(--night);
+  color: var(--paper);
+  padding: clamp(64px, 11vh, 128px) var(--gutter);
 }
 
-@media (max-width: 520px) {
-  .unit-verdict { grid-template-columns: auto auto; }
-  .unit-swap { grid-column: 1 / -1; }
+.film-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  /* The markers still get placed, they just stop travelling to get there, and
-     the figures still change, they just stop announcing it. */
-  .player { transition: none; }
-  .floor-paint { transition: none; }
-  .unit-figure.is-changing,
-  .unit-metric.is-changing { animation: none; }
+.film h2 {
+  margin: 0;
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: clamp(30px, 3.4vw, 52px);
+  letter-spacing: -0.035em;
+  line-height: 1;
 }
 
-/* THE SECTION RHYTHM, measured rather than felt, 2026-09-04.
-   Every section carried 128px of padding above and below on a 1280px screen,
-   so 256px of nothing sat between any two of them. On the owner's 1536 by 730
-   screen that was 272px - more than a third of the viewport spent on emptiness
-   between one claim and the next. The scale is now 5.5vw capped at 5.5rem,
-   which is a gap of about 170px: still air, no longer a wait.
+.film-head p { margin: 0; color: #a39d92; max-width: 36ch; }
 
-   These four paddings are one decision and move together. Changing one of them
-   alone reintroduces the uneven rhythm they exist to keep. */
+.player {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--night-2);
+  aspect-ratio: 16 / 9;
+}
 
-/* ---------- sidelines, the length of the page ----------
-   The two rails frame the content and the short outward ticks mark section
-   boundaries. Interior court furniture was removed after the owner found the
-   arcs, keys and centre circle too busy behind the content. */
+.player video { width: 100%; height: 100%; object-fit: cover; }
 
-body { position: relative; }
-
-.courtgrid {
+.play {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  z-index: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #fff;
 }
 
-.rail {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--hairline);
+.play span {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--ball);
+  border-radius: 999px;
+  padding: 16px 28px;
+  font: inherit;
+  font-weight: 650;
+  font-size: 18px;
+  transition: transform .3s var(--snap);
 }
-.rail-left  { left: max(var(--gutter), calc(50% - 600px)); }
-.rail-right { right: max(var(--gutter), calc(50% - 600px)); }
+.play:hover span { transform: scale(1.04); }
+.play svg { width: 14px; height: 14px; }
+.player.is-playing .play { display: none; }
 
-/* WHERE ONE SECTION ENDS: the throw-in line, not a rule across the page.
+/* ---------- questions ---------- */
 
-   A real court has one. It is a short mark on each sideline, 8.325 m from the
-   endline, and a throw-in in the last two minutes is taken from it. That
-   distance is not a coincidence of this page's arithmetic: the ring is 157.5
-   from the baseline and the arc is 675 from the ring, so the top of the
-   three-point arc is 157.5 + 675 = 832.5 - the same 8.325 m. The mark and the
-   top of the arc line up on a real floor, which is why the owner asked for this
-   one and not for a divider.
+.qa { list-style: none; margin: clamp(40px, 7vh, 80px) 0 0; padding: 0; }
 
-   It replaces a hairline that ran the full width of the page. That rule
-   separated sections the way a horizontal rule separates anything, which is to
-   say it said nothing; this says "sideline" and marks the change at the same
-   time.
-
-   The length is chosen to be legible, not scaled. A real mark reaches 0.15 m
-   onto a 15 m floor - a hundredth of the width, about 11px here - which at this
-   size would read as dirt on the screen rather than as a mark. */
-.claim, .connect, .how, .footer { position: relative; }
-.claim::before, .claim::after,
-.connect::before, .connect::after,
-.how::before, .how::after,
-.footer::before, .footer::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  width: 34px;
-  height: 1px;
-  /* The same hairline as the rails and the court. It was drawn in --ink-faint,
-     which made it darker than every other line on the page and read as a
-     different kind of thing. A court line is a court line. */
-  background: var(--hairline);
+.qa li {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: clamp(24px, 5vw, 80px);
+  padding: clamp(28px, 4vh, 44px) 0;
+  border-top: 1px solid var(--line);
 }
-/* Outside the sideline, not inside it: the mark sits off the floor so nothing
-   ever reaches into the column the content occupies. */
-.claim::before, .connect::before, .how::before, .footer::before {
-  right: calc(100% - max(var(--gutter), calc(50% - 600px)));
-}
-.claim::after, .connect::after, .how::after, .footer::after {
-  left: calc(100% - max(var(--gutter), calc(50% - 600px)));
+.qa li:last-child { border-bottom: 1px solid var(--line); }
+
+.qa .q {
+  margin: 0;
+  font-size: clamp(24px, 2.5vw, 38px);
+  line-height: 1.15;
+  font-weight: 560;
+  letter-spacing: -0.02em;
 }
 
-main, .topbar { position: relative; z-index: 1; }
+.qa .a { display: grid; gap: 8px; align-content: start; }
+.qa .n { font-size: clamp(40px, 4vw, 60px); line-height: 1; }
+.qa .a p { margin: 0; font-size: 17px; max-width: 42ch; }
+.qa .a small { color: var(--ink-2); font-size: 15px; }
+
+/* ---------- the court ---------- */
+
+.court-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: center;
+}
+
+.teams { display: grid; gap: 10px; margin: 32px 0 0; padding: 0; list-style: none; }
+
+.team {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 14px 16px;
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s, opacity .2s;
+}
+.team:hover { border-color: var(--ink-2); }
+.team[aria-pressed="false"] { opacity: .45; }
+.team .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--team); }
+.team b { font-weight: 650; }
+.team .tally { color: var(--ink-2); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+.key { margin: 18px 0 0; font-size: 14px; color: var(--ink-2); display: flex; gap: 20px; flex-wrap: wrap; }
+.key span { display: inline-flex; align-items: center; gap: 8px; }
+.key i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--ink); }
+.key .made i { background: var(--ink); }
+
+.court {
+  margin: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: clamp(12px, 2vw, 24px);
+}
+
+.court svg { width: 100%; height: auto; }
+.court .lines { fill: none; stroke: #b9b2a5; stroke-width: 5; }
+.court .shot { transition: opacity .5s var(--ease), transform .5s var(--ease); transform-box: fill-box; transform-origin: center; }
+.court .shot.is-waiting { opacity: 0; transform: scale(.2); }
+.court .shot.is-off { opacity: 0; }
+.court figcaption { margin-top: 12px; font-size: 14px; color: var(--ink-2); }
 
 /* ---------- connect ---------- */
 
-.connect {
-  position: relative;
-  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
-}
-.connect-inner { max-width: 780px; margin: 0 auto; }
-
-.connect h2, .how h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(2rem, 3.6vw, 3rem);
-  line-height: 1.06;
-  letter-spacing: -0.035em;
+.steps {
+  list-style: none;
+  margin: clamp(40px, 7vh, 72px) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 3vw, 48px);
+  counter-reset: step;
 }
 
-.connect-lede {
-  margin: 1rem 0 0;
-  max-width: 48ch;
-  color: var(--ink-soft);
+.steps li { counter-increment: step; border-top: 2px solid var(--ink); padding-top: 20px; }
+.steps li::before {
+  content: counter(step);
+  display: block;
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: 44px;
+  line-height: 1;
+  margin-bottom: 16px;
 }
-
-/* The sentence that saves the visitor an attempt: no assistant connects itself. */
-.connect-honest {
-  margin: 1.6rem 0 0;
-  max-width: 56ch;
-  font-size: 0.95rem;
-  color: var(--ink);
-}
+.steps h3 { margin: 0 0 8px; font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+.steps p { margin: 0; color: var(--ink-2); font-size: 16px; }
 
 .address {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-top: 2rem;
-  padding: 0.75rem 0.75rem 0.75rem 1.05rem;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
+  gap: 8px;
+  margin-top: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px 6px 6px 14px;
 }
 .address code {
-  font-family: var(--figures);
-  font-size: clamp(0.78rem, 1.5vw, 0.95rem);
-  color: var(--ink);
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.copy {
-  margin-left: auto;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #fff;
-  background: var(--ink);
-  border: 0;
-  border-radius: var(--r-pill);
-  padding: 0.5rem 0.95rem;
-  cursor: pointer;
-  flex: none;
-}
-.copy:hover { background: #000; }
-.copy.is-done { background: #16A34A; }
-
-/* One panel per client, because the four setups are genuinely different and a
-   single averaged instruction would be wrong for all of them. Each panel says
-   which kind of claim it is making before it says anything else: verified means
-   somebody connected that client and called a tool; expected means the client's
-   own specification says this works and nobody here has run it. */
-.clients { margin-top: 2rem; }
-
-.client-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.client-tab {
-  font: inherit;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--ink-soft);
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 0.6rem 0.85rem;
-  margin-bottom: -1px;
-  cursor: pointer;
-}
-.client-tab:hover { color: var(--ink); }
-.client-tab[aria-selected="true"] {
-  color: var(--ink);
-  border-bottom-color: var(--ball);
-}
-
-.client-panel {
-  padding: 1.5rem 0 0;
-}
-
-.client-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-.client-status::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex: none;
-}
-.client-status-verified { color: #15803D; }
-.client-status-verified::before { background: #16A34A; }
-/* Amber, and it is the only amber on the page: it means a claim that has not
-   been run yet, and nothing else is allowed to borrow it. */
-.client-status-review,
-.client-status-expected { color: #92400E; }
-.client-status-review::before,
-.client-status-expected::before { background: #D97706; }
-
-.client-note {
-  margin: 1rem 0 0;
-  font-size: 0.92rem;
-  color: var(--ink-soft);
-  max-width: 56ch;
-}
-
-.howto {
-  list-style: none;
-  counter-reset: howto;
-  margin: 1.1rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.55rem;
-  max-width: 56ch;
-}
-/* The number hangs in the margin and the step reads as one sentence.
-   This was a grid with a 1.6rem marker column, copied from the block-level
-   list it replaced. Grid makes every child its own item, and these steps are
-   inline content - "Open ", <b>Settings</b>, ", then ", <b>Connectors</b> - so
-   each fragment was laid into the next cell and the sentence came apart, one
-   bold word per line, overlapping the line above. Inline content needs inline
-   flow; the marker gets out of the way instead. */
-.howto li {
-  counter-increment: howto;
-  position: relative;
-  padding-left: 2.3rem;
-  font-size: 0.94rem;
-  line-height: 1.55;
-  color: var(--ink-soft);
-}
-.howto li::before {
-  content: counter(howto);
-  position: absolute;
-  left: 0;
-  top: 0.08em;
-  width: 1.6rem;
-  font-family: var(--figures);
-  font-size: 0.8rem;
-  color: var(--ink-faint);
-}
-.howto b { color: var(--ink); font-weight: 600; }
-
-/* Inline code is for short things only - a command name, a flag. A long
-   command in here breaks mid-word and its box splits across two lines with a
-   border down the middle of a URL, so long commands are block-level instead
-   (.howto-code below). `break-word` rather than `break-all`: it breaks a word
-   only when the word alone will not fit, which is what stops a short token
-   being chopped for no reason. */
-.howto code,
-.howto-alt code {
-  font-family: var(--figures);
-  font-size: 0.82em;
-  background: var(--paper-deep);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-sm);
-  padding: 0.1em 0.4em;
-  overflow-wrap: break-word;
-}
-
-/* The Gemini steps are numbered across a code block, so the second list has to
-   carry on counting rather than start again at one. */
-.howto-continued { counter-reset: howto 1; }
-
-.howto-alt {
-  margin: 1.4rem 0 0;
-  font-size: 0.88rem;
-  color: var(--ink-faint);
-  max-width: 56ch;
-}
-
-/* One command per line, never broken with a backslash continuation: that is a
-   shell-ism that fails in PowerShell and survives a copy badly. A command too
-   wide for the card scrolls inside the card instead, which is the one place
-   horizontal scrolling is the right answer. */
-.howto-code {
-  margin: 1.1rem 0 0;
-  padding: 1rem 1.15rem;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  overflow-x: auto;
-  font-family: var(--figures);
-  font-size: 0.82rem;
-  line-height: 1.65;
-  color: var(--ink-soft);
-}
-.howto-code code { font: inherit; }
-
-.connect-note {
-  margin: 1.6rem 0 0;
-  font-size: 0.88rem;
-  color: var(--ink-faint);
-}
-
-/* ---------- what is behind it ---------- */
-
-/* ---------- ask it something hard ----------
-
-   Three cases, each a block of copy beside a window, alternating side to side
-   so the eye has somewhere to go on the way down. The owner asked for the
-   windows LARGE and said the page may get much longer for it; they take the
-   wider of the two columns and the section is the tallest on the site.
-
-   The window is the same component as the hero's. Nothing here is a screenshot:
-   a PNG of a conversation goes stale silently, cannot be translated with the
-   rest of the page, and blurs on a display the author did not own. */
-.deep {
-  padding: clamp(3rem, 5.5vw, 5.5rem) var(--gutter);
-}
-.deep-inner { max-width: 1100px; margin: 0 auto; }
-
-.deep-head { max-width: 640px; }
-.deep-head h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(1.9rem, 3.6vw, 2.8rem);
-  line-height: 1.06;
-  letter-spacing: -0.035em;
-}
-.deep-lede {
-  margin: 1rem 0 0;
-  font-size: 1.02rem;
-  line-height: 1.6;
-  color: var(--ink-soft);
-}
-
-.deep-case {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  align-items: start;
-  gap: clamp(1.75rem, 4vw, 3.5rem);
-  margin-top: clamp(2rem, 3.5vw, 3.25rem);
-}
-
-/* Three cases, counted and separated (owner, 2026-09-06). The number is set in
-   the figures face like every other measured mark on the page, and the rule
-   between cases is the same hairline as the court. The counter lives on the
-   list, so reordering the markup renumbers it. */
-.deep-inner { counter-reset: deepcase; }
-.deep-case + .deep-case {
-  border-top: 1px solid var(--hairline);
-  padding-top: clamp(2rem, 3.5vw, 3.25rem);
-}
-.deep-copy h3::before {
-  counter-increment: deepcase;
-  content: counter(deepcase, decimal-leading-zero);
-  display: block;
-  margin-bottom: 0.7rem;
-  font-family: var(--figures);
-  font-weight: 500;
-  font-size: 0.82rem;
-  letter-spacing: 0.04em;
-  color: var(--ink-faint);
-}
-/* The copy and the window swap sides on the middle case. The COLUMNS swap with
-   them - ordering alone would have left the window in the narrow column and
-   made the middle case's evidence smaller than the other two, which is the
-   opposite of what was asked for. Source order stays copy-then-window, so a
-   screen reader and a phone both read the claim before the evidence for it. */
-.deep-case-flip {
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-}
-.deep-case-flip .deep-copy { order: 2; }
-.deep-case-flip .deep-window { order: 1; }
-
-.deep-copy { padding-top: 0.4rem; }
-.deep-copy h3 {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-.deep-copy p {
-  margin: 0.8rem 0 0;
-  font-size: 0.95rem;
-  line-height: 1.65;
-  color: var(--ink-soft);
-}
-
-.deep-window {
-  margin: 0;
-  border: 0;
-  background: transparent;
-}
-/* The recording is the primary presentation; its poster paints immediately.
-   The drawn bar and transcript below stay in the markup for structure but
-   remain hidden, avoiding any visual flash or delayed swap. */
-.deep-window > .demo-video {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1360 / 980;
-}
-.deep-window > .window-bar,
-.deep-window > .deep-body { display: none; }
-.deep-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-  padding: 1.1rem 1.25rem 1.25rem;
-}
-
-/* The visitor needs to see that the assistant is working with this warehouse,
-   not the implementation names and arguments behind that work. One restrained
-   thought replaces the internal transcript; the exact calls remain beside the
-   case in source comments so the figures can still be replayed. */
-.deep-thought {
-  display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
-  margin: 0;
-  font-size: 0.8rem;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 14px;
   line-height: 1.4;
-  color: var(--ink-faint);
 }
-.deep-thought::before {
-  content: "";
-  width: 6px;
-  height: 6px;
+.copy {
   flex: none;
-  border-radius: 50%;
-  background: var(--ball);
-}
-.deep-thought span { color: var(--ink-soft); font-weight: 600; }
-
-.deep-body .reply-line {
-  margin: 0 0 0.7rem;
-  font-size: 0.92rem;
-  line-height: 1.6;
-}
-.deep-body .reply-line:last-of-type { margin-bottom: 0; }
-
-@media (max-width: 900px) {
-  .deep-case,
-  .deep-case-flip { grid-template-columns: minmax(0, 1fr); }
-  /* On one column the swap would put the window above its own claim. */
-  .deep-case-flip .deep-copy { order: 0; }
-  .deep-case-flip .deep-window { order: 0; }
+  border: 0;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
 }
 
-.how {
-  padding: clamp(2.75rem, 5vw, 5rem) var(--gutter);
-}
-.how-inner { max-width: 780px; margin: 0 auto; }
+.where { margin-top: clamp(48px, 8vh, 96px); }
+.where h3 { margin: 0 0 6px; font-size: 24px; font-weight: 700; letter-spacing: -0.015em; }
+.where > p { margin: 0 0 24px; color: var(--ink-2); max-width: 60ch; }
 
-.facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 1.6rem 2.5rem;
-  margin: 2rem 0 0;
-}
-.facts dt {
-  font-family: var(--figures);
-  font-weight: 500;
-  font-size: clamp(1.7rem, 3vw, 2.3rem);
-  line-height: 1;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-  color: var(--ball);
-}
-.facts dd {
-  margin: 0.6rem 0 0;
-  font-size: 0.88rem;
-  line-height: 1.55;
-  color: var(--ink-soft);
-}
-
-.how-note {
-  margin: 2.2rem 0 0;
-  max-width: 62ch;
-  font-size: 0.88rem;
-  line-height: 1.65;
-  color: var(--ink-faint);
-}
-.how-note .quiet-link { margin-left: 0.3rem; }
-
-/* The marker, used exactly once on the page.
-
-   It is NOT the orange. The palette above reserves that for measured values
-   and for the action we want taken, and this phrase is neither - it is a
-   statement about where the numbers come from. The band is the same hairline
-   the court is drawn in, so the mark belongs to the page rather than shouting
-   over it.
-
-   Drawn as a background that grows from the left, which is the direction a pen
-   moves, and sitting a little low and a little uneven because a marker does
-   not stop at the cap height. The text itself never moves: only the band
-   behind it arrives. */
-.marker {
-  /* The band is a background on the text itself rather than a box behind it,
-     and `box-decoration-break: clone` is what makes that the right choice: the
-     phrase is long enough to wrap, and a single absolutely-positioned rectangle
-     would span from the start of the first line to the end of the second and
-     paint a block over everything between. Cloned, each line gets its own band,
-     which is what a pen would leave. */
-  padding: 0 0.15em;
-  border-radius: var(--r-sm);
-  color: var(--ink-soft);
-  background-image: linear-gradient(var(--hairline), var(--hairline));
-  background-repeat: no-repeat;
-  /* Low, and shorter than the line: a marker does not stop at the cap height
-     and does not reach the line above. */
-  background-position: 0 84%;
-  background-size: 0 0.92em;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-  transition: background-size var(--dur-move) var(--ease-move), color var(--dur-reveal) var(--ease-move);
-}
-.marker.is-marked {
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.tab {
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
   color: var(--ink);
-  background-size: 100% 0.92em;
+}
+.tab[aria-selected="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: clamp(20px, 3vw, 36px);
+  max-width: 820px;
+}
+.js .panel[hidden] { display: none; }
+.panel + .panel { margin-top: 16px; }
+.panel h4 { margin: 0 0 4px; font-size: 19px; }
+.panel .checked { margin: 0 0 16px; font-size: 14px; color: var(--ink-2); }
+.panel ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.panel p { margin: 16px 0 0; font-size: 16px; }
+.panel pre {
+  margin: 12px 0 0;
+  padding: 14px;
+  background: var(--paper);
+  border-radius: 10px;
+  overflow-x: auto;
+  font-size: 13px;
+}
+
+/* ---------- trust ---------- */
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  gap: clamp(32px, 6vw, 96px);
+}
+
+.claims { display: grid; grid-template-columns: 1fr 1fr; gap: 0 clamp(24px, 4vw, 56px); margin: 0; }
+.claims div { border-top: 1px solid var(--line); padding: 24px 0 32px; }
+.claims dt { font-weight: 700; font-size: 20px; letter-spacing: -0.01em; margin-bottom: 8px; }
+.claims dd { margin: 0; color: var(--ink-2); font-size: 16px; }
+.claims b { color: var(--ink); font-weight: 650; }
+
+/* ---------- questions people ask ---------- */
+
+.faq { margin-top: clamp(40px, 7vh, 72px); max-width: 900px; }
+.faq details { border-top: 1px solid var(--line); }
+.faq details:last-child { border-bottom: 1px solid var(--line); }
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 22px 0;
+  font-size: clamp(19px, 1.7vw, 23px);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-weight: 400; color: var(--ink-2); transition: transform .3s var(--ease); }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq details p { margin: 0 0 24px; color: var(--ink-2); max-width: 64ch; }
+
+/* ---------- close ---------- */
+
+.close {
+  padding: clamp(96px, 16vh, 200px) var(--gutter);
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+.close h2 {
+  margin: 0 auto 36px;
+  font-weight: 820;
+  font-stretch: 116%;
+  font-size: clamp(38px, 6vw, 104px);
+  line-height: .95;
+  letter-spacing: -0.045em;
+  max-width: 14ch;
+}
+.close h2 em { font-style: normal; color: var(--ball); }
+
+footer.site {
+  border-top: 1px solid var(--line);
+  padding: 32px var(--gutter) 40px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+footer.site .wrap { display: flex; justify-content: space-between; gap: 16px 32px; flex-wrap: wrap; }
+footer.site nav { display: flex; gap: 20px; flex-wrap: wrap; }
+footer.site a { text-decoration: none; }
+footer.site a:hover { color: var(--ink); }
+
+/* ---------- reading pages (privacy, support, ChatGPT) ---------- */
+
+.doc { padding: clamp(32px, 7vh, 80px) var(--gutter) clamp(64px, 12vh, 140px); }
+.doc article { max-width: 760px; margin: 0 auto; }
+.doc h1 {
+  margin: 0 0 16px;
+  font-weight: 800;
+  font-stretch: 112%;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.doc h2 { margin: 48px 0 12px; font-size: 24px; font-weight: 700; letter-spacing: -0.015em; }
+.doc h3 { margin: 28px 0 8px; font-size: 19px; }
+.doc p, .doc li { font-size: 17px; }
+.doc .page-meta { color: var(--ink-2); font-size: 15px; margin-bottom: 32px; }
+.doc .lead { font-size: 21px; }
+.doc .alert-box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 20px; }
+.doc code { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: .88em; background: var(--card); padding: 1px 5px; border-radius: 4px; }
+.doc pre { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; }
+.doc pre code { background: none; padding: 0; }
+.doc table { border-collapse: collapse; width: 100%; font-size: 15px; }
+.doc th, .doc td { text-align: left; border-top: 1px solid var(--line); padding: 10px 8px; vertical-align: top; }
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 960px) {
+  .hero-body,
+  .court-grid,
+  .trust-grid,
+  .qa li { grid-template-columns: 1fr; }
+  .qa li { gap: 16px; }
+  .steps { grid-template-columns: 1fr; }
+  .hero .lede { max-width: none; }
+}
+
+@media (max-width: 700px) {
+  .hero h1 { font-size: 11vw; line-height: .95; }
+  .hero h1 .known, .hero h1 .new { white-space: normal; }
+  .facts li { grid-template-columns: 1fr; gap: 0; }
+  .ask, .reply--plain { max-width: 100%; }
+  .claims { grid-template-columns: 1fr; }
+  .bar nav .hide-small { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marker { transition: none; }
+  html { scroll-behavior: auto; }
+  .msg, .js .reveal, .court .shot { transition: none; }
 }
-
-/* ---------- footer ---------- */
-
-.footer {
-  position: relative;
-  z-index: 1;
-  padding: 2.5rem var(--gutter) 3rem;
-}
-.footer-inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.9rem 1.6rem;
-  font-size: 0.85rem;
-  color: var(--ink-faint);
-}
-.footer nav { display: flex; gap: 1.2rem; }
-.footer-note { flex-basis: 100%; }
