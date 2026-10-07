@@ -7,6 +7,17 @@ app = 'euroleague-analytics-mcp'
 primary_region = 'fra'
 
 [build]
+
+# Decision 92: the app ends its own process after 15 idle minutes (see
+# src/euroleague/mcp/idle_exit.py), because the proxy's own idle stop never ran.
+# A clean exit leaves the machine stopped only under 'on-failure' (a crash still
+# restarts it), so the policy is stated here instead of left to the default.
+[env]
+  IDLE_EXIT_MINUTES = '15'
+
+[[restart]]
+  policy = 'on-failure'
+
 [http_service]
   internal_port = 8080
   force_https = true

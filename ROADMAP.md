@@ -40,6 +40,8 @@ delete it and, if it changed what the system does, record it in `DECISIONS.md`.
    - **What failed.** Neither `suspend` nor `stop` took effect. The
      `cordon`/`uncordon` cycle came every ~6 min, with or without the health
      check. 89 and 91 are both reverted, and `suspend` is back in `fly.toml`.
+   - **Proposed fix (Decision 92, awaiting owner).** The app exits itself after
+     15 idle minutes; proven only by tests until deployed.
    - **Owner's call.** Either approve a machine clone to another host, or post
      on the Fly forum with the evidence in 89 and 91.
    - **Cost meanwhile.** The machine runs always-on, about $2 a month.

@@ -17,12 +17,16 @@ Optional:
                                authorization server and answers registration on
                                the provider's behalf; leave it blank and those
                                routes do not exist. See oauth_proxy.py.
+    IDLE_EXIT_MINUTES          exit cleanly after this many minutes with no
+                               request. Unset means never. See idle_exit.py.
 """
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 MINIMUM_PYTHON_VERSION = (3, 14)
@@ -47,11 +51,35 @@ from euroleague.mcp.http_app import (  # noqa: E402
     determine_allowed_hosts,
 )
 from euroleague.mcp.identity import SERVER_INFO  # noqa: E402
+from euroleague.mcp.idle_exit import IdleTracker, exit_when_idle  # noqa: E402
 from euroleague.mcp.logging_setup import configure_logging  # noqa: E402
 from euroleague.mcp.oauth_proxy import oauth_proxy_routes  # noqa: E402
 from euroleague.mcp.openai_submission import openai_submission_routes  # noqa: E402
 from euroleague.mcp.pool import ConnectionPool  # noqa: E402
 from euroleague.mcp.ratelimit import RequestCap  # noqa: E402
+
+
+def idle_exit_seconds(environ: Mapping[str, str]) -> float:
+    """The idle limit in seconds from IDLE_EXIT_MINUTES, or 0 when unset (never exit)."""
+    raw = environ.get("IDLE_EXIT_MINUTES", "").strip()
+    if not raw:
+        return 0.0
+    minutes = float(raw)
+    if minutes < 0:
+        raise ValueError("IDLE_EXIT_MINUTES must not be negative")
+    return minutes * 60
+
+
+async def serve(server: uvicorn.Server, tracker: IdleTracker, idle_limit_seconds: float) -> None:
+    """Serve until terminated, or until the idle limit passes when one is set."""
+    if not idle_limit_seconds:
+        await server.serve()
+        return
+    watcher = asyncio.create_task(exit_when_idle(tracker, server, idle_limit_seconds))
+    try:
+        await server.serve()
+    finally:
+        watcher.cancel()
 
 
 def main() -> int:
@@ -80,9 +108,26 @@ def main() -> int:
             *openai_submission_routes(os.environ),
         ],
     )
-    logger.info("server_ready", extra={"host": server_host, "port": server_port})
+    idle_limit_seconds = idle_exit_seconds(os.environ)
+    tracker = IdleTracker(app)
+    server = uvicorn.Server(
+        uvicorn.Config(
+            tracker if idle_limit_seconds else app,
+            host=server_host,
+            port=server_port,
+            log_config=None,
+            # An idle exit must not wait on a client that keeps a stream open.
+            timeout_graceful_shutdown=10,
+        )
+    )
+    logger.info(
+        "server_ready",
+        extra={"host": server_host, "port": server_port, "idle_exit_s": idle_limit_seconds},
+    )
     try:
-        uvicorn.run(app, host=server_host, port=server_port, log_config=None)
+        asyncio.run(serve(server, tracker, idle_limit_seconds))
+        if idle_limit_seconds and tracker.idle_seconds() >= idle_limit_seconds:
+            logger.info("idle_exit", extra={"idle_s": round(tracker.idle_seconds())})
     finally:
         pool.close()
         logger.info("server_stopped", extra={})
