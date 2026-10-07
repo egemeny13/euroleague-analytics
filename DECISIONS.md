@@ -778,7 +778,10 @@ option (b) or (c). 86's "verify idle suspension" becomes "verify idle stop".
 
 Owner, 2026-10-07: the site and the promo did not make a stranger understand
 the product or want it; rebuild both, reusing nothing of the old design. The
-message is "Your AI knows the score. Now it knows why." The page sells the
+opening line is "Turn your AI into a EuroLeague analyst." (the Turkish page
+says the same in its own words); the first draft's "Your AI knows the score.
+Now it knows why." was rejected by the owner on 2026-10-08 and survives only
+as the film's narrative. The page sells the
 visitor's gain first (questions a box score cannot answer), then shows the
 proof, then the two-minute setup.
 - **Design.** One self-hosted OFL typeface (Archivo, variable width), paper and

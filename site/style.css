@@ -129,7 +129,7 @@ img, video, svg { display: block; max-width: 100%; }
   font-weight: 800;
   font-stretch: 112%;
   font-size: clamp(34px, 4.8vw, 76px);
-  line-height: .98;
+  line-height: 1.06;
   letter-spacing: -0.04em;
   max-width: 15ch;
 }
@@ -160,14 +160,14 @@ img, video, svg { display: block; max-width: 100%; }
   font-weight: 820;
   font-stretch: 116%;
   /* A page whose sentences run longer sets --h1 to keep each on one line. */
-  font-size: var(--h1, min(6.9vw, 124px));
-  line-height: .9;
+  font-size: var(--h1, min(6.9vw, 108px));
+  line-height: 1.02;
   letter-spacing: -0.045em;
 }
 
 /* Each sentence holds one line on wide screens: the contrast between the
    two is the whole headline, and a wrap breaks it into three. */
-.hero h1 .known { display: block; color: var(--ink-2); white-space: nowrap; }
+.hero h1 .known { display: block; white-space: nowrap; }
 .hero h1 .new { display: block; white-space: nowrap; }
 .hero h1 em { font-style: normal; color: var(--ball); }
 
@@ -529,8 +529,7 @@ img, video, svg { display: block; max-width: 100%; }
 
 .trust-grid {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
-  gap: clamp(32px, 6vw, 96px);
+  gap: clamp(32px, 6vh, 64px);
 }
 
 .claims { display: grid; grid-template-columns: 1fr 1fr; gap: 0 clamp(24px, 4vw, 56px); margin: 0; }
@@ -571,7 +570,7 @@ img, video, svg { display: block; max-width: 100%; }
   font-weight: 820;
   font-stretch: 116%;
   font-size: clamp(38px, 6vw, 104px);
-  line-height: .95;
+  line-height: 1.04;
   letter-spacing: -0.045em;
   max-width: 14ch;
 }
@@ -625,13 +624,18 @@ footer.site a:hover { color: var(--ink); }
 }
 
 @media (max-width: 700px) {
-  .hero h1 { font-size: 11vw; line-height: .95; }
+  .hero h1 { font-size: 11vw; line-height: 1.04; }
   .hero h1 .known, .hero h1 .new { white-space: normal; }
   .facts li { grid-template-columns: 1fr; gap: 0; }
   .ask, .reply--plain { max-width: 100%; }
   .claims { grid-template-columns: 1fr; }
   .bar nav .hide-small { display: none; }
   .bar nav { gap: 16px; }
+}
+
+@media (max-width: 400px) {
+  .wordmark { font-size: 15px; }
+  .button--small { padding: 8px 14px; font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
