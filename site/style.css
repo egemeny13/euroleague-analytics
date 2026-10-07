@@ -159,7 +159,8 @@ img, video, svg { display: block; max-width: 100%; }
   margin: 0;
   font-weight: 820;
   font-stretch: 116%;
-  font-size: min(6.9vw, 124px);
+  /* A page whose sentences run longer sets --h1 to keep each on one line. */
+  font-size: var(--h1, min(6.9vw, 124px));
   line-height: .9;
   letter-spacing: -0.045em;
 }
