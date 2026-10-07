@@ -217,7 +217,7 @@ python -m venv .venv
 
 ## 8. Dual-Path Evaluation Suite
 
-[`evaluation.xml`](evaluation.xml) contains 10 complex, realistic questions designed to test LLM retrieval and reasoning over basketball data.
+[`docs/evaluation.xml`](docs/evaluation.xml) contains 10 complex, realistic questions designed to test LLM retrieval and reasoning over basketball data.
 
 `tests/test_phase_8_evaluations.py` re-earns every published answer along two independent paths on demand:
 1. Ground-truth SQL queries executed directly against warehouse tables.

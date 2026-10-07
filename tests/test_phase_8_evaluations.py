@@ -44,7 +44,7 @@ from euroleague.mcp.tools import TOOL_NAMES
 pytestmark = pytest.mark.warehouse
 
 SEASON = "E2024"
-EVALUATION_FILE = Path(__file__).resolve().parents[1] / "evaluation.xml"
+EVALUATION_FILE = Path(__file__).resolve().parents[1] / "docs" / "evaluation.xml"
 
 # Every evaluation is pinned to this population, so these three numbers appear in
 # the disclosure of nearly every answer below.
