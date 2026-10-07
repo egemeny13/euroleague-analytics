@@ -764,3 +764,25 @@ option (b) or (c). 86's "verify idle suspension" becomes "verify idle stop".
   wait for the owner.
 - **Cost meanwhile.** The machine runs always-on, as it did before 86, at
   about $2 a month.
+
+## 92. The hosted MCP ends its own process after 15 idle minutes
+
+Proposed by Claude on 2026-10-07, not yet decided by the owner (the pull request
+is the proposal). Fly's proxy never stopped or suspended the machine (86, 89,
+91), so idle shutdown no longer waits for it: the server exits with code 0 after
+`IDLE_EXIT_MINUTES` (15, set in `fly.toml`) without a request, and
+`[[restart]] policy = 'on-failure'` leaves a cleanly exited machine stopped.
+`auto_start_machines` starts it on the next request. `auto_stop_machines` is left
+at `suspend`; if the platform ever honours it, it simply acts earlier.
+**What counts as use:** any request except `/healthz` and an open `GET /mcp`
+stream. A request being answered blocks the exit. Whether a client's open stream
+is what kept the proxy from stopping the machine is a guess, not a measurement:
+the app has no access log, so inbound traffic while idle was never observed.
+**What it costs:** the same as 91's `stop`: a start is a fresh process, MCP
+sessions do not survive it, and the first request after idle waits for a full
+start (3.9-7.8 s measured 2026-10-06). Machine time falls from always-on to the
+hours of use plus 15 minutes after each.
+**Condition:** after deploy, the machine event log must show a stop within about
+16 minutes of the last real request, and a request after that must start it. If
+the machine restarts itself instead, the restart policy was not what was
+assumed: revert. Not provable before deploy.
