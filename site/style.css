@@ -631,6 +631,7 @@ footer.site a:hover { color: var(--ink); }
   .ask, .reply--plain { max-width: 100%; }
   .claims { grid-template-columns: 1fr; }
   .bar nav .hide-small { display: none; }
+  .bar nav { gap: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

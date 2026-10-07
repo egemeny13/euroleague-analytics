@@ -804,6 +804,13 @@ proof, then the two-minute setup.
   help centre on 2026-10-07; ChatGPT against current secondary guides the same
   day (OpenAI's own page was not reachable); Gemini still carries its
   2026-09-06 date.
+- **Music.** The film's bed was generated locally with Meta's MusicGen
+  (medium). Its weights are licensed CC-BY-NC 4.0; the project is
+  non-commercial, but if a sponsorship (see CONTEXT) is ever judged commercial,
+  replace the bed with a licensed track. The composition renders silent and the
+  bed is mixed in afterwards, so a swap is one ffmpeg command, not a re-render.
+- **Source.** The composition lives outside this repository (launch media,
+  Decision 47) at `E:\dev\euroleague-film\film`.
 **Condition:** when the loaded seasons change, re-query every figure on both
 pages and in the film; never edit one by hand. The Turkish page's figures are
 tested equal to the English page's.
