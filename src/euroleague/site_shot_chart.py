@@ -2,7 +2,7 @@
 
 The page plots a single game. Everything here is the part of that build with no
 network in it: reading the attempts out of a response, checking the game against
-its own season, and assembling the document `site/data/shots.json` holds.
+its own season, and assembling the document `site/data/final-shots.json` holds.
 
 The check is the reason this module exists rather than a one-off script. Decision
 58 measured 627 games and found the recording varies by game: in a bad one every

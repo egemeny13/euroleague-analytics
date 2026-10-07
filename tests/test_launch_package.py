@@ -153,6 +153,9 @@ def test_chatgpt_submission_record_uses_product_subdomain() -> None:
     assert f"**Support / Terms URL:** `{base_url}/support.html`" in content
     assert f"**Privacy Policy URL:** `{base_url}/privacy.html`" in content
     assert f"**Demo Recording:** `{base_url}/launch-film.mp4`" in content
+    # The rebuilt site no longer shows that film, but the submission still
+    # points reviewers at it, so the file stays published (Decision 92).
+    assert (SITE_DIR / "launch-film.mp4").is_file()
 
 
 def test_chatgpt_submission_brand_is_independent_and_competition_descriptive() -> None:
@@ -336,9 +339,10 @@ def test_the_turkish_page_is_reached_by_redirect_and_can_always_be_left() -> Non
 def test_the_turkish_page_shares_the_english_page_s_assets_and_claims() -> None:
     """The Turkish page is the same product, so it loads the same scripts and figures.
 
-    Authored copy may differ sentence by sentence; the scripts, the recordings
-    and the one coverage figure may not. A script listed on one page and not
-    the other means one language gets a broken section.
+    Authored copy may differ sentence by sentence; the scripts, the sections,
+    the coverage figure and every number a visitor reads may not. A script
+    listed on one page and not the other means one language gets a broken
+    section; a number that differs means one language is wrong.
     """
     index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
     turkish_text = TURKISH_PAGE.read_text(encoding="utf-8")
@@ -350,45 +354,49 @@ def test_the_turkish_page_shares_the_english_page_s_assets_and_claims() -> None:
 
     assert scripts_of(turkish_text) == scripts_of(index_text)
 
-    for section_id in ("film", "shots", "lineups", "connect", "deep", "how"):
+    for section_id in ("chat", "film", "ask", "court", "connect", "trust", "faq"):
+        assert f'id="{section_id}"' in index_text, f"English page lacks section {section_id}"
         assert f'id="{section_id}"' in turkish_text, f"Turkish page lacks section {section_id}"
 
     assert "732" in turkish_text, "the Turkish page must state the same games-loaded figure"
     assert "https://euroleague-analytics-mcp.fly.dev/mcp" in turkish_text
 
-    # The recordings are the same files, except the launch film which has a
-    # dedicated Turkish cut (Decision 83).
-    for media in ("hero-demo.mp4", "hard-1.mp4", "hard-2.mp4", "hard-3.mp4"):
-        assert f"../{media}" in turkish_text, f"Turkish page does not reuse {media}"
-    assert "../launch-film-tr.mp4" in turkish_text, (
-        "Turkish page does not use localized launch film"
-    )
+    # Each language has its own cut of the film (Decision 92).
+    assert 'src="film.mp4"' in index_text
+    assert 'src="../film-tr.mp4"' in turkish_text
+
+    # Every figure the visitor reads, in page order. Turkish writes 24,5 where
+    # English writes 24.5 and puts the percent sign first; nothing else may
+    # differ. The animated counters must count to the same targets too.
+    def figures(text: str) -> list[str]:
+        values = re.findall(r'<span class="n"[^>]*>([^<]+)</span>', text)
+        return [v.replace(",", ".").replace("%", "") for v in values]
+
+    def counters(text: str) -> list[str]:
+        return re.findall(r'data-count="([0-9.]+)"', text)
+
+    assert figures(index_text), "no figures found; the markup the check reads has moved"
+    assert figures(turkish_text) == figures(index_text)
+    assert counters(turkish_text) == counters(index_text)
 
 
-def test_the_turkish_page_carries_every_sentence_the_scripts_can_show() -> None:
-    """Decision 53: scripts hold no Turkish, so the page must supply each string.
+def test_site_scripts_hold_no_copy() -> None:
+    """Decision 53: the pages hold every sentence, so one script serves both languages.
 
-    The scripts read `data-text-<key>` from <body> and fall back to English.
-    A key the Turkish page forgets shows an English sentence in the middle of
-    a Turkish page, silently. This test lists the keys from the scripts
-    themselves, so a new key added to a script without its Turkish text fails
-    here rather than on the page.
+    A string literal assigned to textContent would show the same words on the
+    English and the Turkish page. The copy button reads its "copied" word from
+    the page, and the counters read their decimal separator from it.
     """
-    keys: set[str] = set()
-    for script in SITE_DIR.glob("*.js"):
-        script_text = script.read_text(encoding="utf-8")
-        keys.update(re.findall(r'text\("([a-z]+(?:-[a-z]+)*)"', script_text))
-        keys.update(re.findall(r'data-text-([a-z]+(?:-[a-z]+)*)"', script_text))
-    # The position words are looked up by the data's values, not by a literal.
-    keys.update({"position-guard", "position-forward", "position-center"})
-    assert keys, "no data-text keys found in the scripts; the lookup has moved"
-
-    body_tag = re.search(r"<body[^>]*>", TURKISH_PAGE.read_text(encoding="utf-8"))
-    assert body_tag is not None
-    for key in sorted(keys):
-        assert f'data-text-{key}="' in body_tag.group(0), (
-            f"tr/index.html <body> lacks data-text-{key}; a script would show English there"
+    scripts = sorted(SITE_DIR.glob("*.js"))
+    assert scripts, "no site scripts found"
+    for script in scripts:
+        text = script.read_text(encoding="utf-8")
+        assert not re.search(r"textContent\s*=\s*[\"'][^\"']", text), (
+            f"{script.name} writes a literal sentence into the page"
         )
+    for page in (SITE_DIR / "index.html", TURKISH_PAGE):
+        assert 'data-done="' in page.read_text(encoding="utf-8"), f"{page} lacks the copied word"
+    assert 'data-sep=","' in TURKISH_PAGE.read_text(encoding="utf-8")
 
 
 def test_site_scripts_locate_their_data_from_their_own_address() -> None:
@@ -398,10 +406,10 @@ def test_site_scripts_locate_their_data_from_their_own_address() -> None:
     /tr/data/x.json, which does not exist. Resolving against the script's own
     URL gives the same answer from every page that loads it.
     """
-    for name in ("shots.js", "lineups.js"):
-        text = (SITE_DIR / name).read_text(encoding="utf-8")
-        assert 'fetch("data/' not in text, f"{name} still fetches relative to the page"
-        assert "document.currentScript" in text, f"{name} does not resolve data from its own URL"
+    text = (SITE_DIR / "court.js").read_text(encoding="utf-8")
+    assert 'fetch("data/' not in text, "court.js still fetches relative to the page"
+    assert "document.currentScript" in text, "court.js does not resolve data from its own URL"
+    assert (SITE_DIR / "data" / "final-shots.json").is_file()
 
 
 def test_launch_documentation_files_exist() -> None:
@@ -565,8 +573,8 @@ TOOL_COUNT_SURFACES = (
     Path("docs/LAUNCH_NARRATIVE.md"),
     SITE_DIR / "index.html",
     SITE_DIR / "support.html",
-    SITE_DIR / "motion.js",
     SITE_DIR / "tr" / "index.html",
+    *sorted(SITE_DIR.glob("*.js")),
 )
 
 # English number words that could plausibly stand in front of "tool(s)". Any of
@@ -663,40 +671,29 @@ def test_public_copy_states_the_current_tool_count() -> None:
     )
 
 
-def test_lineup_metrics_share_the_copy_column() -> None:
-    """The live figures must use the space below the short lineup explanation."""
-    index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
-    lineup = index_text.split('id="lineups"', 1)[1].split('id="ask"', 1)[0]
+def test_the_accent_colour_is_spent_only_on_answers_and_actions() -> None:
+    """The orange means one thing: an answer from the data, or the action to connect.
 
-    copy_start = lineup.index('<div class="claim-copy">')
-    figure_start = lineup.index('<div class="claim-figure">')
-    verdict = lineup.index('<div class="unit-verdict">')
-
-    assert copy_start < verdict < figure_start, (
-        "The lineup metrics must sit below the copy instead of adding height under the court"
-    )
-
-
-def test_hard_questions_show_thinking_without_technical_call_chrome() -> None:
-    """Each case gets one human-readable thought, not an internal tool transcript."""
-    index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
-    deep = index_text.split('id="deep"', 1)[1].split('id="how"', 1)[0]
-
-    assert deep.count('class="deep-thought"') == 3
-    for technical_class in ("deep-call", "toolcall-name", "deep-args", "deep-back"):
-        assert technical_class not in deep, (
-            f"The hard-question examples still expose technical UI: {technical_class}"
-        )
-
-
-def test_page_background_keeps_only_the_sideline_system() -> None:
-    """The page frame keeps its rails and section ticks, without court furniture."""
-    index_text = (SITE_DIR / "index.html").read_text(encoding="utf-8")
-    background = index_text.split('<div class="courtgrid"', 1)[1].split('<main id="main">', 1)[0]
+    The owner's standing rule is that colour is never decoration. This lists
+    every rule in the stylesheet that uses the accent and fails on any
+    selector outside the agreed set, so a new orange flourish has to be argued
+    for here rather than slipped in.
+    """
     stylesheet = (SITE_DIR / "style.css").read_text(encoding="utf-8")
-
-    assert 'class="rail rail-left"' in background
-    assert 'class="rail rail-right"' in background
-    assert "<svg" not in background
-    assert "halfway" not in background
-    assert ".claim::before" in stylesheet
+    allowed = {
+        ":focus-visible",
+        ".button",
+        ".button:hover",
+        ".chat-head .on::before",
+        ".hero h1 em",
+        ".section h2 em",
+        ".facts .n,\n.qa .n",
+        ".play span",
+        ".close h2 em",
+    }
+    used = set()
+    for selector, body in re.findall(r"([^{}]+)\{([^{}]*)\}", stylesheet):
+        if "var(--ball" in body:
+            used.add(re.sub(r"/\*.*?\*/", "", selector, flags=re.S).strip())
+    assert used, "no rule uses the accent; the variable has been renamed"
+    assert used <= allowed, f"accent used outside answers and actions: {sorted(used - allowed)}"

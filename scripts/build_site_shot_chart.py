@@ -1,4 +1,4 @@
-"""Build `site/data/shots.json` from one archived `Points` response.
+"""Build `site/data/final-shots.json` from one archived `Points` response.
 
 The launch site plots one game. This script is what produces that file, so the
 picture on the page is reproducible rather than hand-assembled: it downloads the
@@ -10,8 +10,8 @@ It refuses a game whose coordinates disagree with its season - see Decision 58
 and `euroleague.site_shot_chart`. Read-only against production: it downloads and
 verifies, and writes nothing back.
 
-    python scripts/build_site_shot_chart.py E2022 330 \\
-        --spotlight-player "LLULL, SERGIO" --spotlight-minute 40 \\
+    python scripts/build_site_shot_chart.py E2025 406 \\
+        --spotlight-player "VEZENKOV, SASHA" \\
         --home-colour "#C8102E" --away-colour "#00529F" \\
         --phase "Final Four championship game"
 """
@@ -36,7 +36,7 @@ from euroleague.site_shot_chart import (
 )
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_OUTPUT = REPOSITORY_ROOT / "site" / "data" / "shots.json"
+DEFAULT_OUTPUT = REPOSITORY_ROOT / "site" / "data" / "final-shots.json"
 
 UNITS = (
     "centimetres; x is lateral from the centre of the attacking half, y is distance "
