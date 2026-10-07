@@ -1,0 +1,377 @@
+{
+  "production_write": false,
+  "warehouse": {
+    "coverage": {
+      "seasons": [
+        "E2024",
+        "E2025",
+        "E2026"
+      ],
+      "games_included": 762,
+      "completeness": "in_progress",
+      "teams": [
+        {
+          "season_code": "E2024",
+          "team_code": "ASV",
+          "display_name": "LDLC ASVEL Villeurbanne"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "BAR",
+          "display_name": "FC Barcelona"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "BAS",
+          "display_name": "Baskonia Vitoria-Gasteiz"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "BER",
+          "display_name": "ALBA Berlin"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "IST",
+          "display_name": "Anadolu Efes Istanbul"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "MAD",
+          "display_name": "Real Madrid"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "MCO",
+          "display_name": "AS Monaco"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "MIL",
+          "display_name": "EA7 Emporio Armani Milan"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "MUN",
+          "display_name": "FC Bayern Munich"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "OLY",
+          "display_name": "Olympiacos Piraeus"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "PAN",
+          "display_name": "Panathinaikos AKTOR Athens"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "PAR",
+          "display_name": "Partizan Mozzart Bet Belgrade"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "PRS",
+          "display_name": "Paris Basketball"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "RED",
+          "display_name": "Crvena Zvezda Meridianbet Belgrade"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "TEL",
+          "display_name": "Maccabi Playtika Tel Aviv"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "ULK",
+          "display_name": "Fenerbahce Beko Istanbul"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "VIR",
+          "display_name": "Virtus Segafredo Bologna"
+        },
+        {
+          "season_code": "E2024",
+          "team_code": "ZAL",
+          "display_name": "Zalgiris Kaunas"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "ASV",
+          "display_name": "LDLC ASVEL Villeurbanne"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "BAR",
+          "display_name": "FC Barcelona"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "BAS",
+          "display_name": "Kosner Baskonia Vitoria-Gasteiz"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "DUB",
+          "display_name": "Dubai Basketball"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "HTA",
+          "display_name": "Hapoel IBI Tel Aviv"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "IST",
+          "display_name": "Anadolu Efes Istanbul"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "MAD",
+          "display_name": "Real Madrid"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "MCO",
+          "display_name": "AS Monaco"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "MIL",
+          "display_name": "EA7 Emporio Armani Milan"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "MUN",
+          "display_name": "FC Bayern Munich"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "OLY",
+          "display_name": "Olympiacos Piraeus"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "PAM",
+          "display_name": "Valencia Basket"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "PAN",
+          "display_name": "Panathinaikos AKTOR Athens"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "PAR",
+          "display_name": "Partizan Mozzart Bet Belgrade"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "PRS",
+          "display_name": "Paris Basketball"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "RED",
+          "display_name": "Crvena Zvezda Meridianbet Belgrade"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "TEL",
+          "display_name": "Maccabi Rapyd Tel Aviv"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "ULK",
+          "display_name": "Fenerbahce Beko Istanbul"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "VIR",
+          "display_name": "Virtus Bologna"
+        },
+        {
+          "season_code": "E2025",
+          "team_code": "ZAL",
+          "display_name": "Zalgiris Kaunas"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "ASV",
+          "display_name": "LDLC ASVEL Villeurbanne"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "BAR",
+          "display_name": "FC Barcelona"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "BAS",
+          "display_name": "Kosner Baskonia Vitoria-Gasteiz"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "BES",
+          "display_name": "Besiktas Istanbul"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "DUB",
+          "display_name": "Dubai Basketball"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "HTA",
+          "display_name": "Hapoel IBI Tel Aviv"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "IST",
+          "display_name": "Anadolu Efes Istanbul"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "MAD",
+          "display_name": "Real Madrid"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "MIL",
+          "display_name": "Armani Olimpia Milan"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "MUN",
+          "display_name": "FC Bayern Munich"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "OLY",
+          "display_name": "Olympiacos Piraeus"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "PAM",
+          "display_name": "Valencia Basket"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "PAN",
+          "display_name": "Panathinaikos AKTOR Athens"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "PAR",
+          "display_name": "Partizan Mozzart Bet Belgrade"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "PRS",
+          "display_name": "Paris Basketball"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "RED",
+          "display_name": "Crvena Zvezda Meridianbet Belgrade"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "TEL",
+          "display_name": "Maccabi Rapyd Tel Aviv"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "ULK",
+          "display_name": "Fenerbahce Tarfin Istanbul"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "VIR",
+          "display_name": "Virtus Bologna"
+        },
+        {
+          "season_code": "E2026",
+          "team_code": "ZAL",
+          "display_name": "Zalgiris Kaunas"
+        }
+      ],
+      "shot_coordinates": {
+        "E2024": {
+          "available": true,
+          "shot_events": 53925,
+          "shots_with_real_coordinates": 41524
+        },
+        "E2025": {
+          "available": true,
+          "shot_events": 67557,
+          "shots_with_real_coordinates": 51745
+        },
+        "E2026": {
+          "available": true,
+          "shot_events": 5131,
+          "shots_with_real_coordinates": 3940
+        }
+      }
+    },
+    "excluded": {
+      "games": 55,
+      "reasons": {
+        "E2024:minutes_mismatch": 2,
+        "E2024:off_court_attribution": 7,
+        "E2024:possession_gate": 14,
+        "E2025:minutes_mismatch": 3,
+        "E2025:off_court_attribution": 12,
+        "E2025:possession_gate": 17,
+        "E2025:substitution_state": 1,
+        "E2026:off_court_attribution": 2
+      },
+      "note": "Excluded by default from every other tool. possession_gate means this game's two independently counted possession totals disagreed; off_court_attribution means one event is credited to a player believed off court; minutes_mismatch means reconstructed minutes disagree with the official box score after correction."
+    },
+    "rows": [
+      {
+        "season_code": "E2024",
+        "games": 330,
+        "excluded_games": 22,
+        "first_game": "2024-10-03",
+        "last_game": "2025-05-25",
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null
+      },
+      {
+        "season_code": "E2025",
+        "games": 402,
+        "excluded_games": 31,
+        "first_game": "2025-09-30",
+        "last_game": "2026-05-24",
+        "completeness": "unknown",
+        "games_scheduled": null,
+        "last_loaded_at": null
+      },
+      {
+        "season_code": "E2026",
+        "games": 30,
+        "excluded_games": 2,
+        "first_game": "2026-09-24",
+        "last_game": "2026-10-02",
+        "completeness": "in_progress",
+        "games_scheduled": 380,
+        "last_loaded_at": "2026-10-07T10:34:59.235972+00:00"
+      }
+    ],
+    "row_count": 3,
+    "truncated": false,
+    "caveats": [
+      "Counting statistics are the official euroleague.net box score. Possessions, pace, lineups, on/off and every per-100 rate are this project's own reconstruction from the play-by-play event stream.",
+      "Shot-coordinate coverage is listed by season above. A season marked available=false can still return shot attempts from game_event, but it cannot answer where they were taken.",
+      "Minutes come in three kinds and every response says which it served. 'corrected' is the default and applies a measured 60-second substitution correction; 'raw' uses the source timestamps untouched and is what anything positional uses; 'official' is the published box score figure. Repeat the basis whenever you quote a minutes figure or a per-minute rate."
+    ]
+  },
+  "applied_sources": []
+}

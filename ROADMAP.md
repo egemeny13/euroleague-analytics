@@ -34,6 +34,15 @@ delete it and, if it changed what the system does, record it in `DECISIONS.md`.
 
 ## Open work
 
+### Owner-requested analytics expansion (2026-10-08)
+
+Decision 93 and `docs/superpowers/plans/2026-10-08-mcp-analytics-expansion.md`.
+Season prompt repaired; three new summaries and opt-in advanced player rates
+are being validated locally. Production release has not happened.
+Historical E2024/E2025 progress requires a truthful successful-load timestamp:
+preflight found no historical application records; do not fabricate one.
+
+
 ### Needs verification now
 
 1. **Fly idle sleep never happens (Decisions 86, 89, 91).**

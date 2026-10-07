@@ -764,3 +764,36 @@ option (b) or (c). 86's "verify idle suspension" becomes "verify idle stop".
   wait for the owner.
 - **Cost meanwhile.** The machine runs always-on, as it did before 86, at
   about $2 a month.
+
+## 93. Owner-requested MCP analytics summaries
+
+2026-10-08. The owner explicitly requested six repairs/additions and authorized
+a written plan and Luna implementation subagents. This supersedes Decisions
+65/79's frozen surface for standings, shot profile and game log (17 tools).
+The underlying read-only SQL-view architecture stays in place.
+
+Season codes identify their starting autumn year: E2024 is 2024-25, confirmed
+against the live warehouse date ranges. The earlier ending-year prompt was wrong.
+Standings include quarantined official scores because possession validation
+does not invalidate the official result; sorting does not implement official
+head-to-head tiebreak rules. Shot profiles aggregate source zones and preserve
+unknown locations and missed free throws, with a matched league population.
+
+Advanced player statistics are opt-in. TS uses the conventional 0.44 FTA
+scoring approximation; it is not an exact possession estimate. Usage is labeled
+usage_event_rate: FGA + inferred FT trips + turnovers per exact offensive
+possession with the player in the starting lineup. It can exceed one and is
+not standard estimated USG%. Assist and rebound numerators/denominators come
+from events associated with that same possession-start lineup population;
+team-only rebound outcomes remain in denominators. Numerators and denominators
+are exposed as season totals for audit, regardless of per_game.
+
+Historical progress must still use a recorded successful load timestamp, never
+fetch time or the time this correction ran. The live preflight found no
+game_source_state rows for E2024/E2025, so that production backfill remains
+blocked on truthful load provenance or an approved cache-backed load. No
+production write or deployment is authorized by this decision.
+
+Conditions: independent metric validation and migration rehearsal must pass;
+existing offline tests and transport parity remain green. Production apply and
+deployment require the separate immediate approval under Decision 87.

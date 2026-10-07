@@ -141,3 +141,12 @@ and neither public API role has a privilege on any of them. Direct role tests
 return PostgreSQL `42501` for both `anon` and `authenticated`; the owning MCP
 role and `service_role` retain the complete, unchanged result sets. See
 `docs/PUBLIC_VIEW_SECURITY_HARDENING_REPORT.md`.
+
+
+## Owner-requested analytics expansion (Decision 93)
+
+| Migration | Reason and status |
+|---|---|
+| `0030_results_views` | Official-score standings include quarantined results; team/player log sources. Prepared locally, not applied to production. |
+| `0031_shot_profile_views` | Event-based zone aggregates and matched league rates, preserving missing coordinates and free throws. Prepared locally, not applied to production. |
+| `0032_player_advanced_views` | Auditable player on-court possession/event denominators, with the explicit custom-rate definitions in Decision 93. Prepared locally, not applied to production. |

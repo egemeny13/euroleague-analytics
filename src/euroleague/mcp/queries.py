@@ -331,7 +331,9 @@ def describe_warehouse(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, A
                 f"{row['season_code']}:{row['reason']}": row["games"] for row in quarantine
             },
             "note": (
-                "Excluded by default from every other tool. possession_gate means this "
+                "Excluded by default from derived-statistics tools. "
+                "Official-score standings always include these games; roster "
+                "membership also includes them. possession_gate means this "
                 "game's two independently counted possession totals disagreed; "
                 "off_court_attribution means one event is credited to a player believed "
                 "off court; minutes_mismatch means reconstructed minutes disagree with "
@@ -751,6 +753,10 @@ def get_team_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
 
 def get_player_stats(cursor: Cursor, arguments: dict[str, Any]) -> dict[str, Any]:
     """A player's season totals or per-game averages, with per-100 rates."""
+    if _boolean(arguments, "advanced", False):
+        from euroleague.mcp.advanced_stats import get_player_stats_advanced
+
+        return get_player_stats_advanced(cursor, arguments)
     include_quarantined = _boolean(arguments, "include_quarantined", False)
     per_game = _boolean(arguments, "per_game", False)
     season_code = resolve_season(cursor, arguments["season"])

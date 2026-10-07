@@ -1,4 +1,4 @@
-"""The fourteen tool definitions.
+"""The seventeen tool definitions.
 
 Descriptions are read by the model at call time, so they are written as prompts
 rather than as code comments: what the tool answers, what the numbers mean, and
@@ -14,6 +14,8 @@ from typing import Any
 from euroleague.mcp import queries
 from euroleague.mcp.envelope import RESPONSE_OUTPUT_SCHEMA
 from euroleague.mcp.protocol import Tool
+from euroleague.mcp.results_queries import get_game_log, get_standings
+from euroleague.mcp.shot_profile import get_shot_profile
 
 TOOL_NAMES: tuple[str, ...] = (
     "el_describe_warehouse",
@@ -30,6 +32,9 @@ TOOL_NAMES: tuple[str, ...] = (
     "el_get_fouls",
     "el_get_referee_stats",
     "el_get_roster",
+    "el_get_standings",
+    "el_get_shot_profile",
+    "el_get_game_log",
 )
 
 _INCLUDE_QUARANTINED = {
@@ -45,8 +50,8 @@ _INCLUDE_QUARANTINED = {
 _SEASON = {
     "type": "string",
     "description": (
-        "Season code such as E2024. E<YYYY> identifies the season ending in spring <YYYY> "
-        "(for example, E2024 is the 2023-24 season). Call el_describe_warehouse to see "
+        "Season code such as E2024. E<YYYY> identifies the season starting in autumn <YYYY> "
+        "(for example, E2024 is the 2024-25 season). Call el_describe_warehouse to see "
         "which seasons are loaded."
     ),
 }
@@ -81,7 +86,7 @@ def _schema(properties: dict[str, Any], required: list[str] | None = None) -> di
     """Every tool's schema, with include_quarantined added for free."""
     return {
         "type": "object",
-        "properties": {**properties, "include_quarantined": _INCLUDE_QUARANTINED},
+        "properties": {"include_quarantined": _INCLUDE_QUARANTINED, **properties},
         "required": required or [],
     }
 
@@ -109,6 +114,10 @@ def _has_narrowing_value(arguments: dict[str, Any], name: str) -> bool:
 def _validate_bulk_narrowing(tool_name: str, arguments: dict[str, Any]) -> None:
     """Keep the two largest surfaces focused before a database runner is selected."""
     narrowing_arguments = _BULK_NARROWING_ARGUMENTS.get(tool_name)
+    if tool_name in ("el_get_shot_profile", "el_get_game_log") and not any(
+        _has_narrowing_value(arguments, name) for name in ("team", "player")
+    ):
+        raise ValueError(f"{tool_name} needs at least one of team or player.")
     if narrowing_arguments is None:
         return
     if any(_has_narrowing_value(arguments, name) for name in narrowing_arguments):
@@ -163,7 +172,7 @@ def build_registry(
                 "holds, whether each is complete, in progress, or of unknown completeness, "
                 "the date range covered, which games are excluded by default and "
                 "why, and the teams in each season. Season codes follow the E<YYYY> convention "
-                "for the season ending in spring <YYYY> (for example, E2024 is the 2023-24 "
+                "for the season starting in autumn <YYYY> (for example, E2024 is the 2024-25 "
                 "season). Counting statistics served by the other tools are the official "
                 "euroleague.net box score; possessions, pace, lineups, on/off and every "
                 "per-100 rate are this project's own reconstruction from play-by-play "
@@ -330,7 +339,12 @@ def build_registry(
                 "substitution correction, 'raw' uses the source timestamps untouched, "
                 "'official' is the published figure. Always repeat that basis when you "
                 "quote a minutes figure or any per-minute rate. Omit the player argument "
-                "to rank a team or a whole season."
+                "to rank a team or a whole season. Pass advanced=true for TS%, eFG%, "
+                "usage, assist, turnover and rebound event rates with their denominators. "
+                "Usage and turnover denominators are this project's exact reconstructed "
+                "on-court possessions, never box-score possession estimates. TS uses the "
+                "standard 0.44 FTA scoring approximation; usage is an explicitly custom "
+                "event rate that can exceed 100%, not standard USG%."
             ),
             input_schema=_schema(
                 {
@@ -344,6 +358,16 @@ def build_registry(
                         ),
                     },
                     "team": {"type": "string", "description": "Team code or club name."},
+                    "advanced": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Add TS%, eFG% and auditable on-court event rates. Usage is "
+                            "shots + inferred FT trips + turnovers per exact offensive "
+                            "possession, not standard estimated USG%. TS uses the "
+                            "standard 0.44 FTA scoring approximation."
+                        ),
+                    },
                     "per_game": {
                         "type": "boolean",
                         "default": False,
@@ -768,6 +792,129 @@ def build_registry(
                 required=["season"],
             ),
             query=queries.get_roster,
+        ),
+        tool(
+            name="el_get_standings",
+            title="Team results and standings summary",
+            description=(
+                "Results by team for a season and optional phase: wins/losses, home and "
+                "away wins/losses, points scored and conceded, point differential and the "
+                "last five results in chronological order. Uses completed official scores "
+                "and includes quarantined games regardless of include_quarantined: "
+                "possession validation has no bearing on official game results. Sorted "
+                "results do not apply the competition's official head-to-head tiebreaks."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "phase": {
+                        "type": "string",
+                        "description": (
+                            "Optional phase code from el_find_games, such as RS, PI, PO or FF."
+                        ),
+                    },
+                    "include_quarantined": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Compatibility flag: official-score standings always include "
+                            "quarantined games, whatever this flag says."
+                        ),
+                    },
+                },
+                required=["season"],
+            ),
+            query=get_standings,
+        ),
+        tool(
+            name="el_get_shot_profile",
+            title="Zone shot profile versus league",
+            description=(
+                "Summarise shot attempts and makes by source zone for a team or player "
+                "with FG%, the same-season league rate and the percentage-point difference. "
+                "Give at least one of team or player; both restrict the player to that "
+                "club. shot_type uses the event action code (2P, 3P or FT), never geometry. "
+                "Missing locations remain an Unknown-zone bucket and free throws stay "
+                "separate. Returns aggregate counts and rates, never raw coordinates."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "team": {
+                        "type": "string",
+                        "description": (
+                            "Team code or club name; required unless player is supplied."
+                        ),
+                    },
+                    "player": {
+                        "type": "string",
+                        "description": "Player ID or name; required unless team is supplied.",
+                    },
+                    "shot_type": {
+                        "type": "string",
+                        "enum": ["2P", "3P", "FT"],
+                        "description": (
+                            "Optional event-defined shot type. Omit to show all types separately."
+                        ),
+                    },
+                },
+                required=["season"],
+            ),
+            query=get_shot_profile,
+        ),
+        tool(
+            name="el_get_game_log",
+            title="Player or team game log",
+            description=(
+                "Official box-score rows for one player or team, newest game first. Give "
+                "player or team and season; narrow with home_away or opponent, and last_n "
+                "for the most recent matching games after those filters. Player DNP rows "
+                "are omitted. Minutes default to corrected and the response states the "
+                "chosen corrected, raw or official basis. Results are bounded and paginated; "
+                "quarantined games follow the usual default exclusion with disclosure."
+            ),
+            input_schema=_schema(
+                {
+                    "season": _SEASON,
+                    "team": {
+                        "type": "string",
+                        "description": "Team code or club name; supply team or player.",
+                    },
+                    "player": {
+                        "type": "string",
+                        "description": "Player ID or name; supply player or team.",
+                    },
+                    "last_n": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 2000,
+                        "description": (
+                            "Most recent matching games after filters, before pagination."
+                        ),
+                    },
+                    "home_away": {
+                        "type": "string",
+                        "enum": ["home", "away"],
+                        "description": (
+                            "Optional venue designation; home or away from the official schedule."
+                        ),
+                    },
+                    "opponent": {
+                        "type": "string",
+                        "description": "Optional opponent team code or club name.",
+                    },
+                    "minutes_basis": {
+                        "type": "string",
+                        "enum": ["corrected", "raw", "official"],
+                        "default": "corrected",
+                        "description": "Which player minutes to serve; default corrected.",
+                    },
+                    "limit": _LIMIT,
+                    "offset": _OFFSET,
+                },
+                required=["season"],
+            ),
+            query=get_game_log,
         ),
     ]
     return {tool.name: tool for tool in tools}
