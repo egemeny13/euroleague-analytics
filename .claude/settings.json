@@ -35,9 +35,7 @@
       "Bash(rg:*)",
       "Bash(find:*)",
       "Bash(wc:*)",
-      "Bash(python scripts/fly_read.py:*)"
-    ],
-    "ask": [
+      "Bash(python scripts/fly_read.py:*)",
       "Bash(git push:*)",
       "Bash(gh pr create:*)",
       "Bash(gh pr merge:*)",
@@ -49,7 +47,11 @@
       "mcp__claude_ai_Supabase__execute_sql",
       "mcp__claude_ai_Supabase__list_tables",
       "mcp__claude_ai_Supabase__query_logs",
-      "mcp__claude_ai_Supabase__get_advisors"
+      "mcp__claude_ai_Supabase__get_advisors",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_migrations",
+      "mcp__claude_ai_Supabase__list_extensions",
+      "mcp__claude_ai_Supabase__get_project"
     ],
     "deny": [
       "Read(./.env)",

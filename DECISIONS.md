@@ -684,6 +684,15 @@ one. The actual control is unchanged: a production write needs the owner's
 approval immediately before it.
 **Condition:** if an agent crosses a merge or production-write boundary without
 approval, or the owner leaves bypass mode, option 2 or 3 becomes the default.
+**Amendment, 2026-10-07 (owner: "her şeye izin veriyorum", after repeated
+Supabase prompts):** the `ask` list in `.claude/settings.json` is removed and its
+twelve rules (pushes, pull-request create/merge/close, workflow runs, merges,
+rebases, `pip install`, and the read-side Supabase tools `execute_sql`,
+`list_tables`, `query_logs`, `get_advisors`) move to `allow`. An `ask` rule
+prompts even in bypass mode, which is what kept interrupting him. The `deny` list
+is unchanged, so migrations, branch and project operations stay refused. The
+conversation rules above are unchanged too: `execute_sql` can write, and a
+production write still needs his approval immediately before it.
 
 ## 88. E2026 uses three new foul codes, each classified from measurement
 
