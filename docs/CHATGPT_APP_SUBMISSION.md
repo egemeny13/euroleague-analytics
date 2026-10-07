@@ -7,13 +7,13 @@
 
 ## 1. Executive Summary
 
-European Basketball Analytics is the ChatGPT distribution name for the existing EuroLeague Analytics MCP server, which exposes 14 tools over Streamable HTTP. The submission manifest (`chatgpt-app-submission.json`) and associated brand assets are used for the OpenAI ChatGPT App Directory listing.
+European Basketball Analytics is the ChatGPT distribution name for the existing EuroLeague Analytics MCP server, which exposes 14 tools over Streamable HTTP. The submission manifest (`docs/chatgpt-app/chatgpt-app-submission.json`) and associated brand assets are used for the OpenAI ChatGPT App Directory listing.
 
 All 14 exposed MCP tools are strictly read-only, closed-world, and non-destructive. Authentication is handled via Auth0 OAuth 2.0 PKCE through a stateless registration proxy (`Decision 51`), preserving Auth0's application caps without exposing dynamic registration upstream.
 
 ---
 
-## 2. Submission Record and Manifest (`chatgpt-app-submission.json`)
+## 2. Submission Record and Manifest (`docs/chatgpt-app/chatgpt-app-submission.json`)
 
 The machine-readable manifest in the repository root complies with OpenAI's
 `chatgpt-app-submission.v1.json` schema. The public listing URLs below are
@@ -42,9 +42,9 @@ rather than a live read from this repository.
 
 ### 2.3 Brand Assets
 Vector and raster brand assets use the existing project design system (clean white background `#FFFFFF`, orange `#E2541A`, and clean seam geometry):
-* **`directory_icon.png`:** 512×512 px PNG (Directory icon)
-* **`composer_icon.png`:** 128×128 px PNG (ChatGPT composer icon)
-* **`icon.svg` / `site/icon.svg`:** Scalable SVG source
+* **`docs/chatgpt-app/directory_icon.png`:** 512×512 px PNG (Directory icon)
+* **`docs/chatgpt-app/composer_icon.png`:** 128×128 px PNG (ChatGPT composer icon)
+* **`site/icon.svg`:** Scalable SVG source
 
 ---
 

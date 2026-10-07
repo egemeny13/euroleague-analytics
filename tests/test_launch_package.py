@@ -159,7 +159,7 @@ def test_chatgpt_submission_brand_is_independent_and_competition_descriptive() -
     """Directory metadata and landing copy avoid presenting a competition as the app brand."""
     import json
 
-    manifest = json.loads(Path("chatgpt-app-submission.json").read_text(encoding="utf-8"))
+    manifest = json.loads(Path("docs/chatgpt-app/chatgpt-app-submission.json").read_text(encoding="utf-8"))
     app_info = manifest["app_info"]
     landing = (SITE_DIR / "chatgpt" / "index.html").read_text(encoding="utf-8")
 
