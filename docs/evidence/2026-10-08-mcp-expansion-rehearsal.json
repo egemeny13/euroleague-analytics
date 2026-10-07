@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-10-07T22:24:01.678281+00:00",
+  "started_at": "2026-10-07T22:31:27.197819+00:00",
   "production_write": false,
   "checks": [
     {
@@ -7,7 +7,7 @@
       "arguments": {
         "season": "E2024"
       },
-      "elapsed_seconds": 0.018,
+      "elapsed_seconds": 0.016,
       "row_count": 18,
       "coverage": {
         "seasons": [
@@ -212,7 +212,7 @@
         "team": "IST",
         "shot_type": "2P"
       },
-      "elapsed_seconds": 0.171,
+      "elapsed_seconds": 0.169,
       "row_count": 8,
       "coverage": {
         "seasons": [
@@ -258,7 +258,7 @@
         "home_away": "home",
         "last_n": 5
       },
-      "elapsed_seconds": 0.18,
+      "elapsed_seconds": 0.175,
       "row_count": 5,
       "coverage": {
         "seasons": [
@@ -323,7 +323,7 @@
         "player": "P009846",
         "team": "IST"
       },
-      "elapsed_seconds": 0.118,
+      "elapsed_seconds": 0.119,
       "row_count": 11,
       "coverage": {
         "seasons": [
@@ -369,7 +369,7 @@
         "last_n": 5,
         "minutes_basis": "official"
       },
-      "elapsed_seconds": 0.186,
+      "elapsed_seconds": 0.184,
       "row_count": 5,
       "coverage": {
         "seasons": [
@@ -439,7 +439,7 @@
         "season": "E2024",
         "player": "P009846"
       },
-      "elapsed_seconds": 0.128,
+      "elapsed_seconds": 0.122,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -482,7 +482,7 @@
         "player": "P009846",
         "advanced": true
       },
-      "elapsed_seconds": 0.721,
+      "elapsed_seconds": 0.695,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -557,7 +557,7 @@
         "advanced": true,
         "per_game": true
       },
-      "elapsed_seconds": 0.634,
+      "elapsed_seconds": 0.606,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -629,7 +629,7 @@
       "arguments": {
         "season": "E2025"
       },
-      "elapsed_seconds": 0.023,
+      "elapsed_seconds": 0.021,
       "row_count": 20,
       "coverage": {
         "seasons": [
@@ -731,7 +731,7 @@
         "season": "E2025",
         "phase": "RS"
       },
-      "elapsed_seconds": 0.018,
+      "elapsed_seconds": 0.015,
       "row_count": 20,
       "coverage": {
         "seasons": [
@@ -834,7 +834,7 @@
         "team": "IST",
         "shot_type": "2P"
       },
-      "elapsed_seconds": 0.149,
+      "elapsed_seconds": 0.144,
       "row_count": 7,
       "coverage": {
         "seasons": [
@@ -880,7 +880,7 @@
         "home_away": "home",
         "last_n": 5
       },
-      "elapsed_seconds": 0.176,
+      "elapsed_seconds": 0.171,
       "row_count": 5,
       "coverage": {
         "seasons": [
@@ -945,7 +945,7 @@
         "player": "P012710",
         "team": "IST"
       },
-      "elapsed_seconds": 0.13,
+      "elapsed_seconds": 0.129,
       "row_count": 11,
       "coverage": {
         "seasons": [
@@ -991,7 +991,7 @@
         "last_n": 5,
         "minutes_basis": "official"
       },
-      "elapsed_seconds": 0.2,
+      "elapsed_seconds": 0.189,
       "row_count": 5,
       "coverage": {
         "seasons": [
@@ -1061,7 +1061,7 @@
         "season": "E2025",
         "player": "P012710"
       },
-      "elapsed_seconds": 0.153,
+      "elapsed_seconds": 0.129,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -1104,7 +1104,7 @@
         "player": "P012710",
         "advanced": true
       },
-      "elapsed_seconds": 0.86,
+      "elapsed_seconds": 0.785,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -1179,7 +1179,7 @@
         "advanced": true,
         "per_game": true
       },
-      "elapsed_seconds": 0.935,
+      "elapsed_seconds": 0.8,
       "row_count": 1,
       "coverage": {
         "seasons": [
@@ -1249,7 +1249,8 @@
   ],
   "migration_up_down_up_identical": true,
   "reader_grants_exercised": true,
+  "historical_progress_synthetic_fixture_passed": true,
   "passed": true,
   "rolled_back": true,
-  "finished_at": "2026-10-07T22:24:08.715395+00:00"
+  "finished_at": "2026-10-07T22:31:33.858100+00:00"
 }

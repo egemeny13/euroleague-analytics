@@ -1,0 +1,39 @@
+{
+  "production_changed": false,
+  "offline_suite": {
+    "command": ".venv/Scripts/python.exe -m pytest",
+    "passed": 1775,
+    "deselected": 151,
+    "seconds": 71.52
+  },
+  "new_local_database_tests": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_results_views.py tests/test_shot_profile.py tests/test_player_advanced.py -m warehouse",
+    "passed": 6,
+    "deselected": 8,
+    "seconds": 19.85,
+    "target": "guarded euroleague_test on port 5433"
+  },
+  "independent_results_recheck": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_results_views.py -m warehouse",
+    "passed": 1,
+    "deselected": 4,
+    "seconds": 0.99,
+    "checks": [
+      "official score venue/result mapping via full join",
+      "no missing player log identities"
+    ]
+  },
+  "quality_checks": [
+    "ruff check . passed",
+    "ruff format --check . passed",
+    "git diff --check passed"
+  ],
+  "local_rehearsal": "scripts/rehearse_mcp_expansion.py; evidence in 2026-10-08-mcp-expansion-rehearsal.json",
+  "historical_progress_limit": "Production has 330 E2024 and 402 E2025 loaded games, but neither season has recorded game_source_state application timestamps. The CLI refuses to invent last_loaded_at; both production completeness markers remain unknown.",
+  "rate_definition_limit": "usage_event_rate is a custom FGA + inferred FT trips + turnovers rate over exact on-court offensive possessions; it is not standard USG%. TS uses the explicit 0.44 FTA approximation. All definitions and denominators are disclosed.",
+  "validation_limits": [
+    "Local PostgreSQL latency is not hosted Supabase latency.",
+    "The new migration grants were exercised with a local role reproducing the MCP grant set, not the production credential.",
+    "No production migration, deploy or ChatGPT directory submission was performed."
+  ]
+}

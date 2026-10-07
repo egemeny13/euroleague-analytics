@@ -42,9 +42,9 @@ Every number published by this warehouse is mechanically verified against offici
 
 ---
 
-## 3. The 14 MCP Tools
+## 3. The 17 MCP Tools
 
-The server exposes 14 read-only tools designed specifically for LLMs. Every response declares its data coverage, quarantined game exclusions, and whether minutes are raw or corrected.
+The server exposes 17 read-only tools designed specifically for LLMs. Every response declares its data coverage, quarantined game exclusions, and whether minutes are raw or corrected.
 
 | Tool | Purpose |
 |---|---|
@@ -55,20 +55,23 @@ The server exposes 14 read-only tools designed specifically for LLMs. Every resp
 | `el_get_play_by_play` | Source-ordered event stream with on-court lineups, score margins, and clock readings. |
 | `el_get_shot_data` | Shot attempts with normalized half-court court coordinates (X, Y). |
 | `el_get_team_stats` | Four Factors (eFG%, TOV%, ORB%, FTR), pace, offensive rating, and defensive rating. |
-| `el_get_player_stats` | Player per-game and per-100 possession statistics. |
+| `el_get_player_stats` | Player per-game and per-100 statistics; optional advanced shooting and explicitly defined event rates. |
 | `el_get_lineup_stats` | 5-man lineup performance with possession counts, offensive, defensive, and net ratings. |
 | `el_get_player_on_off` | Team net rating differential with a specific player on court versus off court. |
 | `el_get_possessions` | Individual possession records with start score, duration, ending reason, and clutch filters. |
 | `el_get_fouls` | Fouls committed and drawn by type, grouped by player, team, or game; reconciles to the box score. |
 | `el_get_referee_stats` | A referee's season: games worked, fouls per game, home-win rate, and pace; unpivoted from the schedule's officiating crew. |
 | `el_get_roster` | A team's roster with biography (jersey, position, height, weight, birth date, country), linked to the box-score player by observed stat lines, never by name. |
+| `el_get_standings` | Official-score W-L, home/away splits, points, differential and last five; quarantine included. |
+| `el_get_shot_profile` | Zone shot attempts, makes and rates versus the same-season league, without coordinates. |
+| `el_get_game_log` | Bounded player/team official game lines with recency, venue and opponent filters. |
 
 ---
 
 ## 4. Generic MCP Client Setup
 
 The server remains a standard MCP server. The hosted and local transports publish the
-same 14 tools, input schemas, output schemas, and safety annotations. No ChatGPT-specific
+same 17 tools, input schemas, output schemas, and safety annotations. No ChatGPT-specific
 metadata is present in the tool registry.
 
 ### Hosted Streamable HTTP (recommended)
@@ -138,7 +141,7 @@ of the tool registry.
 3. Add a new MCP connection and enter
    `https://euroleague-analytics-mcp.fly.dev/mcp` as the public Streamable HTTP URL.
 4. Complete the OAuth sign-in.
-5. Review the discovered 14 tools and start a new conversation with the connection enabled.
+5. Review the discovered 17 tools and start a new conversation with the connection enabled.
 
 Developer mode availability can depend on the ChatGPT account and workspace policy. The
 current official flow is documented in OpenAI's
@@ -233,7 +236,7 @@ Both paths must agree with the published `<expected_answer>`.
 - **Privacy Policy**: [euroleague.egemenyucelen.me/privacy.html](https://euroleague.egemenyucelen.me/privacy.html)
 - **Support & FAQ**: [euroleague.egemenyucelen.me/support.html](https://euroleague.egemenyucelen.me/support.html)
 - **Sponsorship One-Pager**: [`docs/SPONSOR_ONE_PAGER.md`](docs/SPONSOR_ONE_PAGER.md)
-- **Scope of version 1**: [`docs/SCOPE.md`](docs/SCOPE.md) — what the fourteen tools do, what is left out on purpose, and why
+- **Scope of version 1**: [`docs/SCOPE.md`](docs/SCOPE.md) — what the 17 tools do, what is left out on purpose, and why
 - **Decision Log**: [`DECISIONS.md`](DECISIONS.md)
 - **Phase Reports**: [`docs/`](docs/)
 

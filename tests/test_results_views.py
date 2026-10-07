@@ -107,6 +107,43 @@ def test_0030_views_reconcile_and_rehearse_in_a_rolled_back_schema() -> None:
             assert validated_games >= 50
             assert team_mismatches == 0
 
+            # Compare the standings source with the independent official game
+            # scores, rather than only comparing aggregates of the same view.
+            result_mismatches = connection.execute(
+                "with expected as (select g.season_code, g.gamecode, side.* "
+                "from warehouse.v_game g cross join lateral (values "
+                "(g.home_team_code, g.away_team_code, true, g.home_score, g.away_score), "
+                "(g.away_team_code, g.home_team_code, false, g.away_score, g.home_score) "
+                ") side(team_code, opponent_team_code, is_home, points_for, points_against) "
+                "where g.season_code = 'E2025' and g.played "
+                "and g.home_score is not null and g.away_score is not null), "
+                "actual as (select * from v_standings_game where season_code = 'E2025') "
+                "select count(*) from expected e full join actual a using "
+                "(season_code, gamecode, team_code) where e.gamecode is null "
+                "or a.gamecode is null or "
+                "(a.opponent_team_code, a.is_home, a.points_for, a.points_against, a.result) "
+                "is distinct from "
+                "(e.opponent_team_code, e.is_home, e.points_for, e.points_against, "
+                "case when e.points_for > e.points_against then 'W' "
+                "when e.points_for < e.points_against then 'L' else 'T' end)"
+            ).fetchone()[0]
+            assert result_mismatches == 0
+
+            # A matching-row comparison alone cannot detect dropped player rows.
+            # Compare the row identity sets too, with the same DNP definition.
+            missing_player_rows = connection.execute(
+                "with expected as (select p.season_code, p.gamecode, p.player_id "
+                "from warehouse.v_player_game p join warehouse.v_game g using "
+                "(season_code, gamecode) where p.season_code = 'E2025' "
+                "and p.seconds_official > 0 and g.played and g.home_score is not null "
+                "and g.away_score is not null), "
+                "actual as (select season_code, gamecode, player_id from v_player_game_log "
+                "where season_code = 'E2025') "
+                "select count(*) from expected e full join actual a using "
+                "(season_code, gamecode, player_id) where e.gamecode is null or a.gamecode is null"
+            ).fetchone()[0]
+            assert missing_player_rows == 0
+
             player_mismatches = connection.execute(
                 "select count(*) from v_player_game_log l join warehouse.v_player_game p "
                 "using (season_code, gamecode, team_code, player_id) where l.season_code = 'E2025' "

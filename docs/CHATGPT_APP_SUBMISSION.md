@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-European Basketball Analytics is the ChatGPT distribution name for the existing EuroLeague Analytics MCP server, which exposes 14 tools over Streamable HTTP. The submission manifest (`docs/chatgpt-app/chatgpt-app-submission.json`) and associated brand assets are used for the OpenAI ChatGPT App Directory listing.
+European Basketball Analytics is the ChatGPT distribution name for the existing EuroLeague Analytics MCP server, which exposes 17 tools over Streamable HTTP. The submission manifest (`docs/chatgpt-app/chatgpt-app-submission.json`) and associated brand assets are used for the OpenAI ChatGPT App Directory listing.
 
 All 14 exposed MCP tools are strictly read-only, closed-world, and non-destructive. Authentication is handled via Auth0 OAuth 2.0 PKCE through a stateless registration proxy (`Decision 51`), preserving Auth0's application caps without exposing dynamic registration upstream.
 

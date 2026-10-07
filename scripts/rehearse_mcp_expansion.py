@@ -17,8 +17,9 @@ import psycopg
 from psycopg import sql
 
 from euroleague.config import load_env_file
+from euroleague.historical_progress import backfill_historical_progress
 from euroleague.incremental_confirmation import assert_local_confirmation_target
-from euroleague.mcp.queries import get_player_stats
+from euroleague.mcp.queries import coverage_for, get_player_stats
 from euroleague.mcp.tools import build_registry
 
 
@@ -213,7 +214,7 @@ def main() -> int:
                     pergame["rows"][0]["usage_event_rate"]
                     == advanced["rows"][0]["usage_event_rate"]
                 )
-            # The server's real credential must be able to read every newly served view.
+            # A role with the MCP grant set must be able to read every newly served view.
             cursor.execute("set local role el_reader")
             for view in (
                 "v_standings",
@@ -226,6 +227,52 @@ def main() -> int:
                 cursor.fetchall()
             cursor.execute("reset role")
             report["reader_grants_exercised"] = True
+
+            # Synthetic successful-load records prove the metadata write and
+            # disclosure without inventing timestamps for the real warehouse.
+            progress_schema = schema + "_progress"
+            cursor.execute(sql.SQL("create schema {}").format(sql.Identifier(progress_schema)))
+            cursor.execute(
+                sql.SQL("set local search_path to {}, public").format(
+                    sql.Identifier(progress_schema)
+                )
+            )
+            cursor.execute(
+                "create table raw_game (season_code text, gamecode integer, played boolean, "
+                "utc_date timestamptz, excluded_by_default boolean); "
+                "create table game_source_state (season_code text, gamecode integer, "
+                "applied_at timestamptz); "
+                "create view v_game as select * from raw_game"
+            )
+            cursor.execute((root / "migrations/0009_season_progress.up.sql").read_text())
+            recorded = datetime(2026, 9, 7, 12, tzinfo=UTC)
+            for season in ("E2024", "E2025"):
+                for code in (1, 2):
+                    cursor.execute(
+                        "insert into raw_game values (%s, %s, true, %s, false)",
+                        (season, code, recorded),
+                    )
+                    cursor.execute(
+                        "insert into game_source_state values (%s, %s, %s)",
+                        (season, code, recorded),
+                    )
+
+            class FixtureCache:
+                def read_schedule_json(self, season_code):
+                    return {
+                        "data": [
+                            {"gameCode": 1, "played": True},
+                            {"gameCode": 2, "played": True},
+                        ]
+                    }
+
+            backfill_historical_progress(conn, FixtureCache())
+            for season in ("E2024", "E2025"):
+                coverage = coverage_for(cursor, season, False)
+                assert coverage["completeness"] == "complete"
+                assert coverage["games_scheduled"] == 2
+                assert coverage["last_loaded_at"] == recorded.isoformat()
+            report["historical_progress_synthetic_fixture_passed"] = True
             report["passed"] = True
     except Exception as exc:
         report["passed"] = False

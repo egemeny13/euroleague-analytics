@@ -13,8 +13,9 @@ delete it and, if it changed what the system does, record it in `DECISIONS.md`.
 
 ## Current state — 2026-10-06
 
-- **MCP server:** Fourteen read-only `el_` tools, frozen for version 1
-  (Decisions 65, 79; list in `docs/SCOPE.md`). Served over stdio and hosted
+- **MCP server:** 17 read-only `el_` tools in the repository (Decision 93;
+  list in `docs/SCOPE.md`); the hosted release still has fourteen pending approval.
+  The original surface is served over stdio and hosted
   StreamableHTTP on Fly (`euroleague-analytics-mcp`), OAuth through Auth0,
   open to public sign-in since 2026-09-02.
 - **Hot warehouse (Supabase free tier):** E2024 and E2025 complete; E2026 loading
@@ -37,10 +38,14 @@ delete it and, if it changed what the system does, record it in `DECISIONS.md`.
 ### Owner-requested analytics expansion (2026-10-08)
 
 Decision 93 and `docs/superpowers/plans/2026-10-08-mcp-analytics-expansion.md`.
-Season prompt repaired; three new summaries and opt-in advanced player rates
-are being validated locally. Production release has not happened.
-Historical E2024/E2025 progress requires a truthful successful-load timestamp:
-preflight found no historical application records; do not fabricate one.
+Local implementation verified: season prompt, standings, shot profile,
+opt-in advanced player rates and game logs; 1,775 offline tests and six guarded
+local PostgreSQL tests pass. Up/down/up, actual handler calls and reader grants
+passed; official-score/log and shot populations reconciled over complete seasons.
+Open: approve and apply migrations 0030-0032, then release the reviewed branch.
+Historical E2024/E2025 progress remains blocked on a truthful successful-load
+timestamp: preflight found no historical application records. The backfill was
+rehearsed with synthetic recorded loads; production dates were not fabricated.
 
 
 ### Needs verification now

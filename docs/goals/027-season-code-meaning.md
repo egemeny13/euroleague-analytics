@@ -13,6 +13,12 @@ acceptance:
   - uv run pytest
 ---
 
+> Correction, 2026-10-08 (Decision 93): this goal's ending-year premise
+> was wrong. E2024 is 2024-25 and covers 2024-10-03 to 2025-05-25 in the
+> live warehouse. The original text below is retained as the historical
+> explanation of how the incorrect prompt entered the registry; it must not
+> be used as the current season convention.
+
 ## Outcome (plain language)
 
 A model reading the tool descriptions learns that `E2024` means the season that
