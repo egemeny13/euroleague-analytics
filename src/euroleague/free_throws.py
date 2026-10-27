@@ -52,12 +52,12 @@ from euroleague.events import EventRecord
 
 FREE_THROW_TYPES = frozenset({"FTM", "FTA"})
 BALL_TOUCHING_BOUNDARY_TYPES = frozenset({"2FGM", "3FGM", "TO", "D", "2FGA", "3FGA", "O"})
-# The first eight are the E2020-E2025 codes; `CMU_DI`, `CMU_FL` and `CMT1` are the
-# E2026 codes (DECISIONS.md item 88). Leaving one out is not harmless: a foul
+# The first eight are the E2020-E2025 codes; `CMU_DI`, `CMU_FL`, `CMT1` and `CMT2` are the
+# E2026 codes (DECISIONS.md items 88 and 94). Leaving one out is not harmless: a foul
 # missing from this set stops closing an open trip and drops out of
 # `preceding_fouls`, and no error says so.
 FOUL_TYPES = frozenset(
-    {"CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "CMU_DI", "CMU_FL", "CMT1"}
+    {"CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "CMU_DI", "CMU_FL", "CMT1", "CMT2"}
 )
 MAX_SHOTS_ONE_FOUL_CAN_AWARD = 3
 

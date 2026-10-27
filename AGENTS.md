@@ -109,9 +109,10 @@ owner; one rule here was once generalised from a single game and was wrong.
   is a filter on those columns, never a baked threshold or separate table.
 - **Foul type is `PLAYTYPE`; read it, never infer it.** E2020–E2025 use `CM`,
   `OF`, `CMU`, `CMT`, `C`, `B`, `CMD`, `CMTI`. E2026 drops `CMU`, `CMT`, `CMD`,
-  `CMTI` and adds `CMU_DI`, `CMU_FL`, `CMT1` (Decision 88: all count as fouls
-  committed; `CMU_DI` is not disqualifying; `CMU_DI`/`CMU_FL` free throws leave
-  the ball with the fouled team). An unknown code stops the rebuild by design —
+  `CMTI` and adds `CMU_DI`, `CMU_FL`, `CMT1`, `CMT2` (Decisions 88, 94: all count
+  as fouls committed; `CMU_DI` is not disqualifying; `CMU_DI`/`CMU_FL` free throws
+  leave the ball with the fouled team; `CMT1`/`CMT2` free throws are
+  off-possession). An unknown code stops the rebuild by design —
   measure it before mapping it.
 - Every `OF` already has its own `TO` row: count the `TO`, ignore the `OF`.
   Never infer an offensive foul from a foul and turnover sharing a clock

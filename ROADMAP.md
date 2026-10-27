@@ -61,9 +61,10 @@ rehearsed with synthetic recorded loads; production dates were not fabricated.
      on the Fly forum with the evidence in 89 and 91.
    - **Cost meanwhile.** The machine runs always-on, about $2 a month.
    - **How to check.** Read the event log with `python scripts/fly_read.py`.
-2. **E2026 foul codes (Decision 88).** Re-measure the three new codes as games
-   arrive; `CMT1` rests on two clean cases. An unknown code stops the rebuild by
-   design.
+2. **E2026 foul codes (Decisions 88, 94).** Re-measure the four new codes as
+   games arrive; `CMT2` rests on one case (game 52). `v_foul_event` and the MCP
+   fouls tool do not count `CMT2` yet; that needs a migration and the owner's
+   apply approval. An unknown code stops the rebuild by design.
 
 ### Owner decisions waiting
 
