@@ -15,7 +15,11 @@ RUN useradd --create-home --uid 10001 appuser
 WORKDIR /app
 
 COPY requirements.txt requirements-http.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-http.txt
+# pip carries its own vendored certifi, frozen at the pip release the base image
+# was built with. Upgrading pip first replaces that copy, so a newly published
+# certifi advisory does not fail the weekly Trivy scan until the base image is
+# rebuilt.
+RUN pip install --no-cache-dir --upgrade pip \n    && pip install --no-cache-dir -r requirements.txt -r requirements-http.txt
 
 COPY src/ ./src/
 COPY scripts/mcp_http_server.py ./scripts/
