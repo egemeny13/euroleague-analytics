@@ -209,7 +209,7 @@ def test_one_trip_can_span_two_clock_readings(fixture_cache: ResponseCache) -> N
 
 @pytest.mark.parametrize(
     "foul_type",
-    ["CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "CMU_DI", "CMU_FL", "CMT1"],
+    ["CM", "OF", "CMU", "CMT", "C", "B", "CMD", "CMTI", "CMU_DI", "CMU_FL", "CMT1", "CMT2"],
 )
 def test_each_explicit_foul_type_closes_an_open_trip(foul_type: str) -> None:
     events = [_event(0, "FTM"), _event(1, foul_type, "DEF"), _event(2, "FTM")]

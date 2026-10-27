@@ -820,3 +820,29 @@ source walk over E2024/E2025. The approved FT classifier is the Python oracle;
 official box scores separately reconcile source assists over clean games.
 Both reviewed examples now pass. Evidence:
 `docs/evidence/2026-10-08-rate-annotation-repair.json`.
+
+## 94. `CMT2` (technical foul 2) is a possession-retaining foul, like `CMT1`
+
+2026-10-27. The nightly E2026 job failed from 2026-10-16 with
+`UnclassifiedEventTypeError: 'CMT2'`, as Decision 88 said it would. The error
+names game 45 because a rebuild reads the whole season; the one `CMT2` row is
+in game 52 (TEL player, "Technical Foul 2 (1)", Q3 07:39).
+
+Measured over all 70 played E2026 games (public PlaybyPlay and Boxscore,
+fetched read-only 2026-10-27): `CMT2` 1 row, `CMT1` 52 rows, no other unknown
+code. In game 52 a TEL basket is followed by `CMT2`, one PAM free throw, then a
+PAM turnover: the shooting team kept the ball. As retaining, PAM has 75
+possessions and 0 same-team back-to-back possessions; as non-retaining or as a
+non-foul, 76 and 1 (the free throw closes a phantom possession). No other game
+changes. In the box score the player's `FoulsCommited` is 1 and `CMT2` is his
+only foul row, so it counts as committed.
+
+`CMT1` re-checked with 52 rows instead of 2: over the 30 games carrying
+`CMT1`/`CMT2`, retaining both gives 11 same-team back-to-back possessions,
+neither 41, `CMT1` alone 12. Decision 88's classification holds.
+
+Decided by Claude from measurement; not yet reviewed by the owner.
+**Condition:** `CMT2` rests on one case; re-measure as games arrive.
+`v_foul_event` and the MCP fouls tool still list only Decision 88's codes, so
+game 52 under-counts one committed foul until a migration (owner-approved apply)
+adds `CMT2`.

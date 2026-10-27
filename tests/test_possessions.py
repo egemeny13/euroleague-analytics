@@ -93,7 +93,8 @@ OLDER_SEASON_EVENT_TYPES = {"TPOFF", "F", "BF"}
 # Types first seen in E2026 (DECISIONS.md item 88), measured over the 30 archived
 # games: `CMU_DI` disruptive foul (13), `CMU_FL` flagrant foul (6) and `CMT1`
 # technical foul 1 (21). E2026 carries none of the older CMU, CMT, CMD or CMTI.
-E2026_EVENT_TYPES = {"CMU_DI", "CMU_FL", "CMT1"}
+# `CMT2` technical foul 2 first appeared in game 52 (DECISIONS.md item 94).
+E2026_EVENT_TYPES = {"CMU_DI", "CMU_FL", "CMT1", "CMT2"}
 E2026_FIXTURE = Path(__file__).parent / "fixtures" / "e2026_new_foul_codes.json"
 
 
@@ -109,7 +110,7 @@ def test_vocabulary_explicitly_classifies_all_31_e2024_event_types() -> None:
     assert set(EVENT_ROLES) == ALL_E2024_EVENT_TYPES | OLDER_SEASON_EVENT_TYPES | E2026_EVENT_TYPES
     assert sum(role is EventRole.ENDING for role in EVENT_ROLES.values()) == 5
     assert sum(role is EventRole.CONTINUING for role in EVENT_ROLES.values()) == 4
-    assert sum(role is EventRole.NO_BALL for role in EVENT_ROLES.values()) == 28
+    assert sum(role is EventRole.NO_BALL for role in EVENT_ROLES.values()) == 29
 
 
 def test_e2026_foul_codes_are_accepted_and_do_not_touch_the_ball() -> None:
@@ -201,6 +202,30 @@ def test_real_e2026_technical_foul_1_keeps_the_ball_with_the_team_shooting_it(
     first = next(p for p in result.possessions if p.offense_team_code == retaining_team)
     assert first.end_ingest_index == basket_index
     assert first.end_reason == "made_shot"
+
+
+def test_real_e2026_technical_foul_2_free_throw_is_off_possession() -> None:
+    """Break caught: the nightly rebuild died on `CMT2` (game 52), or its free throw
+    closes a phantom PAM possession between TEL's basket and PAM's turnover."""
+    events, team_a, team_b = _e2026_excerpt("cmt2_game_52")
+    assert [event.playtype for event in events] == [
+        "TO", "ST", "2FGM", "AS", "CMT2", "FTM", "TO", "3FGM",
+    ]  # fmt: skip
+    assert (events[4].team_code, events[5].team_code, events[6].team_code) == (
+        "TEL",
+        "PAM",
+        "PAM",
+    )
+
+    result = count_game_possessions(events, team_a, team_b)
+
+    assert result.team_counts == {"PAM": 2, "TEL": 2}
+    assert [(p.offense_team_code, p.end_reason) for p in result.possessions] == [
+        ("PAM", "turnover"),
+        ("TEL", "made_shot"),
+        ("PAM", "turnover"),
+        ("TEL", "made_shot"),
+    ]
 
 
 def test_older_season_marker_and_fight_rows_do_not_change_possessions() -> None:
@@ -319,7 +344,7 @@ def test_and_one_free_throw_does_not_end_the_possession_twice() -> None:
     assert [possession.end_reason for possession in result.possessions] == ["made_shot"]
 
 
-@pytest.mark.parametrize("foul_type", ["CMT", "C", "B", "CMU", "CMU_DI", "CMU_FL", "CMT1"])
+@pytest.mark.parametrize("foul_type", ["CMT", "C", "B", "CMU", "CMU_DI", "CMU_FL", "CMT1", "CMT2"])
 def test_technical_or_unsportsmanlike_free_throw_does_not_end_control(
     foul_type: str,
 ) -> None:
