@@ -10,7 +10,7 @@
 # unpinned transitive dependency matters.
 #
 # Regenerate with:
-#     uv pip compile <(echo mcp==2.1.1) --output-file requirements-http.txt
+#     uv pip compile <(echo mcp==2.2.0) --output-file requirements-http.txt
 # then restore this header, which uv's own header would overwrite with an
 # absolute path from whichever machine produced it.
 annotated-types==0.8.0
